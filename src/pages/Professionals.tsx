@@ -75,6 +75,8 @@ interface ProfMetrics {
   ratingCount: number;
   lastActivity: string | null;
   platformProjectCount: number;
+  avgFee: number | null;
+  avgDeliveryDays: number | null;
   collaborationHistory: Array<{
     projectName: string;
     completed: boolean;
@@ -82,6 +84,7 @@ interface ProfMetrics {
     fee: number;
     deliveryStatus: string;
     joinedAt: string;
+    deliveryDueDate: string | null;
   }>;
 }
 
