@@ -12,14 +12,16 @@ import { toast } from "sonner";
 import { AITaskAssistant, type AITaskAssistantHandle } from "@/components/AITaskAssistant";
 import { useProfessionals } from "@/hooks/useProfessionals";
 import { useAIConversations } from "@/hooks/useAIConversations";
+import { useProjectAlerts } from "@/hooks/useProjectAlerts";
 
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import FinancialSummary from "@/components/dashboard/FinancialSummary";
-import ActiveProjectsList from "@/components/dashboard/ActiveProjectsList";
 import DailyChecklist from "@/components/dashboard/DailyChecklist";
 import FirstRunEmptyState from "@/components/dashboard/FirstRunEmptyState";
 import RecentTransactions from "@/components/dashboard/RecentTransactions";
 import UpcomingReleases from "@/components/dashboard/UpcomingReleases";
+import ProjectAlertsCard from "@/components/dashboard/ProjectAlertsCard";
+import ProjectHealthList from "@/components/dashboard/ProjectHealthList";
 
 export default function Dashboard() {
   const aiRef = useRef<AITaskAssistantHandle>(null);
@@ -38,6 +40,34 @@ export default function Dashboard() {
     messages: savedMessages, loadingMessages,
     createConversation, saveMessage, renameConversation, deleteConversation, startNewConversation,
   } = useAIConversations();
+
+  // Fetch pending invites for alert detection
+  const [pendingInvites, setPendingInvites] = useState<{ projectId: string; professionalName: string; createdAt: string }[]>([]);
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from("project_invitations")
+      .select("project_id, professional_name, created_at")
+      .eq("invited_by", user.id)
+      .eq("status", "pending")
+      .then(({ data }) => {
+        if (data) {
+          setPendingInvites(
+            data.map((d) => ({ projectId: d.project_id, professionalName: d.professional_name, createdAt: d.created_at }))
+          );
+        }
+      });
+  }, [user]);
+
+  // Project alerts & health scores
+  const { alerts, projectsWithHealth } = useProjectAlerts({
+    projects,
+    transactions,
+    activeTasks: activeTasks.map((t) => ({ projectId: t.projectId, dueDate: t.dueDate, description: t.description })),
+    getMixPercent,
+    getProjectFinancials,
+    pendingInvites,
+  });
 
   // Auto-generate tasks once per session, with 1-hour throttle
   useEffect(() => {
@@ -86,25 +116,47 @@ export default function Dashboard() {
   // ── Build context-aware chips for AI ──
   const buildAIChips = () => {
     const chips: Array<{ label: string; msg: string; highlight?: boolean }> = [];
+
+    // Prioritize actionable chips
+    if (alerts.length > 0) {
+      const criticalAlerts = alerts.filter((a) => a.severity === "critical");
+      if (criticalAlerts.length > 0) {
+        chips.push({
+          label: `🚨 ${criticalAlerts.length} crítico${criticalAlerts.length > 1 ? "s" : ""}`,
+          msg: `Tenho ${criticalAlerts.length} alerta(s) crítico(s): ${criticalAlerts.slice(0, 3).map((a) => `${a.title} (${a.projectName})`).join(", ")}. O que devo resolver primeiro?`,
+          highlight: true,
+        });
+      }
+    }
+
     const urgentTasks = activeTasks.filter((t) => t.source === "deadline" || t.source === "payment");
     if (urgentTasks.length > 0) chips.push({ label: `⚠️ ${urgentTasks.length} urgente${urgentTasks.length > 1 ? "s" : ""}`, msg: "Quais são minhas pendências mais urgentes agora? Liste com prazo e contexto.", highlight: true });
-    const byStage: Record<string, typeof projects> = {};
-    projects.forEach((p) => { if (!p.completed) (byStage[p.stage] = byStage[p.stage] ?? []).push(p); });
-    const stageLabels: Record<string, string> = { inicio: "🎵 Iniciado", gravacao: "🎙️ Gravação", mix: "🎛️ Mix", master: "🔊 Master", upload: "🚀 Upload", lancado: "🏆 Lançado" };
-    Object.entries(byStage).forEach(([stage, list]) => { const lbl = stageLabels[stage]; if (!lbl) return; chips.push({ label: `${lbl} (${list.length})`, msg: `Fale sobre os projetos em fase de ${stage}: ${list.map((p) => p.name).join(", ")}. O que preciso fazer para avançar?` }); });
-    const mixProjects = projects.filter((p) => !p.completed && p.stage === "mix");
-    const masterProjects = projects.filter((p) => !p.completed && p.stage === "master");
-    if (mixProjects.length > 0) chips.push({ label: "🎛️ Dica de mix", msg: `Tenho ${mixProjects.length} projeto(s) em fase de mix: ${mixProjects.map((p) => p.name).join(", ")}. Me dá dicas de EQ, compressão ou balanceamento para avançar.` });
-    if (masterProjects.length > 0) chips.push({ label: "🔊 Checar master", msg: `Tenho ${masterProjects.length} projeto(s) em fase de master: ${masterProjects.map((p) => p.name).join(", ")}. Quais critérios devo checar antes de finalizar a master?` });
-    if (mixProjects.length === 0 && masterProjects.length === 0 && projects.length > 0) chips.push({ label: "🎙️ Dica técnica", msg: "Me dá uma dica prática de produção musical que posso aplicar hoje nos meus projetos." });
-    if (projects.length === 0) { chips.length = 0; chips.push({ label: "🎵 Criar projeto", msg: "Como devo organizar meu primeiro projeto musical? Quais informações são essenciais?" }); chips.push({ label: "🎙️ Dicas de gravação", msg: "Sou um artista independente. Me dá dicas fundamentais para começar a gravar com qualidade em casa." }); chips.push({ label: "🔊 LUFS streaming", msg: "Quais são os alvos de LUFS para Spotify, YouTube e Apple Music?" }); }
+
+    if (activeTasks.length > 0) {
+      chips.push({ label: "📋 O que fazer hoje", msg: "Com base nas minhas tarefas e projetos, o que devo priorizar hoje? Me dá um plano de ação claro." });
+    }
+
+    const stalledProjects = projectsWithHealth.filter((p) => p.alerts.some((a) => a.category === "stalled"));
+    if (stalledProjects.length > 0) {
+      chips.push({
+        label: `⏸️ ${stalledProjects.length} parado${stalledProjects.length > 1 ? "s" : ""}`,
+        msg: `Tenho ${stalledProjects.length} projeto(s) parado(s): ${stalledProjects.map((p) => p.project.name).join(", ")}. Como posso destravar?`,
+      });
+    }
+
+    if (projects.length === 0) {
+      chips.length = 0;
+      chips.push({ label: "🎵 Criar projeto", msg: "Como devo organizar meu primeiro projeto musical? Quais informações são essenciais?" });
+      chips.push({ label: "🎙️ Dicas de gravação", msg: "Sou um artista independente. Me dá dicas fundamentais para começar a gravar com qualidade em casa." });
+    }
+
     return chips;
   };
 
   const isFirstRun = projects.length === 0;
 
   return (
-    <div className="p-4 md:p-6 space-y-6">
+    <div className="p-4 md:p-6 space-y-5">
       <DashboardHeader
         displayName={displayName}
         projects={projects}
@@ -112,12 +164,9 @@ export default function Dashboard() {
         onSelectProject={setSelectedProjectId}
       />
 
-      <FinancialSummary financials={financials} isSimpleMode={isSimpleMode} />
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+      {/* 1. O que fazer hoje + Alertas */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         {isFirstRun && <FirstRunEmptyState onNavigate={navigate} />}
-
-        <ActiveProjectsList projects={filtered} hidden={isFirstRun} />
 
         <DailyChecklist
           activeTasks={activeTasks}
@@ -133,56 +182,66 @@ export default function Dashboard() {
           aiRef={aiRef}
         />
 
-        {/* AI Assistant Card */}
-        <Card className={cn("glass-card animate-fade-in border-primary/20 lg:col-span-1", isFirstRun && "hidden")} style={{ animationDelay: "150ms" }}>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center gap-2">
-              <div className="relative">
-                <Bot className="h-4 w-4 text-primary" />
-                <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-primary animate-pulse" />
-              </div>
-              <span className="neon-text">Assistente IA</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <AITaskAssistant
-              ref={aiRef}
-              alwaysOpen
-              contextChips={buildAIChips()}
-              context={{
-                projects: projects.map((p) => ({
-                  id: p.id, name: p.name, artist: p.artist, stage: p.stage,
-                  mixPercent: getMixPercent(p.id), projectType: p.projectType,
-                  totalContractValue: p.totalContractValue, amountPaid: p.amountPaid,
-                  estimatedMonths: p.estimatedMonths,
-                })),
-                activeTasks: activeTasks.map((t) => ({ description: t.description, source: t.source, dueDate: t.dueDate })),
-                financials,
-                professionals: professionals.map((p) => ({ name: p.name, specialty: p.specialty, bio: p.bio ?? "", active: true, phone: p.phone ?? "" })),
-              }}
-              onAddTask={async (description, projectId) => {
-                const validProjectId = projectId && projects.some((p) => p.id === projectId) ? projectId : null;
-                const result = await addTask({ description, projectId: validProjectId, source: "manual" });
-                if (!result) await addTask({ description, projectId: null, source: "manual" });
-              }}
-              conversations={conversations}
-              activeConversationId={activeConversationId}
-              savedMessages={savedMessages}
-              loadingMessages={loadingMessages}
-              onCreateConversation={createConversation}
-              onSaveMessage={saveMessage}
-              onSelectConversation={setActiveConversationId}
-              onNewConversation={startNewConversation}
-              onDeleteConversation={deleteConversation}
-              onRenameConversation={renameConversation}
-            />
-          </CardContent>
-        </Card>
+        <ProjectAlertsCard alerts={alerts} hidden={isFirstRun} />
       </div>
+
+      {/* 2. Projetos com score de saúde */}
+      <ProjectHealthList projects={projectsWithHealth} hidden={isFirstRun} />
+
+      {/* 3. Próximos lançamentos */}
+      <UpcomingReleases projects={projects} getMixPercent={getMixPercent} hidden={isFirstRun} />
+
+      {/* 4. Financeiro */}
+      <FinancialSummary financials={financials} isSimpleMode={isSimpleMode} />
 
       {!isSimpleMode && <RecentTransactions transactions={transactions} />}
 
-      <UpcomingReleases projects={projects} getMixPercent={getMixPercent} hidden={isFirstRun} />
+      {/* 5. AI Assistant */}
+      <Card className={cn("glass-card animate-fade-in border-primary/20", isFirstRun && "hidden")} style={{ animationDelay: "150ms" }}>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base flex items-center gap-2">
+            <div className="relative">
+              <Bot className="h-4 w-4 text-primary" />
+              <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-primary animate-pulse" />
+            </div>
+            <span className="neon-text">Assistente IA</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <AITaskAssistant
+            ref={aiRef}
+            alwaysOpen
+            contextChips={buildAIChips()}
+            context={{
+              projects: projects.map((p) => ({
+                id: p.id, name: p.name, artist: p.artist, stage: p.stage,
+                mixPercent: getMixPercent(p.id), projectType: p.projectType,
+                totalContractValue: p.totalContractValue, amountPaid: p.amountPaid,
+                estimatedMonths: p.estimatedMonths,
+              })),
+              activeTasks: activeTasks.map((t) => ({ description: t.description, source: t.source, dueDate: t.dueDate })),
+              financials,
+              professionals: professionals.map((p) => ({ name: p.name, specialty: p.specialty, bio: p.bio ?? "", active: true, phone: p.phone ?? "" })),
+              alerts: alerts.slice(0, 10).map((a) => ({ title: a.title, severity: a.severity, project: a.projectName, category: a.category })),
+            }}
+            onAddTask={async (description, projectId) => {
+              const validProjectId = projectId && projects.some((p) => p.id === projectId) ? projectId : null;
+              const result = await addTask({ description, projectId: validProjectId, source: "manual" });
+              if (!result) await addTask({ description, projectId: null, source: "manual" });
+            }}
+            conversations={conversations}
+            activeConversationId={activeConversationId}
+            savedMessages={savedMessages}
+            loadingMessages={loadingMessages}
+            onCreateConversation={createConversation}
+            onSaveMessage={saveMessage}
+            onSelectConversation={setActiveConversationId}
+            onNewConversation={startNewConversation}
+            onDeleteConversation={deleteConversation}
+            onRenameConversation={renameConversation}
+          />
+        </CardContent>
+      </Card>
     </div>
   );
 }
