@@ -1,19 +1,15 @@
-import { useState, useRef, useEffect, KeyboardEvent } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useProjects } from "@/contexts/ProjectContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useProjectChat } from "@/hooks/useProjectChat";
 import {
-  ChevronLeft, Music2, Pencil, MessageSquare, Send, Lock,
+  ChevronLeft, Music2, Pencil, MessageSquare,
   LayoutDashboard, Users, ListChecks, DollarSign, Rocket, FolderOpen,
 } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
-import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 
 import ProjectOverviewTab from "@/components/project-hub/ProjectOverviewTab";
