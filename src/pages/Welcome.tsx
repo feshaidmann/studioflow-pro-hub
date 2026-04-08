@@ -7,146 +7,29 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/contexts/ProfileContext";
 import { toast } from "sonner";
 import {
-  DashboardMockup,
-  ProjectsMockup,
-  MasterAnalyzerMockup,
-  FinancialMockup,
-  AgendaMockup,
-  MusicDNAMockup,
-} from "@/components/TutorialMockups";
-import {
-  FolderKanban,
-  Activity,
-  DollarSign,
-  ArrowRight,
-  Users,
-  LogIn,
-  Mic2,
-  CalendarDays,
-  LayoutDashboard,
-  Sparkles,
-  AlertTriangle,
-  Dna,
+  FolderKanban, DollarSign, ArrowRight, Users, LogIn, Mic2,
+  CalendarDays, Sparkles, AlertTriangle, CheckCircle2, XCircle,
+  Rocket, Clock, FileCheck, Shield,
 } from "lucide-react";
 
-/* ── AI Mockup ── */
-function AIMockup() {
-  const messages = [
-    { role: "assistant", text: "Olá! Sou seu assistente de produção musical. Como posso ajudar?" },
-    { role: "user", text: "Qual projeto está mais atrasado?" },
-    { role: "assistant", text: "Summer Vibes está em 72% há 6 dias sem atualização. Quer que eu crie uma tarefa de revisão?" },
-    { role: "user", text: "Meu LUFS está em –10. Está ok para Spotify?" },
-    { role: "assistant", text: "–10 LUFS está acima do ideal. O Spotify normaliza para –14 LUFS, então sua faixa pode soar mais baixa que as outras. Recomendo masterizar entre –14 e –9 LUFS integrado." },
-  ];
-
-  return (
-    <div className="rounded-lg border border-dashed border-primary/30 bg-background/60 overflow-hidden">
-      <div className="flex items-center gap-2 px-3 py-1.5 bg-muted/40 border-b border-border/40">
-        <div className="flex gap-1">
-          <span className="h-2 w-2 rounded-full bg-destructive/60" />
-          <span className="h-2 w-2 rounded-full bg-warning/60" />
-          <span className="h-2 w-2 rounded-full bg-success/60" />
-        </div>
-        <Sparkles className="h-2.5 w-2.5 text-primary" />
-        <span className="text-[10px] text-muted-foreground font-medium">Assistente IA</span>
-      </div>
-      <div className="p-3 space-y-2 text-[11px]">
-        {messages.map((m, i) => (
-          <div
-            key={i}
-            className={`flex gap-2 ${m.role === "user" ? "justify-end" : "justify-start"}`}
-          >
-            {m.role === "assistant" && (
-              <div className="h-5 w-5 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center shrink-0 mt-0.5">
-                <Sparkles className="h-2.5 w-2.5 text-primary" />
-              </div>
-            )}
-            <div
-              className={`rounded-lg px-2.5 py-1.5 max-w-[80%] leading-relaxed ${
-                m.role === "user"
-                  ? "bg-primary/10 text-foreground border border-primary/20"
-                  : "bg-card/80 text-foreground border border-border/40"
-              }`}
-            >
-              {m.text}
-            </div>
-          </div>
-        ))}
-        <div className="flex gap-1.5 pt-1">
-          {["Criar tarefa", "Ver projeto", "Explicar LUFS"].map((chip) => (
-            <span
-              key={chip}
-              className="rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[9px] text-primary font-medium"
-            >
-              {chip}
-            </span>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-const previewTabs = [
-  { id: "ai", label: "IA", icon: Sparkles, component: AIMockup, accent: "text-primary", activeBg: "bg-primary/15 border-primary/30" },
-  { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, component: DashboardMockup, accent: "text-primary", activeBg: "bg-primary/15 border-primary/30" },
-  { id: "projects", label: "Projetos", icon: FolderKanban, component: ProjectsMockup, accent: "text-primary", activeBg: "bg-primary/15 border-primary/30" },
-  { id: "dna", label: "DNA Musical", icon: Dna, component: MusicDNAMockup, accent: "text-primary", activeBg: "bg-primary/15 border-primary/30" },
-  { id: "master", label: "Master", icon: Activity, component: MasterAnalyzerMockup, accent: "text-primary", activeBg: "bg-primary/15 border-primary/30" },
-  { id: "finance", label: "Finanças", icon: DollarSign, component: FinancialMockup, accent: "text-[hsl(var(--success))]", activeBg: "bg-[hsl(var(--success)/0.1)] border-[hsl(var(--success)/0.2)]" },
-  { id: "agenda", label: "Agenda", icon: CalendarDays, component: AgendaMockup, accent: "text-sky-500", activeBg: "bg-sky-500/10 border-sky-500/20" },
+/* ── Features reposicionadas para gestão operacional ── */
+const features = [
+  { text: "Organize seu lançamento do rascunho à distribuição.", icon: Rocket, accent: "from-primary/15 to-primary/5", iconColor: "text-primary", highlight: true },
+  { text: "Nunca mais perca um prazo de entrega ou gravação.", icon: Clock, accent: "from-primary/15 to-primary/5", iconColor: "text-primary", highlight: true },
+  { text: "Controle equipe, cachês e custos por projeto.", icon: Users, accent: "from-[hsl(var(--warning)/0.15)] to-[hsl(var(--warning)/0.05)]", iconColor: "text-[hsl(var(--warning))]", highlight: false },
+  { text: "Finanças claras: quanto gastou e o que falta.", icon: DollarSign, accent: "from-[hsl(var(--success)/0.15)] to-[hsl(var(--success)/0.05)]", iconColor: "text-[hsl(var(--success))]", highlight: false },
+  { text: "Arquivos organizados: stems, mixes, capas e contratos.", icon: FileCheck, accent: "from-primary/15 to-primary/5", iconColor: "text-primary", highlight: false },
+  { text: "Agenda integrada com shows, ensaios e deadlines.", icon: CalendarDays, accent: "from-sky-500/15 to-sky-500/5", iconColor: "text-sky-500", highlight: false },
+  { text: "IA que avisa o que está travando seu projeto.", icon: Sparkles, accent: "from-primary/15 to-primary/5", iconColor: "text-primary", highlight: false },
 ];
 
-const features = [
-  {
-    solution: "IA que responde sobre projetos, finanças, mixagem e agenda — a qualquer hora.",
-    icon: Sparkles,
-    accent: "from-primary/15 to-primary/5",
-    iconColor: "text-primary",
-    highlight: true,
-  },
-  {
-    solution: "Projetos com BPM, tom, estágio e progresso de mix.",
-    icon: FolderKanban,
-    accent: "from-primary/15 to-primary/5",
-    iconColor: "text-primary",
-    highlight: false,
-  },
-  {
-    solution: "DNA Musical: diagnóstico técnico e artístico por IA a partir do áudio.",
-    icon: Dna,
-    accent: "from-primary/15 to-primary/5",
-    iconColor: "text-primary",
-    highlight: true,
-  },
-  {
-    solution: "Master Analyzer checa LUFS e True Peak no padrão Spotify.",
-    icon: Activity,
-    accent: "from-primary/15 to-primary/5",
-    iconColor: "text-primary",
-    highlight: false,
-  },
-  {
-    solution: "Cachês, shows e custos por projeto. Margem em tempo real.",
-    icon: DollarSign,
-    accent: "from-[hsl(var(--success)/0.15)] to-[hsl(var(--success)/0.05)]",
-    iconColor: "text-[hsl(var(--success))]",
-    highlight: false,
-  },
-  {
-    solution: "Cadastre parceiros, convide para projetos e avalie cada um.",
-    icon: Users,
-    accent: "from-[hsl(var(--warning)/0.15)] to-[hsl(var(--warning)/0.05)]",
-    iconColor: "text-[hsl(var(--warning))]",
-    highlight: false,
-  },
-  {
-    solution: "Shows, gravações e prazos integrados à agenda.",
-    accent: "from-sky-500/15 to-sky-500/5",
-    iconColor: "text-sky-500",
-    icon: CalendarDays,
-    highlight: false,
-  },
+/* ── Antes vs Depois ── */
+const comparison = [
+  { before: "Conversas soltas no WhatsApp", after: "Chat do projeto com tarefas vinculadas" },
+  { before: "Planilha de custos genérica", after: "Financeiro por projeto e por faixa" },
+  { before: "Prazos esquecidos", after: "Alertas automáticos de risco" },
+  { before: "Arquivos espalhados em pastas", after: "Central de arquivos por etapa" },
+  { before: "Sem saber se está pronto pra lançar", after: "Checklist de lançamento completo" },
 ];
 
 export default function Welcome() {
@@ -154,8 +37,6 @@ export default function Welcome() {
   const { needsProfileSetup } = useProfile();
   const { t } = useLanguage();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState("ai");
-  const ActiveMockup = previewTabs.find((t) => t.id === activeTab)?.component ?? AIMockup;
 
   if (loading) return <div className="flex items-center justify-center min-h-screen"><div className="animate-pulse text-muted-foreground">{t("misc.loading")}</div></div>;
   if (user && needsProfileSetup) return <Navigate to="/onboarding" replace />;
@@ -165,19 +46,15 @@ export default function Welcome() {
     const { error } = await lovable.auth.signInWithOAuth("google", {
       redirect_uri: window.location.origin,
     });
-    if (error) {
-      toast.error("Erro ao entrar com Google. Tente novamente.");
-    }
+    if (error) toast.error("Erro ao entrar com Google. Tente novamente.");
   };
 
   return (
     <div className="relative min-h-screen overflow-x-hidden bg-background">
-      {/* ── BETA BANNER ── */}
+      {/* BETA BANNER */}
       <div className="fixed top-0 inset-x-0 z-50 flex items-center justify-center gap-2 bg-card/80 backdrop-blur-xl border-b border-border/60 px-4 py-1.5">
         <AlertTriangle className="h-3 w-3 text-warning shrink-0" />
-        <p className="text-[11px] text-muted-foreground font-medium">
-          {t("welcome.beta")}
-        </p>
+        <p className="text-[11px] text-muted-foreground font-medium">{t("welcome.beta")}</p>
       </div>
 
       <div className="relative z-10 flex flex-col items-center px-5 pb-16 pt-20 md:px-12 md:pt-28">
@@ -185,86 +62,74 @@ export default function Welcome() {
         {/* ── HERO ── */}
         <section className="w-full max-w-xl text-center animate-fade-in">
           <div className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-[11px] font-medium text-primary mb-5">
-            <Sparkles className="h-3 w-3" />
-            {t("welcome.badge")}
+            <Rocket className="h-3 w-3" />
+            Gestão completa para artistas independentes
           </div>
 
           <h1 className="text-4xl md:text-5xl font-semibold leading-tight tracking-tight text-foreground">
             StudioFlow
           </h1>
 
-          <p className="mt-4 text-muted-foreground text-sm md:text-base max-w-sm mx-auto leading-relaxed">
-            {t("welcome.subtitle")}{" "}
-            <span className="text-foreground font-medium">{t("welcome.subtitleBold")}</span>
-            {" "}{t("welcome.with")}{" "}
-            <span className="text-primary font-semibold">{t("welcome.subtitleAI")}</span>.
+          <p className="mt-4 text-muted-foreground text-sm md:text-base max-w-md mx-auto leading-relaxed">
+            Organize seu lançamento, controle prazos e custos, e pare de perder tempo com planilha e WhatsApp.
           </p>
         </section>
 
         {/* ── FEATURES ── */}
-        <section className="mt-8 w-full max-w-2xl animate-fade-in" style={{ animationDelay: "150ms" }}>
+        <section className="mt-8 w-full max-w-2xl animate-fade-in" style={{ animationDelay: "100ms" }}>
           <p className="text-center text-xs text-muted-foreground font-medium mb-5 uppercase tracking-wider">
             {t("welcome.featuresLabel")}
           </p>
-
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5">
             {features.map((item, i) => (
               <div
                 key={i}
-                className={`glass-card rounded-xl p-3 flex flex-col items-center gap-2 text-center animate-fade-in ${
-                  item.highlight ? "border border-primary/20 shadow-sm" : ""
-                }`}
-                style={{ animationDelay: `${150 + i * 60}ms` }}
+                className={`glass-card rounded-xl p-3 flex flex-col items-center gap-2 text-center animate-fade-in ${item.highlight ? "border border-primary/20 shadow-sm" : ""}`}
+                style={{ animationDelay: `${100 + i * 50}ms` }}
               >
                 <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br ${item.accent}`}>
                   <item.icon className={`h-4 w-4 ${item.iconColor}`} />
                 </div>
-                <p className="text-xs text-foreground leading-snug">
-                  {item.solution}
-                </p>
+                <p className="text-xs text-foreground leading-snug">{item.text}</p>
               </div>
             ))}
           </div>
         </section>
 
-        {/* ── APP PREVIEW ── */}
-        <section className="mt-10 w-full max-w-2xl animate-fade-in" style={{ animationDelay: "550ms" }}>
-          <p className="text-center text-xs text-muted-foreground font-medium mb-4 uppercase tracking-wider">
-            {t("welcome.previewLabel")}
-          </p>
+        {/* ── SEÇÃO "FEITO PARA QUEM USA WHATSAPP E PLANILHA" ── */}
+        <section className="mt-10 w-full max-w-xl animate-fade-in" style={{ animationDelay: "300ms" }}>
+          <div className="glass-card rounded-2xl p-6 border border-border/40">
+            <div className="flex items-center gap-2 mb-4">
+              <Shield className="h-4 w-4 text-primary" />
+              <p className="text-sm font-semibold text-foreground">
+                Feito para quem hoje usa WhatsApp e planilha
+              </p>
+            </div>
+            <p className="text-xs text-muted-foreground mb-5 leading-relaxed">
+              Você não precisa aprender uma ferramenta complexa. Comece com o básico e ative mais quando precisar.
+            </p>
 
-          {/* Tab bar */}
-          <div className="flex gap-1.5 overflow-x-auto pb-1 mb-3 scrollbar-none justify-center flex-wrap">
-            {previewTabs.map((tab) => {
-              const Icon = tab.icon;
-              const active = tab.id === activeTab;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all border ${
-                    active
-                      ? `${tab.activeBg} ${tab.accent}`
-                      : "bg-muted/40 text-muted-foreground border-border/30 hover:text-foreground hover:bg-muted/60"
-                  }`}
-                >
-                  <Icon className="h-3 w-3" />
-                  {tab.label}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Mockup container */}
-          <div className="glass-card rounded-2xl overflow-hidden border border-border/40 transition-all duration-300">
-            <div key={activeTab} className="pointer-events-none animate-fade-in">
-              <ActiveMockup />
+            {/* Antes vs Depois */}
+            <div className="space-y-2">
+              {comparison.map((item, i) => (
+                <div key={i} className="flex items-start gap-3 text-xs">
+                  <div className="flex items-center gap-1.5 w-[45%] shrink-0">
+                    <XCircle className="h-3.5 w-3.5 text-destructive/60 shrink-0" />
+                    <span className="text-muted-foreground line-through">{item.before}</span>
+                  </div>
+                  <ArrowRight className="h-3 w-3 text-muted-foreground/40 shrink-0 mt-0.5" />
+                  <div className="flex items-center gap-1.5">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-[hsl(var(--success))] shrink-0" />
+                    <span className="text-foreground font-medium">{item.after}</span>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </section>
 
-        {/* ── CTA ── */}
-        <section className="mt-8 w-full max-w-sm animate-fade-in" style={{ animationDelay: "700ms" }}>
+        {/* ── CTA DUPLA ── */}
+        <section className="mt-8 w-full max-w-sm animate-fade-in" style={{ animationDelay: "500ms" }}>
           <div className="glass-card rounded-2xl px-6 py-7 flex flex-col items-center gap-4 text-center">
             <div>
               <p className="text-sm font-semibold text-foreground leading-snug">
@@ -279,7 +144,7 @@ export default function Welcome() {
                 className="active:scale-95 transition-transform gap-2 text-sm font-semibold w-full"
               >
                 <Mic2 className="h-4 w-4" />
-                {t("welcome.ctaEmail")}
+                Começar simples
                 <ArrowRight className="h-4 w-4" />
               </Button>
               <Button
