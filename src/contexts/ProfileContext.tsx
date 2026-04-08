@@ -89,6 +89,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   const userType: UserType = profile?.user_type ?? "artist";
   const displayName = profile?.display_name || user?.email?.split("@")[0] || "";
   const trackViewMode: TrackViewMode = profile?.track_view_mode ?? "basic";
+  const isSimpleMode = trackViewMode === "basic";
   const plan: UserPlan = (profile?.plan as UserPlan) ?? "pro";
   // MVP validation phase: all users have Pro access
   const isPro = true;
