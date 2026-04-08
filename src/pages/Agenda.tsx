@@ -259,6 +259,35 @@ export default function Agenda() {
         </Card>
       )}
 
+      {/* Preparation alerts */}
+      {unpreparedEvents.length > 0 && (
+        <Card className="glass-card border-amber-400/20 animate-fade-in">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Info className="h-4 w-4 text-amber-400" />
+              <p className="text-sm font-semibold">Eventos sem preparação</p>
+              <Badge variant="secondary" className="text-[10px]">{unpreparedEvents.length}</Badge>
+            </div>
+            <p className="text-xs text-muted-foreground mb-2">
+              Estes eventos acontecem nos próximos 3 dias e não possuem descrição ou checklist.
+            </p>
+            <div className="space-y-1">
+              {unpreparedEvents.map((ev) => (
+                <div key={ev.id} className="flex items-center gap-2 text-xs px-2 py-1.5 rounded-md hover:bg-muted/30 transition-colors cursor-pointer"
+                  onClick={() => { setEditEvent(ev); setFormOpen(true); }}
+                >
+                  <AlertTriangle className="h-3.5 w-3.5 text-amber-400 shrink-0" />
+                  <span className="font-medium truncate flex-1">{ev.title}</span>
+                  <span className="text-muted-foreground">
+                    {format(parseISO(ev.startDatetime), "dd/MM")}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Event list */}
       {loading ? (
         <div className="flex items-center justify-center py-16 text-muted-foreground">
