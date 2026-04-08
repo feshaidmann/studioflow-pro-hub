@@ -1,155 +1,117 @@
 
 
-# Diagnóstico Tecnico e Plano da Fase 1 — StudioFlow Pro
+# Fase 1 — Novo Onboarding Orientado ao Uso
 
----
+## Objetivo
+Substituir o onboarding atual (4 passos genéricos: nome, projeto, modo, resumo) por um fluxo de 6 passos que ativa o usuário no uso real do produto — coletando momento, tipo de projeto, modo, maior dor, identidade, e criando automaticamente o primeiro projeto. Ao final, redirecionar para `/projects/:id` em vez de `/dashboard`.
 
-## 1. Diagnostico da Base Atual
+## Diagnóstico da base atual
 
-### Arquitetura
-- **Frontend**: React 18 + TypeScript + Vite 5 + Tailwind CSS v3
-- **Backend**: Lovable Cloud (Supabase) com 22 tabelas, RLS configurado, 8 Edge Functions
-- **Contextos**: AuthContext, ProfileContext, ProjectContext, LanguageContext
-- **Rotas**: 18 rotas (8 protegidas dentro de AppLayout)
+**O que já funciona e será preservado:**
+- `ProfileContext` com `updateProfile`, `needsProfileSetup`, `isSimpleMode`
+- `ProjectContext.addProject()` retorna `Project | null` (com `id`)
+- Rota `/onboarding` já existe no `App.tsx`
+- Guard `ProtectedRoute` redireciona para `/onboarding` se `needsProfileSetup`
+- Flag `onboarding_completed` na tabela `profiles` (server-side)
+- Trigger `handle_new_user` cria profile automaticamente
 
-### Pontos Fortes (preservar)
-- RLS bem implementado em todas as tabelas
-- Sistema de tarefas automáticas com regras configuráveis
-- Onboarding com flag server-side (`onboarding_completed`)
-- Assistente IA integrado ao Dashboard com contexto dos projetos
-- Chat de projeto em tempo real
-- Workflow de 6 etapas com progressão visual
+**O que precisa mudar:**
+- `profiles` precisa de 3 novos campos: `current_moment`, `main_pain`, `onboarding_version`
+- `track_view_mode` já serve como `preferred_mode` — sem campo novo
+- `Onboarding.tsx` será reescrito com 6 steps
+- `ProfileContext` precisa incluir os novos campos no select e no tipo
 
-### Problemas Identificados
-| Area | Problema |
-|------|----------|
-| **Onboarding** | 3 passos genéricos (nome, especialidades, visibilidade). Não orienta o uso real da plataforma. |
-| **Dashboard** | Arquivo monolítico (911 linhas). Mistura KPIs, checklist, projetos, transações e IA em um unico componente. |
-| **Projects.tsx** | 1097 linhas. Combina listagem, criação, edição, equipe, convites, finanças e master analyzer em uma unica pagina. |
-| **ProjectDetail.tsx** | Muito simples — mostra apenas timeline + chat. Sem abas, sem tarefas, sem finanças do projeto. |
-| **Modo simples/avançado** | `track_view_mode` existe no perfil mas so afeta a visão de tracks, não a complexidade geral da interface. |
-| **ProjectContext** | 563 linhas, acumula projetos, tracks, profissionais e transações. |
+## Migration necessária
 
----
-
-## 2. Arquitetura Proposta — Fase 1
-
-### 2.1 Novo Onboarding Orientado ao Uso
-
-**Objetivo**: Guiar o artista a criar seu primeiro projeto real durante o onboarding.
-
-**Fluxo proposto** (4 passos):
-1. **Identidade** — nome, cidade (manter atual)
-2. **Primeiro Projeto** — nome do projeto, tipo (single/EP/album), etapa atual
-3. **Modo de uso** — escolher entre "Simples" (oculta tracks avançadas, financeiro resumido) ou "Completo" (tudo visível)
-4. **Pronto** — resumo + entrar
-
-**Alterações**:
-- `src/pages/Onboarding.tsx` — adicionar steps 2 (projeto) e 3 (modo), remover step de especialidades (mover para Settings)
-- `profiles` table — reutilizar `track_view_mode` renomeando conceitualmente para representar o "modo" (basic = simples, advanced = completo). Sem migration necessária.
-
-### 2.2 Dashboard Mais Acionável
-
-**Objetivo**: Reduzir ruído, priorizar ações. Componentizar.
-
-**Estrutura proposta**:
-```text
-Dashboard
-├── DashboardHeader (saudação + filtro + CTA)
-├── QuickActions (cards clicáveis: novo projeto, nova transação, agenda)
-├── ActiveProjectsList (projetos ativos com progresso)
-├── DailyChecklist (tarefas, já existe mas extraído)
-├── FinancialSummary (KPIs financeiros, extraído)
-└── AIAssistantCard (já existe, extraído)
+```sql
+ALTER TABLE public.profiles
+  ADD COLUMN IF NOT EXISTS current_moment text NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS main_pain text NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS onboarding_version integer NOT NULL DEFAULT 1;
 ```
 
-**Alterações**:
-- Criar `src/components/dashboard/` com 5-6 componentes extraídos do Dashboard.tsx
-- `src/pages/Dashboard.tsx` — reduzir para ~150 linhas, orquestrar sub-componentes
-- Modo simples: ocultar KPIs de margem e transações recentes
-- Modo completo: tudo visível (comportamento atual)
+Justificativa: campos com defaults vazios, sem quebrar registros existentes. `onboarding_version` permite distinguir usuários do onboarding antigo vs novo.
 
-### 2.3 Project Hub com Abas (preparação)
+## Arquivos que serão alterados
 
-**Objetivo**: Transformar ProjectDetail em hub central do projeto, com abas.
+| Arquivo | Mudança |
+|---------|---------|
+| `src/pages/Onboarding.tsx` | Reescrever com 6 steps (momento, tipo, modo, dor, identidade, confirmação) |
+| `src/contexts/ProfileContext.tsx` | Adicionar `current_moment`, `main_pain`, `onboarding_version` ao tipo Profile e ao select |
 
-**Abas propostas**:
-1. **Visão Geral** — timeline de progresso + resumo (atual)
-2. **Equipe** — membros, convites (extrair de Projects.tsx)
-3. **Chat** — chat em tempo real (atual, já existe)
-4. **Tarefas** — checklist filtrado por projeto (reutilizar useTasks)
-5. **Finanças** — receitas/despesas do projeto (extrair de Projects.tsx)
+## Arquivos que serão criados
 
-**Alterações**:
-- `src/pages/ProjectDetail.tsx` — adicionar sistema de Tabs, mover conteúdo existente para aba "Visão Geral"
-- Criar `src/components/project-hub/` com:
-  - `ProjectOverviewTab.tsx`
-  - `ProjectTeamTab.tsx`
-  - `ProjectTasksTab.tsx`
-  - `ProjectFinanceTab.tsx`
-- `src/pages/Projects.tsx` — simplificar, remover blocos de equipe/finanças que migram para o hub
+Nenhum novo arquivo. Evolução incremental do existente.
 
----
+## Hooks/contexts afetados
 
-## 3. Arquivos a Alterar/Criar
+- `ProfileContext` — tipo Profile expandido, select ampliado
+- `ProjectContext` — apenas consumido (addProject), sem alteração
 
-### Alterar
-| Arquivo | Escopo da Alteração |
-|---------|-------------------|
-| `src/pages/Onboarding.tsx` | Adicionar steps de projeto e modo |
-| `src/pages/Dashboard.tsx` | Extrair sub-componentes, respeitar modo |
-| `src/pages/ProjectDetail.tsx` | Adicionar Tabs, integrar sub-componentes |
-| `src/pages/Projects.tsx` | Remover blocos que migram para hub |
-| `src/contexts/ProfileContext.tsx` | Expor helper `isSimpleMode` baseado em `track_view_mode` |
-| `src/components/AppLayout.tsx` | Nenhuma alteração na Fase 1 |
+## Tabelas afetadas
 
-### Criar
-| Arquivo | Proposito |
-|---------|-----------|
-| `src/components/dashboard/DashboardHeader.tsx` | Header com saudação e filtro |
-| `src/components/dashboard/QuickActions.tsx` | Cards de ação rapida |
-| `src/components/dashboard/ActiveProjectsList.tsx` | Lista de projetos ativos |
-| `src/components/dashboard/DailyChecklist.tsx` | Checklist extraído |
-| `src/components/dashboard/FinancialSummary.tsx` | KPIs financeiros |
-| `src/components/dashboard/AIAssistantCard.tsx` | Card do assistente IA |
-| `src/components/project-hub/ProjectOverviewTab.tsx` | Aba visão geral |
-| `src/components/project-hub/ProjectTeamTab.tsx` | Aba equipe |
-| `src/components/project-hub/ProjectTasksTab.tsx` | Aba tarefas do projeto |
-| `src/components/project-hub/ProjectFinanceTab.tsx` | Aba finanças do projeto |
+- `profiles` — 3 novos campos (migration)
 
----
-
-## 4. Tabelas/Campos — Alterações
-
-**Nenhuma migration necessária na Fase 1.** Justificativa:
-- `track_view_mode` ('basic'/'advanced') já existe em `profiles` e será reutilizado para o conceito de modo simples/completo
-- O onboarding já cria o projeto via `ProjectContext.addProject()` existente
-- Tarefas por projeto já filtram por `project_id` na tabela `tasks`
-
----
-
-## 5. Ordem de Implementação
-
-| Etapa | Entrega | Risco |
-|-------|---------|-------|
-| **1** | `ProfileContext` — adicionar `isSimpleMode` | Nenhum, é aditivo |
-| **2** | Extrair componentes do Dashboard para `src/components/dashboard/` | Baixo — refactor puro, sem mudança funcional |
-| **3** | Recompor `Dashboard.tsx` usando sub-componentes + modo simples/completo | Medio — testar que nada quebrou |
-| **4** | Atualizar `Onboarding.tsx` com novos steps | Baixo — pagina isolada |
-| **5** | Criar componentes em `src/components/project-hub/` | Baixo — novos arquivos |
-| **6** | Atualizar `ProjectDetail.tsx` com Tabs | Medio — muda UX existente |
-| **7** | Simplificar `Projects.tsx` (remover blocos migrados) | Alto — pagina complexa, testar regressão |
-
----
-
-## 6. Riscos e Cuidados
+## Riscos de regressão
 
 | Risco | Mitigação |
 |-------|-----------|
-| Quebrar Dashboard ao extrair componentes | Fazer extração 1 componente por vez, testar entre cada um |
-| Perder estado do checklist de first-run (localStorage) | Manter mesma key `sfp_onboarding_done` |
-| Onboarding criar projeto sem dados suficientes | Validar nome do projeto como obrigatório; tipo default "single" |
-| ProjectDetail com tabs pode confundir guests (membros convidados) | Guests veem apenas abas "Visão Geral" e "Chat" |
-| Projects.tsx muito grande para refatorar de uma vez | Na Fase 1, apenas extrair equipe/finanças para hub; manter listagem e criação em Projects.tsx |
-| `track_view_mode` sendo usado em outros lugares | Verificar que nenhum componente depende do valor para lógica critica além de exibição de tracks |
+| Campos novos quebrarem upsert existente | Defaults NOT NULL com valor vazio — sem impacto |
+| Select do ProfileContext não incluir campos novos | Adicionar explicitamente ao select |
+| Usuários que já completaram onboarding v1 | `onboarding_completed` já é true — não serão afetados |
+| Redirect para projeto inexistente se addProject falhar | Fallback para `/dashboard` |
+
+## Estratégia de implementação (3 blocos sequenciais)
+
+1. **Migration** — adicionar 3 campos ao profiles
+2. **ProfileContext** — expandir tipo e select
+3. **Onboarding.tsx** — reescrever com 6 steps
+
+## Novo fluxo do onboarding (6 steps)
+
+```text
+Step 1: Momento atual
+  - "Tenho uma ideia" → stage: inicio
+  - "Já estou produzindo" → stage: gravacao
+  - "Tenho música pronta" → stage: master
+  - "Quero lançar" → stage: upload
+
+Step 2: Tipo de projeto
+  - Single / EP / Álbum
+
+Step 3: Modo de uso
+  - Simples (basic) / Completo (advanced)
+
+Step 4: Maior dificuldade
+  - Organização / Equipe / Prazos / Financeiro / Lançamento
+
+Step 5: Identidade
+  - Nome artístico (pré-preenchido do email)
+  - Cidade (opcional)
+
+Step 6: Confirmação + criar projeto automático
+  - Resumo visual
+  - Botão "Começar" → cria projeto + salva perfil → redireciona para /projects/:id
+```
+
+## Comportamento detalhado do Step 6 (confirmação)
+
+- Projeto criado automaticamente com:
+  - `name`: baseado no tipo ("Meu Single", "Meu EP", "Meu Álbum")
+  - `artist`: nome artístico informado
+  - `stage`: mapeado do momento escolhido
+  - `projectType`: tipo escolhido
+- Profile atualizado com: `display_name`, `city`, `track_view_mode`, `current_moment`, `main_pain`, `onboarding_version: 2`, `onboarding_completed: true`
+- Redirect: `/projects/:newProjectId`
+- Fallback se projeto falhar: redirect para `/dashboard`
+
+## Critérios de aceite
+
+1. Novo usuário vê 6 steps claros com progress bar
+2. Momento, tipo, modo e dor são selecionáveis via cards (sem inputs de texto desnecessários)
+3. Projeto é criado automaticamente ao confirmar
+4. Perfil salva todos os campos novos
+5. Redirect pós-onboarding vai para o projeto criado
+6. Usuários existentes (onboarding v1) não são impactados
+7. Build compila sem erros TypeScript
 
