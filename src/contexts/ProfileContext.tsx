@@ -103,7 +103,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
 
   return (
     <ProfileContext.Provider
-      value={{ profile, userType, displayName, trackViewMode, plan, isPro, loading, needsProfileSetup, updateProfile, refreshProfile: fetchProfile }}
+      value={{ profile, userType, displayName, trackViewMode, isSimpleMode, plan, isPro, loading, needsProfileSetup, updateProfile, refreshProfile: fetchProfile }}
     >
       {children}
     </ProfileContext.Provider>
