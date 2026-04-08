@@ -75,6 +75,14 @@ interface ProfMetrics {
   ratingCount: number;
   lastActivity: string | null;
   platformProjectCount: number;
+  collaborationHistory: Array<{
+    projectName: string;
+    completed: boolean;
+    role: string;
+    fee: number;
+    deliveryStatus: string;
+    joinedAt: string;
+  }>;
 }
 
 export default function Professionals() {
