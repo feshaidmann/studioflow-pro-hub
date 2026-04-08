@@ -87,6 +87,7 @@ export default function DailyChecklist({
   const [completedOpen, setCompletedOpen] = useState(false);
   const [sourceFilter, setSourceFilter] = useState<string>("all");
   const [projectFilter, setProjectFilter] = useState<string>("all");
+  const [assigneeFilter, setAssigneeFilter] = useState<string>("all");
 
   const handleAddTask = async () => {
     if (!newTaskDesc.trim()) return;
