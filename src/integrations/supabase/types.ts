@@ -663,9 +663,11 @@ export type Database = {
       }
       project_invitations: {
         Row: {
+          accepted_at: string | null
           allow_global_listing: boolean | null
           created_at: string
           deadline: string
+          declined_at: string | null
           expires_at: string
           fee: number
           id: string
@@ -680,9 +682,11 @@ export type Database = {
           token: string
         }
         Insert: {
+          accepted_at?: string | null
           allow_global_listing?: boolean | null
           created_at?: string
           deadline?: string
+          declined_at?: string | null
           expires_at?: string
           fee?: number
           id?: string
@@ -697,9 +701,11 @@ export type Database = {
           token?: string
         }
         Update: {
+          accepted_at?: string | null
           allow_global_listing?: boolean | null
           created_at?: string
           deadline?: string
+          declined_at?: string | null
           expires_at?: string
           fee?: number
           id?: string
@@ -735,8 +741,10 @@ export type Database = {
           instrument: string
           invitation_id: string | null
           last_activity_at: string | null
+          member_type: string
           name: string
           notes: string
+          permissions_scope: string
           phone: string
           project_id: string
           role: string
@@ -754,8 +762,10 @@ export type Database = {
           instrument?: string
           invitation_id?: string | null
           last_activity_at?: string | null
+          member_type?: string
           name?: string
           notes?: string
+          permissions_scope?: string
           phone?: string
           project_id: string
           role?: string
@@ -773,8 +783,10 @@ export type Database = {
           instrument?: string
           invitation_id?: string | null
           last_activity_at?: string | null
+          member_type?: string
           name?: string
           notes?: string
+          permissions_scope?: string
           phone?: string
           project_id?: string
           role?: string
