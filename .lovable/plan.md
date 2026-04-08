@@ -142,7 +142,7 @@
 | Eventos/deadlines/vínculo com projeto | ✅ | |
 | Visão "próximos 7 dias" | ✅ | Padrão da página |
 | Deadlines de colaboradores | ✅ | Seção "Prazos da equipe" |
-| Alerta quando evento sem preparação | ❌ | |
+| Alerta quando evento sem preparação | ✅ | Card de alerta para eventos em 3 dias sem descrição |
 
 ## 12. Arquivos (Módulo)
 
