@@ -65,7 +65,10 @@ export default function ProjectDetail() {
     ? { id: ownerProject.id, name: ownerProject.name, artist: ownerProject.artist, stage: ownerProject.stage, completed: ownerProject.completed, projectType: ownerProject.projectType }
     : guestProject;
 
-  const progress = isOwner && ownerProject ? getMixPercent(ownerProject.id) : STAGE_PERCENT[project?.stage ?? "rough"] ?? 0;
+  const stageProgress = STAGE_PERCENT[project?.stage ?? "rough"] ?? 0;
+  const mixProgress = isOwner && ownerProject ? getMixPercent(ownerProject.id) : 0;
+  // Use the higher of stage-based or mix-based progress so the bar always reflects actual stage
+  const progress = Math.max(stageProgress, mixProgress);
 
   if (guestLoading) {
     return (
