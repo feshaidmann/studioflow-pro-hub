@@ -179,6 +179,25 @@ export default function DailyChecklist({
                 </SelectContent>
               </Select>
             )}
+
+            {/* Assignee filter */}
+            {(() => {
+              const assignees = Array.from(new Set(activeTasks.map((t) => t.assignedTo).filter(Boolean)));
+              if (assignees.length < 2) return null;
+              return (
+                <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
+                  <SelectTrigger className="h-6 w-[110px] text-[10px] border-border/40">
+                    <SelectValue placeholder="Responsável" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all" className="text-xs">Todos</SelectItem>
+                    {assignees.map((a) => (
+                      <SelectItem key={a} value={a} className="text-xs">{a}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              );
+            })()}
           </div>
         )}
 
