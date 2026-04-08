@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useProjectChat } from "@/hooks/useProjectChat";
 import {
   ChevronLeft, Music2, Pencil, MessageSquare, Send, Lock,
-  LayoutDashboard, Users, ListChecks, DollarSign,
+  LayoutDashboard, Users, ListChecks, DollarSign, Rocket,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -20,6 +20,7 @@ import ProjectOverviewTab from "@/components/project-hub/ProjectOverviewTab";
 import ProjectTeamTab from "@/components/project-hub/ProjectTeamTab";
 import ProjectTasksTab from "@/components/project-hub/ProjectTasksTab";
 import ProjectFinanceTab from "@/components/project-hub/ProjectFinanceTab";
+import ProjectReleaseTab from "@/components/project-hub/ProjectReleaseTab";
 
 const STAGE_PERCENT: Record<string, number> = {
   rough: 0, inicio: 5, gravacao: 25, mix: 55, master: 75, upload: 90, lancado: 100,
@@ -171,7 +172,7 @@ export default function ProjectDetail() {
 
       {/* ── Tabs ── */}
       <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="w-full grid grid-cols-5">
+        <TabsList className="w-full grid grid-cols-6">
           <TabsTrigger value="overview" className="gap-1 text-xs">
             <LayoutDashboard className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">Visão Geral</span>
@@ -196,6 +197,12 @@ export default function ProjectDetail() {
             <TabsTrigger value="finance" className="gap-1 text-xs">
               <DollarSign className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">Finanças</span>
+            </TabsTrigger>
+          )}
+          {isOwner && (
+            <TabsTrigger value="release" className="gap-1 text-xs">
+              <Rocket className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Lançamento</span>
             </TabsTrigger>
           )}
         </TabsList>
@@ -227,6 +234,12 @@ export default function ProjectDetail() {
         {isOwner && (
           <TabsContent value="finance">
             <ProjectFinanceTab projectId={project.id} />
+          </TabsContent>
+        )}
+
+        {isOwner && (
+          <TabsContent value="release">
+            <ProjectReleaseTab projectId={project.id} />
           </TabsContent>
         )}
       </Tabs>
