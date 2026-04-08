@@ -273,9 +273,9 @@ export default function InviteResponse() {
     return <StatusScreen accent="error" icon={<XCircle className="h-12 w-12 text-destructive" />} title="Erro ao processar" message="Tente novamente mais tarde ou entre em contato com o artista." />;
 
   if (pageState === "accepted") {
-    const projectPath = projectId ? `/projects?id=${projectId}` : "/projects";
+    const projectPath = projectId ? `/projects/${projectId}` : "/projects";
     const loginPath = projectId
-      ? `/auth?redirect=/projects%3Fid%3D${projectId}`
+      ? `/auth?redirect=/projects/${projectId}`
       : "/auth";
     return (
       <StatusScreen
