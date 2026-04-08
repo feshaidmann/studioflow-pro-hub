@@ -64,11 +64,11 @@ Deno.serve(async (req) => {
   // --- Profiles (non-admin only) ---
   const { data: profiles } = await adminClient
     .from("profiles")
-    .select("id, display_name, user_type, plan, created_at")
+    .select("id, display_name, user_type, plan, created_at, onboarding_completed, track_view_mode")
     .in("id", nonAdminIds.length > 0 ? nonAdminIds : ["00000000-0000-0000-0000-000000000000"]);
 
   const profileMap = new Map(
-    (profiles ?? []).map((p: { id: string; display_name: string; user_type: string; plan: string; created_at: string }) => [p.id, p])
+    (profiles ?? []).map((p: any) => [p.id, p])
   );
 
   // --- Total non-admin users ---
@@ -183,8 +183,7 @@ Deno.serve(async (req) => {
       };
     });
 
-  // --- Revenue estimate from subscriptions (based on plan counts) ---
-  // Pro plan price: R$ 49.90/month (configurable)
+  // --- Revenue estimate ---
   const PRO_PRICE_BRL = 49.9;
   const proUsers = planCounts["pro"] ?? 0;
   const estimatedMonthlyRevenue = proUsers * PRO_PRICE_BRL;
@@ -194,7 +193,7 @@ Deno.serve(async (req) => {
     { name: "Plano Pro", count: proUsers, price: PRO_PRICE_BRL },
   ];
 
-  // --- Activity last 30 days ---
+  // --- Activity & Engagement ---
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
   const thirtyDaysIso = thirtyDaysAgo.toISOString();
@@ -203,8 +202,6 @@ Deno.serve(async (req) => {
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
   const sevenDaysIso = sevenDaysAgo.toISOString();
 
-  // --- Engagement: logins last 7 days & active users ---
-  // "Active users" = users who created tasks, projects, transactions or events in last 7 days
   const [
     { data: recentTasksWeek },
     { data: recentProjectsWeek },
@@ -223,7 +220,6 @@ Deno.serve(async (req) => {
   }
   const activeUsersLast7Days = activeUserIds.size;
 
-  // Logins last 7 days via auth.users last_sign_in_at
   const loginsLast7Days = authUsers.filter((u) => {
     if (adminIds.has(u.id)) return false;
     if (!u.last_sign_in_at) return false;
@@ -259,7 +255,7 @@ Deno.serve(async (req) => {
 
   const activityTimeline = Object.values(dayMap);
 
-  // --- Infrastructure cost estimates (with real AI tracking) ---
+  // --- Infrastructure cost estimates ---
   const RESEND_COST_PER_EMAIL_USD = 0.001;
   const SUPABASE_ESTIMATED_USD = totalUsers > 50 ? 25 : 0;
 
@@ -274,15 +270,9 @@ Deno.serve(async (req) => {
     { name: "E-mails (Resend)", value: parseFloat(emailCostTotal.toFixed(4)), currency: "USD", note: `${totalInvitations ?? 0} convites enviados` },
   ];
 
-  // --- Edge functions list ---
   const edgeFunctions = [
-    "ai-task-assistant",
-    "audio-analyze",
-    "generate-daily-tasks",
-    "respond-to-invite",
-    "search-platform-professionals",
-    "send-project-invite",
-    "admin-stats",
+    "ai-task-assistant", "audio-analyze", "generate-daily-tasks",
+    "respond-to-invite", "search-platform-professionals", "send-project-invite", "admin-stats",
   ];
 
   // --- Function logs ---
@@ -291,6 +281,131 @@ Deno.serve(async (req) => {
     .select("id, created_at, function_name, level, message, details")
     .order("created_at", { ascending: false })
     .limit(50);
+
+  // ═══════════════════════════════════════════════
+  // ── PRODUCT ADOPTION METRICS ──
+  // ═══════════════════════════════════════════════
+
+  // 1) Onboarding completion rate
+  const onboardedUsers = (profiles ?? []).filter((p: any) => p.onboarding_completed === true).length;
+  const onboardingRate = totalUsers > 0 ? Math.round((onboardedUsers / totalUsers) * 100) : 0;
+
+  // 2) Simple vs Advanced mode usage
+  const basicModeUsers = (profiles ?? []).filter((p: any) => p.track_view_mode === "basic").length;
+  const advancedModeUsers = (profiles ?? []).filter((p: any) => p.track_view_mode === "advanced").length;
+
+  // 3) Projects created vs launched
+  const { data: allProjects } = await adminClient
+    .from("projects")
+    .select("id, user_id, stage, completed, created_at")
+    .in("user_id", nonAdminIds.length > 0 ? nonAdminIds : ["00000000-0000-0000-0000-000000000000"]);
+
+  const projectsCreatedTotal = allProjects?.length ?? 0;
+  const projectsLaunched = (allProjects ?? []).filter((p: any) => p.stage === "lancado" || p.completed === true).length;
+  const launchRate = projectsCreatedTotal > 0 ? Math.round((projectsLaunched / projectsCreatedTotal) * 100) : 0;
+
+  // 4) Time to first project (median hours from signup to first project)
+  const userFirstProject: Record<string, string> = {};
+  for (const p of allProjects ?? []) {
+    if (!userFirstProject[p.user_id] || p.created_at < userFirstProject[p.user_id]) {
+      userFirstProject[p.user_id] = p.created_at;
+    }
+  }
+  const timeToFirstProjectHours: number[] = [];
+  for (const [uid, firstProjDate] of Object.entries(userFirstProject)) {
+    const authUser = authUsers.find((u) => u.id === uid);
+    if (authUser?.created_at) {
+      const diff = (new Date(firstProjDate).getTime() - new Date(authUser.created_at).getTime()) / 3600000;
+      if (diff >= 0) timeToFirstProjectHours.push(diff);
+    }
+  }
+  timeToFirstProjectHours.sort((a, b) => a - b);
+  const medianTimeToFirstProject = timeToFirstProjectHours.length > 0
+    ? timeToFirstProjectHours[Math.floor(timeToFirstProjectHours.length / 2)]
+    : null;
+
+  // 5) Time to first task (median hours)
+  const { data: allTasksForActivation } = await adminClient
+    .from("tasks")
+    .select("user_id, created_at, completed")
+    .eq("auto_generated", false)
+    .in("user_id", nonAdminIds.length > 0 ? nonAdminIds : ["00000000-0000-0000-0000-000000000000"])
+    .order("created_at", { ascending: true });
+
+  const userFirstTask: Record<string, string> = {};
+  for (const t of allTasksForActivation ?? []) {
+    if (!userFirstTask[t.user_id]) {
+      userFirstTask[t.user_id] = t.created_at;
+    }
+  }
+  const timeToFirstTaskHours: number[] = [];
+  for (const [uid, firstTaskDate] of Object.entries(userFirstTask)) {
+    const authUser = authUsers.find((u) => u.id === uid);
+    if (authUser?.created_at) {
+      const diff = (new Date(firstTaskDate).getTime() - new Date(authUser.created_at).getTime()) / 3600000;
+      if (diff >= 0) timeToFirstTaskHours.push(diff);
+    }
+  }
+  timeToFirstTaskHours.sort((a, b) => a - b);
+  const medianTimeToFirstTask = timeToFirstTaskHours.length > 0
+    ? timeToFirstTaskHours[Math.floor(timeToFirstTaskHours.length / 2)]
+    : null;
+
+  // 6) Users with project but no progress (stuck at 'rough' stage, not completed)
+  const usersWithProjects = new Set((allProjects ?? []).map((p: any) => p.user_id));
+  const stuckUsers: string[] = [];
+  for (const uid of usersWithProjects) {
+    const userProjs = (allProjects ?? []).filter((p: any) => p.user_id === uid);
+    const allStuck = userProjs.every((p: any) => p.stage === "rough" && !p.completed);
+    if (allStuck) stuckUsers.push(uid);
+  }
+
+  // 7) Feature usage (count per area from tasks source_module + general activity)
+  const { data: allTaskAreas } = await adminClient
+    .from("tasks")
+    .select("source_module, task_area")
+    .in("user_id", nonAdminIds.length > 0 ? nonAdminIds : ["00000000-0000-0000-0000-000000000000"]);
+
+  const featureUsage: Record<string, number> = {};
+  for (const t of allTaskAreas ?? []) {
+    const area = t.source_module || t.task_area || "geral";
+    if (area && area !== "") featureUsage[area] = (featureUsage[area] || 0) + 1;
+  }
+
+  // Add project files, messages, transactions as feature signals
+  const { count: totalFiles } = await adminClient.from("project_files").select("*", { count: "exact", head: true });
+  const { count: totalMessages } = await adminClient.from("project_messages").select("*", { count: "exact", head: true });
+  const { count: totalDNA } = await adminClient.from("music_dna_analyses").select("*", { count: "exact", head: true });
+
+  if ((totalFiles ?? 0) > 0) featureUsage["arquivos"] = totalFiles ?? 0;
+  if ((totalMessages ?? 0) > 0) featureUsage["chat"] = totalMessages ?? 0;
+  if ((totalTransactions ?? 0) > 0) featureUsage["financeiro"] = totalTransactions ?? 0;
+  if ((totalDNA ?? 0) > 0) featureUsage["dna_musical"] = totalDNA ?? 0;
+  if ((totalMixTracks ?? 0) > 0) featureUsage["mix_tracks"] = totalMixTracks ?? 0;
+
+  // Sort by count descending
+  const featureRanking = Object.entries(featureUsage)
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 10);
+
+  // 8) Users who never created a project
+  const usersWithoutProject = nonAdminIds.filter((uid) => !usersWithProjects.has(uid)).length;
+
+  const adoption = {
+    onboardingRate,
+    onboardedUsers,
+    basicModeUsers,
+    advancedModeUsers,
+    projectsCreatedTotal,
+    projectsLaunched,
+    launchRate,
+    medianTimeToFirstProject,
+    medianTimeToFirstTask,
+    stuckUsersCount: stuckUsers.length,
+    usersWithoutProject,
+    featureRanking,
+  };
 
   return new Response(
     JSON.stringify({
@@ -311,6 +426,7 @@ Deno.serve(async (req) => {
         activeUsersLast7Days,
         retentionRate: totalUsers > 0 ? Math.round((activeUsersLast7Days / totalUsers) * 100) : 0,
       },
+      adoption,
       users,
       planCounts,
       products,
