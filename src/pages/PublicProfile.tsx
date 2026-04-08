@@ -31,6 +31,14 @@ interface RatingsData {
   rating_count: number;
 }
 
+interface DeliveryHistoryItem {
+  project_name: string;
+  role: string;
+  delivery_status: string;
+  delivery_due_date: string | null;
+  joined_at: string;
+}
+
 export default function PublicProfile() {
   const { username } = useParams<{ username: string }>();
   const [profile, setProfile] = useState<PublicProfileData | null>(null);
