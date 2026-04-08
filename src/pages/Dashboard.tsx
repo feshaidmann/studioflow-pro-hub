@@ -224,7 +224,10 @@ export default function Dashboard() {
         <ProjectAlertsCard alerts={alerts} hidden={isFirstRun} />
       </div>
 
-      {/* 2. Projetos com score de saúde */}
+      {/* 2. Equipe pendente */}
+      <PendingTeamCard hidden={isFirstRun} />
+
+      {/* 3. Projetos com score de saúde */}
       <ProjectHealthList projects={projectsWithHealth} hidden={isFirstRun} />
 
       {/* 3. Próximos lançamentos */}
