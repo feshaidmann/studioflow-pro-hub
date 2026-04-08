@@ -45,6 +45,7 @@ export default function PublicProfile() {
   const [ratings, setRatings] = useState<RatingsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [history, setHistory] = useState<DeliveryHistoryItem[]>([]);
 
   useEffect(() => {
     if (!username) return;
