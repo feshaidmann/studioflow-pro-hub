@@ -221,7 +221,7 @@ export default function Dashboard() {
                 totalContractValue: p.totalContractValue, amountPaid: p.amountPaid,
                 estimatedMonths: p.estimatedMonths,
               })),
-              activeTasks: activeTasks.map((t) => ({ description: t.description, source: t.source, dueDate: t.dueDate })),
+              activeTasks: activeTasks.map((t) => ({ description: t.description, source: t.source, dueDate: t.dueDate, assignedTo: t.assignedTo, blocked: t.blocked, blockedReason: t.blockedReason, severity: t.severity })),
               financials,
               professionals: professionals.map((p) => ({ name: p.name, specialty: p.specialty, bio: p.bio ?? "", active: true, phone: p.phone ?? "" })),
               alerts: alerts.slice(0, 10).map((a) => ({ title: a.title, severity: a.severity, project: a.projectName, category: a.category })),
