@@ -726,44 +726,59 @@ export type Database = {
       project_members: {
         Row: {
           created_at: string
+          delivery_due_date: string | null
+          delivery_status: string
           email: string
+          expected_deliverable: string
           fee: number
           id: string
           instrument: string
           invitation_id: string | null
+          last_activity_at: string | null
           name: string
           notes: string
           phone: string
           project_id: string
           role: string
+          stage: string
           user_id: string
         }
         Insert: {
           created_at?: string
+          delivery_due_date?: string | null
+          delivery_status?: string
           email?: string
+          expected_deliverable?: string
           fee?: number
           id?: string
           instrument?: string
           invitation_id?: string | null
+          last_activity_at?: string | null
           name?: string
           notes?: string
           phone?: string
           project_id: string
           role?: string
+          stage?: string
           user_id: string
         }
         Update: {
           created_at?: string
+          delivery_due_date?: string | null
+          delivery_status?: string
           email?: string
+          expected_deliverable?: string
           fee?: number
           id?: string
           instrument?: string
           invitation_id?: string | null
+          last_activity_at?: string | null
           name?: string
           notes?: string
           phone?: string
           project_id?: string
           role?: string
+          stage?: string
           user_id?: string
         }
         Relationships: [
