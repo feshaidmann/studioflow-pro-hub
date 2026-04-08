@@ -238,7 +238,20 @@ export default function Professionals() {
       fee: Number(m.fee) || 0,
       deliveryStatus: m.delivery_status || "",
       joinedAt: m.created_at,
+      deliveryDueDate: m.delivery_due_date ?? null,
     }));
+
+    // Calculate avg fee
+    const fees = collaborationHistory.filter((h) => h.fee > 0).map((h) => h.fee);
+    const avgFee = fees.length > 0 ? fees.reduce((a, b) => a + b, 0) / fees.length : null;
+
+    // Calculate avg delivery time (days from join to delivery due date)
+    const deliveryDays = collaborationHistory
+      .filter((h) => h.deliveryDueDate && h.joinedAt)
+      .map((h) => Math.ceil((new Date(h.deliveryDueDate!).getTime() - new Date(h.joinedAt).getTime()) / 86400000))
+      .filter((d) => d > 0);
+    const avgDeliveryDays = deliveryDays.length > 0 ? Math.round(deliveryDays.reduce((a, b) => a + b, 0) / deliveryDays.length) : null;
+
     setMetrics({
       projectCount: rows.length,
       projectNames,
@@ -246,6 +259,8 @@ export default function Professionals() {
       ratingCount,
       lastActivity,
       platformProjectCount: Number(platformCount) || 0,
+      avgFee,
+      avgDeliveryDays,
       collaborationHistory,
     });
     setMetricsLoading(false);
