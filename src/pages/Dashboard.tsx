@@ -175,11 +175,13 @@ export default function Dashboard() {
           onAddTask={async (desc) => { await addTask({ description: desc }); }}
           onToggleTask={toggleTask}
           onDeleteTask={deleteTask}
+          onUpdateTask={(id, patch) => updateTask(id, patch)}
           onRefresh={handleRefreshTasks}
           refreshing={refreshing}
           lastRefreshed={lastRefreshed}
           hidden={isFirstRun}
           aiRef={aiRef}
+          projects={projects.map((p) => ({ id: p.id, name: p.name }))}
         />
 
         <ProjectAlertsCard alerts={alerts} hidden={isFirstRun} />
