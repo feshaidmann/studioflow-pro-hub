@@ -31,6 +31,7 @@ interface ProfileContextType {
   userType: UserType;
   displayName: string;
   trackViewMode: TrackViewMode;
+  isSimpleMode: boolean;
   plan: UserPlan;
   isPro: boolean;
   loading: boolean;
@@ -88,6 +89,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   const userType: UserType = profile?.user_type ?? "artist";
   const displayName = profile?.display_name || user?.email?.split("@")[0] || "";
   const trackViewMode: TrackViewMode = profile?.track_view_mode ?? "basic";
+  const isSimpleMode = trackViewMode === "basic";
   const plan: UserPlan = (profile?.plan as UserPlan) ?? "pro";
   // MVP validation phase: all users have Pro access
   const isPro = true;
@@ -101,7 +103,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
 
   return (
     <ProfileContext.Provider
-      value={{ profile, userType, displayName, trackViewMode, plan, isPro, loading, needsProfileSetup, updateProfile, refreshProfile: fetchProfile }}
+      value={{ profile, userType, displayName, trackViewMode, isSimpleMode, plan, isPro, loading, needsProfileSetup, updateProfile, refreshProfile: fetchProfile }}
     >
       {children}
     </ProfileContext.Provider>
