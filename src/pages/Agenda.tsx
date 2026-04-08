@@ -29,6 +29,47 @@ export default function Agenda() {
   const { t } = useLanguage();
   const { events, loading, addEvent, updateEvent, deleteEvent } = useEvents();
   const { projects } = useProjects();
+  const { user } = useAuth();
+
+  /* ── Collaborator deadlines ── */
+  interface TeamDeadline {
+    memberName: string;
+    role: string;
+    projectName: string;
+    projectId: string;
+    dueDate: string;
+    daysUntilDue: number;
+    status: string;
+  }
+  const [teamDeadlines, setTeamDeadlines] = useState<TeamDeadline[]>([]);
+
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from("project_members")
+      .select("name, role, delivery_due_date, delivery_status, project_id, projects(name)")
+      .eq("user_id", user.id)
+      .neq("delivery_status", "entregue")
+      .not("delivery_due_date", "is", null)
+      .then(({ data }) => {
+        if (data) {
+          const now = Date.now();
+          setTeamDeadlines(
+            data
+              .map((d: any) => ({
+                memberName: d.name,
+                role: d.role,
+                projectName: d.projects?.name || "—",
+                projectId: d.project_id,
+                dueDate: d.delivery_due_date,
+                daysUntilDue: Math.ceil((new Date(d.delivery_due_date).getTime() - now) / 86400000),
+                status: d.delivery_status,
+              }))
+              .sort((a: TeamDeadline, b: TeamDeadline) => a.daysUntilDue - b.daysUntilDue)
+          );
+        }
+      });
+  }, [user]);
 
   /* ── Form state ── */
   const [formOpen, setFormOpen] = useState(false);
