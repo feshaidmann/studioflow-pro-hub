@@ -68,10 +68,13 @@ import {
   Download,
 } from "lucide-react";
 import { useProjects } from "@/contexts/ProjectContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { type Transaction } from "@/data/mockData";
 import TransactionForm from "@/components/finance/TransactionForm";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
