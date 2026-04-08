@@ -229,8 +229,22 @@ export default function Admin() {
 
   const p = stats?.platform;
   const ai = stats?.aiUsage;
+  const ad = stats?.adoption;
 
   const fmtUsd = (v: number) => (v < 0.001 ? `$${v.toFixed(6)}` : `$${v.toFixed(4)}`);
+  const fmtHours = (h: number | null | undefined) => {
+    if (h == null) return "—";
+    if (h < 1) return `${Math.round(h * 60)}min`;
+    if (h < 24) return `${h.toFixed(1)}h`;
+    return `${(h / 24).toFixed(1)}d`;
+  };
+
+  const FEATURE_LABELS: Record<string, string> = {
+    geral: "Geral", mix: "Mix", financeiro: "Financeiro", chat: "Chat",
+    arquivos: "Arquivos", dna_musical: "DNA Musical", mix_tracks: "Tracks/Mix",
+    gravacao: "Gravação", master: "Master", lancamento: "Lançamento",
+    equipe: "Equipe", agenda: "Agenda",
+  };
 
   const Spinner = () => <span className="animate-pulse text-muted-foreground">…</span>;
 
