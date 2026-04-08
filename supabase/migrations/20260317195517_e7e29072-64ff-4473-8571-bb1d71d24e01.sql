@@ -1,0 +1,1 @@
+ALTER TABLE public.transactions ALTER COLUMN project_id DROP NOT NULL;

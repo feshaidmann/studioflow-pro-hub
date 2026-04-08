@@ -1,0 +1,1 @@
+ALTER TABLE public.projects ADD COLUMN completed boolean NOT NULL DEFAULT false;

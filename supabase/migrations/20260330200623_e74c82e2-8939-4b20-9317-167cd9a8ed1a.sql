@@ -1,0 +1,1 @@
+ALTER TABLE public.profiles ALTER COLUMN user_type SET DEFAULT 'artist';

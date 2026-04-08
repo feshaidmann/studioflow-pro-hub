@@ -1,0 +1,1 @@
+ALTER TABLE public.tasks ADD COLUMN dismissed boolean NOT NULL DEFAULT false;
