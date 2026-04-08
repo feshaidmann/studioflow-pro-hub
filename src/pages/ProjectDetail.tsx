@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useProjectChat } from "@/hooks/useProjectChat";
 import {
   ChevronLeft, Music2, Pencil, MessageSquare, Send, Lock,
-  LayoutDashboard, Users, ListChecks, DollarSign,
+  LayoutDashboard, Users, ListChecks, DollarSign, Rocket,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
