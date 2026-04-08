@@ -63,6 +63,7 @@ interface ProjectContext {
   activeTasks: Array<{ description: string; source: string; dueDate: string | null }>;
   financials: { totalIncome: number; totalExpense: number; profit: number };
   professionals?: Array<{ name: string; specialty: string; bio: string; active: boolean; phone: string }>;
+  alerts?: Array<{ title: string; severity: string; project: string; category: string }>;
 }
 
 export interface AITaskAssistantHandle {
