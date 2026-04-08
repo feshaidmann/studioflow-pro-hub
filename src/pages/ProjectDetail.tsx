@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 
 import ProjectOverviewTab from "@/components/project-hub/ProjectOverviewTab";
 import ProjectTeamTab from "@/components/project-hub/ProjectTeamTab";
+import ProjectChat from "@/components/project-hub/ProjectChat";
 import ProjectTasksTab from "@/components/project-hub/ProjectTasksTab";
 import ProjectFinanceTab from "@/components/project-hub/ProjectFinanceTab";
 import ProjectReleaseTab from "@/components/project-hub/ProjectReleaseTab";
