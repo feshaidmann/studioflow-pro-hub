@@ -1,81 +1,34 @@
 
-## Objetivo
-Criar experiência completa para o colaborador convidado com acesso controlado ao projeto.
+## Plano Simplificado — Experiência do Colaborador
 
-## Diagnóstico
-**Já existe:**
-- `project_invitations` com campos básicos (fee, deadline, role, token, status)
-- `project_members` com delivery_status, delivery_due_date, expected_deliverable, last_activity_at, stage
-- `respond-to-invite` edge function (aceita/recusa mas NÃO cria project_member)
-- `InviteResponse.tsx` página pública funcional
-- `ProjectDetail.tsx` com detecção owner vs guest (via `get_project_for_member` RPC)
-- Guest já vê abas limitadas (overview + chat), mas muito básico
-- `useProjectFiles`, `useProjectChat`, `useTasks` hooks prontos
-- RLS em project_messages permite membros lerem
-- RLS em project_files permite membros lerem e inserir
+### O que muda vs. plano original
 
-**Falta:**
-- `respond-to-invite` não cria `project_member` ao aceitar
-- Guest view no ProjectDetail muito limitado (só overview + chat)
-- Sem aba de tarefas/arquivos para colaborador
-- Sem campo `permissions_scope` ou `member_type`
-- RLS de project_messages não permite UPDATE pelo colaborador
-- Falta redirecionamento pós-aceite para área do colaborador
-- Falta listagem de projetos do colaborador na navegação
+| Antes | Agora |
+|-------|-------|
+| 3 componentes de aba separados para colaborador | Reusar `ProjectTasksTab` e `ProjectFilesTab` com prop de filtro |
+| `permissions_scope` com lógica granular futura | Apenas `isOwner` boolean — simples e suficiente |
+| Fallback duplo no upsert (edge function) | Upsert único, sem try/catch redundante |
+| 4 abas para colaborador | Manter 4 abas, mas simplificar componentes |
+| Onboarding obrigatório pós-convite | Pular onboarding para usuários com `origin = 'invite'` |
 
-## Estratégia Incremental (5 fases)
+### Fase única — Implementação
 
-### Fase 1 — Migration DB
-- Adicionar `permissions_scope` e `member_type` a `project_members`
-- Adicionar `accepted_at`, `declined_at` a `project_invitations`
-- Adicionar RLS para UPDATE em `project_messages` (autor da mensagem)
-- Adicionar RLS para UPDATE em `project_files` (quem fez upload)
+**1. Refatorar abas do colaborador**
+- Deletar `CollaboratorTasksTab.tsx` e `CollaboratorFilesTab.tsx`
+- Adicionar prop `collaboratorMode` a `ProjectTasksTab` e `ProjectFilesTab` para filtrar por `user_id` atual
+- Manter `CollaboratorOverviewTab.tsx` (tem layout diferente o suficiente)
+- Atualizar `ProjectDetail.tsx` para usar os componentes reusados
 
-### Fase 2 — Edge Function respond-to-invite
-- Ao aceitar, criar registro em `project_members` com dados do convite
-- Preencher `permissions_scope = 'basic_collaborator'`, `member_type = 'collaborator'`
-- Gravar `accepted_at` / `declined_at`
+**2. Limpar edge function**
+- Remover bloco try/catch com fallback insert redundante (linhas 118-134)
+- Manter apenas o upsert principal
 
-### Fase 3 — Área do Colaborador (ProjectDetail guest view)
-- Expandir abas do guest: Resumo, Minhas Tarefas, Meus Arquivos, Conversa
-- Resumo: projeto, papel, prazo, status da participação
-- Tarefas: filtradas por `assigned_to` do colaborador
-- Arquivos: filtrados por `user_id` do colaborador + upload
-- Chat: já funciona
+**3. Reduzir fricção no onboarding**
+- No `ProfileContext`, pular onboarding para perfis com `origin = 'invite'`
+- Colaborador convidado vai direto para o projeto
 
-### Fase 4 — InviteResponse pós-aceite
-- Redirecionar para `/projects/:id` após aceite (se logado)
-- Se não logado, redirecionar para `/auth?redirect=/projects/:id`
-
-### Fase 5 — Listagem de projetos do colaborador
-- Na página /projects, mostrar projetos onde é membro (já existe `get_member_projects` RPC)
-- Garantir que aparece na navegação
-
-## Arquivos alterados
-- `supabase/functions/respond-to-invite/index.ts`
-- `src/pages/ProjectDetail.tsx`
-- `src/pages/InviteResponse.tsx`
-
-## Arquivos criados
-- `src/components/project-hub/CollaboratorOverviewTab.tsx`
-- `src/components/project-hub/CollaboratorTasksTab.tsx`
-- `src/components/project-hub/CollaboratorFilesTab.tsx`
-
-## Migrations
-- Adicionar campos em `project_members` e `project_invitations`
-- Adicionar RLS UPDATE em `project_messages` e `project_files`
-
-## Impactos em RLS
-- `project_messages`: adicionar UPDATE policy para autor
-- `project_files`: adicionar UPDATE/DELETE policy para uploader que é membro
-
-## Riscos
-- Colaboradores que aceitaram antes da migration não terão `project_member` criado
-- Precisará de script de reconciliação futuro se necessário
-
-## Critérios de aceite
-1. Convite aceito cria project_member automaticamente
-2. Colaborador logado vê projeto com 4 abas limitadas
-3. Colaborador não vê financeiro, equipe completa, lançamento
-4. Colaborador pode enviar arquivos e mensagens
-5. Colaborador vê apenas suas tarefas atribuídas
+### Adiado para fase posterior
+- Listagem de projetos do colaborador na sidebar
+- Notificações ao owner quando colaborador aceita
+- Edição de status de entrega pelo colaborador
+- Script de reconciliação de convites antigos
