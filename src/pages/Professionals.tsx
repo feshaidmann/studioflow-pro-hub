@@ -203,7 +203,7 @@ export default function Professionals() {
     // Fetch project_members for this professional (matched by name — current user only)
     const { data: members } = await supabase
       .from("project_members")
-      .select("project_id, created_at, role, fee, delivery_status, projects:project_id(name, completed)")
+      .select("project_id, created_at, role, fee, delivery_status, delivery_due_date, projects:project_id(name, completed)")
       .eq("user_id", user?.id)
       .ilike("name", p.name)
       .order("created_at", { ascending: false });
