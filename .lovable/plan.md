@@ -178,12 +178,12 @@
 | Requisito | Status |
 |-----------|--------|
 | Métricas/custos/logs | ✅ |
-| Tempo até criar primeiro projeto | ⚠️ |
+| Tempo até criar primeiro projeto | ✅ | Mediana exibida |
 | % que conclui onboarding | ✅ |
 | % que conclui primeiro projeto | ✅ |
 | Feature mais usada | ✅ |
 | Ponto de abandono por tela | ❌ |
-| Projetos criados vs lançados | ⚠️ |
+| Projetos criados vs lançados | ✅ | Taxa de lançamento com contagem |
 
 ## 16. Perfil Público
 
