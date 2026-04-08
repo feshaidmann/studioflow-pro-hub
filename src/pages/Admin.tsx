@@ -320,7 +320,121 @@ export default function Admin() {
         </div>
       </section>
 
-      {/* ── Receita ── */}
+      {/* ── Aderência & Ativação ── */}
+      <section>
+        <SectionTitle icon={Gauge} label="Aderência & Ativação de Produto" />
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+          <StatCard
+            label="Onboarding completo"
+            value={loading ? <Spinner /> : `${ad?.onboardingRate ?? 0}%`}
+            icon={Rocket}
+            color="text-success"
+            sub={loading ? "" : `${ad?.onboardedUsers ?? 0} de ${p?.totalUsers ?? 0}`}
+          />
+          <StatCard
+            label="Tempo até 1º projeto"
+            value={loading ? <Spinner /> : fmtHours(ad?.medianTimeToFirstProject)}
+            icon={Clock}
+            color="text-primary"
+            sub="Mediana"
+          />
+          <StatCard
+            label="Tempo até 1ª tarefa"
+            value={loading ? <Spinner /> : fmtHours(ad?.medianTimeToFirstTask)}
+            icon={Clock}
+            color="text-blue-400"
+            sub="Mediana (manuais)"
+          />
+          <StatCard
+            label="Taxa de lançamento"
+            value={loading ? <Spinner /> : `${ad?.launchRate ?? 0}%`}
+            icon={Rocket}
+            color="text-primary"
+            sub={loading ? "" : `${ad?.projectsLaunched ?? 0} de ${ad?.projectsCreatedTotal ?? 0}`}
+          />
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+          <StatCard
+            label="Modo Simples"
+            value={loading ? <Spinner /> : ad?.basicModeUsers ?? 0}
+            icon={Layers}
+            color="text-muted-foreground"
+            sub="Usuários"
+          />
+          <StatCard
+            label="Modo Avançado"
+            value={loading ? <Spinner /> : ad?.advancedModeUsers ?? 0}
+            icon={Layers}
+            color="text-primary"
+            sub="Usuários"
+          />
+          <StatCard
+            label="Sem projeto criado"
+            value={loading ? <Spinner /> : ad?.usersWithoutProject ?? 0}
+            icon={UserX}
+            color="text-destructive"
+            sub="Nunca criaram projeto"
+          />
+          <StatCard
+            label="Sem progresso"
+            value={loading ? <Spinner /> : ad?.stuckUsersCount ?? 0}
+            icon={AlertTriangle}
+            color="text-warning"
+            sub="Projeto ativo parado em rascunho"
+          />
+        </div>
+
+        {/* Feature ranking */}
+        <Card className="border-border bg-card">
+          <CardHeader className="pb-1 pt-4 px-4">
+            <CardTitle className="text-xs text-muted-foreground font-medium uppercase tracking-wide flex items-center gap-1.5">
+              <BarChart3 className="h-3.5 w-3.5" />
+              Features mais usadas
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-4 pb-4 pt-3">
+            {loading ? (
+              <div className="space-y-2">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <div key={i} className="h-6 rounded bg-muted animate-pulse" />
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {(ad?.featureRanking ?? []).map((f, i) => {
+                  const maxCount = (ad?.featureRanking ?? [])[0]?.count || 1;
+                  const pct = Math.round((f.count / maxCount) * 100);
+                  return (
+                    <div key={f.name} className="flex items-center gap-3">
+                      <span className="text-xs text-muted-foreground w-5 text-right shrink-0">{i + 1}.</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-0.5">
+                          <span className="text-xs font-medium text-foreground">
+                            {FEATURE_LABELS[f.name] ?? f.name}
+                          </span>
+                          <span className="text-[10px] text-muted-foreground">{f.count}</span>
+                        </div>
+                        <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                          <div
+                            className="h-full rounded-full bg-primary transition-all"
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+                {(ad?.featureRanking ?? []).length === 0 && (
+                  <p className="text-xs text-muted-foreground text-center py-4">Sem dados suficientes</p>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </section>
+
+
       <section>
         <SectionTitle icon={DollarSign} label="Receita" />
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
