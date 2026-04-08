@@ -94,7 +94,7 @@
 | Tarefas manuais | ✅ | |
 | Separar: hoje/semana/vencidas/aguardando | ✅ | |
 | Filtro por projeto | ✅ | No DailyChecklist |
-| Filtro por responsável | ❌ | |
+| Filtro por responsável | ✅ | No DailyChecklist, select de assignee |
 | Botão "resolver agora" | ✅ | Nos alertas, navega ao tab correto |
 | Subtarefas por etapa | ❌ | |
 | Templates de tarefas | ❌ | |
