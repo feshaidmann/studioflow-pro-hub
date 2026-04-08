@@ -115,23 +115,6 @@ Deno.serve(async (req) => {
 
           if (memberErr) {
             console.error("project_member upsert error (non-fatal):", memberErr);
-            // Fallback: try insert without upsert
-            await adminClient.from("project_members").insert({
-              project_id: inv.project_id,
-              user_id: matchedUser.id,
-              name: inv.professional_name || "",
-              email: inv.professional_email || "",
-              role: inv.professional_role || "",
-              fee: inv.fee || 0,
-              invitation_id: inv.id,
-              delivery_status: "ativo",
-              expected_deliverable: inv.schedule_notes || "",
-              permissions_scope: "basic_collaborator",
-              member_type: "collaborator",
-              last_activity_at: now,
-            }).then(({ error }) => {
-              if (error) console.error("fallback insert error (non-fatal):", error);
-            });
           }
         }
       } catch (profileErr) {
