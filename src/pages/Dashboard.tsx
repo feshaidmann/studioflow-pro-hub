@@ -31,7 +31,7 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const { projects, getMixPercent, getProjectFinancials, transactions } = useProjects();
   const { displayName, isSimpleMode } = useProfile();
-  const { activeTasks, completedTasks, loading: tasksLoading, addTask, toggleTask, deleteTask, refresh: refreshTasks } = useTasks();
+  const { activeTasks, completedTasks, loading: tasksLoading, addTask, toggleTask, deleteTask, updateTask, refresh: refreshTasks } = useTasks();
   const { user } = useAuth();
   const autoGenRef = useRef(false);
   const { professionals } = useProfessionals();
