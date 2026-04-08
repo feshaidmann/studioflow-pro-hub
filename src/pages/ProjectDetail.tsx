@@ -192,7 +192,7 @@ export default function ProjectDetail() {
 
       {/* ── Hub Tabs ── */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className={cn("w-full grid", `grid-cols-${tabs.length}`)}>
+        <TabsList className={cn("w-full grid", isOwner ? "grid-cols-6" : "grid-cols-2")}>
           {tabs.map((tab) => {
             const Icon = tab.icon;
             return (
