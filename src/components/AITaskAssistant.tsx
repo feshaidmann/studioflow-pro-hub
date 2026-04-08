@@ -103,19 +103,12 @@ const priorityColor: Record<string, string> = {
 };
 
 const WELCOME_QUICK_ACTIONS: QuickAction[] = [
-  // Projetos
-  { label: "📋 Pendências urgentes", message: "Quais são minhas pendências mais urgentes agora?" },
-  { label: "🚀 Próximo passo", message: "Qual é o próximo passo mais importante para avançar nos meus projetos?" },
-  { label: "📊 Status dos projetos", message: "Me dá um resumo rápido do status de cada projeto ativo." },
-  // Gravação
-  { label: "🎙️ Dica de gravação", message: "Me dá dicas práticas para melhorar a qualidade das minhas gravações de voz e instrumentos." },
-  { label: "🎚️ Preparar stems", message: "Como devo preparar e exportar os stems de um projeto para mixagem?" },
-  // Mix
-  { label: "🎛️ EQ e compressão", message: "Explica como usar EQ e compressão de forma eficaz numa mixagem." },
-  { label: "🔊 LUFS para streaming", message: "Quais são os alvos de LUFS integrado, True Peak e loudness range para Spotify, YouTube e Apple Music?" },
-  // Master
-  { label: "✅ Mix pronto?", message: "Quais são os sinais que indicam que um mix está pronto para masterização?" },
-  { label: "🧠 Configurar DAW", message: "Quais são as configurações essenciais de um projeto no DAW para começar bem uma sessão de mix?" },
+  { label: "🚨 O que está travado?", message: "Analise meus projetos e tarefas. O que está bloqueado ou travado? Me dê ações concretas para resolver." },
+  { label: "📋 O que fazer agora?", message: "Com base nas minhas tarefas vencidas e do dia, qual é o plano de ação prático para agora?" },
+  { label: "⚠️ Pendências críticas", message: "Quais são as pendências mais críticas nos meus projetos? Orçamento, prazos, convites sem resposta." },
+  { label: "🚀 Próximo passo", message: "Qual é a próxima melhor ação para avançar meus projetos? Seja específico." },
+  { label: "🎛️ Dica de mix", message: "Me dá dicas práticas de EQ e compressão para melhorar minha mixagem." },
+  { label: "🔊 LUFS para streaming", message: "Quais são os alvos de LUFS, True Peak e loudness range para Spotify, YouTube e Apple Music?" },
 ];
 
 function renderMarkdown(text: string) {
