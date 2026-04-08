@@ -236,6 +236,12 @@ export default function ProjectDetail() {
             <ProjectFinanceTab projectId={project.id} />
           </TabsContent>
         )}
+
+        {isOwner && (
+          <TabsContent value="release">
+            <ProjectReleaseTab projectId={project.id} />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );
