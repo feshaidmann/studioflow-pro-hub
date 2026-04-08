@@ -75,6 +75,17 @@ interface ProfMetrics {
   ratingCount: number;
   lastActivity: string | null;
   platformProjectCount: number;
+  avgFee: number | null;
+  avgDeliveryDays: number | null;
+  collaborationHistory: Array<{
+    projectName: string;
+    completed: boolean;
+    role: string;
+    fee: number;
+    deliveryStatus: string;
+    joinedAt: string;
+    deliveryDueDate: string | null;
+  }>;
 }
 
 export default function Professionals() {
@@ -192,7 +203,7 @@ export default function Professionals() {
     // Fetch project_members for this professional (matched by name — current user only)
     const { data: members } = await supabase
       .from("project_members")
-      .select("project_id, created_at, projects:project_id(name, completed)")
+      .select("project_id, created_at, role, fee, delivery_status, delivery_due_date, projects:project_id(name, completed)")
       .eq("user_id", user?.id)
       .ilike("name", p.name)
       .order("created_at", { ascending: false });
@@ -220,6 +231,27 @@ export default function Professionals() {
     const rows = (members as any[]) ?? [];
     const projectNames = rows.map((m) => m.projects?.name).filter(Boolean);
     const lastActivity = rows[0]?.created_at ?? null;
+    const collaborationHistory = rows.map((m: any) => ({
+      projectName: m.projects?.name || "—",
+      completed: m.projects?.completed ?? false,
+      role: m.role || "",
+      fee: Number(m.fee) || 0,
+      deliveryStatus: m.delivery_status || "",
+      joinedAt: m.created_at,
+      deliveryDueDate: m.delivery_due_date ?? null,
+    }));
+
+    // Calculate avg fee
+    const fees = collaborationHistory.filter((h) => h.fee > 0).map((h) => h.fee);
+    const avgFee = fees.length > 0 ? fees.reduce((a, b) => a + b, 0) / fees.length : null;
+
+    // Calculate avg delivery time (days from join to delivery due date)
+    const deliveryDays = collaborationHistory
+      .filter((h) => h.deliveryDueDate && h.joinedAt)
+      .map((h) => Math.ceil((new Date(h.deliveryDueDate!).getTime() - new Date(h.joinedAt).getTime()) / 86400000))
+      .filter((d) => d > 0);
+    const avgDeliveryDays = deliveryDays.length > 0 ? Math.round(deliveryDays.reduce((a, b) => a + b, 0) / deliveryDays.length) : null;
+
     setMetrics({
       projectCount: rows.length,
       projectNames,
@@ -227,6 +259,9 @@ export default function Professionals() {
       ratingCount,
       lastActivity,
       platformProjectCount: Number(platformCount) || 0,
+      avgFee,
+      avgDeliveryDays,
+      collaborationHistory,
     });
     setMetricsLoading(false);
   }
@@ -670,15 +705,62 @@ export default function Professionals() {
                   </div>
                 </div>
 
-                {/* Projects list */}
-                {!metricsLoading && metrics && metrics.projectNames.length > 0 && (
-                  <div className="space-y-1.5">
+                {/* Avg fee + avg delivery */}
+                {!metricsLoading && metrics && (metrics.avgFee !== null || metrics.avgDeliveryDays !== null) && (
+                  <div className="flex gap-3">
+                    {metrics.avgFee !== null && (
+                      <div className="flex-1 rounded-lg bg-muted/30 border border-border/40 p-2.5 text-center">
+                        <p className="text-sm font-bold text-primary font-mono-nums">
+                          R${metrics.avgFee.toLocaleString("pt-BR", { minimumFractionDigits: 0 })}
+                        </p>
+                        <p className="text-[9px] text-muted-foreground mt-0.5">Cachê médio</p>
+                      </div>
+                    )}
+                    {metrics.avgDeliveryDays !== null && (
+                      <div className="flex-1 rounded-lg bg-muted/30 border border-border/40 p-2.5 text-center">
+                        <p className="text-sm font-bold text-primary font-mono-nums">
+                          {metrics.avgDeliveryDays}d
+                        </p>
+                        <p className="text-[9px] text-muted-foreground mt-0.5">Prazo médio</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Collaboration history */}
+                {!metricsLoading && metrics && metrics.collaborationHistory.length > 0 && (
+                  <div className="space-y-2">
                     <p className="text-xs text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
-                      <Briefcase className="h-3 w-3" /> Projetos em comum
+                      <Briefcase className="h-3 w-3" /> Histórico de colaboração
                     </p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {metrics.projectNames.map((name, i) => (
-                        <Badge key={i} variant="secondary" className="text-xs">{name}</Badge>
+                    <div className="space-y-1.5">
+                      {metrics.collaborationHistory.map((h, i) => (
+                        <div key={i} className="flex items-center gap-2 text-xs px-2 py-1.5 rounded-md bg-muted/30 border border-border/40">
+                          <div className="flex-1 min-w-0">
+                            <span className="font-medium">{h.projectName}</span>
+                            {h.role && <span className="text-muted-foreground"> · {h.role}</span>}
+                          </div>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            {h.fee > 0 && (
+                              <span className="text-[10px] text-muted-foreground font-mono-nums">
+                                R${h.fee.toLocaleString("pt-BR")}
+                              </span>
+                            )}
+                            {h.completed ? (
+                              <Badge variant="secondary" className="text-[9px] h-4 px-1.5 gap-0.5">
+                                <CheckCircle2 className="h-2.5 w-2.5 text-success" /> Concluído
+                              </Badge>
+                            ) : h.deliveryStatus === "entregue" ? (
+                              <Badge variant="secondary" className="text-[9px] h-4 px-1.5 gap-0.5">
+                                <CheckCircle2 className="h-2.5 w-2.5 text-success" /> Entregue
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-[9px] h-4 px-1.5 text-muted-foreground">
+                                Em andamento
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
                       ))}
                     </div>
                   </div>
