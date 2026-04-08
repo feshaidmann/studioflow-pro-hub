@@ -31,6 +31,7 @@ interface ProfileContextType {
   userType: UserType;
   displayName: string;
   trackViewMode: TrackViewMode;
+  isSimpleMode: boolean;
   plan: UserPlan;
   isPro: boolean;
   loading: boolean;
