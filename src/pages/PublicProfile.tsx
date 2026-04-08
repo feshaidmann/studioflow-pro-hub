@@ -31,12 +31,21 @@ interface RatingsData {
   rating_count: number;
 }
 
+interface DeliveryHistoryItem {
+  project_name: string;
+  role: string;
+  delivery_status: string;
+  delivery_due_date: string | null;
+  joined_at: string;
+}
+
 export default function PublicProfile() {
   const { username } = useParams<{ username: string }>();
   const [profile, setProfile] = useState<PublicProfileData | null>(null);
   const [ratings, setRatings] = useState<RatingsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [history, setHistory] = useState<DeliveryHistoryItem[]>([]);
 
   useEffect(() => {
     if (!username) return;
@@ -61,6 +70,15 @@ export default function PublicProfile() {
         const r = (rData as any[])[0];
         setRatings({ avg_stars: r.avg_stars, rating_count: Number(r.rating_count) });
       }
+
+      // Fetch delivery history
+      if (p.public_email) {
+        const { data: hData } = await supabase.rpc("get_public_profile_history", {
+          p_email: p.public_email,
+        });
+        if (hData) setHistory(hData as DeliveryHistoryItem[]);
+      }
+
       setLoading(false);
     })();
   }, [username]);
@@ -242,6 +260,27 @@ export default function PublicProfile() {
               <span className="text-sm text-muted-foreground">
                 ({ratings.rating_count} avalia{ratings.rating_count === 1 ? "ção" : "ções"})
               </span>
+            </div>
+          </div>
+        )}
+
+        {/* Delivery history */}
+        {history.length > 0 && (
+          <div className="rounded-xl bg-card border border-border/60 p-4 space-y-3">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Histórico de Entregas</p>
+            <div className="space-y-2">
+              {history.map((h, i) => {
+                const statusColor = h.delivery_status === "entregue" ? "text-primary" : h.delivery_status === "atrasado" ? "text-destructive" : "text-muted-foreground";
+                const statusLabel = h.delivery_status === "entregue" ? "Entregue" : h.delivery_status === "atrasado" ? "Atrasado" : h.delivery_status === "ativo" ? "Em andamento" : h.delivery_status;
+                return (
+                  <div key={i} className="flex items-center gap-2 text-sm">
+                    <Briefcase className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                    <span className="flex-1 truncate">{h.project_name}</span>
+                    <span className="text-xs text-muted-foreground">{h.role}</span>
+                    <span className={`text-xs font-medium ${statusColor}`}>{statusLabel}</span>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}

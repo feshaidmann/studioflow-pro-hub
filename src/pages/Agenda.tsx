@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { isToday, isThisWeek, isThisMonth, parseISO, startOfDay, addDays } from "date-fns";
-import { Plus, CalendarDays, Loader2, Users, AlertTriangle } from "lucide-react";
+import { isToday, isThisWeek, isThisMonth, parseISO, startOfDay, addDays, format } from "date-fns";
+import { Plus, CalendarDays, Loader2, Users, AlertTriangle, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -106,6 +106,20 @@ export default function Agenda() {
       return true;
     });
   }, [events, dateFilter, typeFilter, projectFilter]);
+
+  // Events within 3 days without preparation (no description / no linked project tasks)
+  const unpreparedEvents = useMemo(() => {
+    const now = startOfDay(new Date());
+    const soon = addDays(now, 3);
+    return events.filter((ev) => {
+      const d = parseISO(ev.startDatetime);
+      if (d < now || d > soon) return false;
+      // Consider unprepared if no description and important type
+      const importantTypes = ["show", "recording", "rehearsal", "release"];
+      if (!importantTypes.includes(ev.eventType)) return false;
+      return !ev.description || ev.description.trim().length < 10;
+    });
+  }, [events]);
 
   const getProjectName = (id: string | null) =>
     id ? projects.find((p) => p.id === id)?.name : undefined;
@@ -237,6 +251,35 @@ export default function Agenda() {
                         ? "Hoje"
                         : `${td.daysUntilDue}d`}
                   </Badge>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Preparation alerts */}
+      {unpreparedEvents.length > 0 && (
+        <Card className="glass-card border-amber-400/20 animate-fade-in">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Info className="h-4 w-4 text-amber-400" />
+              <p className="text-sm font-semibold">Eventos sem preparação</p>
+              <Badge variant="secondary" className="text-[10px]">{unpreparedEvents.length}</Badge>
+            </div>
+            <p className="text-xs text-muted-foreground mb-2">
+              Estes eventos acontecem nos próximos 3 dias e não possuem descrição ou checklist.
+            </p>
+            <div className="space-y-1">
+              {unpreparedEvents.map((ev) => (
+                <div key={ev.id} className="flex items-center gap-2 text-xs px-2 py-1.5 rounded-md hover:bg-muted/30 transition-colors cursor-pointer"
+                  onClick={() => { setEditEvent(ev); setFormOpen(true); }}
+                >
+                  <AlertTriangle className="h-3.5 w-3.5 text-amber-400 shrink-0" />
+                  <span className="font-medium truncate flex-1">{ev.title}</span>
+                  <span className="text-muted-foreground">
+                    {format(parseISO(ev.startDatetime), "dd/MM")}
+                  </span>
                 </div>
               ))}
             </div>
