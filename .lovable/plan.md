@@ -206,26 +206,25 @@
 | Dashboard | 9 | 0 | 0 |
 | Projects | 6 | 1 | 1 |
 | ProjectDetail | 7 | 0 | 0 |
-| Tarefas | 8 | 0 | 3 |
+| Tarefas | 9 | 0 | 2 |
 | Profissionais | 7 | 0 | 1 |
 | Chat | 6 | 0 | 0 |
 | Financeiro | 6 | 0 | 1 |
-| Agenda | 3 | 0 | 1 |
+| Agenda | 4 | 0 | 0 |
 | Arquivos | 2 | 1 | 0 |
 | Lançamento | 7 | 0 | 0 |
 | IA/DNA | 3 | 0 | 1 |
-| Admin | 4 | 2 | 1 |
-| Perfil Público | 2 | 0 | 2 |
-| **Total** | **91** | **4** | **11** |
+| Admin | 6 | 0 | 1 |
+| Perfil Público | 3 | 0 | 1 |
+| **Total** | **96** | **2** | **8** |
 
 ## Itens Restantes (baixa prioridade)
 
 1. Projects: Template de projeto por objetivo
-2. Tarefas: Filtro por responsável, subtarefas, templates
+2. Tarefas: Subtarefas por etapa, templates de tarefas
 3. Profissionais: Favoritos
 4. Financeiro: Custo por faixa
-5. Agenda: Alerta de evento sem preparação
-6. Arquivos: Comentários em arquivos
-7. IA: Separar core vs Pro
-8. Admin: Ponto de abandono, projetos criados vs lançados
-9. Perfil Público: Links de trabalhos, histórico de entregas
+5. Arquivos: Comentários em arquivos
+6. IA: Separar core vs Pro
+7. Admin: Ponto de abandono por tela
+8. Perfil Público: Links de trabalhos por projeto
