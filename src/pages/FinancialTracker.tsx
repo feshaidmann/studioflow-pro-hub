@@ -151,10 +151,56 @@ function KpiCard({
 export default function FinancialTracker() {
   const { t } = useLanguage();
   const { transactions, projects, deleteTransaction, getProjectFinancials } = useProjects();
+  const { user } = useAuth();
 
   const [formOpen, setFormOpen] = useState(false);
   const [editTx, setEditTx] = useState<Transaction | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+
+  // Pending fees by collaborator
+  interface PendingFee {
+    name: string;
+    role: string;
+    projectName: string;
+    fee: number;
+    feePaid: boolean;
+  }
+  const [pendingFees, setPendingFees] = useState<PendingFee[]>([]);
+
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from("project_members")
+      .select("name, role, fee, project_id, projects(name)")
+      .eq("user_id", user.id)
+      .gt("fee", 0)
+      .then(({ data }) => {
+        if (data) {
+          // Check which have unpaid transactions
+          const fees: PendingFee[] = data.map((d: any) => ({
+            name: d.name,
+            role: d.role,
+            projectName: d.projects?.name || "—",
+            fee: d.fee,
+            feePaid: false,
+          }));
+          // Match against paid transactions with matching description
+          const paidDescs = new Set(
+            transactions
+              .filter((t) => t.type === "expense" && t.paid)
+              .map((t) => t.description.toLowerCase())
+          );
+          setPendingFees(
+            fees.map((f) => ({
+              ...f,
+              feePaid: paidDescs.has(`cachê ${f.name}`.toLowerCase()) ||
+                       paidDescs.has(`cache ${f.name}`.toLowerCase()) ||
+                       paidDescs.has(f.name.toLowerCase()),
+            })).filter((f) => !f.feePaid)
+          );
+        }
+      });
+  }, [user, transactions]);
 
   // Filters
   const [filterProject, setFilterProject] = useState<string>("all");
