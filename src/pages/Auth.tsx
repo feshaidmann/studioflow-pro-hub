@@ -148,6 +148,12 @@ export default function Auth() {
           <CardDescription>
             {mode === "login" ? "Entre na sua conta" : mode === "signup" ? "Crie sua conta" : "Recuperar senha"}
           </CardDescription>
+          {mode === "signup" && (
+            <div className="mt-3 space-y-1">
+              <p className="text-xs text-muted-foreground/80">✨ Você pode começar com 1 projeto</p>
+              <p className="text-xs text-muted-foreground/80">⚡ Sem precisar configurar tudo agora</p>
+            </div>
+          )}
         </CardHeader>
         <CardContent>
           {mode === "forgot" && forgotSent ? (
