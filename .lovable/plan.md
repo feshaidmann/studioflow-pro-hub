@@ -192,7 +192,7 @@
 | Portfólio/especialidades/avaliações | ✅ | |
 | CTA para convite | ✅ | Botão "Convidar para projeto" |
 | Links de trabalhos por projeto | ❌ | |
-| Histórico resumido de entregas | ❌ | |
+| Histórico resumido de entregas | ✅ | Via RPC get_public_profile_history |
 
 ---
 
