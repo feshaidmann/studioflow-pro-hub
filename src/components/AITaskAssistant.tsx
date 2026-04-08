@@ -60,7 +60,7 @@ interface ProjectContext {
     amountPaid?: number | null;
     estimatedMonths?: number | null;
   }>;
-  activeTasks: Array<{ description: string; source: string; dueDate: string | null }>;
+  activeTasks: Array<{ description: string; source: string; dueDate: string | null; assignedTo?: string; blocked?: boolean; blockedReason?: string; severity?: string }>;
   financials: { totalIncome: number; totalExpense: number; profit: number };
   professionals?: Array<{ name: string; specialty: string; bio: string; active: boolean; phone: string }>;
   alerts?: Array<{ title: string; severity: string; project: string; category: string }>;
