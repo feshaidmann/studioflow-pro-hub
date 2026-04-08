@@ -522,9 +522,12 @@ export type Database = {
           bio: string
           city: string
           created_at: string
+          current_moment: string
           display_name: string
           id: string
+          main_pain: string
           onboarding_completed: boolean
+          onboarding_version: number
           origin: string
           plan: string
           projects_completed: number
@@ -544,9 +547,12 @@ export type Database = {
           bio?: string
           city?: string
           created_at?: string
+          current_moment?: string
           display_name?: string
           id: string
+          main_pain?: string
           onboarding_completed?: boolean
+          onboarding_version?: number
           origin?: string
           plan?: string
           projects_completed?: number
@@ -566,9 +572,12 @@ export type Database = {
           bio?: string
           city?: string
           created_at?: string
+          current_moment?: string
           display_name?: string
           id?: string
+          main_pain?: string
           onboarding_completed?: boolean
+          onboarding_version?: number
           origin?: string
           plan?: string
           projects_completed?: number
