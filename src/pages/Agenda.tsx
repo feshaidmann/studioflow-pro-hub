@@ -205,6 +205,45 @@ export default function Agenda() {
         </Select>
       </div>
 
+      {/* Team deadlines */}
+      {teamDeadlines.length > 0 && (
+        <Card className="glass-card border-warning/20 animate-fade-in">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Users className="h-4 w-4 text-warning" />
+              <p className="text-sm font-semibold">Prazos da equipe</p>
+              <Badge variant="secondary" className="text-[10px]">{teamDeadlines.length}</Badge>
+            </div>
+            <div className="space-y-1.5">
+              {teamDeadlines.slice(0, 6).map((td, i) => (
+                <div key={i} className="flex items-center gap-2 text-xs px-2 py-1.5 rounded-md hover:bg-muted/30 transition-colors">
+                  {td.daysUntilDue < 0 ? (
+                    <AlertTriangle className="h-3.5 w-3.5 text-destructive shrink-0" />
+                  ) : (
+                    <CalendarDays className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                  )}
+                  <span className="font-medium truncate flex-1">{td.memberName}</span>
+                  <span className="text-muted-foreground truncate">{td.role}</span>
+                  <span className="text-muted-foreground">·</span>
+                  <span className="text-muted-foreground truncate">{td.projectName}</span>
+                  <Badge variant="outline" className={cn(
+                    "text-[9px] shrink-0",
+                    td.daysUntilDue < 0 ? "border-destructive/40 text-destructive" :
+                    td.daysUntilDue <= 3 ? "border-warning/40 text-warning" : "border-border"
+                  )}>
+                    {td.daysUntilDue < 0
+                      ? `${Math.abs(td.daysUntilDue)}d atrasado`
+                      : td.daysUntilDue === 0
+                        ? "Hoje"
+                        : `${td.daysUntilDue}d`}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Event list */}
       {loading ? (
         <div className="flex items-center justify-center py-16 text-muted-foreground">
