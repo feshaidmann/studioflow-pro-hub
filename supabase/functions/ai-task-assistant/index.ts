@@ -2,7 +2,6 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const AI_MODEL = "google/gemini-3-flash-preview";
-// Custo estimado por chamada (input+output tokens médios do assistente)
 const COST_PER_CALL_USD = 0.00035;
 
 function getAdminClient() {
@@ -49,8 +48,7 @@ serve(async (req) => {
   const authHeader = req.headers.get("Authorization");
   if (!authHeader?.startsWith("Bearer ")) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
-      status: 401,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 
@@ -64,8 +62,7 @@ serve(async (req) => {
   const { data, error: authError } = await supabase.auth.getClaims(token);
   if (authError || !data?.claims) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
-      status: 401,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 
@@ -74,97 +71,107 @@ serve(async (req) => {
   const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
   if (!LOVABLE_API_KEY) {
     return new Response(JSON.stringify({ error: "LOVABLE_API_KEY not configured" }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 
   try {
     const { messages, projectsContext } = await req.json();
 
-    // Build context block from project data
+    // Build context block
     let contextBlock = "";
     if (projectsContext) {
-      const { projects = [], activeTasks = [], financials = {}, professionals = [] } = projectsContext;
+      const { projects = [], activeTasks = [], financials = {}, professionals = [], alerts = [] } = projectsContext;
 
       const projectLines = projects.map((p: any) => {
         const paid = p.amountPaid ?? 0;
         const total = p.totalContractValue ?? 0;
         const pending = total - paid;
-        const parts = [
+        return [
           `- "${p.name}" (artista: ${p.artist || "—"})`,
           `  Estágio: ${p.stage} | Progresso: ${p.mixPercent ?? 0}%`,
           p.projectType ? `  Tipo: ${p.projectType}` : "",
           total > 0 ? `  Contrato: R$${total.toFixed(0)} | Pago: R$${paid.toFixed(0)} | Pendente: R$${pending.toFixed(0)}` : "",
           p.estimatedMonths ? `  Prazo estimado: ${p.estimatedMonths} meses` : "",
-        ].filter(Boolean);
+        ].filter(Boolean).join("\n");
+      });
+
+      const taskLines = activeTasks.slice(0, 20).map((t: any) => {
+        const parts = [`- [${t.source}]${t.severity && t.severity !== "medium" ? ` [${t.severity}]` : ""} ${t.description}`];
+        if (t.dueDate) parts[0] += ` (vence: ${t.dueDate})`;
+        if (t.assignedTo) parts.push(`  → ${t.assignedTo}`);
+        if (t.blocked) parts.push(`  ⚠ BLOQUEADA${t.blockedReason ? `: ${t.blockedReason}` : ""}`);
         return parts.join("\n");
       });
 
-      const taskLines = activeTasks.slice(0, 15).map((t: any) =>
-        `- [${t.source}] ${t.description}${t.dueDate ? ` (vence: ${t.dueDate})` : ""}`
+      const alertLines = alerts.slice(0, 10).map((a: any) =>
+        `- [${a.severity}] ${a.title} (projeto: ${a.project}, categoria: ${a.category})`
       );
 
-      const profLines = professionals.slice(0, 30).map((p: any) => {
-        const parts = [
+      const profLines = professionals.slice(0, 30).map((p: any) =>
+        [
           `- ${p.name}${p.specialty ? ` (${p.specialty})` : ""}${p.active ? "" : " [inativo]"}`,
           p.bio ? `  Bio: ${p.bio}` : "",
           p.phone ? `  WhatsApp: ${p.phone}` : "",
-        ].filter(Boolean);
-        return parts.join("\n");
-      });
+        ].filter(Boolean).join("\n")
+      );
 
       contextBlock = `
-## Estado atual dos projetos (${new Date().toLocaleDateString("pt-BR")}):
-${projectLines.length > 0 ? projectLines.join("\n\n") : "Nenhum projeto ativo."}
+## Estado atual (${new Date().toLocaleDateString("pt-BR")}):
 
-## Tarefas pendentes (${activeTasks.length} total):
-${taskLines.length > 0 ? taskLines.join("\n") : "Nenhuma tarefa pendente."}
+### Alertas ativos (${alerts.length}):
+${alertLines.length > 0 ? alertLines.join("\n") : "Nenhum alerta."}
 
-## Resumo financeiro:
-- Receita total: R$${(financials.totalIncome ?? 0).toFixed(0)}
+### Projetos (${projects.length}):
+${projectLines.length > 0 ? projectLines.join("\n\n") : "Nenhum projeto."}
+
+### Tarefas pendentes (${activeTasks.length}):
+${taskLines.length > 0 ? taskLines.join("\n") : "Nenhuma tarefa."}
+
+### Resumo financeiro:
+- Receita: R$${(financials.totalIncome ?? 0).toFixed(0)}
 - Despesas: R$${(financials.totalExpense ?? 0).toFixed(0)}
 - Lucro: R$${(financials.profit ?? 0).toFixed(0)}
 
-## Parceiros / Contatos da agenda (${professionals.length}):
-${profLines.length > 0 ? profLines.join("\n") : "Nenhum parceiro cadastrado."}
+### Parceiros (${professionals.length}):
+${profLines.length > 0 ? profLines.join("\n") : "Nenhum parceiro."}
 `;
     }
 
-    const systemPrompt = `Você é o Assistente Técnico do JamSession — um parceiro de confiança para produtores e artistas que usam o StudioFlow. Seu jeito é amigável, próximo e animado, como um colega experiente de estúdio que fica feliz em ajudar.
+    const systemPrompt = `Você é o Assistente Operacional do StudioFlow — um parceiro prático que ajuda artistas independentes a não perderem prazos, resolverem blockers e avançarem seus projetos musicais.
 
-Você domina mixagem, masterização e produção musical (rough mix → mix → master → release), além de contratos, pagamentos, prazos e gestão de profissionais.
+FOCO PRINCIPAL (priorize nesta ordem):
+1. O que está TRAVANDO o projeto do usuário (tarefas bloqueadas, colaboradores sem resposta, arquivos faltando)
+2. O que PRECISA ser feito HOJE (tarefas vencidas e do dia)
+3. Pendências CRÍTICAS (orçamento em risco, lançamento com problemas)
+4. PRÓXIMA MELHOR AÇÃO concreta e acionável
 
-ESCOPO E LIMITES:
-Você SOMENTE responde perguntas relacionadas aos seguintes temas:
-- Produção musical: mixagem, masterização, gravação, arranjo, composição, stages de projeto
-- Gestão de projetos musicais: prazos, progresso, entrega, feedback de clientes
-- Finanças de estúdio: receitas, despesas, contratos, pagamentos, inadimplência
-- Agenda e colaboradores: profissionais, parceiros, convites, especialidades
-- Tarefas e produtividade dentro do StudioFlow
+COMPORTAMENTO OPERACIONAL:
+- Quando o usuário pedir orientação geral, analise os alertas e tarefas e diga EXATAMENTE o que fazer, em que ordem
+- Identifique patterns: "Você tem 3 tarefas vencidas no projeto X — comece por Y porque Z"
+- Se detectar riscos, avise proativamente: orçamento >90%, convite sem resposta >5 dias, projeto parado >14 dias
+- Sugira desbloquear tarefas bloqueadas com ações específicas
+- Nunca dê respostas vagas como "organize melhor" — diga "abra o projeto X, vá em Equipe e cobre o João pelo stem de guitarra"
 
-Se o usuário perguntar algo fora desses temas, responda com simpatia e em uma linha: "Esse tema foge um pouco do meu campo! Estou aqui pra ajudar com tudo relacionado à sua produção musical e estúdio 🎵". Não elabore.
+ESCOPO:
+Você responde sobre produção musical (mix, master, gravação, arranjo), gestão de projetos musicais (prazos, equipe, entregas), finanças de estúdio e tarefas operacionais.
+Se o usuário perguntar algo fora desses temas: "Esse tema foge do meu campo! Estou aqui pra ajudar com sua produção musical 🎵"
 
-ESTILO DE RESPOSTA:
-- Responda SEMPRE em português brasileiro
-- Tom amigável, caloroso e encorajador — como um colega de estúdio, não um manual técnico
-- Pode usar emojis com moderação para deixar as respostas mais leves 🎶
-- Seja objetivo — vá ao ponto sem enrolação, mas sem ser frio
-- Use listas quando houver 2 ou mais itens ou passos
-- Formatação limpa: sem ##, sem **, sem markdown decorativo — apenas texto simples e listas com "-"
-- Espaçamento entre parágrafos e listas para facilitar a leitura
-- Evite repetir o que o usuário disse ou fazer elogios exagerados
-- NÃO faça análise automática nem resumo não solicitado — responda APENAS ao que foi perguntado
-- Use os dados de contexto para tornar a resposta mais personalizada e relevante
+ESTILO:
+- Português brasileiro, tom direto e encorajador
+- Seja CONCISO — priorize ação sobre explicação
+- Use listas com "-" para múltiplos itens
+- Emojis com moderação
+- Formatação simples: sem ##, sem **, apenas texto e listas
+- Use dados do contexto para personalizar cada resposta
 
 SUGESTÕES DE TAREFAS:
-Quando quiser sugerir tarefas, inclua EXATAMENTE ao final da resposta (nunca no meio) um bloco neste formato:
+Quando sugerir tarefas, inclua ao final:
 <sugestoes>
-[{"description":"Texto curto e acionável","priority":"high","project_id":"id-opcional"},{"description":"Outra tarefa","priority":"medium"}]
+[{"description":"Ação concreta","priority":"high","project_id":"id-opcional"},{"description":"Outra ação","priority":"medium"}]
 </sugestoes>
-
-Use priority: "high" (urgente), "medium" (importante) ou "low" (quando tiver tempo).
-Sugira apenas 1-4 tarefas mais relevantes. NUNCA use outros formatos como JSON solto, tool_code ou código.
+Use priority: "high" (urgente/blocker), "medium" (importante), "low" (quando tiver tempo).
+Máximo 4 sugestões. Cada uma deve ser uma ação específica, não genérica.
 
 ${contextBlock}`;
 
@@ -195,7 +202,7 @@ ${contextBlock}`;
       }
       if (response.status === 402) {
         return new Response(
-          JSON.stringify({ error: "Créditos insuficientes. Adicione créditos ao workspace Lovable." }),
+          JSON.stringify({ error: "Créditos insuficientes. Adicione créditos ao workspace." }),
           { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
@@ -207,7 +214,6 @@ ${contextBlock}`;
       );
     }
 
-    // Register successful invocation for cost tracking (best-effort, async)
     logInvocation(userId, "success");
 
     return new Response(response.body, {

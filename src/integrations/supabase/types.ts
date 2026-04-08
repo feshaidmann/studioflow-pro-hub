@@ -987,7 +987,10 @@ export type Database = {
       }
       tasks: {
         Row: {
+          assigned_to: string
           auto_generated: boolean
+          blocked: boolean
+          blocked_reason: string
           completed: boolean
           created_at: string
           description: string
@@ -995,13 +998,19 @@ export type Database = {
           due_date: string | null
           id: string
           project_id: string | null
+          severity: string
           source: string
           source_key: string
+          source_module: string
+          task_area: string
           updated_at: string
           user_id: string
         }
         Insert: {
+          assigned_to?: string
           auto_generated?: boolean
+          blocked?: boolean
+          blocked_reason?: string
           completed?: boolean
           created_at?: string
           description?: string
@@ -1009,13 +1018,19 @@ export type Database = {
           due_date?: string | null
           id?: string
           project_id?: string | null
+          severity?: string
           source?: string
           source_key?: string
+          source_module?: string
+          task_area?: string
           updated_at?: string
           user_id: string
         }
         Update: {
+          assigned_to?: string
           auto_generated?: boolean
+          blocked?: boolean
+          blocked_reason?: string
           completed?: boolean
           created_at?: string
           description?: string
@@ -1023,8 +1038,11 @@ export type Database = {
           due_date?: string | null
           id?: string
           project_id?: string | null
+          severity?: string
           source?: string
           source_key?: string
+          source_module?: string
+          task_area?: string
           updated_at?: string
           user_id?: string
         }

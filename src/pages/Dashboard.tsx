@@ -31,7 +31,7 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const { projects, getMixPercent, getProjectFinancials, transactions } = useProjects();
   const { displayName, isSimpleMode } = useProfile();
-  const { activeTasks, completedTasks, loading: tasksLoading, addTask, toggleTask, deleteTask, refresh: refreshTasks } = useTasks();
+  const { activeTasks, completedTasks, loading: tasksLoading, addTask, toggleTask, deleteTask, updateTask, refresh: refreshTasks } = useTasks();
   const { user } = useAuth();
   const autoGenRef = useRef(false);
   const { professionals } = useProfessionals();
@@ -175,11 +175,13 @@ export default function Dashboard() {
           onAddTask={async (desc) => { await addTask({ description: desc }); }}
           onToggleTask={toggleTask}
           onDeleteTask={deleteTask}
+          onUpdateTask={(id, patch) => updateTask(id, patch)}
           onRefresh={handleRefreshTasks}
           refreshing={refreshing}
           lastRefreshed={lastRefreshed}
           hidden={isFirstRun}
           aiRef={aiRef}
+          projects={projects.map((p) => ({ id: p.id, name: p.name }))}
         />
 
         <ProjectAlertsCard alerts={alerts} hidden={isFirstRun} />
@@ -219,7 +221,7 @@ export default function Dashboard() {
                 totalContractValue: p.totalContractValue, amountPaid: p.amountPaid,
                 estimatedMonths: p.estimatedMonths,
               })),
-              activeTasks: activeTasks.map((t) => ({ description: t.description, source: t.source, dueDate: t.dueDate })),
+              activeTasks: activeTasks.map((t) => ({ description: t.description, source: t.source, dueDate: t.dueDate, assignedTo: t.assignedTo, blocked: t.blocked, blockedReason: t.blockedReason, severity: t.severity })),
               financials,
               professionals: professionals.map((p) => ({ name: p.name, specialty: p.specialty, bio: p.bio ?? "", active: true, phone: p.phone ?? "" })),
               alerts: alerts.slice(0, 10).map((a) => ({ title: a.title, severity: a.severity, project: a.projectName, category: a.category })),
