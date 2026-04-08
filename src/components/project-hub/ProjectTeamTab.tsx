@@ -1,11 +1,47 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Users, UserPlus, Mail, Phone, DollarSign, Music, X as XIcon, Check, Clock, Copy, Link2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import {
+  Users, Mail, Phone, DollarSign, Music, X as XIcon, Check, Clock,
+  Copy, Link2, AlertTriangle, Package, ChevronDown, ChevronUp,
+  CalendarDays, FileText, UserCheck, Send,
+} from "lucide-react";
 import { useProjects } from "@/contexts/ProjectContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { format, isPast, isToday, differenceInDays } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { cn } from "@/lib/utils";
 import type { Professional } from "@/data/mockData";
+
+/* ── Types ── */
+type DeliveryStatus = "convidado" | "ativo" | "aguardando" | "atrasado" | "entregou" | "concluido";
+
+interface MemberExtra {
+  delivery_status: DeliveryStatus;
+  delivery_due_date: string | null;
+  expected_deliverable: string;
+  last_activity_at: string | null;
+  stage: string;
+}
+
+const STATUS_CONFIG: Record<DeliveryStatus, { label: string; color: string; icon: typeof Clock }> = {
+  convidado: { label: "Convidado", color: "border-yellow-500/50 text-yellow-400", icon: Clock },
+  ativo: { label: "Ativo", color: "border-blue-500/50 text-blue-400", icon: UserCheck },
+  aguardando: { label: "Aguardando", color: "border-orange-500/50 text-orange-400", icon: Clock },
+  atrasado: { label: "Atrasado", color: "border-red-500/50 text-red-400", icon: AlertTriangle },
+  entregou: { label: "Entregou", color: "border-emerald-500/50 text-emerald-400", icon: Package },
+  concluido: { label: "Concluído", color: "border-green-500/50 text-green-400", icon: Check },
+};
+
+const STAGE_LABELS: Record<string, string> = {
+  rough: "Projeto Iniciado", inicio: "Início", gravacao: "Gravação",
+  mix: "Mix", master: "Master", upload: "Upload", lancado: "Lançado",
+};
 
 interface ProjectTeamTabProps {
   projectId: string;
@@ -15,23 +51,81 @@ export default function ProjectTeamTab({ projectId }: ProjectTeamTabProps) {
   const { professionals, removeProfessional } = useProjects();
   const team = professionals[projectId] || [];
 
+  const [memberExtras, setMemberExtras] = useState<Record<string, MemberExtra>>({});
   const [inviteTokens, setInviteTokens] = useState<Record<string, string>>({});
   const [inviteStatuses, setInviteStatuses] = useState<Record<string, string>>({});
   const [copiedToken, setCopiedToken] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState<Partial<MemberExtra>>({});
+  const [saving, setSaving] = useState(false);
+  const [filterStatus, setFilterStatus] = useState<string>("all");
 
+  // Fetch invitations + member extras
   useEffect(() => {
-    supabase.from("project_invitations").select("professional_email, token, status").eq("project_id", projectId).then(({ data }) => {
-      if (!data) return;
-      const tokenMap: Record<string, string> = {};
-      const statusMap: Record<string, string> = {};
-      data.forEach((row) => {
-        if (row.token) tokenMap[row.professional_email] = row.token;
-        if (row.status) statusMap[row.professional_email] = row.status;
-      });
-      setInviteTokens(tokenMap);
-      setInviteStatuses(statusMap);
-    });
+    const fetchData = async () => {
+      const [invRes, memRes] = await Promise.all([
+        supabase.from("project_invitations").select("professional_email, token, status").eq("project_id", projectId),
+        supabase.from("project_members").select("id, delivery_status, delivery_due_date, expected_deliverable, last_activity_at, stage").eq("project_id", projectId),
+      ]);
+
+      if (invRes.data) {
+        const tokenMap: Record<string, string> = {};
+        const statusMap: Record<string, string> = {};
+        invRes.data.forEach((row) => {
+          if (row.token) tokenMap[row.professional_email] = row.token;
+          if (row.status) statusMap[row.professional_email] = row.status;
+        });
+        setInviteTokens(tokenMap);
+        setInviteStatuses(statusMap);
+      }
+
+      if (memRes.data) {
+        const extras: Record<string, MemberExtra> = {};
+        memRes.data.forEach((row) => {
+          extras[row.id] = {
+            delivery_status: (row.delivery_status || "ativo") as DeliveryStatus,
+            delivery_due_date: row.delivery_due_date,
+            expected_deliverable: row.expected_deliverable || "",
+            last_activity_at: row.last_activity_at,
+            stage: row.stage || "",
+          };
+        });
+        setMemberExtras(extras);
+      }
+    };
+    fetchData();
   }, [projectId]);
+
+  // Compute effective status (auto-detect late)
+  const getEffectiveStatus = (prof: Professional): DeliveryStatus => {
+    const extra = memberExtras[prof.id];
+    if (!extra) {
+      const invStatus = prof.email ? inviteStatuses[prof.email] : null;
+      if (invStatus === "pending") return "convidado";
+      return "ativo";
+    }
+    if (extra.delivery_status === "ativo" && extra.delivery_due_date && isPast(new Date(extra.delivery_due_date)) && !isToday(new Date(extra.delivery_due_date))) {
+      return "atrasado";
+    }
+    return extra.delivery_status;
+  };
+
+  // Filter
+  const filteredTeam = useMemo(() => {
+    if (filterStatus === "all") return team;
+    return team.filter((p) => getEffectiveStatus(p) === filterStatus);
+  }, [team, filterStatus, memberExtras, inviteStatuses]);
+
+  // Summary counts
+  const statusCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    team.forEach((p) => {
+      const s = getEffectiveStatus(p);
+      counts[s] = (counts[s] || 0) + 1;
+    });
+    return counts;
+  }, [team, memberExtras, inviteStatuses]);
 
   const getInviteLink = (token: string) => `${window.location.origin}/invite/${token}`;
 
@@ -40,6 +134,62 @@ export default function ProjectTeamTab({ projectId }: ProjectTeamTabProps) {
     setCopiedToken(token);
     toast.success("Link copiado! 🔗");
     setTimeout(() => setCopiedToken(null), 2000);
+  };
+
+  const startEditing = (prof: Professional) => {
+    const extra = memberExtras[prof.id];
+    setEditingId(prof.id);
+    setEditForm({
+      delivery_status: extra?.delivery_status || "ativo",
+      delivery_due_date: extra?.delivery_due_date || null,
+      expected_deliverable: extra?.expected_deliverable || "",
+      stage: extra?.stage || "",
+    });
+  };
+
+  const saveEdit = async (profId: string) => {
+    setSaving(true);
+    const { error } = await supabase.from("project_members").update({
+      delivery_status: editForm.delivery_status || "ativo",
+      delivery_due_date: editForm.delivery_due_date || null,
+      expected_deliverable: editForm.expected_deliverable || "",
+      stage: editForm.stage || "",
+      last_activity_at: new Date().toISOString(),
+    }).eq("id", profId);
+
+    if (error) {
+      toast.error("Erro ao salvar");
+    } else {
+      setMemberExtras((prev) => ({
+        ...prev,
+        [profId]: {
+          ...prev[profId],
+          delivery_status: (editForm.delivery_status || "ativo") as DeliveryStatus,
+          delivery_due_date: editForm.delivery_due_date || null,
+          expected_deliverable: editForm.expected_deliverable || "",
+          stage: editForm.stage || "",
+          last_activity_at: new Date().toISOString(),
+        },
+      }));
+      toast.success("Atualizado! ✅");
+    }
+    setEditingId(null);
+    setSaving(false);
+  };
+
+  const quickStatusChange = async (profId: string, status: DeliveryStatus) => {
+    const { error } = await supabase.from("project_members").update({
+      delivery_status: status,
+      last_activity_at: new Date().toISOString(),
+    }).eq("id", profId);
+
+    if (!error) {
+      setMemberExtras((prev) => ({
+        ...prev,
+        [profId]: { ...prev[profId], delivery_status: status, last_activity_at: new Date().toISOString() },
+      }));
+      toast.success(`Status: ${STATUS_CONFIG[status].label}`);
+    }
   };
 
   if (team.length === 0) {
@@ -53,47 +203,238 @@ export default function ProjectTeamTab({ projectId }: ProjectTeamTabProps) {
   }
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center gap-2 mb-2">
-        <Users className="h-4 w-4 text-primary" />
-        <span className="text-sm font-semibold">Colaboradores ({team.length})</span>
+    <div className="space-y-4">
+      {/* Header + Summary */}
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div className="flex items-center gap-2">
+          <Users className="h-4 w-4 text-primary" />
+          <span className="text-sm font-semibold">Equipe ({team.length})</span>
+        </div>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {Object.entries(statusCounts).map(([status, count]) => {
+            const cfg = STATUS_CONFIG[status as DeliveryStatus];
+            if (!cfg) return null;
+            return (
+              <Badge
+                key={status}
+                variant="outline"
+                className={cn("text-[10px] gap-1 cursor-pointer", cfg.color, filterStatus === status && "ring-1 ring-primary")}
+                onClick={() => setFilterStatus(filterStatus === status ? "all" : status)}
+              >
+                {count} {cfg.label}
+              </Badge>
+            );
+          })}
+          {filterStatus !== "all" && (
+            <Button variant="ghost" size="sm" className="h-5 text-[10px] px-1.5" onClick={() => setFilterStatus("all")}>
+              Limpar
+            </Button>
+          )}
+        </div>
       </div>
-      {team.map((prof) => {
+
+      {/* Member Cards */}
+      {filteredTeam.map((prof) => {
         const token = prof.email ? inviteTokens[prof.email] : null;
-        const inviteLink = token ? getInviteLink(token) : null;
         const isCopied = token && copiedToken === token;
-        const inviteStatus = prof.email ? inviteStatuses[prof.email] : null;
+        const extra = memberExtras[prof.id];
+        const effectiveStatus = getEffectiveStatus(prof);
+        const statusCfg = STATUS_CONFIG[effectiveStatus];
+        const isExpanded = expandedId === prof.id;
+        const isEditing = editingId === prof.id;
+
+        const dueDate = extra?.delivery_due_date;
+        const daysLeft = dueDate ? differenceInDays(new Date(dueDate), new Date()) : null;
+
         return (
-          <div key={prof.id} className="rounded-lg bg-secondary/30 border border-border p-3 space-y-2">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center flex-wrap gap-1.5">
-                <span className="font-medium text-sm">{prof.name}</span>
-                <Badge variant="secondary" className="text-xs">{prof.role}</Badge>
-                {inviteStatus === "pending" && <Badge variant="outline" className="text-[10px] gap-1 border-yellow-500/50 text-yellow-400"><Clock className="h-2.5 w-2.5"/>Pendente</Badge>}
-                {inviteStatus === "accepted" && <Badge variant="outline" className="text-[10px] gap-1 border-green-500/50 text-green-400"><Check className="h-2.5 w-2.5"/>Aceito</Badge>}
-                {inviteStatus === "declined" && <Badge variant="outline" className="text-[10px] gap-1 border-red-500/50 text-red-400"><XIcon className="h-2.5 w-2.5"/>Recusado</Badge>}
-              </div>
-              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeProfessional(projectId, prof.id)}>
-                <XIcon className="h-3 w-3" />
-              </Button>
-            </div>
-            <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-              {prof.instrument && prof.instrument !== "—" && <span className="flex items-center gap-1"><Music className="h-3 w-3" />{prof.instrument}</span>}
-              {prof.email && <span className="flex items-center gap-1"><Mail className="h-3 w-3" />{prof.email}</span>}
-              {prof.phone && <span className="flex items-center gap-1"><Phone className="h-3 w-3" />{prof.phone}</span>}
-              {prof.fee > 0 && <span className="flex items-center gap-1 text-foreground"><DollarSign className="h-3 w-3" />R$ {prof.fee.toLocaleString()}</span>}
-            </div>
-            {prof.notes && <p className="text-xs text-muted-foreground italic">{prof.notes}</p>}
-            {inviteLink && (
-              <div className="pt-1 border-t border-border/40 space-y-1.5">
-                <div className="flex items-center gap-1.5 rounded-md bg-primary/5 border border-primary/20 px-2 py-1.5">
-                  <Link2 className="h-3 w-3 text-primary shrink-0" />
-                  <span className="text-[10px] text-muted-foreground truncate flex-1 font-mono">/invite/{token}</span>
+          <div key={prof.id} className="rounded-lg bg-secondary/30 border border-border overflow-hidden">
+            {/* Main row */}
+            <div
+              className="p-3 cursor-pointer hover:bg-muted/20 transition-colors"
+              onClick={() => setExpandedId(isExpanded ? null : prof.id)}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center flex-wrap gap-1.5 min-w-0">
+                  <span className="font-medium text-sm truncate">{prof.name}</span>
+                  <Badge variant="secondary" className="text-[10px]">{prof.role}</Badge>
+                  <Badge variant="outline" className={cn("text-[10px] gap-1", statusCfg.color)}>
+                    <statusCfg.icon className="h-2.5 w-2.5" />
+                    {statusCfg.label}
+                  </Badge>
+                  {extra?.stage && (
+                    <Badge variant="outline" className="text-[10px] border-primary/30 text-primary">
+                      {STAGE_LABELS[extra.stage] || extra.stage}
+                    </Badge>
+                  )}
                 </div>
-                <Button variant="outline" size="sm" className="h-7 text-xs gap-1 w-full" onClick={() => handleCopyLink(token!)}>
-                  {isCopied ? <Check className="h-3 w-3 text-success" /> : <Copy className="h-3 w-3" />}
-                  {isCopied ? "Copiado!" : "Copiar link"}
-                </Button>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  {dueDate && (
+                    <span className={cn(
+                      "text-[10px] flex items-center gap-0.5",
+                      daysLeft !== null && daysLeft < 0 ? "text-red-400" : daysLeft !== null && daysLeft <= 2 ? "text-yellow-400" : "text-muted-foreground"
+                    )}>
+                      <CalendarDays className="h-2.5 w-2.5" />
+                      {format(new Date(dueDate), "dd/MM", { locale: ptBR })}
+                    </span>
+                  )}
+                  {isExpanded ? <ChevronUp className="h-3.5 w-3.5 text-muted-foreground" /> : <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />}
+                </div>
+              </div>
+
+              {/* Deliverable preview */}
+              {extra?.expected_deliverable && !isExpanded && (
+                <p className="text-[10px] text-muted-foreground mt-1 truncate flex items-center gap-1">
+                  <FileText className="h-2.5 w-2.5 shrink-0" />
+                  {extra.expected_deliverable}
+                </p>
+              )}
+            </div>
+
+            {/* Expanded details */}
+            {isExpanded && (
+              <div className="border-t border-border p-3 space-y-3">
+                {/* Contact info */}
+                <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                  {prof.instrument && prof.instrument !== "—" && (
+                    <span className="flex items-center gap-1"><Music className="h-3 w-3" />{prof.instrument}</span>
+                  )}
+                  {prof.email && (
+                    <span className="flex items-center gap-1"><Mail className="h-3 w-3" />{prof.email}</span>
+                  )}
+                  {prof.phone && (
+                    <span className="flex items-center gap-1"><Phone className="h-3 w-3" />{prof.phone}</span>
+                  )}
+                  {prof.fee > 0 && (
+                    <span className="flex items-center gap-1 text-foreground">
+                      <DollarSign className="h-3 w-3" />R$ {prof.fee.toLocaleString("pt-BR")}
+                    </span>
+                  )}
+                </div>
+
+                {prof.notes && <p className="text-xs text-muted-foreground italic">{prof.notes}</p>}
+
+                {/* Deliverable & status section */}
+                {isEditing ? (
+                  <div className="space-y-2 bg-muted/20 rounded-md p-2.5">
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-[10px] text-muted-foreground mb-0.5 block">Status</label>
+                        <Select
+                          value={editForm.delivery_status || "ativo"}
+                          onValueChange={(v) => setEditForm({ ...editForm, delivery_status: v as DeliveryStatus })}
+                        >
+                          <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            {Object.entries(STATUS_CONFIG).map(([k, v]) => (
+                              <SelectItem key={k} value={k} className="text-xs">{v.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-muted-foreground mb-0.5 block">Etapa</label>
+                        <Select
+                          value={editForm.stage || "none"}
+                          onValueChange={(v) => setEditForm({ ...editForm, stage: v === "none" ? "" : v })}
+                        >
+                          <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none" className="text-xs">Nenhuma</SelectItem>
+                            {Object.entries(STAGE_LABELS).map(([k, v]) => (
+                              <SelectItem key={k} value={k} className="text-xs">{v}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-muted-foreground mb-0.5 block">Prazo</label>
+                      <Input
+                        type="date"
+                        className="h-7 text-xs"
+                        value={editForm.delivery_due_date || ""}
+                        onChange={(e) => setEditForm({ ...editForm, delivery_due_date: e.target.value || null })}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-muted-foreground mb-0.5 block">Entrega esperada</label>
+                      <Input
+                        className="h-7 text-xs"
+                        placeholder="Ex: Stems de guitarra mixados"
+                        value={editForm.expected_deliverable || ""}
+                        onChange={(e) => setEditForm({ ...editForm, expected_deliverable: e.target.value })}
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <Button size="sm" className="h-7 text-xs flex-1" onClick={() => saveEdit(prof.id)} disabled={saving}>
+                        <Check className="h-3 w-3 mr-1" /> Salvar
+                      </Button>
+                      <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setEditingId(null)}>
+                        Cancelar
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {/* Deliverable info */}
+                    {extra?.expected_deliverable && (
+                      <div className="bg-muted/20 rounded-md p-2">
+                        <span className="text-[10px] text-muted-foreground block mb-0.5">Entrega esperada</span>
+                        <p className="text-xs">{extra.expected_deliverable}</p>
+                      </div>
+                    )}
+
+                    {/* Last activity */}
+                    {extra?.last_activity_at && (
+                      <p className="text-[10px] text-muted-foreground">
+                        Último movimento: {format(new Date(extra.last_activity_at), "dd/MM 'às' HH:mm", { locale: ptBR })}
+                      </p>
+                    )}
+
+                    {/* Quick actions */}
+                    <div className="flex flex-wrap gap-1.5">
+                      <Button variant="outline" size="sm" className="h-6 text-[10px] gap-1" onClick={(e) => { e.stopPropagation(); startEditing(prof); }}>
+                        <FileText className="h-2.5 w-2.5" /> Editar
+                      </Button>
+                      {effectiveStatus === "ativo" && (
+                        <Button variant="outline" size="sm" className="h-6 text-[10px] gap-1 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10"
+                          onClick={(e) => { e.stopPropagation(); quickStatusChange(prof.id, "entregou"); }}>
+                          <Package className="h-2.5 w-2.5" /> Marcar entrega
+                        </Button>
+                      )}
+                      {effectiveStatus === "entregou" && (
+                        <Button variant="outline" size="sm" className="h-6 text-[10px] gap-1 border-green-500/30 text-green-400 hover:bg-green-500/10"
+                          onClick={(e) => { e.stopPropagation(); quickStatusChange(prof.id, "concluido"); }}>
+                          <Check className="h-2.5 w-2.5" /> Concluir
+                        </Button>
+                      )}
+                      {(effectiveStatus === "atrasado" || effectiveStatus === "aguardando") && (
+                        <Button variant="outline" size="sm" className="h-6 text-[10px] gap-1 border-blue-500/30 text-blue-400 hover:bg-blue-500/10"
+                          onClick={(e) => { e.stopPropagation(); quickStatusChange(prof.id, "ativo"); }}>
+                          <UserCheck className="h-2.5 w-2.5" /> Reativar
+                        </Button>
+                      )}
+                      <Button variant="ghost" size="sm" className="h-6 text-[10px] gap-1 text-destructive hover:text-destructive"
+                        onClick={(e) => { e.stopPropagation(); removeProfessional(projectId, prof.id); }}>
+                        <XIcon className="h-2.5 w-2.5" /> Remover
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Invite link */}
+                {token && (
+                  <div className="pt-2 border-t border-border/40 space-y-1.5">
+                    <div className="flex items-center gap-1.5 rounded-md bg-primary/5 border border-primary/20 px-2 py-1.5">
+                      <Link2 className="h-3 w-3 text-primary shrink-0" />
+                      <span className="text-[10px] text-muted-foreground truncate flex-1 font-mono">/invite/{token}</span>
+                    </div>
+                    <Button variant="outline" size="sm" className="h-7 text-xs gap-1 w-full" onClick={() => handleCopyLink(token!)}>
+                      {isCopied ? <Check className="h-3 w-3 text-green-400" /> : <Copy className="h-3 w-3" />}
+                      {isCopied ? "Copiado!" : "Copiar link"}
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
           </div>
