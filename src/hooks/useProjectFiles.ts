@@ -104,7 +104,7 @@ export function useProjectFiles(projectId: string) {
           size: file.size,
           storage_path: storagePath,
           status: "em_revisao",
-          uploaded_by_name: profile?.displayName || user.email?.split("@")[0] || "Usuário",
+          uploaded_by_name: profile?.display_name || user.email?.split("@")[0] || "Usuário",
         })
         .select()
         .single();
