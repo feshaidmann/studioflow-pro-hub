@@ -22,6 +22,7 @@ import RecentTransactions from "@/components/dashboard/RecentTransactions";
 import UpcomingReleases from "@/components/dashboard/UpcomingReleases";
 import ProjectAlertsCard from "@/components/dashboard/ProjectAlertsCard";
 import ProjectHealthList from "@/components/dashboard/ProjectHealthList";
+import PendingTeamCard from "@/components/dashboard/PendingTeamCard";
 
 export default function Dashboard() {
   const aiRef = useRef<AITaskAssistantHandle>(null);
