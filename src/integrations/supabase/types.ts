@@ -1274,6 +1274,16 @@ export type Database = {
           whatsapp: string
         }[]
       }
+      get_public_profile_history: {
+        Args: { p_email: string }
+        Returns: {
+          delivery_due_date: string
+          delivery_status: string
+          joined_at: string
+          project_name: string
+          role: string
+        }[]
+      }
       get_public_profile_ratings: {
         Args: { p_profile_id: string }
         Returns: {
