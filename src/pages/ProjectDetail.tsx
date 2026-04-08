@@ -19,6 +19,9 @@ import ProjectTasksTab from "@/components/project-hub/ProjectTasksTab";
 import ProjectFinanceTab from "@/components/project-hub/ProjectFinanceTab";
 import ProjectReleaseTab from "@/components/project-hub/ProjectReleaseTab";
 import ProjectFilesTab from "@/components/project-hub/ProjectFilesTab";
+import CollaboratorOverviewTab from "@/components/project-hub/CollaboratorOverviewTab";
+import CollaboratorTasksTab from "@/components/project-hub/CollaboratorTasksTab";
+import CollaboratorFilesTab from "@/components/project-hub/CollaboratorFilesTab";
 
 const STAGE_PERCENT: Record<string, number> = {
   rough: 0, inicio: 5, gravacao: 25, mix: 55, master: 75, upload: 90, lancado: 100,
@@ -28,14 +31,10 @@ const TYPE_LABEL: Record<string, string> = {
   single: "Single", ep: "EP", album: "Álbum", beat: "Beat / Base", trilha_guia: "Trilha Guia", feat: "Feat",
 };
 
-
-
-// ── Project view shape ──
 interface ProjectView {
   id: string; name: string; artist: string; stage: string; completed: boolean; projectType: string;
 }
 
-// ── Main Page ──
 export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -98,10 +97,12 @@ export default function ProjectDetail() {
     { value: "release", label: "Lançamento", icon: Rocket },
   ];
 
-  // Guest tabs (limited)
+  // Collaborator tabs
   const guestTabs = [
-    { value: "overview", label: "Visão Geral", icon: LayoutDashboard },
-    { value: "chat", label: "Chat", icon: MessageSquare },
+    { value: "overview", label: "Resumo", icon: LayoutDashboard },
+    { value: "tasks", label: "Minhas Tarefas", icon: ListChecks },
+    { value: "files", label: "Meus Arquivos", icon: FolderOpen },
+    { value: "chat", label: "Conversa", icon: MessageSquare },
   ];
 
   const tabs = isOwner ? ownerTabs : guestTabs;
@@ -118,6 +119,7 @@ export default function ProjectDetail() {
             <h1 className="text-xl font-bold truncate neon-text">{project.name}</h1>
             {project.completed && <Badge className="bg-success/20 text-success border-success/30 text-xs">Concluído</Badge>}
             <Badge variant="secondary" className="text-xs">{TYPE_LABEL[project.projectType] ?? project.projectType}</Badge>
+            {!isOwner && <Badge className="bg-primary/15 text-primary border-primary/30 text-xs">Colaborador</Badge>}
           </div>
           {project.artist && <p className="text-sm text-muted-foreground font-medium">{project.artist}</p>}
         </div>
@@ -130,7 +132,7 @@ export default function ProjectDetail() {
 
       {/* ── Hub Tabs ── */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className={cn("w-full grid", isOwner ? "grid-cols-6" : "grid-cols-2")}>
+        <TabsList className={cn("w-full grid", isOwner ? "grid-cols-6" : "grid-cols-4")}>
           {tabs.map((tab) => {
             const Icon = tab.icon;
             return (
@@ -142,58 +144,54 @@ export default function ProjectDetail() {
           })}
         </TabsList>
 
-        <TabsContent value="overview">
-          <ProjectOverviewTab
-            project={project}
-            progress={progress}
-            isOwner={isOwner}
-            onSwitchTab={setActiveTab}
-          />
-        </TabsContent>
-
+        {/* ── Owner Tabs ── */}
         {isOwner && (
-          <TabsContent value="tasks">
-            <ProjectTasksTab projectId={project.id} />
-          </TabsContent>
+          <>
+            <TabsContent value="overview">
+              <ProjectOverviewTab project={project} progress={progress} isOwner={isOwner} onSwitchTab={setActiveTab} />
+            </TabsContent>
+            <TabsContent value="tasks">
+              <ProjectTasksTab projectId={project.id} />
+            </TabsContent>
+            <TabsContent value="team">
+              <ProjectTeamTab projectId={project.id} />
+            </TabsContent>
+            <TabsContent value="files">
+              <ProjectFilesTab projectId={project.id} />
+            </TabsContent>
+            <TabsContent value="finance">
+              <ProjectFinanceTab projectId={project.id} />
+            </TabsContent>
+            <TabsContent value="release">
+              <ProjectReleaseTab projectId={project.id} />
+            </TabsContent>
+          </>
         )}
 
-        {isOwner && (
-          <TabsContent value="team">
-            <ProjectTeamTab projectId={project.id} />
-          </TabsContent>
-        )}
-
-        {isOwner && (
-          <TabsContent value="files">
-            <ProjectFilesTab projectId={project.id} />
-          </TabsContent>
-        )}
-
-        {isOwner && (
-          <TabsContent value="finance">
-            <ProjectFinanceTab projectId={project.id} />
-          </TabsContent>
-        )}
-
-        {isOwner && (
-          <TabsContent value="release">
-            <ProjectReleaseTab projectId={project.id} />
-          </TabsContent>
-        )}
-
-        {/* Guest-only chat tab */}
+        {/* ── Collaborator Tabs ── */}
         {!isOwner && (
-          <TabsContent value="chat">
-            <div className="rounded-xl border border-border bg-card/40 overflow-hidden">
-              <div className="p-3">
-                <ProjectChat projectId={project.id} />
+          <>
+            <TabsContent value="overview">
+              <CollaboratorOverviewTab projectId={project.id} project={project} />
+            </TabsContent>
+            <TabsContent value="tasks">
+              <CollaboratorTasksTab projectId={project.id} />
+            </TabsContent>
+            <TabsContent value="files">
+              <CollaboratorFilesTab projectId={project.id} />
+            </TabsContent>
+            <TabsContent value="chat">
+              <div className="rounded-xl border border-border bg-card/40 overflow-hidden">
+                <div className="p-3">
+                  <ProjectChat projectId={project.id} />
+                </div>
               </div>
-            </div>
-          </TabsContent>
+            </TabsContent>
+          </>
         )}
       </Tabs>
 
-      {/* Owner also gets chat, but embedded below tabs for context */}
+      {/* Owner also gets chat embedded below */}
       {isOwner && (
         <div className="rounded-xl border border-border bg-card/40 overflow-hidden">
           <button

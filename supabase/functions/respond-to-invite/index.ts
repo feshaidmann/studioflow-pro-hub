@@ -21,7 +21,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Use service role to bypass RLS for the update
     const adminClient = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
@@ -30,7 +29,7 @@ Deno.serve(async (req) => {
     // Fetch invitation by token
     const { data: inv, error: fetchErr } = await adminClient
       .from("project_invitations")
-      .select("*, project:projects(name, artist)")
+      .select("*, project:projects(name, artist, user_id)")
       .eq("token", token)
       .maybeSingle();
 
@@ -41,7 +40,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Check already responded
     if (inv.status !== "pending") {
       return new Response(
         JSON.stringify({ error: "already_responded", status: inv.status }),
@@ -49,7 +47,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Check expiry
     if (new Date(inv.expires_at) < new Date()) {
       return new Response(JSON.stringify({ error: "invitation_expired" }), {
         status: 410,
@@ -57,13 +54,16 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Update invitation
+    const now = new Date().toISOString();
+
+    // Update invitation with timestamps
     const { error: updateErr } = await adminClient
       .from("project_invitations")
       .update({
         status,
         allow_global_listing: allow_global_listing ?? false,
-        responded_at: new Date().toISOString(),
+        responded_at: now,
+        ...(status === "accepted" ? { accepted_at: now } : { declined_at: now }),
       })
       .eq("token", token);
 
@@ -75,17 +75,16 @@ Deno.serve(async (req) => {
       });
     }
 
-    // If accepted: look up auth user by email and set plan=free, origin=invite on their profile
+    // If accepted: find or create user, create project_member
     if (status === "accepted") {
       try {
-        // Look up user in auth by email
         const { data: usersData } = await adminClient.auth.admin.listUsers();
         const matchedUser = usersData?.users?.find(
           (u) => u.email?.toLowerCase() === inv.professional_email?.toLowerCase()
         );
 
         if (matchedUser) {
-          // Upsert profile with plan=free and origin=invite
+          // Upsert profile
           await adminClient
             .from("profiles")
             .upsert({
@@ -94,14 +93,53 @@ Deno.serve(async (req) => {
               origin: "invite",
               allow_global_listing: allow_global_listing ?? false,
             }, { onConflict: "id" });
+
+          // Create project_member linking user to the project
+          const { error: memberErr } = await adminClient
+            .from("project_members")
+            .upsert({
+              project_id: inv.project_id,
+              user_id: matchedUser.id,
+              name: inv.professional_name || "",
+              email: inv.professional_email || "",
+              role: inv.professional_role || "",
+              fee: inv.fee || 0,
+              invitation_id: inv.id,
+              delivery_status: "ativo",
+              expected_deliverable: inv.schedule_notes || "",
+              delivery_due_date: inv.deadline || null,
+              permissions_scope: "basic_collaborator",
+              member_type: "collaborator",
+              last_activity_at: now,
+            }, { onConflict: "project_id,user_id", ignoreDuplicates: false });
+
+          if (memberErr) {
+            console.error("project_member upsert error (non-fatal):", memberErr);
+            // Fallback: try insert without upsert
+            await adminClient.from("project_members").insert({
+              project_id: inv.project_id,
+              user_id: matchedUser.id,
+              name: inv.professional_name || "",
+              email: inv.professional_email || "",
+              role: inv.professional_role || "",
+              fee: inv.fee || 0,
+              invitation_id: inv.id,
+              delivery_status: "ativo",
+              expected_deliverable: inv.schedule_notes || "",
+              permissions_scope: "basic_collaborator",
+              member_type: "collaborator",
+              last_activity_at: now,
+            }).then(({ error }) => {
+              if (error) console.error("fallback insert error (non-fatal):", error);
+            });
+          }
         }
       } catch (profileErr) {
-        // Non-fatal: log and continue
-        console.error("profile update error (non-fatal):", profileErr);
+        console.error("profile/member update error (non-fatal):", profileErr);
       }
     }
 
-    // If accepted AND professional consented to global listing, add to professionals table
+    // Global listing
     if (status === "accepted" && allow_global_listing === true) {
       await adminClient.from("professionals").insert({
         name: inv.professional_name,

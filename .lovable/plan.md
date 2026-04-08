@@ -1,117 +1,81 @@
 
-
-# Fase 1 — Novo Onboarding Orientado ao Uso
-
 ## Objetivo
-Substituir o onboarding atual (4 passos genéricos: nome, projeto, modo, resumo) por um fluxo de 6 passos que ativa o usuário no uso real do produto — coletando momento, tipo de projeto, modo, maior dor, identidade, e criando automaticamente o primeiro projeto. Ao final, redirecionar para `/projects/:id` em vez de `/dashboard`.
+Criar experiência completa para o colaborador convidado com acesso controlado ao projeto.
 
-## Diagnóstico da base atual
+## Diagnóstico
+**Já existe:**
+- `project_invitations` com campos básicos (fee, deadline, role, token, status)
+- `project_members` com delivery_status, delivery_due_date, expected_deliverable, last_activity_at, stage
+- `respond-to-invite` edge function (aceita/recusa mas NÃO cria project_member)
+- `InviteResponse.tsx` página pública funcional
+- `ProjectDetail.tsx` com detecção owner vs guest (via `get_project_for_member` RPC)
+- Guest já vê abas limitadas (overview + chat), mas muito básico
+- `useProjectFiles`, `useProjectChat`, `useTasks` hooks prontos
+- RLS em project_messages permite membros lerem
+- RLS em project_files permite membros lerem e inserir
 
-**O que já funciona e será preservado:**
-- `ProfileContext` com `updateProfile`, `needsProfileSetup`, `isSimpleMode`
-- `ProjectContext.addProject()` retorna `Project | null` (com `id`)
-- Rota `/onboarding` já existe no `App.tsx`
-- Guard `ProtectedRoute` redireciona para `/onboarding` se `needsProfileSetup`
-- Flag `onboarding_completed` na tabela `profiles` (server-side)
-- Trigger `handle_new_user` cria profile automaticamente
+**Falta:**
+- `respond-to-invite` não cria `project_member` ao aceitar
+- Guest view no ProjectDetail muito limitado (só overview + chat)
+- Sem aba de tarefas/arquivos para colaborador
+- Sem campo `permissions_scope` ou `member_type`
+- RLS de project_messages não permite UPDATE pelo colaborador
+- Falta redirecionamento pós-aceite para área do colaborador
+- Falta listagem de projetos do colaborador na navegação
 
-**O que precisa mudar:**
-- `profiles` precisa de 3 novos campos: `current_moment`, `main_pain`, `onboarding_version`
-- `track_view_mode` já serve como `preferred_mode` — sem campo novo
-- `Onboarding.tsx` será reescrito com 6 steps
-- `ProfileContext` precisa incluir os novos campos no select e no tipo
+## Estratégia Incremental (5 fases)
 
-## Migration necessária
+### Fase 1 — Migration DB
+- Adicionar `permissions_scope` e `member_type` a `project_members`
+- Adicionar `accepted_at`, `declined_at` a `project_invitations`
+- Adicionar RLS para UPDATE em `project_messages` (autor da mensagem)
+- Adicionar RLS para UPDATE em `project_files` (quem fez upload)
 
-```sql
-ALTER TABLE public.profiles
-  ADD COLUMN IF NOT EXISTS current_moment text NOT NULL DEFAULT '',
-  ADD COLUMN IF NOT EXISTS main_pain text NOT NULL DEFAULT '',
-  ADD COLUMN IF NOT EXISTS onboarding_version integer NOT NULL DEFAULT 1;
-```
+### Fase 2 — Edge Function respond-to-invite
+- Ao aceitar, criar registro em `project_members` com dados do convite
+- Preencher `permissions_scope = 'basic_collaborator'`, `member_type = 'collaborator'`
+- Gravar `accepted_at` / `declined_at`
 
-Justificativa: campos com defaults vazios, sem quebrar registros existentes. `onboarding_version` permite distinguir usuários do onboarding antigo vs novo.
+### Fase 3 — Área do Colaborador (ProjectDetail guest view)
+- Expandir abas do guest: Resumo, Minhas Tarefas, Meus Arquivos, Conversa
+- Resumo: projeto, papel, prazo, status da participação
+- Tarefas: filtradas por `assigned_to` do colaborador
+- Arquivos: filtrados por `user_id` do colaborador + upload
+- Chat: já funciona
 
-## Arquivos que serão alterados
+### Fase 4 — InviteResponse pós-aceite
+- Redirecionar para `/projects/:id` após aceite (se logado)
+- Se não logado, redirecionar para `/auth?redirect=/projects/:id`
 
-| Arquivo | Mudança |
-|---------|---------|
-| `src/pages/Onboarding.tsx` | Reescrever com 6 steps (momento, tipo, modo, dor, identidade, confirmação) |
-| `src/contexts/ProfileContext.tsx` | Adicionar `current_moment`, `main_pain`, `onboarding_version` ao tipo Profile e ao select |
+### Fase 5 — Listagem de projetos do colaborador
+- Na página /projects, mostrar projetos onde é membro (já existe `get_member_projects` RPC)
+- Garantir que aparece na navegação
 
-## Arquivos que serão criados
+## Arquivos alterados
+- `supabase/functions/respond-to-invite/index.ts`
+- `src/pages/ProjectDetail.tsx`
+- `src/pages/InviteResponse.tsx`
 
-Nenhum novo arquivo. Evolução incremental do existente.
+## Arquivos criados
+- `src/components/project-hub/CollaboratorOverviewTab.tsx`
+- `src/components/project-hub/CollaboratorTasksTab.tsx`
+- `src/components/project-hub/CollaboratorFilesTab.tsx`
 
-## Hooks/contexts afetados
+## Migrations
+- Adicionar campos em `project_members` e `project_invitations`
+- Adicionar RLS UPDATE em `project_messages` e `project_files`
 
-- `ProfileContext` — tipo Profile expandido, select ampliado
-- `ProjectContext` — apenas consumido (addProject), sem alteração
+## Impactos em RLS
+- `project_messages`: adicionar UPDATE policy para autor
+- `project_files`: adicionar UPDATE/DELETE policy para uploader que é membro
 
-## Tabelas afetadas
-
-- `profiles` — 3 novos campos (migration)
-
-## Riscos de regressão
-
-| Risco | Mitigação |
-|-------|-----------|
-| Campos novos quebrarem upsert existente | Defaults NOT NULL com valor vazio — sem impacto |
-| Select do ProfileContext não incluir campos novos | Adicionar explicitamente ao select |
-| Usuários que já completaram onboarding v1 | `onboarding_completed` já é true — não serão afetados |
-| Redirect para projeto inexistente se addProject falhar | Fallback para `/dashboard` |
-
-## Estratégia de implementação (3 blocos sequenciais)
-
-1. **Migration** — adicionar 3 campos ao profiles
-2. **ProfileContext** — expandir tipo e select
-3. **Onboarding.tsx** — reescrever com 6 steps
-
-## Novo fluxo do onboarding (6 steps)
-
-```text
-Step 1: Momento atual
-  - "Tenho uma ideia" → stage: inicio
-  - "Já estou produzindo" → stage: gravacao
-  - "Tenho música pronta" → stage: master
-  - "Quero lançar" → stage: upload
-
-Step 2: Tipo de projeto
-  - Single / EP / Álbum
-
-Step 3: Modo de uso
-  - Simples (basic) / Completo (advanced)
-
-Step 4: Maior dificuldade
-  - Organização / Equipe / Prazos / Financeiro / Lançamento
-
-Step 5: Identidade
-  - Nome artístico (pré-preenchido do email)
-  - Cidade (opcional)
-
-Step 6: Confirmação + criar projeto automático
-  - Resumo visual
-  - Botão "Começar" → cria projeto + salva perfil → redireciona para /projects/:id
-```
-
-## Comportamento detalhado do Step 6 (confirmação)
-
-- Projeto criado automaticamente com:
-  - `name`: baseado no tipo ("Meu Single", "Meu EP", "Meu Álbum")
-  - `artist`: nome artístico informado
-  - `stage`: mapeado do momento escolhido
-  - `projectType`: tipo escolhido
-- Profile atualizado com: `display_name`, `city`, `track_view_mode`, `current_moment`, `main_pain`, `onboarding_version: 2`, `onboarding_completed: true`
-- Redirect: `/projects/:newProjectId`
-- Fallback se projeto falhar: redirect para `/dashboard`
+## Riscos
+- Colaboradores que aceitaram antes da migration não terão `project_member` criado
+- Precisará de script de reconciliação futuro se necessário
 
 ## Critérios de aceite
-
-1. Novo usuário vê 6 steps claros com progress bar
-2. Momento, tipo, modo e dor são selecionáveis via cards (sem inputs de texto desnecessários)
-3. Projeto é criado automaticamente ao confirmar
-4. Perfil salva todos os campos novos
-5. Redirect pós-onboarding vai para o projeto criado
-6. Usuários existentes (onboarding v1) não são impactados
-7. Build compila sem erros TypeScript
-
+1. Convite aceito cria project_member automaticamente
+2. Colaborador logado vê projeto com 4 abas limitadas
+3. Colaborador não vê financeiro, equipe completa, lançamento
+4. Colaborador pode enviar arquivos e mensagens
+5. Colaborador vê apenas suas tarefas atribuídas
