@@ -1,7 +1,7 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { isToday, isThisWeek, isThisMonth, parseISO, startOfDay, addDays } from "date-fns";
-import { Plus, CalendarDays, Loader2 } from "lucide-react";
+import { Plus, CalendarDays, Loader2, Users, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -11,13 +11,17 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
 import { useEvents, type CalendarEvent, type NewEvent } from "@/hooks/useEvents";
 import { useProjects } from "@/contexts/ProjectContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import EventCard from "@/components/agenda/EventCard";
 import EventForm from "@/components/agenda/EventForm";
 import TransactionForm from "@/components/finance/TransactionForm";
 import { EVENT_TYPES } from "@/lib/eventTypes";
+import { cn } from "@/lib/utils";
 
 type DateFilter = "all" | "today" | "week" | "month";
 
