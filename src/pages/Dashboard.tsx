@@ -22,6 +22,7 @@ import RecentTransactions from "@/components/dashboard/RecentTransactions";
 import UpcomingReleases from "@/components/dashboard/UpcomingReleases";
 import ProjectAlertsCard from "@/components/dashboard/ProjectAlertsCard";
 import ProjectHealthList from "@/components/dashboard/ProjectHealthList";
+import PendingTeamCard from "@/components/dashboard/PendingTeamCard";
 
 export default function Dashboard() {
   const aiRef = useRef<AITaskAssistantHandle>(null);
@@ -223,7 +224,10 @@ export default function Dashboard() {
         <ProjectAlertsCard alerts={alerts} hidden={isFirstRun} />
       </div>
 
-      {/* 2. Projetos com score de saúde */}
+      {/* 2. Equipe pendente */}
+      <PendingTeamCard hidden={isFirstRun} />
+
+      {/* 3. Projetos com score de saúde */}
       <ProjectHealthList projects={projectsWithHealth} hidden={isFirstRun} />
 
       {/* 3. Próximos lançamentos */}
@@ -234,18 +238,15 @@ export default function Dashboard() {
 
       {!isSimpleMode && <RecentTransactions transactions={transactions} />}
 
-      {/* 5. AI Assistant */}
-      <Card className={cn("glass-card animate-fade-in border-primary/20", isFirstRun && "hidden")} style={{ animationDelay: "150ms" }}>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base flex items-center gap-2">
-            <div className="relative">
-              <Bot className="h-4 w-4 text-primary" />
-              <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-primary animate-pulse" />
-            </div>
-            <span className="neon-text">Assistente IA</span>
+      {/* 6. AI Assistant — compact */}
+      <Card className={cn("glass-card animate-fade-in border-border/40", isFirstRun && "hidden")} style={{ animationDelay: "150ms" }}>
+        <CardHeader className="pb-1 pt-3 px-4">
+          <CardTitle className="text-xs flex items-center gap-1.5 text-muted-foreground font-medium">
+            <Bot className="h-3.5 w-3.5 text-primary" />
+            Assistente IA
           </CardTitle>
         </CardHeader>
-        <CardContent className="pt-0">
+        <CardContent className="pt-0 px-4 pb-3">
           <AITaskAssistant
             ref={aiRef}
             alwaysOpen

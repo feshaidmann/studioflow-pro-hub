@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Papa from "papaparse";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -68,10 +68,13 @@ import {
   Download,
 } from "lucide-react";
 import { useProjects } from "@/contexts/ProjectContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { type Transaction } from "@/data/mockData";
 import TransactionForm from "@/components/finance/TransactionForm";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -148,10 +151,56 @@ function KpiCard({
 export default function FinancialTracker() {
   const { t } = useLanguage();
   const { transactions, projects, deleteTransaction, getProjectFinancials } = useProjects();
+  const { user } = useAuth();
 
   const [formOpen, setFormOpen] = useState(false);
   const [editTx, setEditTx] = useState<Transaction | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+
+  // Pending fees by collaborator
+  interface PendingFee {
+    name: string;
+    role: string;
+    projectName: string;
+    fee: number;
+    feePaid: boolean;
+  }
+  const [pendingFees, setPendingFees] = useState<PendingFee[]>([]);
+
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from("project_members")
+      .select("name, role, fee, project_id, projects(name)")
+      .eq("user_id", user.id)
+      .gt("fee", 0)
+      .then(({ data }) => {
+        if (data) {
+          // Check which have unpaid transactions
+          const fees: PendingFee[] = data.map((d: any) => ({
+            name: d.name,
+            role: d.role,
+            projectName: d.projects?.name || "—",
+            fee: d.fee,
+            feePaid: false,
+          }));
+          // Match against paid transactions with matching description
+          const paidDescs = new Set(
+            transactions
+              .filter((t) => t.type === "expense" && t.paid)
+              .map((t) => t.description.toLowerCase())
+          );
+          setPendingFees(
+            fees.map((f) => ({
+              ...f,
+              feePaid: paidDescs.has(`cachê ${f.name}`.toLowerCase()) ||
+                       paidDescs.has(`cache ${f.name}`.toLowerCase()) ||
+                       paidDescs.has(f.name.toLowerCase()),
+            })).filter((f) => !f.feePaid)
+          );
+        }
+      });
+  }, [user, transactions]);
 
   // Filters
   const [filterProject, setFilterProject] = useState<string>("all");
@@ -437,6 +486,39 @@ export default function FinancialTracker() {
           </div>
         );
       })()}
+
+      {/* Pending fees by collaborator */}
+      {pendingFees.length > 0 && (
+        <Card className="glass-card border-warning/20">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Clock className="h-4 w-4 text-warning" />
+              Pagamentos pendentes por colaborador
+              <Badge variant="secondary" className="text-[10px]">{pendingFees.length}</Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-1.5">
+            {pendingFees.map((pf, i) => (
+              <div key={i} className="flex items-center gap-2 text-xs px-2 py-1.5 rounded-md hover:bg-muted/30 transition-colors">
+                <div className="flex-1 min-w-0">
+                  <span className="font-medium">{pf.name}</span>
+                  {pf.role && <span className="text-muted-foreground"> · {pf.role}</span>}
+                  <span className="text-muted-foreground"> · {pf.projectName}</span>
+                </div>
+                <span className="font-mono-nums font-semibold text-warning shrink-0">
+                  {formatCurrency(pf.fee)}
+                </span>
+              </div>
+            ))}
+            <div className="pt-1 border-t border-border/40 flex justify-between text-xs px-2">
+              <span className="text-muted-foreground font-medium">Total pendente</span>
+              <span className="font-mono-nums font-bold text-warning">
+                {formatCurrency(pendingFees.reduce((s, f) => s + f.fee, 0))}
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Tabs */}
       <Tabs defaultValue="transactions">

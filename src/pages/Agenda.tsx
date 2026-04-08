@@ -1,7 +1,7 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { isToday, isThisWeek, isThisMonth, parseISO, startOfDay, addDays } from "date-fns";
-import { Plus, CalendarDays, Loader2 } from "lucide-react";
+import { Plus, CalendarDays, Loader2, Users, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -11,13 +11,17 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
 import { useEvents, type CalendarEvent, type NewEvent } from "@/hooks/useEvents";
 import { useProjects } from "@/contexts/ProjectContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import EventCard from "@/components/agenda/EventCard";
 import EventForm from "@/components/agenda/EventForm";
 import TransactionForm from "@/components/finance/TransactionForm";
 import { EVENT_TYPES } from "@/lib/eventTypes";
+import { cn } from "@/lib/utils";
 
 type DateFilter = "all" | "today" | "week" | "month";
 
@@ -25,6 +29,47 @@ export default function Agenda() {
   const { t } = useLanguage();
   const { events, loading, addEvent, updateEvent, deleteEvent } = useEvents();
   const { projects } = useProjects();
+  const { user } = useAuth();
+
+  /* ── Collaborator deadlines ── */
+  interface TeamDeadline {
+    memberName: string;
+    role: string;
+    projectName: string;
+    projectId: string;
+    dueDate: string;
+    daysUntilDue: number;
+    status: string;
+  }
+  const [teamDeadlines, setTeamDeadlines] = useState<TeamDeadline[]>([]);
+
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from("project_members")
+      .select("name, role, delivery_due_date, delivery_status, project_id, projects(name)")
+      .eq("user_id", user.id)
+      .neq("delivery_status", "entregue")
+      .not("delivery_due_date", "is", null)
+      .then(({ data }) => {
+        if (data) {
+          const now = Date.now();
+          setTeamDeadlines(
+            data
+              .map((d: any) => ({
+                memberName: d.name,
+                role: d.role,
+                projectName: d.projects?.name || "—",
+                projectId: d.project_id,
+                dueDate: d.delivery_due_date,
+                daysUntilDue: Math.ceil((new Date(d.delivery_due_date).getTime() - now) / 86400000),
+                status: d.delivery_status,
+              }))
+              .sort((a: TeamDeadline, b: TeamDeadline) => a.daysUntilDue - b.daysUntilDue)
+          );
+        }
+      });
+  }, [user]);
 
   /* ── Form state ── */
   const [formOpen, setFormOpen] = useState(false);
@@ -159,6 +204,45 @@ export default function Agenda() {
           </SelectContent>
         </Select>
       </div>
+
+      {/* Team deadlines */}
+      {teamDeadlines.length > 0 && (
+        <Card className="glass-card border-warning/20 animate-fade-in">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Users className="h-4 w-4 text-warning" />
+              <p className="text-sm font-semibold">Prazos da equipe</p>
+              <Badge variant="secondary" className="text-[10px]">{teamDeadlines.length}</Badge>
+            </div>
+            <div className="space-y-1.5">
+              {teamDeadlines.slice(0, 6).map((td, i) => (
+                <div key={i} className="flex items-center gap-2 text-xs px-2 py-1.5 rounded-md hover:bg-muted/30 transition-colors">
+                  {td.daysUntilDue < 0 ? (
+                    <AlertTriangle className="h-3.5 w-3.5 text-destructive shrink-0" />
+                  ) : (
+                    <CalendarDays className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                  )}
+                  <span className="font-medium truncate flex-1">{td.memberName}</span>
+                  <span className="text-muted-foreground truncate">{td.role}</span>
+                  <span className="text-muted-foreground">·</span>
+                  <span className="text-muted-foreground truncate">{td.projectName}</span>
+                  <Badge variant="outline" className={cn(
+                    "text-[9px] shrink-0",
+                    td.daysUntilDue < 0 ? "border-destructive/40 text-destructive" :
+                    td.daysUntilDue <= 3 ? "border-warning/40 text-warning" : "border-border"
+                  )}>
+                    {td.daysUntilDue < 0
+                      ? `${Math.abs(td.daysUntilDue)}d atrasado`
+                      : td.daysUntilDue === 0
+                        ? "Hoje"
+                        : `${td.daysUntilDue}d`}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Event list */}
       {loading ? (
