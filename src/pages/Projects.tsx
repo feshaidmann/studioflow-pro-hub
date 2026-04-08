@@ -920,39 +920,71 @@ export default function Projects() {
         </Card>
       ) : (
         <>
+          {/* Filters */}
+          <div className="flex flex-wrap gap-2">
+            <Select value={stageFilter} onValueChange={setStageFilter}>
+              <SelectTrigger className="w-[140px] h-8 text-xs"><SelectValue placeholder="Estágio" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os estágios</SelectItem>
+                {stages.map((s) => <SelectItem key={s} value={s}>{t(`stage.${s}`)}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-[140px] h-8 text-xs"><SelectValue placeholder="Status" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os status</SelectItem>
+                <SelectItem value="no_prazo">No prazo</SelectItem>
+                <SelectItem value="parado">Parado</SelectItem>
+                <SelectItem value="risco">Orçamento em risco</SelectItem>
+                <SelectItem value="quase">Quase lá</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
           {/* Project list */}
           <div className="space-y-3">
-            {projects.filter((p) => !p.completed).length === 0 && (
-              <div className="text-center py-12 text-muted-foreground">
-                <Music className="h-12 w-12 mx-auto mb-3 opacity-30" />
-                <p>{t("projects.empty")}</p>
-              </div>
-            )}
-            {projects.filter((p) => !p.completed).map((project) => (
-              <Card key={project.id} className="glass-card cursor-pointer hover:border-primary/40 transition-all" onClick={() => setSelectedProject(project)}>
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-semibold text-sm truncate">{project.name}</span>
-                        <Badge variant="outline" className="text-[10px] shrink-0">{t(`stage.${project.stage}`)}</Badge>
-                        {project.projectType && project.projectType !== "single" && <Badge variant="secondary" className="text-[10px] shrink-0">{t(`projects.${project.projectType}`)}</Badge>}
+            {(() => {
+              const activeProjects = projects.filter((p) => !p.completed).filter((p) => {
+                if (stageFilter !== "all" && p.stage !== stageFilter) return false;
+                if (statusFilter !== "all" && getProjectStatus(p).key !== statusFilter) return false;
+                return true;
+              });
+              if (activeProjects.length === 0) return (
+                <div className="text-center py-12 text-muted-foreground">
+                  <Music className="h-12 w-12 mx-auto mb-3 opacity-30" />
+                  <p>{stageFilter !== "all" || statusFilter !== "all" ? "Nenhum projeto encontrado com esses filtros." : t("projects.empty")}</p>
+                </div>
+              );
+              return activeProjects.map((project) => {
+                const status = getProjectStatus(project);
+                return (
+                  <Card key={project.id} className="glass-card cursor-pointer hover:border-primary/40 transition-all" onClick={() => setSelectedProject(project)}>
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-semibold text-sm truncate">{project.name}</span>
+                            <Badge variant="outline" className="text-[10px] shrink-0">{t(`stage.${project.stage}`)}</Badge>
+                            {project.projectType && project.projectType !== "single" && <Badge variant="secondary" className="text-[10px] shrink-0">{t(`projects.${project.projectType}`)}</Badge>}
+                            <Badge variant="outline" className={cn("text-[10px] shrink-0", status.color)}>{status.label}</Badge>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-0.5">{project.artist}</p>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0 ml-2">
+                          <Button size="sm" className="h-7 text-xs gap-1 neon-glow" asChild onClick={(e) => e.stopPropagation()}>
+                            <Link to={`/projects/${project.id}`}>
+                              <MessageSquare className="h-3.5 w-3.5" /> Chat
+                            </Link>
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); openEditDialog(project); }}><Pencil className="h-3.5 w-3.5" /></Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={(e) => { e.stopPropagation(); openDeleteDialog(project.id); }}><Trash2 className="h-3.5 w-3.5" /></Button>
+                        </div>
                       </div>
-                      <p className="text-xs text-muted-foreground mt-0.5">{project.artist}</p>
-                    </div>
-                    <div className="flex items-center gap-1 shrink-0 ml-2">
-                      <Button size="sm" className="h-7 text-xs gap-1 neon-glow" asChild onClick={(e) => e.stopPropagation()}>
-                        <Link to={`/projects/${project.id}`}>
-                          <MessageSquare className="h-3.5 w-3.5" /> Chat
-                        </Link>
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); openEditDialog(project); }}><Pencil className="h-3.5 w-3.5" /></Button>
-                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={(e) => { e.stopPropagation(); openDeleteDialog(project.id); }}><Trash2 className="h-3.5 w-3.5" /></Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                    </CardContent>
+                  </Card>
+                );
+              });
+            })()}
           </div>
 
           {/* Completed projects */}
