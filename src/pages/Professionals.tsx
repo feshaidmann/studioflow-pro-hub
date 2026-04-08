@@ -228,6 +228,14 @@ export default function Professionals() {
     const rows = (members as any[]) ?? [];
     const projectNames = rows.map((m) => m.projects?.name).filter(Boolean);
     const lastActivity = rows[0]?.created_at ?? null;
+    const collaborationHistory = rows.map((m: any) => ({
+      projectName: m.projects?.name || "—",
+      completed: m.projects?.completed ?? false,
+      role: m.role || "",
+      fee: Number(m.fee) || 0,
+      deliveryStatus: m.delivery_status || "",
+      joinedAt: m.created_at,
+    }));
     setMetrics({
       projectCount: rows.length,
       projectNames,
@@ -235,6 +243,7 @@ export default function Professionals() {
       ratingCount,
       lastActivity,
       platformProjectCount: Number(platformCount) || 0,
+      collaborationHistory,
     });
     setMetricsLoading(false);
   }
