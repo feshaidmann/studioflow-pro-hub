@@ -23,6 +23,16 @@ const CAT_ICON: Record<AlertCategory, React.ElementType> = {
   deadline: CalendarClock,
 };
 
+// Map alert category to a target tab in project detail
+const CAT_TAB: Record<AlertCategory, string> = {
+  stalled: "visao-geral",
+  budget: "financeiro",
+  invite: "equipe",
+  team: "equipe",
+  release: "lancamento",
+  deadline: "tarefas",
+};
+
 interface ProjectAlertsCardProps {
   alerts: ProjectAlert[];
   hidden?: boolean;
