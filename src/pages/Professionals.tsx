@@ -705,6 +705,28 @@ export default function Professionals() {
                   </div>
                 </div>
 
+                {/* Avg fee + avg delivery */}
+                {!metricsLoading && metrics && (metrics.avgFee !== null || metrics.avgDeliveryDays !== null) && (
+                  <div className="flex gap-3">
+                    {metrics.avgFee !== null && (
+                      <div className="flex-1 rounded-lg bg-muted/30 border border-border/40 p-2.5 text-center">
+                        <p className="text-sm font-bold text-primary font-mono-nums">
+                          R${metrics.avgFee.toLocaleString("pt-BR", { minimumFractionDigits: 0 })}
+                        </p>
+                        <p className="text-[9px] text-muted-foreground mt-0.5">Cachê médio</p>
+                      </div>
+                    )}
+                    {metrics.avgDeliveryDays !== null && (
+                      <div className="flex-1 rounded-lg bg-muted/30 border border-border/40 p-2.5 text-center">
+                        <p className="text-sm font-bold text-primary font-mono-nums">
+                          {metrics.avgDeliveryDays}d
+                        </p>
+                        <p className="text-[9px] text-muted-foreground mt-0.5">Prazo médio</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {/* Collaboration history */}
                 {!metricsLoading && metrics && metrics.collaborationHistory.length > 0 && (
                   <div className="space-y-2">
