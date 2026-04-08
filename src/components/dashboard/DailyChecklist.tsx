@@ -99,6 +99,7 @@ export default function DailyChecklist({
   let filtered = activeTasks;
   if (sourceFilter !== "all") filtered = filtered.filter((t) => t.source === sourceFilter);
   if (projectFilter !== "all") filtered = filtered.filter((t) => t.projectId === projectFilter);
+  if (assigneeFilter !== "all") filtered = filtered.filter((t) => t.assignedTo === assigneeFilter);
 
   const grouped = groupTasks(filtered);
 
