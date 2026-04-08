@@ -155,6 +155,19 @@ export default function Dashboard() {
 
   const isFirstRun = projects.length === 0;
 
+  // Build "next recommended action" block
+  const nextAction = useMemo(() => {
+    if (isFirstRun) return null;
+    const critical = alerts.find((a) => a.severity === "critical");
+    if (critical) return { label: critical.title, detail: critical.projectName, severity: "critical" as const };
+    const urgentTask = activeTasks.find((t) => t.source === "deadline" || t.source === "payment");
+    if (urgentTask) return { label: urgentTask.description, detail: "Tarefa urgente", severity: "warning" as const };
+    const warning = alerts.find((a) => a.severity === "warning");
+    if (warning) return { label: warning.title, detail: warning.projectName, severity: "warning" as const };
+    if (activeTasks.length > 0) return { label: activeTasks[0].description, detail: "Próxima tarefa", severity: "info" as const };
+    return null;
+  }, [alerts, activeTasks, isFirstRun]);
+
   return (
     <div className="p-4 md:p-6 space-y-5">
       <DashboardHeader
@@ -163,6 +176,29 @@ export default function Dashboard() {
         selectedProjectId={selectedProjectId}
         onSelectProject={setSelectedProjectId}
       />
+
+      {/* Next recommended action */}
+      {nextAction && (
+        <div className={cn(
+          "rounded-lg border px-4 py-3 flex items-center gap-3 animate-fade-in",
+          nextAction.severity === "critical" ? "border-destructive/40 bg-destructive/5" :
+          nextAction.severity === "warning" ? "border-warning/40 bg-warning/5" :
+          "border-primary/30 bg-primary/5"
+        )}>
+          <div className={cn(
+            "h-8 w-8 rounded-full flex items-center justify-center shrink-0",
+            nextAction.severity === "critical" ? "bg-destructive/15" :
+            nextAction.severity === "warning" ? "bg-warning/15" : "bg-primary/15"
+          )}>
+            <Bot className={cn("h-4 w-4", nextAction.severity === "critical" ? "text-destructive" : nextAction.severity === "warning" ? "text-warning" : "text-primary")} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Próxima ação recomendada</p>
+            <p className="text-sm font-medium truncate">{nextAction.label}</p>
+            <p className="text-[11px] text-muted-foreground">{nextAction.detail}</p>
+          </div>
+        </div>
+      )}
 
       {/* 1. O que fazer hoje + Alertas */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">

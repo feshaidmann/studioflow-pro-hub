@@ -93,9 +93,25 @@ export default function Projects() {
     addProject, updateProject, deleteProject,
     getMixPercent, getProjectFinancials,
     addProfessional, removeProfessional, addProfessionalToGlobal,
-    addTransaction,
+    addTransaction, transactions,
   } = useProjects();
   const { professionals: globalProfessionals, loading: globalsLoading } = useProfessionals();
+
+  /* ── Filters ── */
+  const [stageFilter, setStageFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+
+  const getProjectStatus = (project: Project): { label: string; color: string; key: string } => {
+    if (project.completed) return { label: "Concluído", color: "text-[hsl(var(--success))] border-[hsl(var(--success)/0.3)] bg-[hsl(var(--success)/0.1)]", key: "concluido" };
+    const financials = getProjectFinancials(project.id);
+    const budget = project.totalContractValue ?? 0;
+    const budgetOver = budget > 0 && financials.totalExpense / budget > 0.9;
+
+    if (budgetOver) return { label: "Orçamento em risco", color: "text-warning border-warning/30 bg-warning/10", key: "risco" };
+    if (project.stage === "master" || project.stage === "upload") return { label: "Quase lá", color: "text-primary border-primary/30 bg-primary/10", key: "quase" };
+    if (project.mixPercent === 0 && project.stage === "inicio") return { label: "Recém criado", color: "text-muted-foreground border-border bg-muted/30", key: "parado" };
+    return { label: "No prazo", color: "text-[hsl(var(--success))] border-[hsl(var(--success)/0.3)] bg-[hsl(var(--success)/0.1)]", key: "no_prazo" };
+  };
   const { addNotification } = useNotifications();
 
   /* ── Guest projects (projects where user is an invited member) ── */
@@ -463,7 +479,7 @@ export default function Projects() {
 
   return (
     <div className="p-4 md:p-6 space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <h1 className="text-2xl md:text-3xl font-bold neon-text">{t("projects.title")}</h1>
         <Dialog open={dialogOpen} onOpenChange={(open) => { if (open) setForm((prev) => ({ ...prev, artist: prev.artist || displayName })); setDialogOpen(open); }}>
           <DialogTrigger asChild>
@@ -900,39 +916,71 @@ export default function Projects() {
         </Card>
       ) : (
         <>
+          {/* Filters */}
+          <div className="flex flex-wrap gap-2">
+            <Select value={stageFilter} onValueChange={setStageFilter}>
+              <SelectTrigger className="w-[140px] h-8 text-xs"><SelectValue placeholder="Estágio" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os estágios</SelectItem>
+                {stages.map((s) => <SelectItem key={s} value={s}>{t(`stage.${s}`)}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-[140px] h-8 text-xs"><SelectValue placeholder="Status" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os status</SelectItem>
+                <SelectItem value="no_prazo">No prazo</SelectItem>
+                <SelectItem value="parado">Parado</SelectItem>
+                <SelectItem value="risco">Orçamento em risco</SelectItem>
+                <SelectItem value="quase">Quase lá</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
           {/* Project list */}
           <div className="space-y-3">
-            {projects.filter((p) => !p.completed).length === 0 && (
-              <div className="text-center py-12 text-muted-foreground">
-                <Music className="h-12 w-12 mx-auto mb-3 opacity-30" />
-                <p>{t("projects.empty")}</p>
-              </div>
-            )}
-            {projects.filter((p) => !p.completed).map((project) => (
-              <Card key={project.id} className="glass-card cursor-pointer hover:border-primary/40 transition-all" onClick={() => setSelectedProject(project)}>
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-semibold text-sm truncate">{project.name}</span>
-                        <Badge variant="outline" className="text-[10px] shrink-0">{t(`stage.${project.stage}`)}</Badge>
-                        {project.projectType && project.projectType !== "single" && <Badge variant="secondary" className="text-[10px] shrink-0">{t(`projects.${project.projectType}`)}</Badge>}
+            {(() => {
+              const activeProjects = projects.filter((p) => !p.completed).filter((p) => {
+                if (stageFilter !== "all" && p.stage !== stageFilter) return false;
+                if (statusFilter !== "all" && getProjectStatus(p).key !== statusFilter) return false;
+                return true;
+              });
+              if (activeProjects.length === 0) return (
+                <div className="text-center py-12 text-muted-foreground">
+                  <Music className="h-12 w-12 mx-auto mb-3 opacity-30" />
+                  <p>{stageFilter !== "all" || statusFilter !== "all" ? "Nenhum projeto encontrado com esses filtros." : t("projects.empty")}</p>
+                </div>
+              );
+              return activeProjects.map((project) => {
+                const status = getProjectStatus(project);
+                return (
+                  <Card key={project.id} className="glass-card cursor-pointer hover:border-primary/40 transition-all" onClick={() => setSelectedProject(project)}>
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-semibold text-sm truncate">{project.name}</span>
+                            <Badge variant="outline" className="text-[10px] shrink-0">{t(`stage.${project.stage}`)}</Badge>
+                            {project.projectType && project.projectType !== "single" && <Badge variant="secondary" className="text-[10px] shrink-0">{t(`projects.${project.projectType}`)}</Badge>}
+                            <Badge variant="outline" className={cn("text-[10px] shrink-0", status.color)}>{status.label}</Badge>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-0.5">{project.artist}</p>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0 ml-2">
+                          <Button size="sm" className="h-7 text-xs gap-1 neon-glow" asChild onClick={(e) => e.stopPropagation()}>
+                            <Link to={`/projects/${project.id}`}>
+                              <MessageSquare className="h-3.5 w-3.5" /> Chat
+                            </Link>
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); openEditDialog(project); }}><Pencil className="h-3.5 w-3.5" /></Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={(e) => { e.stopPropagation(); openDeleteDialog(project.id); }}><Trash2 className="h-3.5 w-3.5" /></Button>
+                        </div>
                       </div>
-                      <p className="text-xs text-muted-foreground mt-0.5">{project.artist}</p>
-                    </div>
-                    <div className="flex items-center gap-1 shrink-0 ml-2">
-                      <Button size="sm" className="h-7 text-xs gap-1 neon-glow" asChild onClick={(e) => e.stopPropagation()}>
-                        <Link to={`/projects/${project.id}`}>
-                          <MessageSquare className="h-3.5 w-3.5" /> Chat
-                        </Link>
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); openEditDialog(project); }}><Pencil className="h-3.5 w-3.5" /></Button>
-                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={(e) => { e.stopPropagation(); openDeleteDialog(project.id); }}><Trash2 className="h-3.5 w-3.5" /></Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                    </CardContent>
+                  </Card>
+                );
+              });
+            })()}
           </div>
 
           {/* Completed projects */}

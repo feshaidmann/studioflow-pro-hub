@@ -36,7 +36,7 @@ export default function Agenda() {
   const [txPrefill, setTxPrefill] = useState<{ description: string; date: string; projectId?: string } | null>(null);
 
   /* ── Filters ── */
-  const [dateFilter, setDateFilter] = useState<DateFilter>("all");
+  const [dateFilter, setDateFilter] = useState<DateFilter>("week");
   const [typeFilter, setTypeFilter] = useState("all");
   const [projectFilter, setProjectFilter] = useState("all");
 
