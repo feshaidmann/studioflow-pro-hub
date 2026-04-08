@@ -592,6 +592,75 @@ export type Database = {
         }
         Relationships: []
       }
+      project_files: {
+        Row: {
+          created_at: string
+          file_name: string
+          folder: string
+          id: string
+          mime_type: string
+          original_name: string
+          parent_file_id: string | null
+          project_id: string
+          size: number
+          status: string
+          storage_path: string
+          updated_at: string
+          uploaded_by_name: string
+          user_id: string
+          version_number: number
+        }
+        Insert: {
+          created_at?: string
+          file_name: string
+          folder?: string
+          id?: string
+          mime_type?: string
+          original_name: string
+          parent_file_id?: string | null
+          project_id: string
+          size?: number
+          status?: string
+          storage_path: string
+          updated_at?: string
+          uploaded_by_name?: string
+          user_id: string
+          version_number?: number
+        }
+        Update: {
+          created_at?: string
+          file_name?: string
+          folder?: string
+          id?: string
+          mime_type?: string
+          original_name?: string
+          parent_file_id?: string | null
+          project_id?: string
+          size?: number
+          status?: string
+          storage_path?: string
+          updated_at?: string
+          uploaded_by_name?: string
+          user_id?: string
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_files_parent_file_id_fkey"
+            columns: ["parent_file_id"]
+            isOneToOne: false
+            referencedRelation: "project_files"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_files_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_invitations: {
         Row: {
           allow_global_listing: boolean | null
