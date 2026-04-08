@@ -264,6 +264,27 @@ export default function PublicProfile() {
           </div>
         )}
 
+        {/* Delivery history */}
+        {history.length > 0 && (
+          <div className="rounded-xl bg-card border border-border/60 p-4 space-y-3">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Histórico de Entregas</p>
+            <div className="space-y-2">
+              {history.map((h, i) => {
+                const statusColor = h.delivery_status === "entregue" ? "text-primary" : h.delivery_status === "atrasado" ? "text-destructive" : "text-muted-foreground";
+                const statusLabel = h.delivery_status === "entregue" ? "Entregue" : h.delivery_status === "atrasado" ? "Atrasado" : h.delivery_status === "ativo" ? "Em andamento" : h.delivery_status;
+                return (
+                  <div key={i} className="flex items-center gap-2 text-sm">
+                    <Briefcase className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                    <span className="flex-1 truncate">{h.project_name}</span>
+                    <span className="text-xs text-muted-foreground">{h.role}</span>
+                    <span className={`text-xs font-medium ${statusColor}`}>{statusLabel}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* Contact */}
         {(profile.public_email || profile.whatsapp) && (
           <div className="rounded-xl bg-card border border-border/60 p-4 space-y-3">
