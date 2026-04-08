@@ -16,6 +16,12 @@ import {
   LogIn,
   MessageSquarePlus,
   Star,
+  Rocket,
+  Clock,
+  BarChart3,
+  UserX,
+  Layers,
+  Gauge,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
