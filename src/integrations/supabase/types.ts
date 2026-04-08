@@ -800,23 +800,38 @@ export type Database = {
       }
       project_messages: {
         Row: {
+          attachment_name: string
+          attachment_path: string
           content: string
           created_at: string
           id: string
+          is_pending: boolean
+          is_resolved: boolean
+          linked_task_id: string | null
           project_id: string
           user_id: string
         }
         Insert: {
+          attachment_name?: string
+          attachment_path?: string
           content: string
           created_at?: string
           id?: string
+          is_pending?: boolean
+          is_resolved?: boolean
+          linked_task_id?: string | null
           project_id: string
           user_id: string
         }
         Update: {
+          attachment_name?: string
+          attachment_path?: string
           content?: string
           created_at?: string
           id?: string
+          is_pending?: boolean
+          is_resolved?: boolean
+          linked_task_id?: string | null
           project_id?: string
           user_id?: string
         }
