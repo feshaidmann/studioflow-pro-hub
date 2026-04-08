@@ -283,28 +283,6 @@ export default function Settings() {
         </CardContent>
       </Card>
 
-      {/* Aparência */}
-      <Card className="glass-card">
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <Palette className="h-4 w-4 text-primary" />
-            {t("settings.appearance")}
-          </CardTitle>
-          <CardDescription>{t("settings.lightTheme")}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex gap-3">
-            <Button
-              variant="default"
-              size="sm"
-              className="flex-1 gap-2"
-            >
-              <Sun className="h-4 w-4" />
-              {t("settings.light")}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Notificações Push */}
       <Card className="glass-card">
