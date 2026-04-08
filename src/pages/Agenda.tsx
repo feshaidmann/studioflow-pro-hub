@@ -107,6 +107,20 @@ export default function Agenda() {
     });
   }, [events, dateFilter, typeFilter, projectFilter]);
 
+  // Events within 3 days without preparation (no description / no linked project tasks)
+  const unpreparedEvents = useMemo(() => {
+    const now = startOfDay(new Date());
+    const soon = addDays(now, 3);
+    return events.filter((ev) => {
+      const d = parseISO(ev.startDatetime);
+      if (d < now || d > soon) return false;
+      // Consider unprepared if no description and important type
+      const importantTypes = ["show", "recording", "rehearsal", "release"];
+      if (!importantTypes.includes(ev.eventType)) return false;
+      return !ev.description || ev.description.trim().length < 10;
+    });
+  }, [events]);
+
   const getProjectName = (id: string | null) =>
     id ? projects.find((p) => p.id === id)?.name : undefined;
 
