@@ -23,6 +23,9 @@ interface Profile {
   public_email: string;
   allow_global_listing: boolean;
   onboarding_completed: boolean;
+  current_moment: string;
+  main_pain: string;
+  onboarding_version: number;
   created_at?: string;
 }
 
