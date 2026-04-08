@@ -70,6 +70,15 @@ export default function PublicProfile() {
         const r = (rData as any[])[0];
         setRatings({ avg_stars: r.avg_stars, rating_count: Number(r.rating_count) });
       }
+
+      // Fetch delivery history
+      if (p.public_email) {
+        const { data: hData } = await supabase.rpc("get_public_profile_history", {
+          p_email: p.public_email,
+        });
+        if (hData) setHistory(hData as DeliveryHistoryItem[]);
+      }
+
       setLoading(false);
     })();
   }, [username]);
