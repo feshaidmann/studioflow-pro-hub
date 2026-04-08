@@ -172,7 +172,7 @@ export default function ProjectDetail() {
 
       {/* ── Tabs ── */}
       <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="w-full grid grid-cols-5">
+        <TabsList className="w-full grid grid-cols-6">
           <TabsTrigger value="overview" className="gap-1 text-xs">
             <LayoutDashboard className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">Visão Geral</span>
@@ -197,6 +197,12 @@ export default function ProjectDetail() {
             <TabsTrigger value="finance" className="gap-1 text-xs">
               <DollarSign className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">Finanças</span>
+            </TabsTrigger>
+          )}
+          {isOwner && (
+            <TabsTrigger value="release" className="gap-1 text-xs">
+              <Rocket className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Lançamento</span>
             </TabsTrigger>
           )}
         </TabsList>
