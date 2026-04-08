@@ -1,0 +1,7 @@
+
+ALTER TABLE public.project_members
+  ADD COLUMN IF NOT EXISTS delivery_status TEXT NOT NULL DEFAULT 'ativo',
+  ADD COLUMN IF NOT EXISTS delivery_due_date DATE,
+  ADD COLUMN IF NOT EXISTS expected_deliverable TEXT NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS last_activity_at TIMESTAMP WITH TIME ZONE,
+  ADD COLUMN IF NOT EXISTS stage TEXT NOT NULL DEFAULT '';
