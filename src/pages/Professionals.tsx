@@ -687,15 +687,40 @@ export default function Professionals() {
                   </div>
                 </div>
 
-                {/* Projects list */}
-                {!metricsLoading && metrics && metrics.projectNames.length > 0 && (
-                  <div className="space-y-1.5">
+                {/* Collaboration history */}
+                {!metricsLoading && metrics && metrics.collaborationHistory.length > 0 && (
+                  <div className="space-y-2">
                     <p className="text-xs text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
-                      <Briefcase className="h-3 w-3" /> Projetos em comum
+                      <Briefcase className="h-3 w-3" /> Histórico de colaboração
                     </p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {metrics.projectNames.map((name, i) => (
-                        <Badge key={i} variant="secondary" className="text-xs">{name}</Badge>
+                    <div className="space-y-1.5">
+                      {metrics.collaborationHistory.map((h, i) => (
+                        <div key={i} className="flex items-center gap-2 text-xs px-2 py-1.5 rounded-md bg-muted/30 border border-border/40">
+                          <div className="flex-1 min-w-0">
+                            <span className="font-medium">{h.projectName}</span>
+                            {h.role && <span className="text-muted-foreground"> · {h.role}</span>}
+                          </div>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            {h.fee > 0 && (
+                              <span className="text-[10px] text-muted-foreground font-mono-nums">
+                                R${h.fee.toLocaleString("pt-BR")}
+                              </span>
+                            )}
+                            {h.completed ? (
+                              <Badge variant="secondary" className="text-[9px] h-4 px-1.5 gap-0.5">
+                                <CheckCircle2 className="h-2.5 w-2.5 text-success" /> Concluído
+                              </Badge>
+                            ) : h.deliveryStatus === "entregue" ? (
+                              <Badge variant="secondary" className="text-[9px] h-4 px-1.5 gap-0.5">
+                                <CheckCircle2 className="h-2.5 w-2.5 text-success" /> Entregue
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-[9px] h-4 px-1.5 text-muted-foreground">
+                                Em andamento
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
                       ))}
                     </div>
                   </div>
