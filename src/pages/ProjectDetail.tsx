@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useProjectChat } from "@/hooks/useProjectChat";
 import {
   ChevronLeft, Music2, Pencil, MessageSquare, Send, Lock,
-  LayoutDashboard, Users, ListChecks, DollarSign, Rocket,
+  LayoutDashboard, Users, ListChecks, DollarSign, Rocket, FolderOpen,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -21,6 +21,7 @@ import ProjectTeamTab from "@/components/project-hub/ProjectTeamTab";
 import ProjectTasksTab from "@/components/project-hub/ProjectTasksTab";
 import ProjectFinanceTab from "@/components/project-hub/ProjectFinanceTab";
 import ProjectReleaseTab from "@/components/project-hub/ProjectReleaseTab";
+import ProjectFilesTab from "@/components/project-hub/ProjectFilesTab";
 
 const STAGE_PERCENT: Record<string, number> = {
   rough: 0, inicio: 5, gravacao: 25, mix: 55, master: 75, upload: 90, lancado: 100,
@@ -30,7 +31,7 @@ const TYPE_LABEL: Record<string, string> = {
   single: "Single", ep: "EP", album: "Álbum", beat: "Beat / Base", trilha_guia: "Trilha Guia", feat: "Feat",
 };
 
-// ── Chat component ──
+// ── Chat component (extracted inline) ──
 function ProjectChat({ projectId }: { projectId: string }) {
   const { messages, loading, sending, sendMessage, currentUserId } = useProjectChat(projectId);
   const [input, setInput] = useState("");
@@ -102,6 +103,7 @@ export default function ProjectDetail() {
   const navigate = useNavigate();
   const { t } = useLanguage();
   const { projects, getMixPercent } = useProjects();
+  const [activeTab, setActiveTab] = useState("overview");
 
   const ownerProject = projects.find((p) => p.id === id);
   const [guestProject, setGuestProject] = useState<ProjectView | null>(null);
@@ -148,8 +150,26 @@ export default function ProjectDetail() {
     );
   }
 
+  // Owner tab definitions
+  const ownerTabs = [
+    { value: "overview", label: "Visão Geral", icon: LayoutDashboard },
+    { value: "tasks", label: "Tarefas", icon: ListChecks },
+    { value: "team", label: "Equipe", icon: Users },
+    { value: "files", label: "Arquivos", icon: FolderOpen },
+    { value: "finance", label: "Financeiro", icon: DollarSign },
+    { value: "release", label: "Lançamento", icon: Rocket },
+  ];
+
+  // Guest tabs (limited)
+  const guestTabs = [
+    { value: "overview", label: "Visão Geral", icon: LayoutDashboard },
+    { value: "chat", label: "Chat", icon: MessageSquare },
+  ];
+
+  const tabs = isOwner ? ownerTabs : guestTabs;
+
   return (
-    <div className="p-4 md:p-6 max-w-3xl mx-auto space-y-5">
+    <div className="p-4 md:p-6 max-w-4xl mx-auto space-y-5">
       {/* ── Back + Header ── */}
       <div className="flex items-start gap-3">
         <Button variant="ghost" size="icon" className="mt-0.5 shrink-0 h-8 w-8" onClick={() => navigate("/projects")}>
@@ -170,46 +190,34 @@ export default function ProjectDetail() {
         )}
       </div>
 
-      {/* ── Tabs ── */}
-      <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="w-full grid grid-cols-6">
-          <TabsTrigger value="overview" className="gap-1 text-xs">
-            <LayoutDashboard className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Visão Geral</span>
-          </TabsTrigger>
-          {isOwner && (
-            <TabsTrigger value="team" className="gap-1 text-xs">
-              <Users className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Equipe</span>
-            </TabsTrigger>
-          )}
-          <TabsTrigger value="chat" className="gap-1 text-xs">
-            <MessageSquare className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Chat</span>
-          </TabsTrigger>
-          {isOwner && (
-            <TabsTrigger value="tasks" className="gap-1 text-xs">
-              <ListChecks className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Tarefas</span>
-            </TabsTrigger>
-          )}
-          {isOwner && (
-            <TabsTrigger value="finance" className="gap-1 text-xs">
-              <DollarSign className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Finanças</span>
-            </TabsTrigger>
-          )}
-          {isOwner && (
-            <TabsTrigger value="release" className="gap-1 text-xs">
-              <Rocket className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Lançamento</span>
-            </TabsTrigger>
-          )}
+      {/* ── Hub Tabs ── */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className={cn("w-full grid", isOwner ? "grid-cols-6" : "grid-cols-2")}>
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            return (
+              <TabsTrigger key={tab.value} value={tab.value} className="gap-1 text-xs">
+                <Icon className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">{tab.label}</span>
+              </TabsTrigger>
+            );
+          })}
         </TabsList>
 
         <TabsContent value="overview">
-          <ProjectOverviewTab project={project} progress={progress} />
+          <ProjectOverviewTab
+            project={project}
+            progress={progress}
+            isOwner={isOwner}
+            onSwitchTab={setActiveTab}
+          />
         </TabsContent>
+
+        {isOwner && (
+          <TabsContent value="tasks">
+            <ProjectTasksTab projectId={project.id} />
+          </TabsContent>
+        )}
 
         {isOwner && (
           <TabsContent value="team">
@@ -217,17 +225,9 @@ export default function ProjectDetail() {
           </TabsContent>
         )}
 
-        <TabsContent value="chat">
-          <div className="rounded-xl border border-border bg-card/40 overflow-hidden">
-            <div className="p-3">
-              <ProjectChat projectId={project.id} />
-            </div>
-          </div>
-        </TabsContent>
-
         {isOwner && (
-          <TabsContent value="tasks">
-            <ProjectTasksTab projectId={project.id} />
+          <TabsContent value="files">
+            <ProjectFilesTab projectId={project.id} />
           </TabsContent>
         )}
 
@@ -242,7 +242,37 @@ export default function ProjectDetail() {
             <ProjectReleaseTab projectId={project.id} />
           </TabsContent>
         )}
+
+        {/* Guest-only chat tab */}
+        {!isOwner && (
+          <TabsContent value="chat">
+            <div className="rounded-xl border border-border bg-card/40 overflow-hidden">
+              <div className="p-3">
+                <ProjectChat projectId={project.id} />
+              </div>
+            </div>
+          </TabsContent>
+        )}
       </Tabs>
+
+      {/* Owner also gets chat, but embedded below tabs for context */}
+      {isOwner && (
+        <div className="rounded-xl border border-border bg-card/40 overflow-hidden">
+          <button
+            className="w-full flex items-center gap-2 px-4 py-3 text-sm font-semibold hover:bg-muted/30 transition-colors"
+            onClick={() => {
+              const el = document.getElementById("project-chat-section");
+              el?.scrollIntoView({ behavior: "smooth" });
+            }}
+          >
+            <MessageSquare className="h-4 w-4 text-primary" />
+            Chat da Equipe
+          </button>
+          <div id="project-chat-section" className="p-3 border-t border-border">
+            <ProjectChat projectId={project.id} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
