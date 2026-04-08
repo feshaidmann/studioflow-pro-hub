@@ -99,10 +99,11 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
 
   // Use server-side flag so onboarding only shows on first registration, not on new devices
   // Profile null (trigger failed) OR onboarding not completed → needs setup
+  // Skip onboarding for users who arrived via invite (origin = 'invite')
   const needsProfileSetup =
     !loading &&
     !!user &&
-    (profile === null || !profile.onboarding_completed);
+    (profile === null || (!profile.onboarding_completed && profile.origin !== "invite"));
 
   return (
     <ProfileContext.Provider
