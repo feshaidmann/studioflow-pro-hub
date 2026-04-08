@@ -64,10 +64,9 @@ export default function ProjectAlertsCard({ alerts, hidden }: ProjectAlertsCardP
             <div
               key={alert.id}
               className={cn(
-                "flex items-start gap-2.5 rounded-lg px-3 py-2 border cursor-pointer hover:-translate-y-0.5 transition-all duration-200",
+                "flex items-start gap-2.5 rounded-lg px-3 py-2 border transition-all duration-200",
                 sev.border, sev.bg,
               )}
-              onClick={() => navigate(`/projects/${alert.projectId}`)}
             >
               <SevIcon className={cn("h-4 w-4 shrink-0 mt-0.5", sev.iconColor)} />
               <div className="flex-1 min-w-0">
@@ -77,7 +76,17 @@ export default function ProjectAlertsCard({ alerts, hidden }: ProjectAlertsCardP
                 </div>
                 <p className="text-[11px] text-muted-foreground leading-snug">{alert.description}</p>
               </div>
-              <Badge variant="outline" className="text-[9px] shrink-0 mt-0.5">{alert.projectName}</Badge>
+              <div className="flex flex-col items-end gap-1 shrink-0">
+                <Badge variant="outline" className="text-[9px]">{alert.projectName}</Badge>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-5 px-1.5 text-[10px] gap-0.5 text-primary hover:text-primary/80"
+                  onClick={() => navigate(`/projects/${alert.projectId}?tab=${CAT_TAB[alert.category] || "visao-geral"}`)}
+                >
+                  Resolver <ArrowRight className="h-2.5 w-2.5" />
+                </Button>
+              </div>
             </div>
           );
         })}
