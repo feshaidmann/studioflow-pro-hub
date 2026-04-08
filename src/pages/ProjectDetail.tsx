@@ -20,6 +20,7 @@ import ProjectOverviewTab from "@/components/project-hub/ProjectOverviewTab";
 import ProjectTeamTab from "@/components/project-hub/ProjectTeamTab";
 import ProjectTasksTab from "@/components/project-hub/ProjectTasksTab";
 import ProjectFinanceTab from "@/components/project-hub/ProjectFinanceTab";
+import ProjectReleaseTab from "@/components/project-hub/ProjectReleaseTab";
 
 const STAGE_PERCENT: Record<string, number> = {
   rough: 0, inicio: 5, gravacao: 25, mix: 55, master: 75, upload: 90, lancado: 100,
