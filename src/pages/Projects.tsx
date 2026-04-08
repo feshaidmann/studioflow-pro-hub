@@ -103,17 +103,13 @@ export default function Projects() {
 
   const getProjectStatus = (project: Project): { label: string; color: string; key: string } => {
     if (project.completed) return { label: "Concluído", color: "text-[hsl(var(--success))] border-[hsl(var(--success)/0.3)] bg-[hsl(var(--success)/0.1)]", key: "concluido" };
-    const updatedAt = new Date(project.updatedAt || project.createdAt);
-    const daysSince = Math.floor((Date.now() - updatedAt.getTime()) / (1000 * 60 * 60 * 24));
-    const team = professionals[project.id] || [];
-    const hasPendingInvite = team.length === 0; // simplified
     const financials = getProjectFinancials(project.id);
     const budget = project.totalContractValue ?? 0;
     const budgetOver = budget > 0 && financials.totalExpense / budget > 0.9;
 
-    if (daysSince > 7) return { label: "Parado", color: "text-destructive border-destructive/30 bg-destructive/10", key: "parado" };
     if (budgetOver) return { label: "Orçamento em risco", color: "text-warning border-warning/30 bg-warning/10", key: "risco" };
     if (project.stage === "master" || project.stage === "upload") return { label: "Quase lá", color: "text-primary border-primary/30 bg-primary/10", key: "quase" };
+    if (project.mixPercent === 0 && project.stage === "inicio") return { label: "Recém criado", color: "text-muted-foreground border-border bg-muted/30", key: "parado" };
     return { label: "No prazo", color: "text-[hsl(var(--success))] border-[hsl(var(--success)/0.3)] bg-[hsl(var(--success)/0.1)]", key: "no_prazo" };
   };
   const { addNotification } = useNotifications();
