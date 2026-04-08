@@ -93,9 +93,29 @@ export default function Projects() {
     addProject, updateProject, deleteProject,
     getMixPercent, getProjectFinancials,
     addProfessional, removeProfessional, addProfessionalToGlobal,
-    addTransaction,
+    addTransaction, transactions,
   } = useProjects();
   const { professionals: globalProfessionals, loading: globalsLoading } = useProfessionals();
+
+  /* ── Filters ── */
+  const [stageFilter, setStageFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+
+  const getProjectStatus = (project: Project): { label: string; color: string; key: string } => {
+    if (project.completed) return { label: "Concluído", color: "text-[hsl(var(--success))] border-[hsl(var(--success)/0.3)] bg-[hsl(var(--success)/0.1)]", key: "concluido" };
+    const updatedAt = new Date(project.updatedAt || project.createdAt);
+    const daysSince = Math.floor((Date.now() - updatedAt.getTime()) / (1000 * 60 * 60 * 24));
+    const team = professionals[project.id] || [];
+    const hasPendingInvite = team.length === 0; // simplified
+    const financials = getProjectFinancials(project.id);
+    const budget = project.totalContractValue ?? 0;
+    const budgetOver = budget > 0 && financials.totalExpense / budget > 0.9;
+
+    if (daysSince > 7) return { label: "Parado", color: "text-destructive border-destructive/30 bg-destructive/10", key: "parado" };
+    if (budgetOver) return { label: "Orçamento em risco", color: "text-warning border-warning/30 bg-warning/10", key: "risco" };
+    if (project.stage === "master" || project.stage === "upload") return { label: "Quase lá", color: "text-primary border-primary/30 bg-primary/10", key: "quase" };
+    return { label: "No prazo", color: "text-[hsl(var(--success))] border-[hsl(var(--success)/0.3)] bg-[hsl(var(--success)/0.1)]", key: "no_prazo" };
+  };
   const { addNotification } = useNotifications();
 
   /* ── Guest projects (projects where user is an invited member) ── */
