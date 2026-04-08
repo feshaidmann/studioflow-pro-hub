@@ -108,6 +108,20 @@ interface AdminStatsResponse {
     activeUsersLast7Days: number;
     retentionRate: number;
   };
+  adoption: {
+    onboardingRate: number;
+    onboardedUsers: number;
+    basicModeUsers: number;
+    advancedModeUsers: number;
+    projectsCreatedTotal: number;
+    projectsLaunched: number;
+    launchRate: number;
+    medianTimeToFirstProject: number | null;
+    medianTimeToFirstTask: number | null;
+    stuckUsersCount: number;
+    usersWithoutProject: number;
+    featureRanking: Array<{ name: string; count: number }>;
+  };
   users: UserRow[];
   planCounts: Record<string, number>;
   products: Product[];
