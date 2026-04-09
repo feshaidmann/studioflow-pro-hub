@@ -1,6 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { DollarSign, TrendingUp, Wallet, AlertTriangle, BarChart3 } from "lucide-react";
+import { DollarSign, TrendingUp, Wallet, AlertTriangle, BarChart3, Music } from "lucide-react";
 import { useProjects } from "@/contexts/ProjectContext";
 import { cn } from "@/lib/utils";
 
