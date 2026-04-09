@@ -29,10 +29,12 @@ interface ProjectFilesTabProps {
 }
 
 export default function ProjectFilesTab({ projectId }: ProjectFilesTabProps) {
-  const { files, loading, uploading, uploadFile, deleteFile, renameFile, updateStatus, getFileUrl } = useProjectFiles(projectId);
+  const { files, loading, uploading, uploadFile, deleteFile, renameFile, updateStatus, updateComments, getFileUrl } = useProjectFiles(projectId);
   const [openFolders, setOpenFolders] = useState<Set<string>>(new Set(["composicao", "gravacao", "mix", "master"]));
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
+  const [commentingId, setCommentingId] = useState<string | null>(null);
+  const [commentText, setCommentText] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadFolder, setUploadFolder] = useState<FolderKey>("composicao");
 
