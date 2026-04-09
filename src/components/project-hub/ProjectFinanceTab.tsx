@@ -50,16 +50,15 @@ export default function ProjectFinanceTab({ projectId }: ProjectFinanceTabProps)
   }).filter((s) => s.total > 0);
   const maxStageCost = Math.max(...costByStage.map((s) => s.total), 1);
 
-  // Cost per track
-  const { projects: allProjects } = useProjects();
-  const tracks = useProjects().professionals; // tracks come from mix_tracks context but we use transactions linked to tracks
-  const projectTracks = (project as any)?.tracks ?? [];
-  const trackExpenses = projectTransactions
-    .filter((t) => t.type === "expense" && t.trackId)
-    .reduce((acc, t) => {
-      acc[t.trackId!] = (acc[t.trackId!] || 0) + t.amount;
-      return acc;
-    }, {} as Record<string, number>);
+  // Cost per track – group "Cachê — <Name>" expenses by musician name
+  const trackExpenses: Record<string, number> = {};
+  projectTransactions
+    .filter((t) => t.type === "expense" && t.category === "Músicos e Session")
+    .forEach((t) => {
+      const match = t.description.match(/Cachê\s*—\s*([^(]+)/);
+      const key = match ? match[1].trim() : t.description;
+      trackExpenses[key] = (trackExpenses[key] || 0) + t.amount;
+    });
   const hasTrackCosts = Object.keys(trackExpenses).length > 0;
 
   return (
