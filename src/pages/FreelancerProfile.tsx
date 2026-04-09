@@ -461,6 +461,48 @@ export default function FreelancerProfile() {
               </p>
             )}
           </div>
+
+          {/* Work links */}
+          <div className="space-y-2">
+            <Label><Link2 className="inline h-3 w-3 mr-1" />Links de trabalhos</Label>
+            <p className="text-[11px] text-muted-foreground">Adicione links para seus trabalhos, portfólio ou projetos publicados.</p>
+            {form.work_links.map((link, i) => (
+              <div key={i} className="flex gap-2 items-center">
+                <Input
+                  placeholder="Título (ex: Meu EP)"
+                  value={link.title}
+                  onChange={(e) => {
+                    const updated = [...form.work_links];
+                    updated[i] = { ...updated[i], title: e.target.value };
+                    setForm((prev) => ({ ...prev, work_links: updated }));
+                  }}
+                  className="flex-1"
+                />
+                <Input
+                  placeholder="https://..."
+                  value={link.url}
+                  onChange={(e) => {
+                    const updated = [...form.work_links];
+                    updated[i] = { ...updated[i], url: e.target.value };
+                    setForm((prev) => ({ ...prev, work_links: updated }));
+                  }}
+                  className="flex-1"
+                />
+                <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive" onClick={() => {
+                  setForm((prev) => ({ ...prev, work_links: prev.work_links.filter((_, idx) => idx !== i) }));
+                }}>
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            ))}
+            {form.work_links.length < 5 && (
+              <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => {
+                setForm((prev) => ({ ...prev, work_links: [...prev.work_links, { title: "", url: "" }] }));
+              }}>
+                <Plus className="h-3 w-3" /> Adicionar link
+              </Button>
+            )}
+          </div>
         </CardContent>
       </Card>
 
