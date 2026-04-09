@@ -382,7 +382,7 @@ export default function FinancialTracker() {
   const profitFiltered = totalIncomeFiltered - totalExpenseFiltered;
 
   return (
-    <div className="p-4 md:p-6 space-y-6 pb-12">
+    <div className="p-4 md:p-6 space-y-6 pb-12 max-w-6xl mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <h1 className="text-2xl md:text-3xl font-bold neon-text">Financeiro</h1>
