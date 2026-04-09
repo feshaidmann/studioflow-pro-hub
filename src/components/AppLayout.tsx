@@ -31,16 +31,16 @@ import { useProfile } from "@/contexts/ProfileContext";
 import { useProjects } from "@/contexts/ProjectContext";
 
 const principalItems = [
-  { labelKey: "nav.home",     path: "/dashboard", icon: Home,         proOnly: false },
-  { labelKey: "nav.projects", path: "/projects",  icon: FolderKanban, proOnly: false },
+  { labelKey: "nav.home",     path: "/dashboard", icon: Home,         proOnly: false, mobileLabel: "" },
+  { labelKey: "nav.projects", path: "/projects",  icon: FolderKanban, proOnly: false, mobileLabel: "" },
 ];
 
 const gestaoItems = [
-  { labelKey: "nav.finance",       path: "/finance",       icon: DollarSign,   proOnly: false },
-  { labelKey: "nav.agenda",        path: "/agenda",        icon: CalendarDays, proOnly: false },
-  { labelKey: "nav.musicdna",      path: "/music-dna",     icon: Dna,          proOnly: false },
-  { labelKey: "nav.professionals", path: "/professionals", icon: Users,        proOnly: false },
-  { labelKey: "nav.tutorial",      path: "/tutorial",      icon: BookOpen,     proOnly: false },
+  { labelKey: "nav.finance",       path: "/finance",       icon: DollarSign,   proOnly: false, mobileLabel: "" },
+  { labelKey: "nav.agenda",        path: "/agenda",        icon: CalendarDays, proOnly: false, mobileLabel: "" },
+  { labelKey: "nav.musicdna",      path: "/music-dna",     icon: Dna,          proOnly: false, mobileLabel: "nav.musicdna.short" },
+  { labelKey: "nav.professionals", path: "/professionals", icon: Users,        proOnly: false, mobileLabel: "" },
+  { labelKey: "nav.tutorial",      path: "/tutorial",      icon: BookOpen,     proOnly: false, mobileLabel: "" },
 ];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
