@@ -136,7 +136,7 @@ export default function Projects() {
   const [showTeam, setShowTeam] = useState(false);
   const [teamDialogOpen, setTeamDialogOpen] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [form, setForm] = useState({ name: "", artist: "", bpm: "120", key: "C", stage: "inicio" as Project["stage"], projectType: "single" as ProjectType, trackCount: "", uploadDate: "" });
+  const [form, setForm] = useState({ name: "", artist: "", bpm: "120", key: "C", stage: "inicio" as Project["stage"], projectType: "single" as ProjectType, trackCount: "", uploadDate: "", template: "none" as ProjectTemplate });
 
   /* ── Wizard state (2-step: select → proposal) ── */
   const [wizardStep, setWizardStep] = useState<WizardStep>("select");
