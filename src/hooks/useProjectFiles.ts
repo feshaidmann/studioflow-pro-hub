@@ -52,6 +52,7 @@ function dbToFile(row: any): ProjectFile {
     uploadedByName: row.uploaded_by_name,
     versionNumber: row.version_number,
     parentFileId: row.parent_file_id,
+    comments: row.comments ?? "",
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
