@@ -238,14 +238,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
         {/* Nav */}
         <nav className="flex flex-1 flex-col p-2 gap-0.5 overflow-y-auto">
-          {principalItems.map(renderNavItem)}
+          <TooltipProvider delayDuration={200}>
+            {principalItems.map(renderNavItem)}
 
-          <div className="my-2 border-t border-border/30" />
-          {gestaoItems.map(renderNavItem)}
+            <div className="my-2 border-t border-border/30" />
+            {gestaoItems.map(renderNavItem)}
 
-          <div className="my-2 border-t border-border/30" />
-          {renderNavItem(settingsNavItem)}
-          {isAdmin && renderNavItem(adminNavItem)}
+            <div className="my-2 border-t border-border/30" />
+            {renderNavItem(settingsNavItem)}
+            {isAdmin && renderNavItem(adminNavItem)}
+          </TooltipProvider>
         </nav>
 
         {/* Footer */}
