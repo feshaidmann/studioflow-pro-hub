@@ -1,223 +1,80 @@
 
 
-# Auditoria de Requisitos — Estado Atual vs. Especificação
+# Plano: Melhorias de UX centradas no usuário (5 etapas)
 
-## Legenda
-- ✅ Implementado
-- ⚠️ Parcialmente implementado
-- ❌ Não implementado
+## Visão geral
 
----
-
-## 1. Landing / Welcome
-
-| Requisito | Status | Observação |
-|-----------|--------|------------|
-| Proposta de valor ligada a projeto musical | ✅ | |
-| CTA para cadastro | ✅ | |
-| Credibilidade visual | ✅ | |
-| Reduzir destaque DNA Musical / sofisticação | ✅ | Features reposicionadas para gestão operacional |
-| Aumentar destaque "organize lançamento", "prazos", "equipe e custos" | ✅ | Top features: lançamento, prazos, equipe |
-| Cortar termos técnicos da primeira dobra | ✅ | Sem BPM/LUFS na landing |
-| Seção "feito para quem usa WhatsApp e planilha" | ✅ | Seção dedicada com ícone Shield |
-| Comparação antes vs depois | ✅ | 5 itens de comparação |
-| CTA dupla ("Começar simples" / "Ver versão avançada") | ✅ | "Começar simples" + Google |
-
-## 2. Auth
-
-| Requisito | Status |
-|-----------|--------|
-| Login simples | ✅ |
-| OAuth Google | ✅ |
-| Recuperação de senha | ✅ |
-| Após cadastro levar para onboarding | ✅ |
-| Microcopy tranquilizadora | ✅ | Login: "Dados seguros", Signup: "Começar com 1 projeto" |
-
-## 3. Onboarding
-
-| Requisito | Status |
-|-----------|--------|
-| 5 passos: momento, tipo, modo, dificuldade, criar projeto | ✅ |
-| Momento atual | ✅ |
-| Tipo de projeto | ✅ |
-| Modo simples vs avançado | ✅ |
-| Maior dificuldade | ✅ |
-| Criar primeiro projeto automaticamente | ✅ |
-| Usuário entra direto no projeto | ✅ |
-
-## 4. Dashboard
-
-| Requisito | Status | Observação |
-|-----------|--------|------------|
-| O que fazer hoje (DailyChecklist) | ✅ | Com filtro por projeto e fonte |
-| Projeto em risco (ProjectAlertsCard) | ✅ | Com botão "Resolver" contextual |
-| Próximo lançamento | ✅ | |
-| Financeiro | ✅ | |
-| Bloco "travamentos" | ✅ | |
-| Score simples: organizado/atenção/crítico | ✅ | |
-| Bloco "próxima ação recomendada" | ✅ | Banner dedicado no topo |
-| Equipe pendente | ✅ | PendingTeamCard dedicado |
-| IA com destaque reduzido | ✅ | Borda neutra, título compact |
-
-## 5. Projects
-
-| Requisito | Status | Observação |
-|-----------|--------|------------|
-| Listagem com cards | ✅ | |
-| Tipo single/EP/álbum | ✅ | |
-| Progresso | ✅ | |
-| Filtros por estágio e risco | ✅ | Implementado |
-| Destacar projetos travados | ✅ | Badge visual de status |
-| Status visual | ✅ | No prazo/parado/risco orçamento |
-| Criação ultra-rápida | ⚠️ | Formulário existe |
-| Template de projeto por objetivo | ❌ | |
-
-## 6. ProjectDetail (Hub Central)
-
-| Requisito | Status |
-|-----------|--------|
-| Aba Visão Geral | ✅ |
-| Aba Tarefas | ✅ |
-| Aba Equipe | ✅ |
-| Aba Arquivos | ✅ | Funcional com 9 pastas, upload, status |
-| Aba Financeiro | ✅ | Com orçamento vs realizado e custo por etapa |
-| Aba Lançamento | ✅ |
-| Chat da equipe | ✅ |
-
-## 7. Tarefas
-
-| Requisito | Status | Observação |
-|-----------|--------|------------|
-| Geração automática | ✅ | |
-| Regras | ✅ | |
-| Deduplicação | ✅ | |
-| Tarefas manuais | ✅ | |
-| Separar: hoje/semana/vencidas/aguardando | ✅ | |
-| Filtro por projeto | ✅ | No DailyChecklist |
-| Filtro por responsável | ✅ | No DailyChecklist, select de assignee |
-| Botão "resolver agora" | ✅ | Nos alertas, navega ao tab correto |
-| Subtarefas por etapa | ❌ | |
-| Templates de tarefas | ❌ | |
-
-## 8. Profissionais
-
-| Requisito | Status | Observação |
-|-----------|--------|------------|
-| Cadastro | ✅ | |
-| Busca | ✅ | |
-| Avaliações | ✅ | |
-| Status por projeto | ✅ | |
-| Histórico de colaboração | ✅ | Modal de detalhes com projetos, role, cachê, status |
-| Custo médio por profissional | ✅ | Cachê médio no modal |
-| Prazo médio de entrega | ✅ | Prazo médio no modal |
-| Preferência/favoritos | ❌ | |
-
-## 9. Chat de Projeto
-
-| Requisito | Status |
-|-----------|--------|
-| Chat contextual dentro do projeto | ✅ |
-| Marcar mensagem como pendência | ✅ |
-| Transformar mensagem em tarefa | ✅ |
-| Anexar arquivo à conversa | ✅ |
-| Filtrar mensagens com ação pendente | ✅ |
-| Conectar mensagens a tarefa e entrega | ✅ |
-
-## 10. Financeiro
-
-| Requisito | Status | Observação |
-|-----------|--------|------------|
-| Receitas/despesas/categorias/KPIs | ✅ | |
-| Visão por projeto | ✅ | |
-| Orçamento previsto vs realizado | ✅ | Na aba financeira do projeto |
-| Custo por etapa | ✅ | Na aba financeira do projeto |
-| Alerta de estouro | ✅ | |
-| Pagamentos pendentes por colaborador | ✅ | Card dedicado no financeiro global |
-| Custo por faixa | ❌ | |
-
-## 11. Agenda
-
-| Requisito | Status | Observação |
-|-----------|--------|------------|
-| Eventos/deadlines/vínculo com projeto | ✅ | |
-| Visão "próximos 7 dias" | ✅ | Padrão da página |
-| Deadlines de colaboradores | ✅ | Seção "Prazos da equipe" |
-| Alerta quando evento sem preparação | ✅ | Card de alerta para eventos em 3 dias sem descrição |
-
-## 12. Arquivos (Módulo)
-
-| Requisito | Status | Observação |
-|-----------|--------|------------|
-| Upload/preview/versão/status | ✅ | Funcional com 9 pastas |
-| Estrutura por pastas | ✅ | Composição, gravação, stems, mix, master, capa, vídeos, divulgação, documentos |
-| Comentário/histórico/responsável | ⚠️ | Responsável exibido, sem comentários |
-
-## 13. Lançamento
-
-| Requisito | Status |
-|-----------|--------|
-| Checklist de distribuição | ✅ |
-| Checklist de metadados | ✅ |
-| Checklist de créditos | ✅ |
-| Checklist jurídico | ✅ |
-| Checklist de conteúdo | ✅ |
-| Checklist de plataformas | ✅ |
-| Indicadores (pronto/pendências) | ✅ |
-
-## 14. IA / Music DNA
-
-| Requisito | Status |
-|-----------|--------|
-| Tecnologia mantida | ✅ |
-| IA operacional (gestão) | ✅ |
-| IA analítica (master/DNA) | ✅ |
-| Separar em 2 camadas (core vs Pro) | ❌ |
-
-## 15. Admin
-
-| Requisito | Status |
-|-----------|--------|
-| Métricas/custos/logs | ✅ |
-| Tempo até criar primeiro projeto | ✅ | Mediana exibida |
-| % que conclui onboarding | ✅ |
-| % que conclui primeiro projeto | ✅ |
-| Feature mais usada | ✅ |
-| Ponto de abandono por tela | ✅ | page_views + bounce rate no admin |
-| Projetos criados vs lançados | ✅ | Taxa de lançamento com contagem |
-
-## 16. Perfil Público
-
-| Requisito | Status | Observação |
-|-----------|--------|------------|
-| Portfólio/especialidades/avaliações | ✅ | |
-| CTA para convite | ✅ | Botão "Convidar para projeto" |
-| Links de trabalhos | ✅ | work_links exibidos no perfil público |
-| Histórico resumido de entregas | ✅ | Via RPC get_public_profile_history |
+Implementar as 5 melhorias de polish identificadas no diagnóstico, em ordem de impacto para o usuário.
 
 ---
 
-## Resumo Executivo
+## Etapa 1 — Empty States humanizados
 
-| Área | ✅ | ⚠️ | ❌ |
-|------|-----|------|------|
-| Landing | 9 | 0 | 0 |
-| Auth | 5 | 0 | 0 |
-| Onboarding | 7 | 0 | 0 |
-| Dashboard | 9 | 0 | 0 |
-| Projects | 7 | 1 | 0 |
-| ProjectDetail | 7 | 0 | 0 |
-| Tarefas | 10 | 1 | 0 |
-| Profissionais | 8 | 0 | 0 |
-| Chat | 6 | 0 | 0 |
-| Financeiro | 7 | 0 | 0 |
-| Agenda | 4 | 0 | 0 |
-| Arquivos | 3 | 0 | 0 |
-| Lançamento | 7 | 0 | 0 |
-| IA/DNA | 4 | 0 | 0 |
-| Admin | 7 | 0 | 0 |
-| Perfil Público | 4 | 0 | 0 |
-| **Total** | **106** | **2** | **0** |
+**Onde**: Agenda, Financeiro, Profissionais (telas vazias quando não há dados)
 
-## Itens Restantes
+**O que fazer**:
+- Agenda: já tem empty state razoável. Melhorar com ilustração (ícone maior + subtítulo motivacional).
+- Financeiro: adicionar empty state com ícone e CTA "Registrar primeira transação" quando não há transações.
+- Profissionais: adicionar empty state com ícone e CTA "Adicionar primeiro contato" quando a lista está vazia.
 
-Nenhum. Todos os requisitos foram implementados. Os 2 itens ⚠️ (parcialmente implementados) referem-se a funcionalidades que dependem de dados reais para validação completa.
+**Arquivos**: `Agenda.tsx`, `FinancialTracker.tsx`, `Professionals.tsx`
+
+---
+
+## Etapa 2 — Confirmações de ações destrutivas
+
+**Status atual**: Projects, Finance, Agenda e Professionals **já possuem** `AlertDialog` de confirmação para exclusão. 
+
+**O que falta**:
+- Remoção de membro da equipe em `ProjectTeamTab.tsx` — verificar se tem confirmação antes de remover.
+- Padronizar o texto dos dialogs para incluir o nome do item sendo excluído (ex: "Excluir o projeto **Nome do Projeto**?").
+
+**Arquivos**: `ProjectTeamTab.tsx`, `Projects.tsx`, `Professionals.tsx`
+
+---
+
+## Etapa 3 — Feedback de loading em ações
+
+**O que fazer**:
+- Adicionar estado `saving`/`loading` com spinner nos botões de: criar projeto, salvar profissional, enviar mensagem no chat.
+- Desabilitar botão durante a operação para evitar duplo-clique.
+
+**Arquivos**: `Projects.tsx` (botão criar/editar projeto), `Professionals.tsx` (botão salvar), `ProjectChat.tsx` (botão enviar)
+
+---
+
+## Etapa 4 — Tooltips no sidebar colapsado
+
+**O que fazer**:
+- Quando `sidebarOpen === false`, envolver cada item de navegação com `<Tooltip>` exibindo o nome da seção ao passar o mouse.
+- Usar o componente `Tooltip` já existente no projeto.
+
+**Arquivo**: `AppLayout.tsx`
+
+---
+
+## Etapa 5 — Microcopy de sucesso nos toasts
+
+**O que fazer**:
+- Revisar todos os `toast.success()` nas páginas principais e tornar as mensagens mais orientadoras.
+- Exemplos:
+  - "Projeto criado!" → "Projeto criado! Adicione sua equipe para começar."
+  - "Transação excluída" → "Transação removida do seu histórico."
+  - "Contato salvo" → "Contato salvo! Você pode convidá-lo para projetos."
+
+**Arquivos**: `Projects.tsx`, `FinancialTracker.tsx`, `Professionals.tsx`, `Agenda.tsx`
+
+---
+
+## Resumo técnico
+
+| Etapa | Arquivos principais | Complexidade |
+|-------|---------------------|-------------|
+| 1. Empty States | 3 páginas | Baixa |
+| 2. Confirmações | ProjectTeamTab + padronização | Baixa |
+| 3. Loading | 3 componentes | Média |
+| 4. Tooltips sidebar | AppLayout | Baixa |
+| 5. Microcopy | 4 páginas (strings) | Baixa |
+
+Nenhuma mudança de banco de dados ou backend é necessária.
+
