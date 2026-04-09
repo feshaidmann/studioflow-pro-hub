@@ -266,6 +266,8 @@ Cada campo deve conter texto final pronto para exibição ao artista — linguag
 Nenhum campo deve conter instruções, meta-texto ou placeholders. Apenas o conteúdo real do diagnóstico.
 Traduza métricas em percepções musicais. Use "é altamente recomendável", "vale a pena explorar", "seria interessante considerar" — nunca "urgente", "crítico" ou "imediato".
 
+No "diagnostico_tecnico", atue como um produtor musical experiente: para cada campo, além da avaliação, inclua uma dica prática e acionável de como o artista pode alcançar o resultado ideal — cite a técnica ou ferramenta específica (ex: tipo de compressor, plugin, configuração de limiter, ajuste de EQ) e explique de forma simples o que fazer na DAW.
+
 {
   "genero_classificado": "",
   "identidade": {
