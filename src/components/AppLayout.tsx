@@ -44,6 +44,7 @@ const gestaoItems = [
 ];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
+  usePageTracking();
   const isMobile = useIsMobile();
   const SIDEBAR_KEY = "sfp_sidebar_open";
   const [sidebarOpen, setSidebarOpen] = useState(() => {
