@@ -72,7 +72,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     localStorage.setItem("sfp_sidebar_open", String(next));
   };
 
-  const adminNavItem = { labelKey: "nav.admin", path: "/admin", icon: Shield, proOnly: false };
+  const adminNavItem = { labelKey: "nav.admin", path: "/admin", icon: Shield, proOnly: false, mobileLabel: "" };
   const settingsNavItem = { labelKey: "nav.settings", path: "/settings", icon: Settings, proOnly: false, mobileLabel: "nav.settings.short" };
 
   const primaryMobileItems = [
