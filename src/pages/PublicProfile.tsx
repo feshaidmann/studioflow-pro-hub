@@ -297,6 +297,26 @@ export default function PublicProfile() {
           </div>
         )}
 
+        {/* Work links */}
+        {workLinks.length > 0 && (
+          <div className="rounded-xl bg-card border border-border/60 p-4 space-y-3">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Trabalhos</p>
+            {workLinks.filter((l) => l.title && l.url).map((link, i) => (
+              <a
+                key={i}
+                href={link.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 text-sm text-foreground hover:text-primary transition-colors"
+              >
+                <Music className="h-4 w-4 text-muted-foreground shrink-0" />
+                <span className="flex-1 truncate">{link.title}</span>
+                <ExternalLink className="h-3 w-3 text-muted-foreground ml-auto" />
+              </a>
+            ))}
+          </div>
+        )}
+
         {/* Contact */}
         {(profile.public_email || profile.whatsapp) && (
           <div className="rounded-xl bg-card border border-border/60 p-4 space-y-3">
