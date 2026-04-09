@@ -492,6 +492,15 @@ export default function Professionals() {
                 ))}
               </div>
 
+              {/* Favoritos */}
+              <button
+                onClick={() => setFilterFavorite(!filterFavorite)}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs transition-colors ${filterFavorite ? "bg-primary/15 border-primary/40 text-primary font-medium" : "border-border text-muted-foreground hover:bg-muted"}`}
+              >
+                <Star className="h-3.5 w-3.5" />
+                Favoritos
+              </button>
+
               {/* Em projeto */}
               <button
                 onClick={() => setFilterAllocated(!filterAllocated)}
