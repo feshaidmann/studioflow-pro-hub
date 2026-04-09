@@ -1,6 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { DollarSign, TrendingUp, Wallet, AlertTriangle, BarChart3 } from "lucide-react";
+import { DollarSign, TrendingUp, Wallet, AlertTriangle, BarChart3, Music } from "lucide-react";
 import { useProjects } from "@/contexts/ProjectContext";
 import { cn } from "@/lib/utils";
 
@@ -49,6 +49,17 @@ export default function ProjectFinanceTab({ projectId }: ProjectFinanceTabProps)
     return { stage, total };
   }).filter((s) => s.total > 0);
   const maxStageCost = Math.max(...costByStage.map((s) => s.total), 1);
+
+  // Cost per track – group "Cachê — <Name>" expenses by musician name
+  const trackExpenses: Record<string, number> = {};
+  projectTransactions
+    .filter((t) => t.type === "expense" && t.category === "Músicos e Session")
+    .forEach((t) => {
+      const match = t.description.match(/Cachê\s*—\s*([^(]+)/);
+      const key = match ? match[1].trim() : t.description;
+      trackExpenses[key] = (trackExpenses[key] || 0) + t.amount;
+    });
+  const hasTrackCosts = Object.keys(trackExpenses).length > 0;
 
   return (
     <div className="space-y-4">
@@ -115,6 +126,23 @@ export default function ProjectFinanceTab({ projectId }: ProjectFinanceTabProps)
                 <div className="h-1.5 rounded-full bg-muted overflow-hidden">
                   <div className="h-full rounded-full bg-primary/60 transition-all" style={{ width: `${(s.total / maxStageCost) * 100}%` }} />
                 </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Cost per track */}
+      {hasTrackCosts && (
+        <div className="rounded-lg border border-border p-3 space-y-2">
+          <span className="text-xs font-semibold flex items-center gap-1.5">
+            <Music className="h-3.5 w-3.5 text-primary" /> Custo por faixa
+          </span>
+          <div className="space-y-1.5">
+            {Object.entries(trackExpenses).map(([trackId, total]) => (
+              <div key={trackId} className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground truncate flex-1 mr-2">{trackId}</span>
+                <span className="font-mono-nums font-medium">{fmt.format(total)}</span>
               </div>
             ))}
           </div>

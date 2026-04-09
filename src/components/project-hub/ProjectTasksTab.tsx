@@ -45,10 +45,14 @@ function TaskRow({ task, onToggle, onDelete }: { task: Task; onToggle: () => voi
     return { label: `em ${d}d`, color: "text-muted-foreground" };
   })() : null;
 
+  const isSubtask = task.description.startsWith("→ ");
+
   return (
-    <div className="flex items-start gap-2 rounded-lg px-2 py-1.5 hover:bg-secondary/30 transition-colors group">
+    <div className={cn("flex items-start gap-2 rounded-lg px-2 py-1.5 hover:bg-secondary/30 transition-colors group", isSubtask && "pl-7")}>
       <Checkbox checked={task.completed} onCheckedChange={onToggle} className="shrink-0 mt-0.5" />
-      <span className="flex-1 text-xs leading-snug">{task.description}</span>
+      <span className={cn("flex-1 text-xs leading-snug", isSubtask && "text-muted-foreground")}>
+        {isSubtask ? task.description.slice(2) : task.description}
+      </span>
       <div className="flex items-center gap-1 shrink-0">
         {dueBadge && (
           <span className={cn("text-[10px] font-mono-nums flex items-center gap-0.5", dueBadge.color)}>

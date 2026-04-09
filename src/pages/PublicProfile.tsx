@@ -46,6 +46,7 @@ export default function PublicProfile() {
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
   const [history, setHistory] = useState<DeliveryHistoryItem[]>([]);
+  const [workLinks, setWorkLinks] = useState<Array<{ title: string; url: string }>>([]);
 
   useEffect(() => {
     if (!username) return;
@@ -60,6 +61,17 @@ export default function PublicProfile() {
         return;
       }
       const p = (data as any[])[0] as PublicProfileData;
+      setProfile(p);
+
+      // Fetch work_links from profile
+      const { data: profRow } = await supabase
+        .from("profiles")
+        .select("work_links")
+        .eq("id", p.id)
+        .single();
+      if (profRow && Array.isArray((profRow as any).work_links)) {
+        setWorkLinks((profRow as any).work_links as Array<{ title: string; url: string }>);
+      }
       setProfile(p);
 
       // Fetch ratings
@@ -282,6 +294,26 @@ export default function PublicProfile() {
                 );
               })}
             </div>
+          </div>
+        )}
+
+        {/* Work links */}
+        {workLinks.length > 0 && (
+          <div className="rounded-xl bg-card border border-border/60 p-4 space-y-3">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Trabalhos</p>
+            {workLinks.filter((l) => l.title && l.url).map((link, i) => (
+              <a
+                key={i}
+                href={link.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 text-sm text-foreground hover:text-primary transition-colors"
+              >
+                <Music className="h-4 w-4 text-muted-foreground shrink-0" />
+                <span className="flex-1 truncate">{link.title}</span>
+                <ExternalLink className="h-3 w-3 text-muted-foreground ml-auto" />
+              </a>
+            ))}
           </div>
         )}
 

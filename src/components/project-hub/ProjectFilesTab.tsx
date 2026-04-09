@@ -1,11 +1,12 @@
 import { useState, useRef } from "react";
 import {
   FolderOpen, Upload, Music, Image, FileText, Film, Mic, Layers, Sliders, Disc, Megaphone,
-  Download, Trash2, Pencil, Check, X, ChevronDown, ChevronRight, Loader2,
+  Download, Trash2, Pencil, Check, X, ChevronDown, ChevronRight, Loader2, MessageSquare,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { useProjectFiles, FOLDERS, type FolderKey } from "@/hooks/useProjectFiles";
 
 const ICON_MAP: Record<string, React.FC<{ className?: string }>> = {
@@ -28,10 +29,12 @@ interface ProjectFilesTabProps {
 }
 
 export default function ProjectFilesTab({ projectId }: ProjectFilesTabProps) {
-  const { files, loading, uploading, uploadFile, deleteFile, renameFile, updateStatus, getFileUrl } = useProjectFiles(projectId);
+  const { files, loading, uploading, uploadFile, deleteFile, renameFile, updateStatus, updateComments, getFileUrl } = useProjectFiles(projectId);
   const [openFolders, setOpenFolders] = useState<Set<string>>(new Set(["composicao", "gravacao", "mix", "master"]));
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
+  const [commentingId, setCommentingId] = useState<string | null>(null);
+  const [commentText, setCommentText] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadFolder, setUploadFolder] = useState<FolderKey>("composicao");
 
@@ -161,7 +164,31 @@ export default function ProjectFilesTab({ projectId }: ProjectFilesTabProps) {
                               <span className="text-[10px] text-muted-foreground">{formatSize(file.size)}</span>
                               <span className="text-[10px] text-muted-foreground">•</span>
                               <span className="text-[10px] text-muted-foreground">{file.uploadedByName}</span>
+                              {file.comments && (
+                                <>
+                                  <span className="text-[10px] text-muted-foreground">•</span>
+                                  <span className="text-[10px] text-muted-foreground/60 flex items-center gap-0.5">
+                                    <MessageSquare className="h-2.5 w-2.5" /> {file.comments.length > 30 ? file.comments.slice(0, 30) + "…" : file.comments}
+                                  </span>
+                                </>
+                              )}
                             </div>
+                            {/* Inline comment editor */}
+                            {commentingId === file.id && (
+                              <div className="mt-1.5 flex items-start gap-1">
+                                <Textarea
+                                  value={commentText}
+                                  onChange={(e) => setCommentText(e.target.value)}
+                                  placeholder="Adicionar comentário..."
+                                  className="text-xs h-14 resize-none"
+                                  autoFocus
+                                />
+                                <div className="flex flex-col gap-0.5">
+                                  <button onClick={() => { updateComments(file.id, commentText); setCommentingId(null); }} className="text-[hsl(var(--success))] hover:opacity-80 p-0.5"><Check className="h-3.5 w-3.5" /></button>
+                                  <button onClick={() => setCommentingId(null)} className="text-muted-foreground hover:opacity-80 p-0.5"><X className="h-3.5 w-3.5" /></button>
+                                </div>
+                              </div>
+                            )}
                           </div>
 
                           <button
@@ -174,6 +201,9 @@ export default function ProjectFilesTab({ projectId }: ProjectFilesTabProps) {
                           </button>
 
                           <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button onClick={() => { setCommentingId(file.id); setCommentText(file.comments); }} className="p-1 rounded hover:bg-muted/50 text-muted-foreground hover:text-foreground" title="Comentar">
+                              <MessageSquare className="h-3 w-3" />
+                            </button>
                             <button onClick={() => startRename(file.id, file.originalName)} className="p-1 rounded hover:bg-muted/50 text-muted-foreground hover:text-foreground">
                               <Pencil className="h-3 w-3" />
                             </button>

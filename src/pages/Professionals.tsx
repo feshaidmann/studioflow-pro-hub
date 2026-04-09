@@ -66,6 +66,7 @@ interface Professional {
   active: boolean;
   allow_global_listing: boolean;
   created_at: string;
+  favorite: boolean;
 }
 
 interface ProfMetrics {
@@ -106,6 +107,7 @@ export default function Professionals() {
   const [filterSpecialty, setFilterSpecialty] = useState<string>("all");
   const [filterStatus, setFilterStatus] = useState<"all" | "active" | "inactive">("all");
   const [filterAllocated, setFilterAllocated] = useState<boolean>(false);
+  const [filterFavorite, setFilterFavorite] = useState<boolean>(false);
 
   // Table enrichment
   const [ratingsMap, setRatingsMap] = useState<Record<string, { avg: number; count: number }>>({});
@@ -408,16 +410,25 @@ export default function Professionals() {
     if (filterStatus === "active" && !p.active) return false;
     if (filterStatus === "inactive" && p.active) return false;
     if (filterAllocated && (allocationsMap[p.name] ?? []).length === 0) return false;
+    if (filterFavorite && !p.favorite) return false;
     return true;
   });
 
-  const hasActiveFilters = search !== "" || filterSpecialty !== "all" || filterStatus !== "all" || filterAllocated;
+  const hasActiveFilters = search !== "" || filterSpecialty !== "all" || filterStatus !== "all" || filterAllocated || filterFavorite;
+
+  async function toggleFavorite(profId: string, current: boolean) {
+    const next = !current;
+    await supabase.from("professionals").update({ favorite: next } as any).eq("id", profId);
+    setProfessionals((prev) => prev.map((p) => p.id === profId ? { ...p, favorite: next } : p));
+    toast.success(next ? "Adicionado aos favoritos ⭐" : "Removido dos favoritos");
+  }
 
   function clearFilters() {
     setSearch("");
     setFilterSpecialty("all");
     setFilterStatus("all");
     setFilterAllocated(false);
+    setFilterFavorite(false);
   }
 
   return (
@@ -480,6 +491,15 @@ export default function Professionals() {
                   </button>
                 ))}
               </div>
+
+              {/* Favoritos */}
+              <button
+                onClick={() => setFilterFavorite(!filterFavorite)}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs transition-colors ${filterFavorite ? "bg-primary/15 border-primary/40 text-primary font-medium" : "border-border text-muted-foreground hover:bg-muted"}`}
+              >
+                <Star className="h-3.5 w-3.5" />
+                Favoritos
+              </button>
 
               {/* Em projeto */}
               <button
@@ -545,7 +565,18 @@ export default function Professionals() {
                       className="cursor-pointer hover:bg-primary/5 transition-colors"
                       onClick={() => openDetail(p)}
                     >
-                      <TableCell className="font-medium">{p.name}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); toggleFavorite(p.id, p.favorite); }}
+                            className="shrink-0"
+                            title={p.favorite ? "Remover dos favoritos" : "Adicionar aos favoritos"}
+                          >
+                            <Star className={`h-3.5 w-3.5 transition-colors ${p.favorite ? "fill-chart-3 text-chart-3" : "text-muted-foreground/30 hover:text-chart-3"}`} />
+                          </button>
+                          <span className="font-medium">{p.name}</span>
+                        </div>
+                      </TableCell>
                       <TableCell className="text-muted-foreground">{p.email}</TableCell>
                       <TableCell className="text-muted-foreground">{p.phone || "—"}</TableCell>
                       <TableCell>{p.specialty || "—"}</TableCell>

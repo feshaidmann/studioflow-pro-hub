@@ -204,27 +204,20 @@
 | Auth | 5 | 0 | 0 |
 | Onboarding | 7 | 0 | 0 |
 | Dashboard | 9 | 0 | 0 |
-| Projects | 6 | 1 | 1 |
+| Projects | 7 | 1 | 0 |
 | ProjectDetail | 7 | 0 | 0 |
-| Tarefas | 9 | 0 | 2 |
-| Profissionais | 7 | 0 | 1 |
+| Tarefas | 10 | 1 | 0 |
+| Profissionais | 8 | 0 | 0 |
 | Chat | 6 | 0 | 0 |
-| Financeiro | 6 | 0 | 1 |
+| Financeiro | 7 | 0 | 0 |
 | Agenda | 4 | 0 | 0 |
-| Arquivos | 2 | 1 | 0 |
+| Arquivos | 3 | 0 | 0 |
 | Lançamento | 7 | 0 | 0 |
-| IA/DNA | 3 | 0 | 1 |
+| IA/DNA | 4 | 0 | 0 |
 | Admin | 6 | 0 | 1 |
-| Perfil Público | 3 | 0 | 1 |
-| **Total** | **96** | **2** | **8** |
+| Perfil Público | 4 | 0 | 0 |
+| **Total** | **103** | **2** | **1** |
 
-## Itens Restantes (baixa prioridade)
+## Itens Restantes
 
-1. Projects: Template de projeto por objetivo
-2. Tarefas: Subtarefas por etapa, templates de tarefas
-3. Profissionais: Favoritos
-4. Financeiro: Custo por faixa
-5. Arquivos: Comentários em arquivos
-6. IA: Separar core vs Pro
-7. Admin: Ponto de abandono por tela
-8. Perfil Público: Links de trabalhos por projeto
+1. Admin: Ponto de abandono por tela (requer integração analytics mais profunda — PostHog já rastreia pageviews)

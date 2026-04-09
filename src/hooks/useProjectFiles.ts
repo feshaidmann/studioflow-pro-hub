@@ -32,6 +32,7 @@ export interface ProjectFile {
   uploadedByName: string;
   versionNumber: number;
   parentFileId: string | null;
+  comments: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -51,6 +52,7 @@ function dbToFile(row: any): ProjectFile {
     uploadedByName: row.uploaded_by_name,
     versionNumber: row.version_number,
     parentFileId: row.parent_file_id,
+    comments: row.comments ?? "",
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -142,6 +144,12 @@ export function useProjectFiles(projectId: string) {
     toast.success(status === "final" ? "Marcado como final" : "Marcado como em revisão");
   }, []);
 
+  // Update comments
+  const updateComments = useCallback(async (fileId: string, comments: string) => {
+    await supabase.from("project_files").update({ comments } as any).eq("id", fileId);
+    setFiles((prev) => prev.map((f) => f.id === fileId ? { ...f, comments } : f));
+  }, []);
+
   // Get signed URL for preview/download
   const getFileUrl = useCallback(async (storagePath: string): Promise<string | null> => {
     const { data, error } = await supabase.storage
@@ -151,5 +159,5 @@ export function useProjectFiles(projectId: string) {
     return data.signedUrl;
   }, []);
 
-  return { files, loading, uploading, uploadFile, deleteFile, renameFile, updateStatus, getFileUrl, refetch: fetchFiles };
+  return { files, loading, uploading, uploadFile, deleteFile, renameFile, updateStatus, updateComments, getFileUrl, refetch: fetchFiles };
 }

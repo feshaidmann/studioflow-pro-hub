@@ -65,6 +65,15 @@ type WizardStep = "select" | "proposal";
 type WizardSource = "new" | "existing";
 type WizardProfType = "Instrumentista" | "Produtor" | "Mix" | "Master";
 
+type ProjectTemplate = "none" | "single_basico" | "banda_completa" | "producao_eletronica" | "podcast";
+const PROJECT_TEMPLATES: Record<ProjectTemplate, { label: string; description: string; tracks: string[] }> = {
+  none: { label: "Em branco", description: "Sem tracks pré-definidas", tracks: [] },
+  single_basico: { label: "Single Básico", description: "Voz, Violão, Beat, Master Bus", tracks: ["Voz Principal", "Violão", "Beat", "Master Bus"] },
+  banda_completa: { label: "Banda Completa", description: "Voz, Guitarra, Baixo, Bateria, Teclado, Master Bus", tracks: ["Voz Principal", "Backing Vocal", "Guitarra", "Baixo", "Bateria", "Teclado", "Master Bus"] },
+  producao_eletronica: { label: "Produção Eletrônica", description: "Beat, Synth, Bass, FX, Vocal, Master Bus", tracks: ["Beat", "Synth Lead", "Synth Pad", "Bass", "FX", "Vocal", "Master Bus"] },
+  podcast: { label: "Podcast / Voz", description: "Host, Convidado, BG Music, Master Bus", tracks: ["Host", "Convidado", "BG Music", "Master Bus"] },
+};
+
 const profTypeSpecialty: Record<WizardProfType, string> = {
   Instrumentista: "",
   Produtor: "Produtor",
@@ -127,7 +136,7 @@ export default function Projects() {
   const [showTeam, setShowTeam] = useState(false);
   const [teamDialogOpen, setTeamDialogOpen] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [form, setForm] = useState({ name: "", artist: "", bpm: "120", key: "C", stage: "inicio" as Project["stage"], projectType: "single" as ProjectType, trackCount: "", uploadDate: "" });
+  const [form, setForm] = useState({ name: "", artist: "", bpm: "120", key: "C", stage: "inicio" as Project["stage"], projectType: "single" as ProjectType, trackCount: "", uploadDate: "", template: "none" as ProjectTemplate });
 
   /* ── Wizard state (2-step: select → proposal) ── */
   const [wizardStep, setWizardStep] = useState<WizardStep>("select");
@@ -392,6 +401,7 @@ export default function Projects() {
       } catch { /* ignore */ }
     }
     const needsTrackCount = form.projectType === "ep" || form.projectType === "album";
+    const templateTracks = form.template !== "none" ? PROJECT_TEMPLATES[form.template].tracks : null;
     try {
       const newProj = await addProject({
         name: form.name,
@@ -405,13 +415,13 @@ export default function Projects() {
         amountPaid: null,
         estimatedMonths: null,
         uploadDate: uploadDateStr,
-        templateTracks: null,
+        templateTracks: templateTracks,
       });
       if (!newProj) {
         toast.error("Erro ao criar projeto. Verifique sua conexão e tente novamente.");
         return;
       }
-      setForm({ name: "", artist: "", bpm: "120", key: "C", stage: "inicio", projectType: "single", trackCount: "", uploadDate: "" });
+      setForm({ name: "", artist: "", bpm: "120", key: "C", stage: "inicio", projectType: "single", trackCount: "", uploadDate: "", template: "none" });
       setDialogOpen(false);
       addNotification({ title: "Novo projeto criado", message: `${newProj.name} foi adicionado aos seus projetos`, link: "/projects", type: "stage" });
       toast.success(`Projeto "${newProj.name}" criado com sucesso! 🎵`);
@@ -538,6 +548,23 @@ export default function Projects() {
                   onChange={(val) => setForm({ ...form, uploadDate: val })}
                   placeholder="Selecionar data de lançamento"
                 />
+              </div>
+              {/* Template selection */}
+              <div className="space-y-1.5">
+                <Label>Template de tracks</Label>
+                <Select value={form.template} onValueChange={(v) => setForm({ ...form, template: v as ProjectTemplate })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {(Object.entries(PROJECT_TEMPLATES) as [ProjectTemplate, typeof PROJECT_TEMPLATES[ProjectTemplate]][]).map(([key, tmpl]) => (
+                      <SelectItem key={key} value={key}>
+                        <div className="flex flex-col">
+                          <span>{tmpl.label}</span>
+                          <span className="text-[10px] text-muted-foreground">{tmpl.description}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <DialogFooter>

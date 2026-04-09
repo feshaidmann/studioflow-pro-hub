@@ -479,6 +479,7 @@ export type Database = {
           bio: string
           created_at: string
           email: string
+          favorite: boolean
           id: string
           name: string
           phone: string
@@ -492,6 +493,7 @@ export type Database = {
           bio?: string
           created_at?: string
           email: string
+          favorite?: boolean
           id?: string
           name: string
           phone?: string
@@ -505,6 +507,7 @@ export type Database = {
           bio?: string
           created_at?: string
           email?: string
+          favorite?: boolean
           id?: string
           name?: string
           phone?: string
@@ -538,6 +541,7 @@ export type Database = {
           user_type: string
           username: string | null
           whatsapp: string
+          work_links: Json
           youtube_url: string | null
         }
         Insert: {
@@ -563,6 +567,7 @@ export type Database = {
           user_type?: string
           username?: string | null
           whatsapp?: string
+          work_links?: Json
           youtube_url?: string | null
         }
         Update: {
@@ -588,12 +593,14 @@ export type Database = {
           user_type?: string
           username?: string | null
           whatsapp?: string
+          work_links?: Json
           youtube_url?: string | null
         }
         Relationships: []
       }
       project_files: {
         Row: {
+          comments: string
           created_at: string
           file_name: string
           folder: string
@@ -611,6 +618,7 @@ export type Database = {
           version_number: number
         }
         Insert: {
+          comments?: string
           created_at?: string
           file_name: string
           folder?: string
@@ -628,6 +636,7 @@ export type Database = {
           version_number?: number
         }
         Update: {
+          comments?: string
           created_at?: string
           file_name?: string
           folder?: string
