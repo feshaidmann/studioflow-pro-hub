@@ -421,7 +421,7 @@ export default function Projects() {
         toast.error("Erro ao criar projeto. Verifique sua conexão e tente novamente.");
         return;
       }
-      setForm({ name: "", artist: "", bpm: "120", key: "C", stage: "inicio", projectType: "single", trackCount: "", uploadDate: "" });
+      setForm({ name: "", artist: "", bpm: "120", key: "C", stage: "inicio", projectType: "single", trackCount: "", uploadDate: "", template: "none" });
       setDialogOpen(false);
       addNotification({ title: "Novo projeto criado", message: `${newProj.name} foi adicionado aos seus projetos`, link: "/projects", type: "stage" });
       toast.success(`Projeto "${newProj.name}" criado com sucesso! 🎵`);
