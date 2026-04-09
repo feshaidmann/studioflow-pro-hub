@@ -201,6 +201,9 @@ export default function ProjectFilesTab({ projectId }: ProjectFilesTabProps) {
                           </button>
 
                           <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button onClick={() => { setCommentingId(file.id); setCommentText(file.comments); }} className="p-1 rounded hover:bg-muted/50 text-muted-foreground hover:text-foreground" title="Comentar">
+                              <MessageSquare className="h-3 w-3" />
+                            </button>
                             <button onClick={() => startRename(file.id, file.originalName)} className="p-1 rounded hover:bg-muted/50 text-muted-foreground hover:text-foreground">
                               <Pencil className="h-3 w-3" />
                             </button>
