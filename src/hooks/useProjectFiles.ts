@@ -159,5 +159,5 @@ export function useProjectFiles(projectId: string) {
     return data.signedUrl;
   }, []);
 
-  return { files, loading, uploading, uploadFile, deleteFile, renameFile, updateStatus, getFileUrl, refetch: fetchFiles };
+  return { files, loading, uploading, uploadFile, deleteFile, renameFile, updateStatus, updateComments, getFileUrl, refetch: fetchFiles };
 }
