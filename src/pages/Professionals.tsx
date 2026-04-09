@@ -410,6 +410,7 @@ export default function Professionals() {
     if (filterStatus === "active" && !p.active) return false;
     if (filterStatus === "inactive" && p.active) return false;
     if (filterAllocated && (allocationsMap[p.name] ?? []).length === 0) return false;
+    if (filterFavorite && !p.favorite) return false;
     return true;
   });
 
