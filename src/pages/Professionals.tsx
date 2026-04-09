@@ -414,13 +414,21 @@ export default function Professionals() {
     return true;
   });
 
-  const hasActiveFilters = search !== "" || filterSpecialty !== "all" || filterStatus !== "all" || filterAllocated;
+  const hasActiveFilters = search !== "" || filterSpecialty !== "all" || filterStatus !== "all" || filterAllocated || filterFavorite;
+
+  async function toggleFavorite(profId: string, current: boolean) {
+    const next = !current;
+    await supabase.from("professionals").update({ favorite: next } as any).eq("id", profId);
+    setProfessionals((prev) => prev.map((p) => p.id === profId ? { ...p, favorite: next } : p));
+    toast.success(next ? "Adicionado aos favoritos ⭐" : "Removido dos favoritos");
+  }
 
   function clearFilters() {
     setSearch("");
     setFilterSpecialty("all");
     setFilterStatus("all");
     setFilterAllocated(false);
+    setFilterFavorite(false);
   }
 
   return (
