@@ -401,6 +401,7 @@ export default function Projects() {
       } catch { /* ignore */ }
     }
     const needsTrackCount = form.projectType === "ep" || form.projectType === "album";
+    const templateTracks = form.template !== "none" ? PROJECT_TEMPLATES[form.template].tracks : null;
     try {
       const newProj = await addProject({
         name: form.name,
@@ -414,7 +415,7 @@ export default function Projects() {
         amountPaid: null,
         estimatedMonths: null,
         uploadDate: uploadDateStr,
-        templateTracks: null,
+        templateTracks: templateTracks,
       });
       if (!newProj) {
         toast.error("Erro ao criar projeto. Verifique sua conexão e tente novamente.");
