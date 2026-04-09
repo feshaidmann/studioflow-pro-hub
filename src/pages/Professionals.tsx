@@ -66,6 +66,7 @@ interface Professional {
   active: boolean;
   allow_global_listing: boolean;
   created_at: string;
+  favorite: boolean;
 }
 
 interface ProfMetrics {
