@@ -57,6 +57,7 @@ export default function FreelancerProfile() {
     allow_global_listing: false,
     avatar_url: "",
     youtube_url: "",
+    work_links: [] as Array<{ title: string; url: string }>,
   });
 
   const [youtubeError, setYoutubeError] = useState("");
