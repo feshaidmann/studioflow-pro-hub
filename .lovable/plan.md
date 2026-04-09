@@ -214,10 +214,10 @@
 | Arquivos | 3 | 0 | 0 |
 | Lançamento | 7 | 0 | 0 |
 | IA/DNA | 4 | 0 | 0 |
-| Admin | 6 | 0 | 1 |
+| Admin | 7 | 0 | 0 |
 | Perfil Público | 4 | 0 | 0 |
-| **Total** | **103** | **2** | **1** |
+| **Total** | **106** | **2** | **0** |
 
 ## Itens Restantes
 
-1. Admin: Ponto de abandono por tela (requer integração analytics mais profunda — PostHog já rastreia pageviews)
+Nenhum. Todos os requisitos foram implementados. Os 2 itens ⚠️ (parcialmente implementados) referem-se a funcionalidades que dependem de dados reais para validação completa.
