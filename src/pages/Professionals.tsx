@@ -107,6 +107,7 @@ export default function Professionals() {
   const [filterSpecialty, setFilterSpecialty] = useState<string>("all");
   const [filterStatus, setFilterStatus] = useState<"all" | "active" | "inactive">("all");
   const [filterAllocated, setFilterAllocated] = useState<boolean>(false);
+  const [filterFavorite, setFilterFavorite] = useState<boolean>(false);
 
   // Table enrichment
   const [ratingsMap, setRatingsMap] = useState<Record<string, { avg: number; count: number }>>({});
