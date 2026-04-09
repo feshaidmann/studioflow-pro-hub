@@ -288,7 +288,7 @@ export default function Professionals() {
       if (error) {
         toast.error("Erro ao atualizar: " + error.message);
       } else {
-        toast.success("Profissional atualizado!");
+        toast.success("Contato atualizado!");
         setDialogOpen(false);
         fetchProfessionals();
       }
@@ -329,7 +329,7 @@ export default function Professionals() {
 
           toast.success("Contato cadastrado! Copie o link abaixo para compartilhar.");
         } else {
-          toast.success("Contato cadastrado!");
+          toast.success("Contato salvo! Você pode convidá-lo para projetos.");
         }
         setDialogOpen(false);
         fetchProfessionals();
@@ -344,7 +344,7 @@ export default function Professionals() {
     if (error) {
       toast.error("Erro ao excluir: " + error.message);
     } else {
-      toast.success("Profissional removido!");
+      toast.success("Contato removido da sua lista.");
       fetchProfessionals();
     }
     setDeleteId(null);

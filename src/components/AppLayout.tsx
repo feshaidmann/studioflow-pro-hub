@@ -21,6 +21,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
 import LanguageToggle from "@/components/LanguageToggle";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -156,7 +157,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     const active = isItemActive(item);
     const locked = item.proOnly && !isPro;
     const showBadge = item.path === "/projects" && activeProjects > 0;
-    return (
+    const link = (
       <NavLink
         key={item.path}
         to={getNavTo(item)}
@@ -184,6 +185,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         )}
       </NavLink>
     );
+    if (!sidebarOpen) {
+      return (
+        <Tooltip key={item.path}>
+          <TooltipTrigger asChild>{link}</TooltipTrigger>
+          <TooltipContent side="right">{t(item.labelKey)}</TooltipContent>
+        </Tooltip>
+      );
+    }
+    return link;
   };
 
   const initials = (displayName || "U").split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();

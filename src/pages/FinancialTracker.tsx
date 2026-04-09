@@ -339,7 +339,7 @@ export default function FinancialTracker() {
     if (!deleteId) return;
     deleteTransaction(deleteId);
     setDeleteId(null);
-    toast.success(t("finance.deleted"));
+    toast.success("Transação removida do seu histórico.");
   };
 
   const selectedMonthLabel = filterMonth === "current"
