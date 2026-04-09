@@ -259,45 +259,42 @@ ${contrastNote}
 ${instrSection}
 
 ════════════════════════════════════════════════
-INSTRUÇÃO DE OUTPUT
+FORMATO DE RESPOSTA
 ════════════════════════════════════════════════
 Responda SOMENTE com JSON válido, sem markdown, sem texto externo ao JSON.
-Cada campo DEVE referenciar dados numéricos da análise. Classifique o gênero com base nos dados.
+Cada campo deve conter texto final pronto para exibição ao artista — linguagem acessível, acolhedora, sem jargões.
+Nenhum campo deve conter instruções, meta-texto ou placeholders. Apenas o conteúdo real do diagnóstico.
+Traduza métricas em percepções musicais. Use "é altamente recomendável", "vale a pena explorar", "seria interessante considerar" — nunca "urgente", "crítico" ou "imediato".
 
 {
-  "genero_classificado": "gênero identificado pela análise",
+  "genero_classificado": "",
   "identidade": {
-    "mood_principal": "sentimento baseado em valência (${pct(analysis.valence)}) e energia (${pct(analysis.energy)})",
-    "territorio_sonoro": "universo sonoro conectando centroide, acústica e BPM",
-    "tags": ["tag1","tag2","tag3","tag4"],
-    "persona_ouvinte": "perfil: contexto, dispositivo, momento"
+    "mood_principal": "",
+    "territorio_sonoro": "",
+    "tags": [],
+    "persona_ouvinte": ""
   },
   "diagnostico_tecnico": {
-    "lufs_avaliacao": "consequência do LUFS ${analysis.lufs_integrated} para streaming",
-    "true_peak_avaliacao": "consequência do True Peak ${db(analysis.true_peak_dbtp)} dBTP e ação necessária",
-    "dynamic_range_avaliacao": "o que o DR de ${analysis.dynamic_range_lu.toFixed(1)} LU significa",
-    "espectro_avaliacao": "o que o centroide de ${hz(analysis.spectral_centroid_hz)} revela"
+    "lufs_avaliacao": "",
+    "true_peak_avaliacao": "",
+    "dynamic_range_avaliacao": "",
+    "espectro_avaliacao": ""
   },
   "analise_seccoes": {
-    "contraste_verso_refrao": "análise detalhada do contraste com recomendação",
-    "secao_mais_forte": "label + motivo com número",
-    "secao_mais_fraca": "label + motivo com número"
+    "contraste_verso_refrao": "",
+    "secao_mais_forte": "",
+    "secao_mais_fraca": ""
   },
   "referencias_proximas": [
-    { "artista": "nome", "similaridade": "XX%", "motivo": "motivo com dado" },
-    { "artista": "nome", "similaridade": "XX%", "motivo": "motivo com dado" },
-    { "artista": "nome", "similaridade": "XX%", "motivo": "motivo com dado" }
+    { "artista": "", "similaridade": "", "motivo": "" }
   ],
-  "pontos_fortes": ["ponto com dado numérico","ponto com dado","ponto com dado"],
-  "gargalos_criativos": ["gargalo com dado e consequência","gargalo","gargalo"],
-  "sugestoes_arranjo": ["sugestão ancorada em dado","sugestão 2","sugestão 3","sugestão 4"],
+  "pontos_fortes": [],
+  "gargalos_criativos": [],
+  "sugestoes_arranjo": [],
   "proximos_passos": [
-    { "prioridade": "Alta", "acao": "ação com parâmetro", "impacto": "impacto mensurável" },
-    { "prioridade": "Alta", "acao": "ação", "impacto": "impacto" },
-    { "prioridade": "Média", "acao": "ação", "impacto": "impacto" },
-    { "prioridade": "Média", "acao": "ação", "impacto": "impacto" }
+    { "prioridade": "Alta", "acao": "", "impacto": "" }
   ],
-  "diagnostico_resumo": "Parágrafo 3-4 frases. Traduza os dados técnicos em percepções musicais compreensíveis. Use formulações como 'é altamente recomendável', 'vale a pena explorar', 'seria interessante considerar'. NUNCA use termos como 'urgente', 'crítico' ou 'imediato'. Tom de mentor musical experiente e acolhedor."
+  "diagnostico_resumo": ""
 }`.trim();
 }
 
