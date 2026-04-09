@@ -925,10 +925,16 @@ export function MusicDNAAnalyzer() {
           <div className="flex items-center gap-2 mb-1">
             <Music className="h-5 w-5 text-primary" />
             <h1 className="text-xl font-bold">Analisador de DNA Musical</h1>
+            <Badge variant="secondary" className="text-[9px] px-1.5 py-0 h-4 bg-primary/10 text-primary border-primary/20">
+              Pro
+            </Badge>
           </div>
           <p className="text-sm text-muted-foreground leading-relaxed">
             Faça upload da sua demo para receber um diagnóstico técnico avançado com análise espectral,
             detecção de BPM e tom, segmentação por seções e sugestões de produção.
+          </p>
+          <p className="text-[11px] text-muted-foreground/60 mt-1">
+            ✦ Análise espectral e detecção de seções estão disponíveis para todos · Diagnóstico IA avançado é recurso Pro
           </p>
         </div>
       )}
