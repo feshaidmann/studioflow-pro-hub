@@ -65,6 +65,15 @@ type WizardStep = "select" | "proposal";
 type WizardSource = "new" | "existing";
 type WizardProfType = "Instrumentista" | "Produtor" | "Mix" | "Master";
 
+type ProjectTemplate = "none" | "single_basico" | "banda_completa" | "producao_eletronica" | "podcast";
+const PROJECT_TEMPLATES: Record<ProjectTemplate, { label: string; description: string; tracks: string[] }> = {
+  none: { label: "Em branco", description: "Sem tracks pré-definidas", tracks: [] },
+  single_basico: { label: "Single Básico", description: "Voz, Violão, Beat, Master Bus", tracks: ["Voz Principal", "Violão", "Beat", "Master Bus"] },
+  banda_completa: { label: "Banda Completa", description: "Voz, Guitarra, Baixo, Bateria, Teclado, Master Bus", tracks: ["Voz Principal", "Backing Vocal", "Guitarra", "Baixo", "Bateria", "Teclado", "Master Bus"] },
+  producao_eletronica: { label: "Produção Eletrônica", description: "Beat, Synth, Bass, FX, Vocal, Master Bus", tracks: ["Beat", "Synth Lead", "Synth Pad", "Bass", "FX", "Vocal", "Master Bus"] },
+  podcast: { label: "Podcast / Voz", description: "Host, Convidado, BG Music, Master Bus", tracks: ["Host", "Convidado", "BG Music", "Master Bus"] },
+};
+
 const profTypeSpecialty: Record<WizardProfType, string> = {
   Instrumentista: "",
   Produtor: "Produtor",
