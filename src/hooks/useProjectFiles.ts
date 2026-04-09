@@ -144,6 +144,12 @@ export function useProjectFiles(projectId: string) {
     toast.success(status === "final" ? "Marcado como final" : "Marcado como em revisão");
   }, []);
 
+  // Update comments
+  const updateComments = useCallback(async (fileId: string, comments: string) => {
+    await supabase.from("project_files").update({ comments } as any).eq("id", fileId);
+    setFiles((prev) => prev.map((f) => f.id === fileId ? { ...f, comments } : f));
+  }, []);
+
   // Get signed URL for preview/download
   const getFileUrl = useCallback(async (storagePath: string): Promise<string | null> => {
     const { data, error } = await supabase.storage
