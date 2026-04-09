@@ -80,9 +80,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const appUrl = Deno.env.get("APP_URL") || "https://jsp-flux.lovable.app";
-    const acceptUrl = `${appUrl}/platform-invite/${inv.token}?action=accept`;
-    const declineUrl = `${appUrl}/platform-invite/${inv.token}?action=decline`;
+    const appUrl = Deno.env.get("APP_URL") || "https://mix-matters-suite.lovable.app";
     const viewUrl = `${appUrl}/platform-invite/${inv.token}`;
 
     const emailHtml = `
