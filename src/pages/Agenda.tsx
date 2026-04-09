@@ -294,15 +294,24 @@ export default function Agenda() {
           {t("misc.loading")}
         </div>
       ) : filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
-          <CalendarDays className="h-10 w-10 text-muted-foreground/40" />
-          <p className="text-muted-foreground text-sm">
-            {events.length === 0
-              ? t("agenda.noEvents")
-              : t("agenda.noEventsFiltered")}
-          </p>
+        <div className="flex flex-col items-center justify-center py-20 gap-4 text-center">
+          <div className="rounded-full bg-primary/10 p-4">
+            <CalendarDays className="h-10 w-10 text-primary/60" />
+          </div>
+          <div className="space-y-1">
+            <p className="text-foreground font-medium">
+              {events.length === 0
+                ? t("agenda.noEvents")
+                : t("agenda.noEventsFiltered")}
+            </p>
+            <p className="text-muted-foreground text-sm max-w-xs mx-auto">
+              {events.length === 0
+                ? "Organize shows, ensaios e gravações em um só lugar."
+                : "Tente ajustar os filtros acima para encontrar seus eventos."}
+            </p>
+          </div>
           {events.length === 0 && (
-            <Button variant="outline" size="sm" onClick={() => { setEditEvent(null); setFormOpen(true); }}>
+            <Button className="mt-2" onClick={() => { setEditEvent(null); setFormOpen(true); }}>
               <Plus className="h-4 w-4 mr-1" /> {t("agenda.createFirst")}
             </Button>
           )}

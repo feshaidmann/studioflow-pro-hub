@@ -3,6 +3,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
@@ -60,6 +64,7 @@ export default function ProjectTeamTab({ projectId }: ProjectTeamTabProps) {
   const [editForm, setEditForm] = useState<Partial<MemberExtra>>({});
   const [saving, setSaving] = useState(false);
   const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [removeTarget, setRemoveTarget] = useState<{ id: string; name: string } | null>(null);
 
   // Fetch invitations + member extras
   useEffect(() => {
@@ -415,7 +420,7 @@ export default function ProjectTeamTab({ projectId }: ProjectTeamTabProps) {
                         </Button>
                       )}
                       <Button variant="ghost" size="sm" className="h-6 text-[10px] gap-1 text-destructive hover:text-destructive"
-                        onClick={(e) => { e.stopPropagation(); removeProfessional(projectId, prof.id); }}>
+                        onClick={(e) => { e.stopPropagation(); setRemoveTarget({ id: prof.id, name: prof.name }); }}>
                         <XIcon className="h-2.5 w-2.5" /> Remover
                       </Button>
                     </div>
@@ -440,6 +445,27 @@ export default function ProjectTeamTab({ projectId }: ProjectTeamTabProps) {
           </div>
         );
       })}
+
+      {/* Remove confirmation */}
+      <AlertDialog open={!!removeTarget} onOpenChange={(o) => !o && setRemoveTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remover membro</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja remover <strong>{removeTarget?.name}</strong> da equipe deste projeto?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => { if (removeTarget) { removeProfessional(projectId, removeTarget.id); setRemoveTarget(null); } }}
+            >
+              Remover
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

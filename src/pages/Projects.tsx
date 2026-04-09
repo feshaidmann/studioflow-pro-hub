@@ -424,7 +424,7 @@ export default function Projects() {
       setForm({ name: "", artist: "", bpm: "120", key: "C", stage: "inicio", projectType: "single", trackCount: "", uploadDate: "", template: "none" });
       setDialogOpen(false);
       addNotification({ title: "Novo projeto criado", message: `${newProj.name} foi adicionado aos seus projetos`, link: "/projects", type: "stage" });
-      toast.success(`Projeto "${newProj.name}" criado com sucesso! 🎵`);
+      toast.success(`Projeto "${newProj.name}" criado! Adicione sua equipe para começar. 🎵`);
     } catch (e) {
       toast.error("Erro ao criar projeto. Tente novamente.");
     }
@@ -468,7 +468,7 @@ export default function Projects() {
     if (isLancado && !wasAlreadyCompleted) {
       handleLancadoCompletion(editForm.id, editForm.name);
     } else {
-      toast.success("Projeto atualizado com sucesso");
+      toast.success("Projeto atualizado! Confira as mudanças na timeline.");
     }
   };
 
@@ -480,7 +480,7 @@ export default function Projects() {
     if (selectedProject?.id === deleteTargetId) setSelectedProject(null);
     setDeleteDialogOpen(false);
     setDeleteTargetId(null);
-    toast.success("Projeto excluído com sucesso");
+    toast.success("Projeto removido do seu histórico.");
   };
 
   const deleteTargetProject = projects.find((p) => p.id === deleteTargetId);

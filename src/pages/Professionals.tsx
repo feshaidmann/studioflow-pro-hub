@@ -288,7 +288,7 @@ export default function Professionals() {
       if (error) {
         toast.error("Erro ao atualizar: " + error.message);
       } else {
-        toast.success("Profissional atualizado!");
+        toast.success("Contato atualizado!");
         setDialogOpen(false);
         fetchProfessionals();
       }
@@ -329,7 +329,7 @@ export default function Professionals() {
 
           toast.success("Contato cadastrado! Copie o link abaixo para compartilhar.");
         } else {
-          toast.success("Contato cadastrado!");
+          toast.success("Contato salvo! Você pode convidá-lo para projetos.");
         }
         setDialogOpen(false);
         fetchProfessionals();
@@ -344,7 +344,7 @@ export default function Professionals() {
     if (error) {
       toast.error("Erro ao excluir: " + error.message);
     } else {
-      toast.success("Profissional removido!");
+      toast.success("Contato removido da sua lista.");
       fetchProfessionals();
     }
     setDeleteId(null);
@@ -530,9 +530,20 @@ export default function Professionals() {
           {loadingData ? (
             <p className="text-muted-foreground text-sm animate-pulse py-4 text-center">Carregando...</p>
           ) : professionals.length === 0 ? (
-            <p className="text-muted-foreground text-sm py-8 text-center">
-              Nenhum contato cadastrado ainda. Adicione músicos e colaboradores para reutilizá-los nos seus projetos.
-            </p>
+            <div className="flex flex-col items-center justify-center py-20 gap-4 text-center">
+              <div className="rounded-full bg-primary/10 p-4">
+                <Users className="h-10 w-10 text-primary/60" />
+              </div>
+              <div className="space-y-1">
+                <p className="text-foreground font-medium">Nenhum contato ainda</p>
+                <p className="text-muted-foreground text-sm max-w-xs mx-auto">
+                  Adicione músicos e colaboradores para reutilizá-los nos seus projetos.
+                </p>
+              </div>
+              <Button className="mt-2" onClick={openCreate}>
+                <Plus className="h-4 w-4 mr-1" /> Adicionar primeiro contato
+              </Button>
+            </div>
           ) : filtered.length === 0 ? (
             <div className="py-10 text-center space-y-2">
               <Filter className="h-8 w-8 text-muted-foreground/30 mx-auto" />

@@ -339,7 +339,7 @@ export default function FinancialTracker() {
     if (!deleteId) return;
     deleteTransaction(deleteId);
     setDeleteId(null);
-    toast.success(t("finance.deleted"));
+    toast.success("Transação removida do seu histórico.");
   };
 
   const selectedMonthLabel = filterMonth === "current"
@@ -603,8 +603,27 @@ export default function FinancialTracker() {
                 <TableBody>
                   {filtered.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center text-muted-foreground py-12">
-                        Nenhuma transação encontrada
+                      <TableCell colSpan={7} className="py-16">
+                        <div className="flex flex-col items-center justify-center gap-4 text-center">
+                          <div className="rounded-full bg-primary/10 p-4">
+                            <DollarSign className="h-10 w-10 text-primary/60" />
+                          </div>
+                          <div className="space-y-1">
+                            <p className="text-foreground font-medium">
+                              {transactions.length === 0 ? "Nenhuma transação registrada" : "Nenhuma transação encontrada"}
+                            </p>
+                            <p className="text-muted-foreground text-sm max-w-xs mx-auto">
+                              {transactions.length === 0
+                                ? "Registre receitas e despesas para acompanhar suas finanças."
+                                : "Tente ajustar os filtros para encontrar suas transações."}
+                            </p>
+                          </div>
+                          {transactions.length === 0 && (
+                            <Button className="mt-2" onClick={() => { setEditTx(null); setFormOpen(true); }}>
+                              <Plus className="h-4 w-4 mr-1" /> Registrar primeira transação
+                            </Button>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   ) : (
