@@ -392,6 +392,30 @@ Deno.serve(async (req) => {
   // 8) Users who never created a project
   const usersWithoutProject = nonAdminIds.filter((uid) => !usersWithProjects.has(uid)).length;
 
+  // ── Page drop-off (screen abandonment) ──
+  const { data: pageViewRows } = await adminClient
+    .from("page_views")
+    .select("page_path, duration_seconds")
+    .gte("created_at", thirtyDaysIso);
+
+  const pageAgg: Record<string, { views: number; totalDuration: number; bounces: number }> = {};
+  for (const pv of pageViewRows ?? []) {
+    if (!pageAgg[pv.page_path]) pageAgg[pv.page_path] = { views: 0, totalDuration: 0, bounces: 0 };
+    pageAgg[pv.page_path].views++;
+    pageAgg[pv.page_path].totalDuration += Number(pv.duration_seconds ?? 0);
+    if (Number(pv.duration_seconds ?? 0) < 5) pageAgg[pv.page_path].bounces++;
+  }
+
+  const screenDropoff = Object.entries(pageAgg)
+    .map(([path, d]) => ({
+      path,
+      views: d.views,
+      avgDuration: d.views > 0 ? Math.round(d.totalDuration / d.views) : 0,
+      bounceRate: d.views > 0 ? Math.round((d.bounces / d.views) * 100) : 0,
+    }))
+    .sort((a, b) => b.views - a.views)
+    .slice(0, 15);
+
   const adoption = {
     onboardingRate,
     onboardedUsers,
@@ -405,6 +429,7 @@ Deno.serve(async (req) => {
     stuckUsersCount: stuckUsers.length,
     usersWithoutProject,
     featureRanking,
+    screenDropoff,
   };
 
   return new Response(

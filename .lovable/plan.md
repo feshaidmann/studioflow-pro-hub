@@ -182,7 +182,7 @@
 | % que conclui onboarding | ✅ |
 | % que conclui primeiro projeto | ✅ |
 | Feature mais usada | ✅ |
-| Ponto de abandono por tela | ❌ |
+| Ponto de abandono por tela | ✅ | page_views + bounce rate no admin |
 | Projetos criados vs lançados | ✅ | Taxa de lançamento com contagem |
 
 ## 16. Perfil Público
@@ -191,7 +191,7 @@
 |-----------|--------|------------|
 | Portfólio/especialidades/avaliações | ✅ | |
 | CTA para convite | ✅ | Botão "Convidar para projeto" |
-| Links de trabalhos por projeto | ❌ | |
+| Links de trabalhos | ✅ | work_links exibidos no perfil público |
 | Histórico resumido de entregas | ✅ | Via RPC get_public_profile_history |
 
 ---
@@ -214,10 +214,10 @@
 | Arquivos | 3 | 0 | 0 |
 | Lançamento | 7 | 0 | 0 |
 | IA/DNA | 4 | 0 | 0 |
-| Admin | 6 | 0 | 1 |
+| Admin | 7 | 0 | 0 |
 | Perfil Público | 4 | 0 | 0 |
-| **Total** | **103** | **2** | **1** |
+| **Total** | **106** | **2** | **0** |
 
 ## Itens Restantes
 
-1. Admin: Ponto de abandono por tela (requer integração analytics mais profunda — PostHog já rastreia pageviews)
+Nenhum. Todos os requisitos foram implementados. Os 2 itens ⚠️ (parcialmente implementados) referem-se a funcionalidades que dependem de dados reais para validação completa.

@@ -121,6 +121,7 @@ interface AdminStatsResponse {
     stuckUsersCount: number;
     usersWithoutProject: number;
     featureRanking: Array<{ name: string; count: number }>;
+    screenDropoff: Array<{ path: string; views: number; avgDuration: number; bounceRate: number }>;
   };
   users: UserRow[];
   planCounts: Record<string, number>;
@@ -428,6 +429,51 @@ export default function Admin() {
                 {(ad?.featureRanking ?? []).length === 0 && (
                   <p className="text-xs text-muted-foreground text-center py-4">Sem dados suficientes</p>
                 )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </section>
+
+      {/* ── Screen Drop-off ── */}
+      <section>
+        <SectionTitle icon={TrendingUp} label="Ponto de Abandono por Tela — Últimos 30 dias" />
+        <Card className="border-border bg-card">
+          <CardContent className="px-4 pb-4 pt-4">
+            {loading ? (
+              <div className="space-y-2">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <div key={i} className="h-6 rounded bg-muted animate-pulse" />
+                ))}
+              </div>
+            ) : (ad?.screenDropoff ?? []).length === 0 ? (
+              <p className="text-xs text-muted-foreground text-center py-4">Sem dados de navegação ainda</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b border-border">
+                      <th className="text-left py-2 text-muted-foreground font-medium">Tela</th>
+                      <th className="text-right py-2 text-muted-foreground font-medium">Views</th>
+                      <th className="text-right py-2 text-muted-foreground font-medium">Tempo médio</th>
+                      <th className="text-right py-2 text-muted-foreground font-medium">Bounce</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(ad?.screenDropoff ?? []).map((s) => (
+                      <tr key={s.path} className="border-b border-border/50">
+                        <td className="py-2 font-mono text-foreground">{s.path}</td>
+                        <td className="py-2 text-right text-foreground">{s.views}</td>
+                        <td className="py-2 text-right text-muted-foreground">{s.avgDuration}s</td>
+                        <td className="py-2 text-right">
+                          <span className={s.bounceRate > 50 ? "text-destructive font-medium" : "text-muted-foreground"}>
+                            {s.bounceRate}%
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )}
           </CardContent>

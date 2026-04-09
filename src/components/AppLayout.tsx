@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { usePageTracking } from "@/hooks/usePageTracking";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   Home,
@@ -43,6 +44,7 @@ const gestaoItems = [
 ];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
+  usePageTracking();
   const isMobile = useIsMobile();
   const SIDEBAR_KEY = "sfp_sidebar_open";
   const [sidebarOpen, setSidebarOpen] = useState(() => {
