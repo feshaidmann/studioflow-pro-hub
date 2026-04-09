@@ -481,6 +481,7 @@ export default function Admin() {
       </section>
 
 
+      <section>
         <SectionTitle icon={DollarSign} label="Receita" />
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <Card className="border-success/20 bg-success/5">
