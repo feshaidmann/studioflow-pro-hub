@@ -73,7 +73,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   };
 
   const adminNavItem = { labelKey: "nav.admin", path: "/admin", icon: Shield, proOnly: false };
-  const settingsNavItem = { labelKey: "nav.settings", path: "/settings", icon: Settings, proOnly: false };
+  const settingsNavItem = { labelKey: "nav.settings", path: "/settings", icon: Settings, proOnly: false, mobileLabel: "nav.settings.short" };
 
   const primaryMobileItems = [
     ...principalItems,
