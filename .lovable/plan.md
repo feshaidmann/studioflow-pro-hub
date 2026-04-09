@@ -182,7 +182,7 @@
 | % que conclui onboarding | ✅ |
 | % que conclui primeiro projeto | ✅ |
 | Feature mais usada | ✅ |
-| Ponto de abandono por tela | ❌ |
+| Ponto de abandono por tela | ✅ | page_views + bounce rate no admin |
 | Projetos criados vs lançados | ✅ | Taxa de lançamento com contagem |
 
 ## 16. Perfil Público
@@ -191,7 +191,7 @@
 |-----------|--------|------------|
 | Portfólio/especialidades/avaliações | ✅ | |
 | CTA para convite | ✅ | Botão "Convidar para projeto" |
-| Links de trabalhos por projeto | ❌ | |
+| Links de trabalhos | ✅ | work_links exibidos no perfil público |
 | Histórico resumido de entregas | ✅ | Via RPC get_public_profile_history |
 
 ---
