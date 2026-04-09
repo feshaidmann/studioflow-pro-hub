@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { usePageTracking } from "@/hooks/usePageTracking";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   Home,
