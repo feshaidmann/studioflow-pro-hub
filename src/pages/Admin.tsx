@@ -121,7 +121,7 @@ interface AdminStatsResponse {
     stuckUsersCount: number;
     usersWithoutProject: number;
     featureRanking: Array<{ name: string; count: number }>;
-  };
+    screenDropoff: Array<{ path: string; views: number; avgDuration: number; bounceRate: number }>;
   users: UserRow[];
   planCounts: Record<string, number>;
   products: Product[];
