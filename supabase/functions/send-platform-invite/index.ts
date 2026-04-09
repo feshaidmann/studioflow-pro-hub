@@ -109,19 +109,13 @@ Deno.serve(async (req) => {
               para possíveis colaborações em projetos futuros.
             </p>
           </div>
-          <!-- CTA Buttons -->
-          <div style="display:flex;gap:12px;margin-bottom:28px;flex-wrap:wrap">
-            <a href="${acceptUrl}" style="display:inline-block;background:linear-gradient(135deg,#16a34a,#15803d);color:#ffffff;text-decoration:none;padding:14px 28px;border-radius:10px;font-size:15px;font-weight:700;letter-spacing:0.3px">
-              ✅ Aceitar convite
-            </a>
-            <a href="${declineUrl}" style="display:inline-block;background:#374151;color:#d1d5db;text-decoration:none;padding:14px 28px;border-radius:10px;font-size:15px;font-weight:700;letter-spacing:0.3px">
-              ❌ Recusar
+          <!-- CTA Button -->
+          <div style="text-align:center;margin-bottom:28px">
+            <a href="${viewUrl}" style="display:inline-block;background:linear-gradient(135deg,#7c3aed,#a78bfa);color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:10px;font-size:15px;font-weight:700;letter-spacing:0.3px">
+              📩 Ver convite e responder
             </a>
           </div>
-          <p style="margin:0 0 8px;color:#6b7280;font-size:12px;text-align:center">
-            Prefere ver os detalhes antes de decidir? <a href="${viewUrl}" style="color:#a78bfa">Abrir página do convite →</a>
-          </p>
-          <p style="margin:8px 0 0;color:#6b7280;font-size:12px;text-align:center">
+          <p style="margin:0 0 0;color:#6b7280;font-size:12px;text-align:center">
             Este convite expira em 7 dias. Caso não reconheça este e-mail, ignore esta mensagem.
           </p>
         </td></tr>
