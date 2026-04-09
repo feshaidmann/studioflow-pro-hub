@@ -183,6 +183,7 @@ export default function FreelancerProfile() {
         bio: form.bio,
         avatar_url: form.avatar_url,
         youtube_url: form.youtube_url.trim(),
+        work_links: form.work_links,
       } as any);
       toast.success("Perfil atualizado ✅");
     } catch {
