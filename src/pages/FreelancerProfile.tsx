@@ -77,6 +77,7 @@ export default function FreelancerProfile() {
       allow_global_listing: p.allow_global_listing ?? false,
       avatar_url: p.avatar_url ?? "",
       youtube_url: p.youtube_url ?? "",
+      work_links: Array.isArray(p.work_links) ? p.work_links : [],
     });
     if (p.avatar_url) setAvatarPreview(p.avatar_url);
   }, [profile?.id]);
