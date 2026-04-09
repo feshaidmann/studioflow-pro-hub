@@ -133,6 +133,23 @@ export default function ProjectFinanceTab({ projectId }: ProjectFinanceTabProps)
         </div>
       )}
 
+      {/* Cost per track */}
+      {hasTrackCosts && (
+        <div className="rounded-lg border border-border p-3 space-y-2">
+          <span className="text-xs font-semibold flex items-center gap-1.5">
+            <Music className="h-3.5 w-3.5 text-primary" /> Custo por faixa
+          </span>
+          <div className="space-y-1.5">
+            {Object.entries(trackExpenses).map(([trackId, total]) => (
+              <div key={trackId} className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground truncate flex-1 mr-2">{trackId}</span>
+                <span className="font-mono-nums font-medium">{fmt.format(total)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Pending fees */}
       {pendingFees.length > 0 && (
         <div className="rounded-lg border border-warning/30 bg-warning/5 p-3 space-y-1.5">
