@@ -50,6 +50,18 @@ export default function ProjectFinanceTab({ projectId }: ProjectFinanceTabProps)
   }).filter((s) => s.total > 0);
   const maxStageCost = Math.max(...costByStage.map((s) => s.total), 1);
 
+  // Cost per track
+  const { projects: allProjects } = useProjects();
+  const tracks = useProjects().professionals; // tracks come from mix_tracks context but we use transactions linked to tracks
+  const projectTracks = (project as any)?.tracks ?? [];
+  const trackExpenses = projectTransactions
+    .filter((t) => t.type === "expense" && t.trackId)
+    .reduce((acc, t) => {
+      acc[t.trackId!] = (acc[t.trackId!] || 0) + t.amount;
+      return acc;
+    }, {} as Record<string, number>);
+  const hasTrackCosts = Object.keys(trackExpenses).length > 0;
+
   return (
     <div className="space-y-4">
       {/* KPIs */}
