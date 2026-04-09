@@ -392,6 +392,33 @@ export type Database = {
         }
         Relationships: []
       }
+      page_views: {
+        Row: {
+          created_at: string
+          duration_seconds: number
+          id: string
+          page_path: string
+          session_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          duration_seconds?: number
+          id?: string
+          page_path?: string
+          session_id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          duration_seconds?: number
+          id?: string
+          page_path?: string
+          session_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       platform_invitations: {
         Row: {
           allow_global_listing: boolean
