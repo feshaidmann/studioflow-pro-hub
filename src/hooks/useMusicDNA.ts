@@ -297,7 +297,7 @@ Cada campo DEVE referenciar dados numéricos da análise. Classifique o gênero 
     { "prioridade": "Média", "acao": "ação", "impacto": "impacto" },
     { "prioridade": "Média", "acao": "ação", "impacto": "impacto" }
   ],
-  "diagnostico_resumo": "Parágrafo 3-4 frases com números reais. LUFS, contraste de seções, gap espectral. Tom de produtor sênior."
+  "diagnostico_resumo": "Parágrafo 3-4 frases. Traduza os dados técnicos em percepções musicais compreensíveis. Use formulações como 'é altamente recomendável', 'vale a pena explorar', 'seria interessante considerar'. NUNCA use termos como 'urgente', 'crítico' ou 'imediato'. Tom de mentor musical experiente e acolhedor."
 }`.trim();
 }
 
