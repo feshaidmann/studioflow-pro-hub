@@ -32,6 +32,7 @@ export interface ProjectFile {
   uploadedByName: string;
   versionNumber: number;
   parentFileId: string | null;
+  comments: string;
   createdAt: string;
   updatedAt: string;
 }
