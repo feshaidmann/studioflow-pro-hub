@@ -141,7 +141,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   <item.icon className="h-5 w-5" />
                   {locked && <Lock className="absolute -top-1 -right-1 h-2.5 w-2.5 text-muted-foreground/50" />}
                 </div>
-                {t(item.labelKey)}
+                {t(item.mobileLabel || item.labelKey)}
                 {active && <div className="h-1 w-1 rounded-full bg-primary mt-0.5" />}
               </NavLink>
             );

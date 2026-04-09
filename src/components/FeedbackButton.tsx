@@ -67,7 +67,7 @@ export default function FeedbackButton() {
         onClick={() => setOpen(true)}
         aria-label="Enviar feedback"
         className={cn(
-          "fixed bottom-20 right-4 z-50 flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 px-3 py-2 text-xs font-medium text-primary shadow-lg backdrop-blur-sm transition-all hover:bg-primary/20 hover:shadow-[0_0_16px_hsl(var(--primary)/0.4)] active:scale-95",
+          "fixed bottom-[4.5rem] right-4 z-50 flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 px-3 py-2 text-xs font-medium text-primary shadow-lg backdrop-blur-sm transition-all hover:bg-primary/20 hover:shadow-[0_0_16px_hsl(var(--primary)/0.4)] active:scale-95",
           "md:bottom-6 md:right-6"
         )}
       >
