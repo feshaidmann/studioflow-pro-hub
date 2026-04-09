@@ -60,6 +60,7 @@ export default function ProjectTeamTab({ projectId }: ProjectTeamTabProps) {
   const [editForm, setEditForm] = useState<Partial<MemberExtra>>({});
   const [saving, setSaving] = useState(false);
   const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [removeTarget, setRemoveTarget] = useState<{ id: string; name: string } | null>(null);
 
   // Fetch invitations + member extras
   useEffect(() => {
@@ -415,7 +416,7 @@ export default function ProjectTeamTab({ projectId }: ProjectTeamTabProps) {
                         </Button>
                       )}
                       <Button variant="ghost" size="sm" className="h-6 text-[10px] gap-1 text-destructive hover:text-destructive"
-                        onClick={(e) => { e.stopPropagation(); removeProfessional(projectId, prof.id); }}>
+                        onClick={(e) => { e.stopPropagation(); setRemoveTarget({ id: prof.id, name: prof.name }); }}>
                         <XIcon className="h-2.5 w-2.5" /> Remover
                       </Button>
                     </div>
