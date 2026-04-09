@@ -861,12 +861,6 @@ export default function Projects() {
                           <Label>Notas / Observações</Label>
                           <Textarea placeholder="Dias disponíveis, horário de gravação, detalhes do projeto…" value={proposalForm.scheduleNotes} onChange={(e) => setProposalForm((f) => ({ ...f, scheduleNotes: e.target.value }))} className="h-24 resize-none" />
                         </div>
-                        {wizardSelectedEmail && (
-                          <div className="rounded-lg bg-primary/5 border border-primary/20 p-2.5 flex items-start gap-2">
-                            <Mail className="h-4 w-4 text-primary mt-0.5 shrink-0" />
-                            <p className="text-xs text-muted-foreground">Um convite será enviado para <span className="text-foreground font-medium">{wizardSelectedEmail}</span></p>
-                          </div>
-                        )}
                         {proposalHasDeadlineWarning && (
                           <div className="flex flex-col gap-2 rounded-lg bg-warning/10 border border-warning/30 p-3 animate-fade-in">
                             <div className="flex items-start gap-2">
