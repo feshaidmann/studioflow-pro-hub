@@ -46,6 +46,7 @@ export default function PublicProfile() {
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
   const [history, setHistory] = useState<DeliveryHistoryItem[]>([]);
+  const [workLinks, setWorkLinks] = useState<Array<{ title: string; url: string }>>([]);
 
   useEffect(() => {
     if (!username) return;
