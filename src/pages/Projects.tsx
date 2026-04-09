@@ -549,6 +549,23 @@ export default function Projects() {
                   placeholder="Selecionar data de lançamento"
                 />
               </div>
+              {/* Template selection */}
+              <div className="space-y-1.5">
+                <Label>Template de tracks</Label>
+                <Select value={form.template} onValueChange={(v) => setForm({ ...form, template: v as ProjectTemplate })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {(Object.entries(PROJECT_TEMPLATES) as [ProjectTemplate, typeof PROJECT_TEMPLATES[ProjectTemplate]][]).map(([key, tmpl]) => (
+                      <SelectItem key={key} value={key}>
+                        <div className="flex flex-col">
+                          <span>{tmpl.label}</span>
+                          <span className="text-[10px] text-muted-foreground">{tmpl.description}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <DialogFooter>
               <Button onClick={handleAddProject} disabled={!form.name} className="active:scale-95 transition-transform">{t("projects.create")}</Button>
