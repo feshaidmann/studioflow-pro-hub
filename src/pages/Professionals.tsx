@@ -322,7 +322,8 @@ export default function Professionals() {
             .single();
 
           if (invFull?.token) {
-            const link = `https://jsp-flux.lovable.app/platform-invite/${invFull.token}`;
+            const baseUrl = window.location.origin;
+            const link = `${baseUrl}/platform-invite/${invFull.token}`;
             setInviteLink(link);
             setInviteLinkName(values.name);
           }
@@ -372,7 +373,8 @@ export default function Professionals() {
         .single();
 
       if (invFull?.token) {
-        const link = `https://jsp-flux.lovable.app/platform-invite/${invFull.token}`;
+        const baseUrl = window.location.origin;
+        const link = `${baseUrl}/platform-invite/${invFull.token}`;
         setInviteLink(link);
         setInviteLinkName(prof.name);
       }

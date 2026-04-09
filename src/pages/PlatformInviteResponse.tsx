@@ -143,12 +143,10 @@ export default function PlatformInviteResponse() {
           .single();
         setInviterName((profile as any)?.display_name ?? "Um usuário");
 
-        // Auto-action from email link
+        // Pre-select action from email link but always show the page for user confirmation
         const action = searchParams.get("action");
-        if (action === "accept" || action === "decline") {
-          // small delay so user sees the page briefly
-          setTimeout(() => handleRespond(action === "accept" ? "accepted" : "declined", inv.token), 600);
-          return;
+        if (action === "accept") {
+          setAllowGlobalListing(false); // user can toggle before confirming
         }
 
         setPageState("ready");
