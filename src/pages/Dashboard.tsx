@@ -170,7 +170,7 @@ export default function Dashboard() {
   }, [alerts, activeTasks, isFirstRun]);
 
   return (
-    <div className="p-4 md:p-6 space-y-5">
+    <div className="p-4 md:p-6 space-y-5 max-w-6xl mx-auto">
       <DashboardHeader
         displayName={displayName}
         projects={projects}

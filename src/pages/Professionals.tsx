@@ -432,7 +432,7 @@ export default function Professionals() {
   }
 
   return (
-    <div className="p-4 md:p-6 space-y-6">
+    <div className="p-4 md:p-6 space-y-6 max-w-5xl mx-auto">
       <header className="flex items-center justify-between animate-fade-in">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold neon-text flex items-center gap-2">
