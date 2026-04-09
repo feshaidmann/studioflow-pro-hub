@@ -1,11 +1,12 @@
 import { useState, useRef } from "react";
 import {
   FolderOpen, Upload, Music, Image, FileText, Film, Mic, Layers, Sliders, Disc, Megaphone,
-  Download, Trash2, Pencil, Check, X, ChevronDown, ChevronRight, Loader2,
+  Download, Trash2, Pencil, Check, X, ChevronDown, ChevronRight, Loader2, MessageSquare,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { useProjectFiles, FOLDERS, type FolderKey } from "@/hooks/useProjectFiles";
 
 const ICON_MAP: Record<string, React.FC<{ className?: string }>> = {
