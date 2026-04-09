@@ -565,7 +565,18 @@ export default function Professionals() {
                       className="cursor-pointer hover:bg-primary/5 transition-colors"
                       onClick={() => openDetail(p)}
                     >
-                      <TableCell className="font-medium">{p.name}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); toggleFavorite(p.id, p.favorite); }}
+                            className="shrink-0"
+                            title={p.favorite ? "Remover dos favoritos" : "Adicionar aos favoritos"}
+                          >
+                            <Star className={`h-3.5 w-3.5 transition-colors ${p.favorite ? "fill-chart-3 text-chart-3" : "text-muted-foreground/30 hover:text-chart-3"}`} />
+                          </button>
+                          <span className="font-medium">{p.name}</span>
+                        </div>
+                      </TableCell>
                       <TableCell className="text-muted-foreground">{p.email}</TableCell>
                       <TableCell className="text-muted-foreground">{p.phone || "—"}</TableCell>
                       <TableCell>{p.specialty || "—"}</TableCell>
