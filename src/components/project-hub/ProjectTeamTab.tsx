@@ -53,6 +53,7 @@ interface ProjectTeamTabProps {
 }
 
 export default function ProjectTeamTab({ projectId }: ProjectTeamTabProps) {
+  const navigate = useNavigate();
   const { professionals, removeProfessional } = useProjects();
   const team = professionals[projectId] || [];
 
