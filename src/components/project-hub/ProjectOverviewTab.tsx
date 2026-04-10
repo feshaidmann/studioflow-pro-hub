@@ -19,7 +19,7 @@ const TYPE_LABEL: Record<string, string> = {
 
 interface ProjectOverviewTabProps {
   project: { id: string; name: string; artist: string; stage: string; completed: boolean; projectType: string };
-  progress: number;
+  progress?: number;
   isOwner: boolean;
   onSwitchTab?: (tab: string) => void;
 }
@@ -63,15 +63,11 @@ export default function ProjectOverviewTab({ project, progress, isOwner, onSwitc
 
   return (
     <div className="space-y-4">
-      {/* Progress timeline */}
+      {/* Stage timeline */}
       <Card className="border-border bg-card/50">
-        <CardContent className="pt-5 pb-4 space-y-3">
-          <div className="flex items-center justify-between text-sm">
-            <span className="font-medium">{STAGE_LABEL[project.stage] ?? project.stage}</span>
-            <span className="font-mono text-primary font-bold">{progress}%</span>
-          </div>
-          <Progress value={progress} className="h-2" />
-          <div className="flex items-center justify-between pt-1">
+        <CardContent className="pt-5 pb-4">
+          <p className="text-sm font-medium mb-3">{STAGE_LABEL[project.stage] ?? project.stage}</p>
+          <div className="flex items-center justify-between">
             {STAGE_STEPS.map((stage, i) => {
               const done = i < currentStageIdx || project.completed;
               const current = i === currentStageIdx && !project.completed;
