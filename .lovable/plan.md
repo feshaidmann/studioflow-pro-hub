@@ -1,62 +1,57 @@
 
-Objetivo
 
-- Fazer o upload voltar a funcionar de forma confiável no chat e na aba de arquivos do projeto.
+## Diagnóstico
 
-O que já ficou claro
+Atualmente **não existe** um player de áudio inline no projeto. Todos os arquivos (inclusive áudio) exibem apenas um botão de download. Para implementar a proteção que você descreve, precisamos:
 
-- A captura enviada confirma falha no fluxo do chat: o toast “Erro no upload do arquivo” vem de `src/components/project-hub/ProjectChat.tsx`, antes mesmo de gravar a mensagem.
-- Hoje existem 3 fluxos de upload diferentes:
-  - chat: `projectId/<uuid>.<ext>`
-  - arquivos do projeto: `projectId/<folder>/<filename>`
-  - arquivos do colaborador: `projectId/entregas/<filename>`
-- As regras do bucket dependem do primeiro segmento do path ser o UUID do projeto. Em teoria isso deveria funcionar, então a hipótese mais provável é:
-  - bloqueio ainda nas policies do storage, ou
-  - conflito entre policies antigas/novas, ou
-  - erro real do backend está sendo mascarado pelo frontend genérico.
+1. **Criar um player de áudio inline** — para que membros/colaboradores possam ouvir sem baixar
+2. **Restringir o download** apenas ao dono do projeto (quem criou o projeto, `projects.user_id`)
+3. **Proteger no backend** — as signed URLs para download devem ser geradas apenas para o owner
 
-Plano de correção
+---
 
-1. Expor o erro real no frontend
-   - Trocar os toasts genéricos por mensagens com `error.message` e registrar o path enviado.
-   - Fazer isso nos 3 pontos de upload: chat, arquivos do projeto e arquivos do colaborador.
+## Plano
 
-2. Confirmar a rejeição no backend
-   - Verificar os logs recentes de storage/Postgres para descobrir a causa exata: RLS, cast de UUID, auth ou policy conflitante.
+### 1. Criar componente `AudioPlayer`
+- Componente reutilizável que recebe uma signed URL e renderiza um `<audio>` nativo com controles (play, pause, seek, volume)
+- A URL será gerada com tempo curto (ex: 5 min) e sem header de download forçado
+- Aplicado automaticamente quando o `mime_type` começa com `audio/`
 
-3. Padronizar os paths de upload
-   - Unificar os formatos para reduzir ambiguidade, por exemplo:
-```text
-projectId/chat/<uuid>.<ext>
-projectId/files/<folder>/<filename>
-projectId/files/entregas/<filename>
+### 2. Diferenciar "ouvir" de "baixar" na UI
+
+**ProjectFilesTab (owner):** mantém player + botão de download (owner sempre pode baixar)
+
+**CollaboratorFilesTab e ProjectChat:** exibe o player inline para áudio, mas **remove o botão de download** para todos exceto o dono do projeto
+
+- Nos componentes `ProjectChat`, `CollaboratorFilesTab` e `ProjectFilesTab`, verificar se o usuário atual é o `projects.user_id`
+- Se não for o owner: esconder ícone de Download, mostrar apenas o player
+- Se for o owner: mostrar ambos
+
+### 3. Proteção backend (signed URLs)
+- Criar uma função RPC `get_file_download_url(p_file_id uuid)` com `SECURITY DEFINER` que:
+  - Verifica se `auth.uid()` é o `projects.user_id` do projeto vinculado ao arquivo
+  - Só gera a signed URL de download se for o owner
+  - Retorna erro se não for autorizado
+- Para **playback** (streaming): manter a signed URL curta existente (via `createSignedUrl` no cliente), já que o bucket é privado e a URL expira — o áudio toca mas não é facilmente salvável
+
+### 4. Detalhes técnicos
+
+**Novo componente:** `src/components/ui/audio-player.tsx`
 ```
+<audio controls controlsList="nodownload" src={signedUrl} />
+```
+- O atributo `controlsList="nodownload"` remove o botão de download nativo do player do navegador
 
-4. Reescrever as policies do bucket `project-files`
-   - Ajustar insert/select/delete para:
-     - dono do projeto
-     - membro do projeto
-     - colaborador convidado aceito
-   - Remover sobreposição de regras legadas, se existir.
+**Arquivos editados:**
+- `src/components/project-hub/ProjectFilesTab.tsx` — adicionar player inline para arquivos de áudio; passar prop `isOwner`
+- `src/components/project-hub/CollaboratorFilesTab.tsx` — adicionar player, remover botão de download
+- `src/components/project-hub/ProjectChat.tsx` — player inline para anexos de áudio, download condicional
+- `src/pages/ProjectDetail.tsx` — passar `isOwner` para os componentes de arquivos
+- `src/hooks/useProjectFiles.ts` — adicionar função `getPlaybackUrl` com URL de 5min
 
-5. Validar o segundo passo do fluxo
-   - Após o upload no storage, conferir que os inserts em `project_messages` e `project_files` continuam autorizados para os mesmos perfis.
+**Nova migration SQL:**
+- Função RPC `get_file_download_url` que valida ownership antes de gerar URL
 
-6. Retestar ponta a ponta
-   - Chat com anexo
-   - Aba “Arquivos” do projeto
-   - Aba “Meus Arquivos” do colaborador
-   - Download do arquivo enviado
+### Limitação importante
+A proteção é "best effort" no frontend — um usuário técnico poderia inspecionar o código e pegar a URL de streaming. Para proteção total seria necessário um proxy de streaming server-side, mas o player com `controlsList="nodownload"` + URLs curtas + sem botão de download oferece uma barreira prática sólida para o contexto da plataforma.
 
-Detalhes técnicos
-
-- Arquivos principais:
-  - `src/components/project-hub/ProjectChat.tsx`
-  - `src/hooks/useProjectFiles.ts`
-  - `src/components/project-hub/CollaboratorFilesTab.tsx`
-- Backend:
-  - nova migration para consolidar as policies de `storage.objects` e, se necessário, `project_files`
-- Ajustes de UX junto da correção:
-  - mostrar motivo real da falha
-  - limpar input apenas em sucesso
-  - alinhar limites de tamanho entre chat e arquivos
