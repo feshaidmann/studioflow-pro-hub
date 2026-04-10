@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Badge } from "@/components/ui/badge";
-import { User, Clock, Target, CalendarDays, Activity, Music2 } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { User, Clock, Target, CalendarDays, Activity, Music2, Users, FileText, CheckCircle2 } from "lucide-react";
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
   ativo: { label: "Ativo", color: "bg-success/20 text-success border-success/30" },
@@ -11,6 +12,15 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
   atrasado: { label: "Atrasado", color: "bg-destructive/20 text-destructive border-destructive/30" },
   entregou: { label: "Entregou", color: "bg-success/20 text-success border-success/30" },
   concluido: { label: "Concluído", color: "bg-muted text-muted-foreground border-border" },
+};
+
+const STAGE_LABELS: Record<string, string> = {
+  rough: "Rascunho", inicio: "Projeto Iniciado", gravacao: "Gravação", mix: "Mix",
+  master: "Master", upload: "Upload / Pré-lançamento", lancado: "Lançado",
+};
+
+const STAGE_PERCENT: Record<string, number> = {
+  rough: 0, inicio: 5, gravacao: 25, mix: 55, master: 75, upload: 90, lancado: 100,
 };
 
 interface MemberInfo {
@@ -24,6 +34,12 @@ interface MemberInfo {
   notes: string;
 }
 
+interface TeamMember {
+  name: string;
+  role: string;
+  delivery_status: string;
+}
+
 interface CollaboratorOverviewTabProps {
   projectId: string;
   project: { name: string; artist: string; stage: string; completed: boolean; projectType: string };
@@ -32,20 +48,58 @@ interface CollaboratorOverviewTabProps {
 export default function CollaboratorOverviewTab({ projectId, project }: CollaboratorOverviewTabProps) {
   const { user } = useAuth();
   const [member, setMember] = useState<MemberInfo | null>(null);
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [myTaskCount, setMyTaskCount] = useState<{ total: number; done: number }>({ total: 0, done: 0 });
+  const [myFileCount, setMyFileCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!user) return;
-    supabase
-      .from("project_members")
-      .select("role, delivery_status, expected_deliverable, delivery_due_date, last_activity_at, stage, fee, notes")
-      .eq("project_id", projectId)
-      .eq("user_id", user.id)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (data) setMember(data as MemberInfo);
-        setLoading(false);
-      });
+
+    const loadAll = async () => {
+      // My membership
+      const { data: memberData } = await supabase
+        .from("project_members")
+        .select("role, delivery_status, expected_deliverable, delivery_due_date, last_activity_at, stage, fee, notes")
+        .eq("project_id", projectId)
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (memberData) setMember(memberData as MemberInfo);
+
+      // Team members (others)
+      const { data: team } = await supabase
+        .from("project_members")
+        .select("name, role, delivery_status")
+        .eq("project_id", projectId)
+        .neq("user_id", user.id);
+
+      if (team) setTeamMembers(team as TeamMember[]);
+
+      // My tasks
+      const { data: tasks } = await supabase
+        .from("tasks")
+        .select("completed")
+        .eq("project_id", projectId)
+        .eq("user_id", user.id)
+        .eq("dismissed", false);
+
+      if (tasks) {
+        setMyTaskCount({ total: tasks.length, done: tasks.filter((t) => t.completed).length });
+      }
+
+      // My files
+      const { count } = await supabase
+        .from("project_files")
+        .select("id", { count: "exact", head: true })
+        .eq("project_id", projectId)
+        .eq("user_id", user.id);
+
+      setMyFileCount(count ?? 0);
+      setLoading(false);
+    };
+
+    loadAll();
   }, [projectId, user]);
 
   if (loading) return <div className="py-8 text-center text-sm text-muted-foreground">Carregando…</div>;
@@ -54,10 +108,14 @@ export default function CollaboratorOverviewTab({ projectId, project }: Collabor
   const statusInfo = STATUS_LABELS[member.delivery_status] ?? STATUS_LABELS.ativo;
   const dueDate = member.delivery_due_date ? new Date(member.delivery_due_date).toLocaleDateString("pt-BR") : null;
   const isLate = member.delivery_due_date && new Date(member.delivery_due_date) < new Date() && !["entregou", "concluido"].includes(member.delivery_status);
+  const stageProgress = STAGE_PERCENT[project.stage] ?? 0;
+  const daysLeft = member.delivery_due_date
+    ? Math.ceil((new Date(member.delivery_due_date).getTime() - Date.now()) / 86400000)
+    : null;
 
   return (
     <div className="space-y-4 py-2">
-      {/* Project info */}
+      {/* Project info + progress */}
       <div className="rounded-xl border border-border bg-card/60 p-4">
         <div className="flex items-center gap-3 mb-3">
           <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0" style={{ background: "hsl(var(--primary) / 0.15)" }}>
@@ -67,7 +125,40 @@ export default function CollaboratorOverviewTab({ projectId, project }: Collabor
             <p className="font-semibold text-foreground truncate">{project.name}</p>
             <p className="text-xs text-muted-foreground">{project.artist}</p>
           </div>
-          {project.completed && <Badge className="bg-success/20 text-success border-success/30 text-xs">Concluído</Badge>}
+          {project.completed
+            ? <Badge className="bg-success/20 text-success border-success/30 text-xs">Concluído</Badge>
+            : <Badge variant="secondary" className="text-xs">{STAGE_LABELS[project.stage] ?? project.stage}</Badge>
+          }
+        </div>
+        <div className="space-y-1">
+          <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+            <span>Progresso do projeto</span>
+            <span>{stageProgress}%</span>
+          </div>
+          <Progress value={stageProgress} className="h-1.5" />
+        </div>
+      </div>
+
+      {/* Quick stats */}
+      <div className="grid grid-cols-3 gap-2">
+        <div className="rounded-lg border border-border bg-card/60 p-3 text-center">
+          <CheckCircle2 className="h-4 w-4 text-success mx-auto mb-1" />
+          <p className="text-lg font-bold text-foreground">{myTaskCount.done}/{myTaskCount.total}</p>
+          <p className="text-[10px] text-muted-foreground">Tarefas</p>
+        </div>
+        <div className="rounded-lg border border-border bg-card/60 p-3 text-center">
+          <FileText className="h-4 w-4 text-primary mx-auto mb-1" />
+          <p className="text-lg font-bold text-foreground">{myFileCount}</p>
+          <p className="text-[10px] text-muted-foreground">Arquivos</p>
+        </div>
+        <div className={`rounded-lg border p-3 text-center ${isLate ? "border-destructive/30 bg-destructive/5" : "border-border bg-card/60"}`}>
+          <CalendarDays className={`h-4 w-4 mx-auto mb-1 ${isLate ? "text-destructive" : "text-muted-foreground"}`} />
+          <p className={`text-lg font-bold ${isLate ? "text-destructive" : "text-foreground"}`}>
+            {daysLeft !== null ? (daysLeft >= 0 ? daysLeft : Math.abs(daysLeft)) : "—"}
+          </p>
+          <p className="text-[10px] text-muted-foreground">
+            {daysLeft !== null ? (daysLeft >= 0 ? "Dias restantes" : "Dias atrasado") : "Sem prazo"}
+          </p>
         </div>
       </div>
 
@@ -84,28 +175,30 @@ export default function CollaboratorOverviewTab({ projectId, project }: Collabor
             <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Função</p>
             <p className="text-sm font-medium text-foreground">{member.role || "—"}</p>
           </div>
-          <div className="rounded-lg bg-secondary/40 border border-border p-3">
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Etapa</p>
-            <p className="text-sm font-medium text-foreground">{member.stage || project.stage || "—"}</p>
-          </div>
+          {member.fee > 0 && (
+            <div className="rounded-lg bg-primary/10 border border-primary/20 p-3">
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Cachê</p>
+              <p className="text-sm font-bold text-primary">R$ {Number(member.fee).toLocaleString("pt-BR")}</p>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Delivery info */}
-      <div className="rounded-xl border border-border bg-card/60 p-4 space-y-3">
-        <div className="flex items-center gap-2">
-          <Target className="h-4 w-4 text-primary" />
-          <span className="text-sm font-semibold">Entrega</span>
-        </div>
-
-        {member.expected_deliverable && (
-          <div className="rounded-lg bg-secondary/40 border border-border p-3">
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Entrega esperada</p>
-            <p className="text-sm text-foreground">{member.expected_deliverable}</p>
+      {(member.expected_deliverable || dueDate || member.notes) && (
+        <div className="rounded-xl border border-border bg-card/60 p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <Target className="h-4 w-4 text-primary" />
+            <span className="text-sm font-semibold">Entrega</span>
           </div>
-        )}
 
-        <div className="grid grid-cols-2 gap-3">
+          {member.expected_deliverable && (
+            <div className="rounded-lg bg-secondary/40 border border-border p-3">
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Entrega esperada</p>
+              <p className="text-sm text-foreground">{member.expected_deliverable}</p>
+            </div>
+          )}
+
           {dueDate && (
             <div className={`rounded-lg border p-3 ${isLate ? "bg-destructive/10 border-destructive/30" : "bg-secondary/40 border-border"}`}>
               <div className="flex items-center gap-1 mb-1">
@@ -115,21 +208,40 @@ export default function CollaboratorOverviewTab({ projectId, project }: Collabor
               <p className={`text-sm font-medium ${isLate ? "text-destructive" : "text-foreground"}`}>{dueDate}</p>
             </div>
           )}
-          {member.fee > 0 && (
-            <div className="rounded-lg bg-primary/10 border border-primary/20 p-3">
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Cachê</p>
-              <p className="text-sm font-bold text-primary">R$ {Number(member.fee).toLocaleString("pt-BR")}</p>
+
+          {member.notes && (
+            <div className="rounded-lg bg-secondary/40 border border-border p-3">
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Observações</p>
+              <p className="text-sm text-foreground leading-relaxed">{member.notes}</p>
             </div>
           )}
         </div>
+      )}
 
-        {member.notes && (
-          <div className="rounded-lg bg-secondary/40 border border-border p-3">
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Observações</p>
-            <p className="text-sm text-foreground leading-relaxed">{member.notes}</p>
+      {/* Team overview */}
+      {teamMembers.length > 0 && (
+        <div className="rounded-xl border border-border bg-card/60 p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <Users className="h-4 w-4 text-primary" />
+            <span className="text-sm font-semibold">Equipe ({teamMembers.length + 1})</span>
           </div>
-        )}
-      </div>
+          <div className="space-y-2">
+            {teamMembers.map((tm, i) => {
+              const tmStatus = STATUS_LABELS[tm.delivery_status] ?? STATUS_LABELS.ativo;
+              return (
+                <div key={i} className="flex items-center gap-2 text-sm">
+                  <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-medium text-primary shrink-0">
+                    {tm.name.charAt(0).toUpperCase()}
+                  </div>
+                  <span className="font-medium text-foreground truncate flex-1">{tm.name}</span>
+                  {tm.role && <span className="text-xs text-muted-foreground">{tm.role}</span>}
+                  <Badge className={`text-[10px] px-1.5 py-0 h-4 ${tmStatus.color}`}>{tmStatus.label}</Badge>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Activity */}
       {member.last_activity_at && (

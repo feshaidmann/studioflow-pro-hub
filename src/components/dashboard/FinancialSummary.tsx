@@ -19,16 +19,16 @@ export default function FinancialSummary({ financials, isSimpleMode }: Financial
   ];
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 animate-fade-in">
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 animate-fade-in">
       {kpis.map(({ label, value, icon: Icon, colorClass }, i) => (
         <Card key={label} className="glass-card" style={{ animationDelay: `${i * 60}ms` }}>
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className={`p-2 rounded-lg bg-card/60 ${colorClass}`}>
-              <Icon className="h-4 w-4" />
+          <CardContent className="p-3 sm:p-4 flex items-center gap-2 sm:gap-3">
+            <div className={`p-1.5 sm:p-2 rounded-lg bg-card/60 shrink-0 ${colorClass}`}>
+              <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             </div>
-            <div>
-              <p className="text-xs text-muted-foreground">{label}</p>
-              <p className={`text-sm font-semibold font-mono-nums ${colorClass}`}>{value}</p>
+            <div className="min-w-0">
+              <p className="text-[10px] sm:text-xs text-muted-foreground truncate">{label}</p>
+              <p className={`text-xs sm:text-sm font-semibold font-mono-nums truncate ${colorClass}`}>{value}</p>
             </div>
           </CardContent>
         </Card>

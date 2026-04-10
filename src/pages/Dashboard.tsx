@@ -201,49 +201,13 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* 1. O que fazer hoje + Alertas */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-        {isFirstRun && <FirstRunEmptyState onNavigate={navigate} />}
-
-        <DailyChecklist
-          activeTasks={activeTasks}
-          completedTasks={completedTasks}
-          loading={tasksLoading}
-          onAddTask={async (desc) => { await addTask({ description: desc }); }}
-          onToggleTask={toggleTask}
-          onDeleteTask={deleteTask}
-          onUpdateTask={(id, patch) => updateTask(id, patch)}
-          onRefresh={handleRefreshTasks}
-          refreshing={refreshing}
-          lastRefreshed={lastRefreshed}
-          hidden={isFirstRun}
-          aiRef={aiRef}
-          projects={projects.map((p) => ({ id: p.id, name: p.name }))}
-        />
-
-        <ProjectAlertsCard alerts={alerts} hidden={isFirstRun} />
-      </div>
-
-      {/* 2. Equipe pendente */}
-      <PendingTeamCard hidden={isFirstRun} />
-
-      {/* 3. Projetos com score de saúde */}
-      <ProjectHealthList projects={projectsWithHealth} hidden={isFirstRun} />
-
-      {/* 3. Próximos lançamentos */}
-      <UpcomingReleases projects={projects} getMixPercent={getMixPercent} hidden={isFirstRun} />
-
-      {/* 4. Financeiro */}
-      <FinancialSummary financials={financials} isSimpleMode={isSimpleMode} />
-
-      {!isSimpleMode && <RecentTransactions transactions={transactions} />}
-
-      {/* 6. AI Assistant — compact */}
-      <Card className={cn("glass-card animate-fade-in border-border/40", isFirstRun && "hidden")} style={{ animationDelay: "150ms" }}>
+      {/* AI Assistant — prominent position */}
+      <Card className={cn("glass-card animate-fade-in border-primary/20 shadow-sm", isFirstRun && "hidden")} style={{ animationDelay: "50ms" }}>
         <CardHeader className="pb-1 pt-3 px-4">
-          <CardTitle className="text-xs flex items-center gap-1.5 text-muted-foreground font-medium">
+          <CardTitle className="text-xs flex items-center gap-1.5 font-medium">
             <Bot className="h-3.5 w-3.5 text-primary" />
-            Assistente IA
+            <span className="text-primary">Assistente IA</span>
+            <span className="text-muted-foreground ml-1">— pergunte qualquer coisa sobre seus projetos</span>
           </CardTitle>
         </CardHeader>
         <CardContent className="pt-0 px-4 pb-3">
@@ -281,6 +245,43 @@ export default function Dashboard() {
           />
         </CardContent>
       </Card>
+
+      {/* 1. O que fazer hoje + Alertas */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+        {isFirstRun && <FirstRunEmptyState onNavigate={navigate} />}
+
+        <DailyChecklist
+          activeTasks={activeTasks}
+          completedTasks={completedTasks}
+          loading={tasksLoading}
+          onAddTask={async (desc) => { await addTask({ description: desc }); }}
+          onToggleTask={toggleTask}
+          onDeleteTask={deleteTask}
+          onUpdateTask={(id, patch) => updateTask(id, patch)}
+          onRefresh={handleRefreshTasks}
+          refreshing={refreshing}
+          lastRefreshed={lastRefreshed}
+          hidden={isFirstRun}
+          aiRef={aiRef}
+          projects={projects.map((p) => ({ id: p.id, name: p.name }))}
+        />
+
+        <ProjectAlertsCard alerts={alerts} hidden={isFirstRun} />
+      </div>
+
+      {/* 2. Equipe pendente */}
+      <PendingTeamCard hidden={isFirstRun} />
+
+      {/* 3. Projetos com score de saúde */}
+      <ProjectHealthList projects={projectsWithHealth} hidden={isFirstRun} />
+
+      {/* 3. Próximos lançamentos */}
+      <UpcomingReleases projects={projects} getMixPercent={getMixPercent} hidden={isFirstRun} />
+
+      {/* 4. Financeiro */}
+      <FinancialSummary financials={financials} isSimpleMode={isSimpleMode} />
+
+      {!isSimpleMode && <RecentTransactions transactions={transactions} />}
     </div>
   );
 }
