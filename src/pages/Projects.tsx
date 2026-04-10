@@ -212,14 +212,14 @@ export default function Projects() {
 
 
   const resetWizard = () => {
-    setWizardStep("select");
     setWizardSource("new");
     setWizardProfType(null);
     setInstrumentFilter("");
     setSelectedExistingProfId("");
-    setNewContactForm({ name: "", specialty: "", email: "", phone: "" });
+    setNewContactForm({ name: "", email: "", phone: "" });
     setProposalForm({ fee: "", deadline: "", scheduleNotes: "", permissionsScope: "leitor" });
     setDeadlineWarningConfirmed(false);
+    setOptionalOpen(false);
     setWizardSaving(false);
   };
 
