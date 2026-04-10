@@ -251,13 +251,22 @@ export default function Dashboard() {
             alwaysOpen
             contextChips={buildAIChips()}
             context={{
-              projects: projects.map((p) => ({
-                id: p.id, name: p.name, artist: p.artist, stage: p.stage,
-                mixPercent: getMixPercent(p.id), projectType: p.projectType,
-                totalContractValue: p.totalContractValue, amountPaid: p.amountPaid,
-                estimatedMonths: p.estimatedMonths,
-              })),
-              activeTasks: activeTasks.map((t) => ({ description: t.description, source: t.source, dueDate: t.dueDate, assignedTo: t.assignedTo, blocked: t.blocked, blockedReason: t.blockedReason, severity: t.severity })),
+              projects: [
+                ...projects.map((p) => ({
+                  id: p.id, name: p.name, artist: p.artist, stage: p.stage,
+                  mixPercent: getMixPercent(p.id), projectType: p.projectType,
+                  totalContractValue: p.totalContractValue, amountPaid: p.amountPaid,
+                  estimatedMonths: p.estimatedMonths,
+                })),
+                ...guestProjects.filter(g => !g.completed).map((g) => ({
+                  id: g.id, name: `[Parceiro] ${g.name}`, artist: g.artist, stage: g.stage,
+                  mixPercent: 0, projectType: g.project_type,
+                })),
+              ],
+              activeTasks: [
+                ...activeTasks.map((t) => ({ description: t.description, source: t.source, dueDate: t.dueDate, assignedTo: t.assignedTo, blocked: t.blocked, blockedReason: t.blockedReason, severity: t.severity })),
+                ...guestTasks.map((t) => ({ description: `[${t.projectName}] ${t.description}`, source: t.source, dueDate: t.dueDate, assignedTo: t.assignedTo, blocked: t.blocked, blockedReason: t.blockedReason, severity: t.severity })),
+              ],
               financials,
               professionals: professionals.map((p) => ({ name: p.name, specialty: p.specialty, bio: p.bio ?? "", active: true, phone: p.phone ?? "" })),
               alerts: alerts.slice(0, 10).map((a) => ({ title: a.title, severity: a.severity, project: a.projectName, category: a.category })),
