@@ -1,43 +1,41 @@
 
-# Fix: "Projeto não encontrado" for Guest/Collaborator Projects
 
-## Problem
-When a collaborator clicks "Ver projeto e chat", they navigate to `/projects/:id` which uses the `get_project_for_member` RPC. This function checks `project_members.user_id = auth.uid()`, but `project_members.user_id` is set to the **project owner's** ID (the owner adds the member via `addProfessional`). So the collaborator's `auth.uid()` never matches, and the project isn't found.
+# Projetos de Parceiro no Dashboard + Tarefas na IA
 
-Meanwhile, the project list (`get_member_projects`) correctly finds guest projects by matching the collaborator's **email** in `project_invitations`. The two functions use incompatible lookup logic.
+## Problema
+O dashboard mostra apenas projetos próprios (do `ProjectContext`). Projetos em que o usuário é colaborador/parceiro (via convite aceito) não aparecem na lista nem alimentam o assistente IA.
 
-## Fix
+## Solução
 
-### 1. Update `get_project_for_member` RPC (database migration)
-Align its logic with `get_member_projects` — check both `project_members.user_id` AND `project_invitations` (by email, status='accepted'):
+### 1. Buscar projetos de parceiro no Dashboard
+No `Dashboard.tsx`, adicionar um `useEffect` que chama `supabase.rpc("get_member_projects")` para obter os projetos em que o usuário é colaborador. Armazenar em estado local `guestProjects`.
 
-```sql
-CREATE OR REPLACE FUNCTION public.get_project_for_member(p_project_id uuid)
-RETURNS TABLE(id uuid, name text, artist text, stage text, completed boolean, project_type text)
-LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public
-AS $$
-  SELECT p.id, p.name, p.artist, p.stage, p.completed, p.project_type
-  FROM public.projects p
-  WHERE p.id = p_project_id
-    AND (
-      EXISTS (
-        SELECT 1 FROM public.project_members m
-        WHERE m.project_id = p_project_id AND m.user_id = auth.uid()
-      )
-      OR EXISTS (
-        SELECT 1 FROM public.project_invitations pi
-        WHERE pi.project_id = p_project_id
-          AND pi.status = 'accepted'
-          AND lower(pi.professional_email) = lower((
-            SELECT email FROM auth.users WHERE id = auth.uid() LIMIT 1
-          ))
-      )
-    );
-$$;
+### 2. Novo card "Projetos como Parceiro" no Dashboard
+Criar um componente `GuestProjectsList` (similar ao `ProjectHealthList`) que exibe os projetos de parceiro com badge "Colaborador" e link para `/projects/:id`. Renderizar abaixo do `ProjectHealthList` no Dashboard, visível apenas quando houver projetos de parceiro.
+
+### 3. Buscar tarefas de projetos de parceiro
+No Dashboard, após obter os `guestProjects`, buscar tarefas atribuídas ao usuário nesses projetos (via `tasks` table, filtrando por `project_id` IN guestProjects e `assigned_to` = displayName/email ou `user_id` = user.id). Armazenar como `guestTasks`.
+
+### 4. Alimentar a IA com contexto de parceiro
+No bloco `context` do `AITaskAssistant`, incluir os projetos de parceiro e suas tarefas junto aos dados existentes. O prompt do assistente já suporta múltiplos projetos — basta adicioná-los ao array `projects` e `activeTasks`.
+
+## Arquivos modificados
+- `src/pages/Dashboard.tsx` — fetch de guest projects e tasks, novo card, contexto da IA expandido
+- `src/components/dashboard/GuestProjectsList.tsx` — novo componente para listar projetos de parceiro
+
+## Detalhes Técnicos
+
+```text
+Dashboard.tsx
+├── useEffect → supabase.rpc("get_member_projects") → guestProjects[]
+├── useEffect → supabase.from("tasks").select(...)
+│     .in("project_id", guestProjectIds)
+│     .or(assigned_to/user_id filters)
+│     → guestTasks[]
+├── <GuestProjectsList projects={guestProjects} />
+└── AITaskAssistant context.projects += guestProjects
+    AITaskAssistant context.activeTasks += guestTasks
 ```
 
-### 2. No frontend changes needed
-The `ProjectDetail.tsx` code already calls this RPC correctly. Once the function is fixed, guest projects will load.
+O card usará navegação para `/projects/:id` (rota de detalhe que já suporta visão de colaborador). As tarefas de parceiro serão marcadas com o nome do projeto para contexto na IA.
 
-## Root Cause Summary
-`addProfessional` (owner-side) stores `user_id = owner.id` in `project_members`. The invite acceptance edge function stores the correct collaborator `user_id`, but only when the collaborator already has an account. The two data paths are inconsistent. The RPC fix above covers both paths.
