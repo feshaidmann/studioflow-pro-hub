@@ -1,97 +1,43 @@
 
+# Fix: "Projeto não encontrado" for Guest/Collaborator Projects
 
-# Diagnostic: "Add to Team" Wizard — UX Issues
+## Problem
+When a collaborator clicks "Ver projeto e chat", they navigate to `/projects/:id` which uses the `get_project_for_member` RPC. This function checks `project_members.user_id = auth.uid()`, but `project_members.user_id` is set to the **project owner's** ID (the owner adds the member via `addProfessional`). So the collaborator's `auth.uid()` never matches, and the project isn't found.
 
-## Current Flow (2 steps, ~8-12 fields)
+Meanwhile, the project list (`get_member_projects`) correctly finds guest projects by matching the collaborator's **email** in `project_invitations`. The two functions use incompatible lookup logic.
 
-```text
-STEP 1: Select
-├── Professional type (8 buttons) ← required
-├── Instrument (text input, only if "Instrumentista")
-├── Contact source toggle: "Novo contato" / "Minha agenda"
-│   ├── New: Name*, Specialty, Email, Phone (4 fields)
-│   └── Existing: Select dropdown
-└── [Continuar →]
+## Fix
 
-STEP 2: Proposal
-├── Fee (R$)
-├── Deadline (date picker)
-├── Access level (select)
-├── Notes (textarea)
-└── [Enviar proposta / Adicionar à equipe]
+### 1. Update `get_project_for_member` RPC (database migration)
+Align its logic with `get_member_projects` — check both `project_members.user_id` AND `project_invitations` (by email, status='accepted'):
+
+```sql
+CREATE OR REPLACE FUNCTION public.get_project_for_member(p_project_id uuid)
+RETURNS TABLE(id uuid, name text, artist text, stage text, completed boolean, project_type text)
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public
+AS $$
+  SELECT p.id, p.name, p.artist, p.stage, p.completed, p.project_type
+  FROM public.projects p
+  WHERE p.id = p_project_id
+    AND (
+      EXISTS (
+        SELECT 1 FROM public.project_members m
+        WHERE m.project_id = p_project_id AND m.user_id = auth.uid()
+      )
+      OR EXISTS (
+        SELECT 1 FROM public.project_invitations pi
+        WHERE pi.project_id = p_project_id
+          AND pi.status = 'accepted'
+          AND lower(pi.professional_email) = lower((
+            SELECT email FROM auth.users WHERE id = auth.uid() LIMIT 1
+          ))
+      )
+    );
+$$;
 ```
 
----
+### 2. No frontend changes needed
+The `ProjectDetail.tsx` code already calls this RPC correctly. Once the function is fixed, guest projects will load.
 
-## Problems Found
-
-### 1. Redundant field: "Especialidade" (Specialty)
-When the user selects a professional type (e.g. "Mix"), the specialty is auto-filled via `profTypeSpecialty` mapping. But the "Especialidade" text input still appears in the "Novo contato" form, pre-filled with the same value. This is redundant for all types except "Instrumentista" (where the instrument field already covers it). The user sees the same information twice.
-
-### 2. "Instrumento" field duplicates "Especialidade"
-When "Instrumentista" is selected, both "Instrumento" (above the source toggle) and "Especialidade" (inside the new contact form) appear. The instrument value is what should become the specialty — having both is confusing.
-
-### 3. Too many required interactions for the simplest case
-Adding a brand-new team member with no fee requires: select type → type name → skip specialty → skip email → skip phone → click continue → skip fee → skip deadline → skip notes → submit. That is 4 clicks minimum across 2 steps, but the user sees ~8 empty fields they must consciously skip.
-
-### 4. "Origem do contato" toggle is always visible
-Even when the user has zero contacts in their address book, they see "Novo contato / Minha agenda" and must click "Minha agenda" only to find "Nenhum contato cadastrado." This is a dead-end interaction.
-
-### 5. Step 2 fields are all optional but feel mandatory
-Fee, deadline, access level, and notes are all optional, yet they occupy a full second step. For a quick add (just name + role), the user must navigate through an entire empty form.
-
-### 6. Access level defaults to "Leitor" silently
-The default is reasonable but the user gets no explanation of what each level means in practice until they open the dropdown.
-
-### 7. No inline validation or progress indicator
-The user doesn't know which fields are required vs optional. Only "Nome" has a visible asterisk.
-
----
-
-## Proposed Redesign: Single-Step Wizard
-
-Merge both steps into one scrollable form, collapse optional fields, and eliminate redundancies.
-
-### Changes
-
-1. **Remove "Especialidade" field** from the new contact form — derive it automatically from the selected type + instrument (for Instrumentista).
-
-2. **Move "Instrumento" into the type grid** — when "Instrumentista" is tapped, show the instrument input inline below the grid, not as a separate section.
-
-3. **Auto-hide "Minha agenda" tab** when the user has zero contacts — show only "Novo contato" with no toggle.
-
-4. **Merge Step 2 into Step 1** as a collapsible "Detalhes opcionais" section (fee, deadline, notes). This eliminates one full navigation step.
-
-5. **Move "Nível de acesso"** to a simple inline toggle (Leitor / Admin) with one-line descriptions, placed right after the contact selection — not buried in step 2.
-
-6. **Reduce minimum required fields to 2**: Professional type + Name (for new) or Professional type + selection (for existing).
-
-7. **Single submit button** at the bottom: "Adicionar à equipe". The button label changes to "Enviar proposta" only when an email is provided.
-
-### Result
-
-```text
-SINGLE STEP:
-├── Professional type (8 buttons)
-│   └── Instrument input (only if Instrumentista)
-├── Contact source (hidden if no contacts exist)
-│   ├── New: Name*, Email, Phone
-│   └── Existing: Select dropdown
-├── Access level (inline: Leitor / Admin)
-├── ▸ Detalhes opcionais (collapsed)
-│   ├── Fee (R$)
-│   ├── Deadline
-│   └── Notes
-└── [Adicionar à equipe]
-```
-
-Minimum clicks: **3** (select type → type name → submit).
-Fields visible by default: **3-4** (type, name, access level, email).
-Optional fields: hidden behind a toggle.
-
-### Files to modify
-
-- **`src/pages/Projects.tsx`**: Restructure wizard JSX to single step, remove `wizardStep` state, collapse optional fields, remove specialty input, conditionally hide source toggle, move access level inline.
-- **`src/hooks/useProfessionals.ts`**: No changes needed.
-- **`src/data/mockData.ts`**: No changes needed.
-
+## Root Cause Summary
+`addProfessional` (owner-side) stores `user_id = owner.id` in `project_members`. The invite acceptance edge function stores the correct collaborator `user_id`, but only when the collaborator already has an account. The two data paths are inconsistent. The RPC fix above covers both paths.
