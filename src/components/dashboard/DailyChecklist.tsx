@@ -279,7 +279,7 @@ export default function DailyChecklist({
                             {(task.source === "music-dna" || task.description.startsWith("[DNA]")) && aiRef?.current && (
                               <Button variant="ghost" size="icon" className="h-5 w-5 text-primary hover:text-primary/80" onClick={() => {
                                 const desc = task.description.replace(/^\[DNA\]\s*/, "");
-                                aiRef.current?.sendMessage(`[Instrução: responda APENAS com os passos técnicos para aplicar esta técnica.]\n\n${desc}`);
+                                aiRef.current?.sendMessage(`Me explique de forma prática como aplicar esta técnica: ${desc}`);
                               }}>
                                 <Bot className="h-3 w-3" />
                               </Button>
