@@ -1266,6 +1266,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_auth_email: { Args: never; Returns: string }
       get_member_projects: {
         Args: never
         Returns: {
