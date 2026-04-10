@@ -313,20 +313,21 @@ export default function Projects() {
     setPendingPaymentData(null);
   };
 
-  /* ── Unified submit from step 2 ── */
+  /* ── Unified submit ── */
   const handleSubmitProposal = async () => {
     if (!selectedProject) return;
     const hasWarning = !!(proposalForm.deadline && selectedProject?.estimatedMonths && checkDeadlineExceedsProject(proposalForm.deadline));
     if (hasWarning && !deadlineWarningConfirmed) return;
     setWizardSaving(true);
+    const derivedSpecialty = wizardProfType === "Instrumentista" ? instrumentFilter : (profTypeSpecialty[wizardProfType!] || wizardProfType || "");
     try {
       const fee = Number(proposalForm.fee) || 0;
       if (wizardSource === "new") {
-        await addProfessionalToGlobal({ name: newContactForm.name, specialty: newContactForm.specialty, email: newContactForm.email, phone: newContactForm.phone, bio: proposalForm.scheduleNotes, allowGlobalListing: false });
+        await addProfessionalToGlobal({ name: newContactForm.name, specialty: derivedSpecialty, email: newContactForm.email, phone: newContactForm.phone, bio: proposalForm.scheduleNotes, allowGlobalListing: false });
         let invitationId: string | null = null;
-        if (newContactForm.email) invitationId = await createInviteRecord({ projectId: selectedProject.id, name: newContactForm.name, email: newContactForm.email, role: newContactForm.specialty || wizardProfType || "", fee, deadline: proposalForm.deadline, scheduleNotes: proposalForm.scheduleNotes });
-        await addProfessional(selectedProject.id, { name: newContactForm.name, role: wizardProfType ?? "", instrument: newContactForm.specialty, email: newContactForm.email, phone: newContactForm.phone, fee, notes: proposalForm.scheduleNotes, invitationId: invitationId ?? undefined, permissionsScope: proposalForm.permissionsScope });
-        if (fee > 0) triggerPaymentModal(selectedProject.id, newContactForm.name, newContactForm.specialty || wizardProfType || "Profissional", fee);
+        if (newContactForm.email) invitationId = await createInviteRecord({ projectId: selectedProject.id, name: newContactForm.name, email: newContactForm.email, role: derivedSpecialty || wizardProfType || "", fee, deadline: proposalForm.deadline, scheduleNotes: proposalForm.scheduleNotes });
+        await addProfessional(selectedProject.id, { name: newContactForm.name, role: wizardProfType ?? "", instrument: derivedSpecialty, email: newContactForm.email, phone: newContactForm.phone, fee, notes: proposalForm.scheduleNotes, invitationId: invitationId ?? undefined, permissionsScope: proposalForm.permissionsScope });
+        if (fee > 0) triggerPaymentModal(selectedProject.id, newContactForm.name, derivedSpecialty || wizardProfType || "Profissional", fee);
         else addNotification({ title: "Profissional adicionado", message: `${newContactForm.name} adicionado à equipe`, link: "/projects", type: "general" });
         toast.success(`${newContactForm.name} adicionado à equipe ✅`);
       } else {
