@@ -220,6 +220,9 @@ export default function ProjectTeamTab({ projectId }: ProjectTeamTabProps) {
           <span className="text-sm font-semibold">Equipe ({team.length})</span>
         </div>
         <div className="flex items-center gap-1.5 flex-wrap">
+          <Button variant="outline" size="sm" className="h-6 text-[10px] gap-1" onClick={() => navigate(`/projects?id=${projectId}&addMember=1`)}>
+            <UserPlus className="h-3 w-3" /> Adicionar
+          </Button>
           {Object.entries(statusCounts).map(([status, count]) => {
             const cfg = STATUS_CONFIG[status as DeliveryStatus];
             if (!cfg) return null;
