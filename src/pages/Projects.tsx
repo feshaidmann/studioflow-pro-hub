@@ -325,7 +325,7 @@ export default function Projects() {
         await addProfessionalToGlobal({ name: newContactForm.name, specialty: newContactForm.specialty, email: newContactForm.email, phone: newContactForm.phone, bio: proposalForm.scheduleNotes, allowGlobalListing: false });
         let invitationId: string | null = null;
         if (newContactForm.email) invitationId = await createInviteRecord({ projectId: selectedProject.id, name: newContactForm.name, email: newContactForm.email, role: newContactForm.specialty || wizardProfType || "", fee, deadline: proposalForm.deadline, scheduleNotes: proposalForm.scheduleNotes });
-        await addProfessional(selectedProject.id, { name: newContactForm.name, role: wizardProfType ?? "", instrument: newContactForm.specialty, email: newContactForm.email, phone: newContactForm.phone, fee, notes: proposalForm.scheduleNotes, invitationId: invitationId ?? undefined });
+        await addProfessional(selectedProject.id, { name: newContactForm.name, role: wizardProfType ?? "", instrument: newContactForm.specialty, email: newContactForm.email, phone: newContactForm.phone, fee, notes: proposalForm.scheduleNotes, invitationId: invitationId ?? undefined, permissionsScope: proposalForm.permissionsScope });
         if (fee > 0) triggerPaymentModal(selectedProject.id, newContactForm.name, newContactForm.specialty || wizardProfType || "Profissional", fee);
         else addNotification({ title: "Profissional adicionado", message: `${newContactForm.name} adicionado à equipe`, link: "/projects", type: "general" });
         toast.success(`${newContactForm.name} adicionado à equipe ✅`);
@@ -334,7 +334,7 @@ export default function Projects() {
         if (!prof) { setWizardSaving(false); return; }
         let invitationId: string | null = null;
         if ((prof as any).email) invitationId = await createInviteRecord({ projectId: selectedProject.id, name: prof.name, email: (prof as any).email, role: prof.specialty || wizardProfType || "", fee, deadline: proposalForm.deadline, scheduleNotes: proposalForm.scheduleNotes });
-        await addProfessional(selectedProject.id, { name: prof.name, role: wizardProfType ?? "", instrument: prof.specialty, email: (prof as any).email || "", phone: (prof as any).phone || "", fee, notes: proposalForm.scheduleNotes, invitationId: invitationId ?? undefined });
+        await addProfessional(selectedProject.id, { name: prof.name, role: wizardProfType ?? "", instrument: prof.specialty, email: (prof as any).email || "", phone: (prof as any).phone || "", fee, notes: proposalForm.scheduleNotes, invitationId: invitationId ?? undefined, permissionsScope: proposalForm.permissionsScope });
         if (fee > 0) triggerPaymentModal(selectedProject.id, prof.name, prof.specialty || wizardProfType || "Profissional", fee);
         else addNotification({ title: "Profissional adicionado", message: `${prof.name} adicionado à equipe`, link: "/projects", type: "general" });
         toast.success(`${prof.name} adicionado à equipe ✅`);
