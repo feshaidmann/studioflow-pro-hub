@@ -146,16 +146,16 @@ export default function Projects() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState({ name: "", artist: "", bpm: "120", key: "C", stage: "inicio" as Project["stage"], projectType: "single" as ProjectType, trackCount: "", uploadDate: "", template: "none" as ProjectTemplate });
 
-  /* ── Wizard state (2-step: select → proposal) ── */
-  const [wizardStep, setWizardStep] = useState<WizardStep>("select");
+  /* ── Wizard state (single-step) ── */
   const [wizardSource, setWizardSource] = useState<WizardSource>("new");
   const [wizardProfType, setWizardProfType] = useState<WizardProfType | null>(null);
   const [instrumentFilter, setInstrumentFilter] = useState("");
   const [selectedExistingProfId, setSelectedExistingProfId] = useState("");
   const [wizardSaving, setWizardSaving] = useState(false);
-  const [newContactForm, setNewContactForm] = useState({ name: "", specialty: "", email: "", phone: "" });
+  const [newContactForm, setNewContactForm] = useState({ name: "", email: "", phone: "" });
   const [proposalForm, setProposalForm] = useState({ fee: "", deadline: "", scheduleNotes: "", permissionsScope: "leitor" as "admin_convidado" | "leitor" });
   const [deadlineWarningConfirmed, setDeadlineWarningConfirmed] = useState(false);
+  const [optionalOpen, setOptionalOpen] = useState(false);
 
   /* ── Payment modal state ── */
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
