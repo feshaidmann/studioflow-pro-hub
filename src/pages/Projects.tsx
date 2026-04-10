@@ -154,7 +154,7 @@ export default function Projects() {
   const [selectedExistingProfId, setSelectedExistingProfId] = useState("");
   const [wizardSaving, setWizardSaving] = useState(false);
   const [newContactForm, setNewContactForm] = useState({ name: "", specialty: "", email: "", phone: "" });
-  const [proposalForm, setProposalForm] = useState({ fee: "", deadline: "", scheduleNotes: "" });
+  const [proposalForm, setProposalForm] = useState({ fee: "", deadline: "", scheduleNotes: "", permissionsScope: "leitor" as "admin_convidado" | "leitor" });
   const [deadlineWarningConfirmed, setDeadlineWarningConfirmed] = useState(false);
 
   /* ── Payment modal state ── */
