@@ -319,7 +319,10 @@ export default function Dashboard() {
       {/* 3. Projetos com score de saúde */}
       <ProjectHealthList projects={projectsWithHealth} hidden={isFirstRun} />
 
-      {/* 3. Próximos lançamentos */}
+      {/* 3b. Projetos como parceiro */}
+      <GuestProjectsList projects={guestProjects} />
+
+      {/* 4. Próximos lançamentos */}
       <UpcomingReleases projects={projects} getMixPercent={getMixPercent} hidden={isFirstRun} />
 
       {/* 4. Financeiro */}
