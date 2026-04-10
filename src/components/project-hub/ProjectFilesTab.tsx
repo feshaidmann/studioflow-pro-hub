@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useProjectFiles, FOLDERS, type FolderKey } from "@/hooks/useProjectFiles";
+import AudioPlayer from "@/components/ui/audio-player";
 
 const ICON_MAP: Record<string, React.FC<{ className?: string }>> = {
   Music, Mic, Layers, Sliders, Disc, Image, Film, Megaphone, FileText,
@@ -24,11 +25,16 @@ function formatSize(bytes: number) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-interface ProjectFilesTabProps {
-  projectId: string;
+function isAudioMime(mime: string) {
+  return mime.startsWith("audio/");
 }
 
-export default function ProjectFilesTab({ projectId }: ProjectFilesTabProps) {
+interface ProjectFilesTabProps {
+  projectId: string;
+  isOwner?: boolean;
+}
+
+export default function ProjectFilesTab({ projectId, isOwner = true }: ProjectFilesTabProps) {
   const { files, loading, uploading, uploadFile, deleteFile, renameFile, updateStatus, updateComments, getFileUrl } = useProjectFiles(projectId);
   const [openFolders, setOpenFolders] = useState<Set<string>>(new Set());
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -37,6 +43,7 @@ export default function ProjectFilesTab({ projectId }: ProjectFilesTabProps) {
   const [commentText, setCommentText] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadFolder, setUploadFolder] = useState<FolderKey>("composicao");
+  const [playbackUrls, setPlaybackUrls] = useState<Record<string, string>>({});
 
   const toggleFolder = (key: string) => {
     setOpenFolders((prev) => {
@@ -54,9 +61,7 @@ export default function ProjectFilesTab({ projectId }: ProjectFilesTabProps) {
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 50 * 1024 * 1024) {
-      return;
-    }
+    if (file.size > 50 * 1024 * 1024) return;
     await uploadFile(file, uploadFolder);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
@@ -69,6 +74,12 @@ export default function ProjectFilesTab({ projectId }: ProjectFilesTabProps) {
     a.download = originalName;
     a.target = "_blank";
     a.click();
+  };
+
+  const handlePlay = async (fileId: string, storagePath: string) => {
+    if (playbackUrls[fileId]) return;
+    const url = await getFileUrl(storagePath);
+    if (url) setPlaybackUrls((prev) => ({ ...prev, [fileId]: url }));
   };
 
   const startRename = (id: string, name: string) => {
@@ -108,7 +119,6 @@ export default function ProjectFilesTab({ projectId }: ProjectFilesTabProps) {
 
         return (
           <div key={folder.key} className="rounded-lg border border-border/60 overflow-hidden">
-            {/* Folder header */}
             <button
               onClick={() => toggleFolder(folder.key)}
               className="w-full flex items-center gap-2.5 px-3 py-2.5 hover:bg-muted/40 transition-colors"
@@ -121,112 +131,99 @@ export default function ProjectFilesTab({ projectId }: ProjectFilesTabProps) {
               <span className="text-[10px] text-muted-foreground">{folderFiles.length}</span>
             </button>
 
-            {/* Folder content */}
             {isOpen && (
               <div className="border-t border-border/40 bg-muted/10">
                 {folderFiles.length === 0 ? (
                   <div className="px-3 py-4 text-center">
                     <p className="text-xs text-muted-foreground/60 mb-2">Nenhum arquivo nesta pasta</p>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="text-xs gap-1.5 h-7"
-                      onClick={() => handleUploadClick(folder.key)}
-                      disabled={uploading}
-                    >
-                      <Upload className="h-3 w-3" />
-                      Enviar arquivo
+                    <Button size="sm" variant="outline" className="text-xs gap-1.5 h-7" onClick={() => handleUploadClick(folder.key)} disabled={uploading}>
+                      <Upload className="h-3 w-3" /> Enviar arquivo
                     </Button>
                   </div>
                 ) : (
                   <div className="divide-y divide-border/30">
                     {folderFiles.map((file) => {
                       const statusInfo = STATUS_LABELS[file.status] || STATUS_LABELS.em_revisao;
+                      const isAudio = isAudioMime(file.mimeType);
+
+                      // Auto-load playback URL when folder opens for audio files
+                      if (isAudio && !playbackUrls[file.id]) {
+                        handlePlay(file.id, file.storagePath);
+                      }
+
                       return (
-                        <div key={file.id} className="flex items-center gap-2 px-3 py-2 group hover:bg-muted/20 transition-colors">
-                          <div className="flex-1 min-w-0">
-                            {editingId === file.id ? (
-                              <div className="flex items-center gap-1">
-                                <Input
-                                  value={editName}
-                                  onChange={(e) => setEditName(e.target.value)}
-                                  className="h-6 text-xs"
-                                  autoFocus
-                                  onKeyDown={(e) => { if (e.key === "Enter") confirmRename(); if (e.key === "Escape") setEditingId(null); }}
-                                />
-                                <button onClick={confirmRename} className="text-[hsl(var(--success))] hover:opacity-80"><Check className="h-3.5 w-3.5" /></button>
-                                <button onClick={() => setEditingId(null)} className="text-muted-foreground hover:opacity-80"><X className="h-3.5 w-3.5" /></button>
+                        <div key={file.id} className="px-3 py-2 group hover:bg-muted/20 transition-colors">
+                          <div className="flex items-center gap-2">
+                            <div className="flex-1 min-w-0">
+                              {editingId === file.id ? (
+                                <div className="flex items-center gap-1">
+                                  <Input value={editName} onChange={(e) => setEditName(e.target.value)} className="h-6 text-xs" autoFocus
+                                    onKeyDown={(e) => { if (e.key === "Enter") confirmRename(); if (e.key === "Escape") setEditingId(null); }} />
+                                  <button onClick={confirmRename} className="text-[hsl(var(--success))] hover:opacity-80"><Check className="h-3.5 w-3.5" /></button>
+                                  <button onClick={() => setEditingId(null)} className="text-muted-foreground hover:opacity-80"><X className="h-3.5 w-3.5" /></button>
+                                </div>
+                              ) : (
+                                <p className="text-xs font-medium truncate">{file.originalName}</p>
+                              )}
+                              <div className="flex items-center gap-2 mt-0.5">
+                                <span className="text-[10px] text-muted-foreground">{formatSize(file.size)}</span>
+                                <span className="text-[10px] text-muted-foreground">•</span>
+                                <span className="text-[10px] text-muted-foreground">{file.uploadedByName}</span>
+                                {file.comments && (
+                                  <>
+                                    <span className="text-[10px] text-muted-foreground">•</span>
+                                    <span className="text-[10px] text-muted-foreground/60 flex items-center gap-0.5">
+                                      <MessageSquare className="h-2.5 w-2.5" /> {file.comments.length > 30 ? file.comments.slice(0, 30) + "…" : file.comments}
+                                    </span>
+                                  </>
+                                )}
                               </div>
-                            ) : (
-                              <p className="text-xs font-medium truncate">{file.originalName}</p>
-                            )}
-                            <div className="flex items-center gap-2 mt-0.5">
-                              <span className="text-[10px] text-muted-foreground">{formatSize(file.size)}</span>
-                              <span className="text-[10px] text-muted-foreground">•</span>
-                              <span className="text-[10px] text-muted-foreground">{file.uploadedByName}</span>
-                              {file.comments && (
-                                <>
-                                  <span className="text-[10px] text-muted-foreground">•</span>
-                                  <span className="text-[10px] text-muted-foreground/60 flex items-center gap-0.5">
-                                    <MessageSquare className="h-2.5 w-2.5" /> {file.comments.length > 30 ? file.comments.slice(0, 30) + "…" : file.comments}
-                                  </span>
-                                </>
+                              {commentingId === file.id && (
+                                <div className="mt-1.5 flex items-start gap-1">
+                                  <Textarea value={commentText} onChange={(e) => setCommentText(e.target.value)} placeholder="Adicionar comentário..." className="text-xs h-14 resize-none" autoFocus />
+                                  <div className="flex flex-col gap-0.5">
+                                    <button onClick={() => { updateComments(file.id, commentText); setCommentingId(null); }} className="text-[hsl(var(--success))] hover:opacity-80 p-0.5"><Check className="h-3.5 w-3.5" /></button>
+                                    <button onClick={() => setCommentingId(null)} className="text-muted-foreground hover:opacity-80 p-0.5"><X className="h-3.5 w-3.5" /></button>
+                                  </div>
+                                </div>
                               )}
                             </div>
-                            {/* Inline comment editor */}
-                            {commentingId === file.id && (
-                              <div className="mt-1.5 flex items-start gap-1">
-                                <Textarea
-                                  value={commentText}
-                                  onChange={(e) => setCommentText(e.target.value)}
-                                  placeholder="Adicionar comentário..."
-                                  className="text-xs h-14 resize-none"
-                                  autoFocus
-                                />
-                                <div className="flex flex-col gap-0.5">
-                                  <button onClick={() => { updateComments(file.id, commentText); setCommentingId(null); }} className="text-[hsl(var(--success))] hover:opacity-80 p-0.5"><Check className="h-3.5 w-3.5" /></button>
-                                  <button onClick={() => setCommentingId(null)} className="text-muted-foreground hover:opacity-80 p-0.5"><X className="h-3.5 w-3.5" /></button>
-                                </div>
-                              </div>
-                            )}
+
+                            <button onClick={() => updateStatus(file.id, file.status === "final" ? "em_revisao" : "final")} className="shrink-0">
+                              <Badge variant="outline" className={`text-[9px] cursor-pointer hover:opacity-80 ${statusInfo.className}`}>{statusInfo.label}</Badge>
+                            </button>
+
+                            <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button onClick={() => { setCommentingId(file.id); setCommentText(file.comments); }} className="p-1 rounded hover:bg-muted/50 text-muted-foreground hover:text-foreground" title="Comentar">
+                                <MessageSquare className="h-3 w-3" />
+                              </button>
+                              <button onClick={() => startRename(file.id, file.originalName)} className="p-1 rounded hover:bg-muted/50 text-muted-foreground hover:text-foreground">
+                                <Pencil className="h-3 w-3" />
+                              </button>
+                              {/* Download only for owner */}
+                              {isOwner && (
+                                <button onClick={() => handleDownload(file.storagePath, file.originalName)} className="p-1 rounded hover:bg-muted/50 text-muted-foreground hover:text-foreground">
+                                  <Download className="h-3 w-3" />
+                                </button>
+                              )}
+                              <button onClick={() => deleteFile(file.id)} className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive">
+                                <Trash2 className="h-3 w-3" />
+                              </button>
+                            </div>
                           </div>
 
-                          <button
-                            onClick={() => updateStatus(file.id, file.status === "final" ? "em_revisao" : "final")}
-                            className="shrink-0"
-                          >
-                            <Badge variant="outline" className={`text-[9px] cursor-pointer hover:opacity-80 ${statusInfo.className}`}>
-                              {statusInfo.label}
-                            </Badge>
-                          </button>
-
-                          <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button onClick={() => { setCommentingId(file.id); setCommentText(file.comments); }} className="p-1 rounded hover:bg-muted/50 text-muted-foreground hover:text-foreground" title="Comentar">
-                              <MessageSquare className="h-3 w-3" />
-                            </button>
-                            <button onClick={() => startRename(file.id, file.originalName)} className="p-1 rounded hover:bg-muted/50 text-muted-foreground hover:text-foreground">
-                              <Pencil className="h-3 w-3" />
-                            </button>
-                            <button onClick={() => handleDownload(file.storagePath, file.originalName)} className="p-1 rounded hover:bg-muted/50 text-muted-foreground hover:text-foreground">
-                              <Download className="h-3 w-3" />
-                            </button>
-                            <button onClick={() => deleteFile(file.id)} className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive">
-                              <Trash2 className="h-3 w-3" />
-                            </button>
-                          </div>
+                          {/* Inline audio player */}
+                          {isAudio && playbackUrls[file.id] && (
+                            <div className="mt-1.5">
+                              <AudioPlayer src={playbackUrls[file.id]} fileName={file.originalName} />
+                            </div>
+                          )}
                         </div>
                       );
                     })}
                     <div className="px-3 py-2">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="text-xs gap-1.5 h-7 text-muted-foreground"
-                        onClick={() => handleUploadClick(folder.key)}
-                        disabled={uploading}
-                      >
-                        <Upload className="h-3 w-3" />
-                        {uploading ? "Enviando..." : "Adicionar"}
+                      <Button size="sm" variant="ghost" className="text-xs gap-1.5 h-7 text-muted-foreground" onClick={() => handleUploadClick(folder.key)} disabled={uploading}>
+                        <Upload className="h-3 w-3" /> {uploading ? "Enviando..." : "Adicionar"}
                       </Button>
                     </div>
                   </div>
