@@ -23,6 +23,7 @@ import UpcomingReleases from "@/components/dashboard/UpcomingReleases";
 import ProjectAlertsCard from "@/components/dashboard/ProjectAlertsCard";
 import ProjectHealthList from "@/components/dashboard/ProjectHealthList";
 import PendingTeamCard from "@/components/dashboard/PendingTeamCard";
+import GuestProjectsList from "@/components/dashboard/GuestProjectsList";
 
 export default function Dashboard() {
   const aiRef = useRef<AITaskAssistantHandle>(null);
@@ -41,6 +42,40 @@ export default function Dashboard() {
     messages: savedMessages, loadingMessages,
     createConversation, saveMessage, renameConversation, deleteConversation, startNewConversation,
   } = useAIConversations();
+
+  // Fetch guest (partner) projects
+  const [guestProjects, setGuestProjects] = useState<{ id: string; name: string; artist: string; stage: string; completed: boolean; project_type: string; role: string }[]>([]);
+  const [guestTasks, setGuestTasks] = useState<{ description: string; source: string; dueDate: string | null; assignedTo: string; blocked: boolean; blockedReason: string; severity: string; projectName: string }[]>([]);
+
+  useEffect(() => {
+    if (!user) return;
+    supabase.rpc("get_member_projects").then(({ data }) => {
+      if (data) setGuestProjects(data.map((d: any) => ({ id: d.id, name: d.name, artist: d.artist, stage: d.stage, completed: d.completed, project_type: d.project_type, role: d.role })));
+    });
+  }, [user]);
+
+  // Fetch tasks for guest projects
+  useEffect(() => {
+    if (!user || guestProjects.length === 0) return;
+    const ids = guestProjects.filter(g => !g.completed).map(g => g.id);
+    if (ids.length === 0) return;
+    supabase
+      .from("tasks")
+      .select("description, source, due_date, assigned_to, blocked, blocked_reason, severity, project_id")
+      .in("project_id", ids)
+      .eq("completed", false)
+      .eq("dismissed", false)
+      .then(({ data }) => {
+        if (data) {
+          const nameMap = Object.fromEntries(guestProjects.map(g => [g.id, g.name]));
+          setGuestTasks(data.map((t: any) => ({
+            description: t.description, source: t.source, dueDate: t.due_date, assignedTo: t.assigned_to,
+            blocked: t.blocked, blockedReason: t.blocked_reason, severity: t.severity,
+            projectName: nameMap[t.project_id] || "",
+          })));
+        }
+      });
+  }, [user, guestProjects]);
 
   // Fetch pending invites for alert detection
   const [pendingInvites, setPendingInvites] = useState<{ projectId: string; professionalName: string; createdAt: string }[]>([]);
@@ -216,13 +251,22 @@ export default function Dashboard() {
             alwaysOpen
             contextChips={buildAIChips()}
             context={{
-              projects: projects.map((p) => ({
-                id: p.id, name: p.name, artist: p.artist, stage: p.stage,
-                mixPercent: getMixPercent(p.id), projectType: p.projectType,
-                totalContractValue: p.totalContractValue, amountPaid: p.amountPaid,
-                estimatedMonths: p.estimatedMonths,
-              })),
-              activeTasks: activeTasks.map((t) => ({ description: t.description, source: t.source, dueDate: t.dueDate, assignedTo: t.assignedTo, blocked: t.blocked, blockedReason: t.blockedReason, severity: t.severity })),
+              projects: [
+                ...projects.map((p) => ({
+                  id: p.id, name: p.name, artist: p.artist, stage: p.stage,
+                  mixPercent: getMixPercent(p.id), projectType: p.projectType,
+                  totalContractValue: p.totalContractValue, amountPaid: p.amountPaid,
+                  estimatedMonths: p.estimatedMonths,
+                })),
+                ...guestProjects.filter(g => !g.completed).map((g) => ({
+                  id: g.id, name: `[Parceiro] ${g.name}`, artist: g.artist, stage: g.stage,
+                  mixPercent: 0, projectType: g.project_type,
+                })),
+              ],
+              activeTasks: [
+                ...activeTasks.map((t) => ({ description: t.description, source: t.source, dueDate: t.dueDate, assignedTo: t.assignedTo, blocked: t.blocked, blockedReason: t.blockedReason, severity: t.severity })),
+                ...guestTasks.map((t) => ({ description: `[${t.projectName}] ${t.description}`, source: t.source, dueDate: t.dueDate, assignedTo: t.assignedTo, blocked: t.blocked, blockedReason: t.blockedReason, severity: t.severity })),
+              ],
               financials,
               professionals: professionals.map((p) => ({ name: p.name, specialty: p.specialty, bio: p.bio ?? "", active: true, phone: p.phone ?? "" })),
               alerts: alerts.slice(0, 10).map((a) => ({ title: a.title, severity: a.severity, project: a.projectName, category: a.category })),
@@ -275,7 +319,10 @@ export default function Dashboard() {
       {/* 3. Projetos com score de saúde */}
       <ProjectHealthList projects={projectsWithHealth} hidden={isFirstRun} />
 
-      {/* 3. Próximos lançamentos */}
+      {/* 3b. Projetos como parceiro */}
+      <GuestProjectsList projects={guestProjects} />
+
+      {/* 4. Próximos lançamentos */}
       <UpcomingReleases projects={projects} getMixPercent={getMixPercent} hidden={isFirstRun} />
 
       {/* 4. Financeiro */}
