@@ -160,7 +160,7 @@ export default function ProjectDetail() {
               <ProjectTeamTab projectId={project.id} />
             </TabsContent>
             <TabsContent value="files">
-              <ProjectFilesTab projectId={project.id} />
+              <ProjectFilesTab projectId={project.id} isOwner={true} />
             </TabsContent>
             <TabsContent value="finance">
               <ProjectFinanceTab projectId={project.id} />
@@ -186,7 +186,7 @@ export default function ProjectDetail() {
             <TabsContent value="chat">
               <div className="rounded-xl border border-border bg-card/40 overflow-hidden">
                 <div className="p-3">
-                  <ProjectChat projectId={project.id} />
+                  <ProjectChat projectId={project.id} isOwner={false} />
                 </div>
               </div>
             </TabsContent>
@@ -208,7 +208,7 @@ export default function ProjectDetail() {
             Chat da Equipe
           </button>
           <div id="project-chat-section" className="p-3 border-t border-border">
-            <ProjectChat projectId={project.id} />
+            <ProjectChat projectId={project.id} isOwner={true} />
           </div>
         </div>
       )}
