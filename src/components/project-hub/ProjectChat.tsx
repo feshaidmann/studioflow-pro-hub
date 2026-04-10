@@ -54,7 +54,8 @@ export default function ProjectChat({ projectId }: ProjectChatProps) {
       const storagePath = `${projectId}/${crypto.randomUUID()}.${ext}`;
       const { error } = await supabase.storage.from("project-files").upload(storagePath, attachFile);
       if (error) {
-        toast.error("Erro no upload do arquivo");
+        console.error("Storage upload error:", error, "path:", storagePath);
+        toast.error(`Erro no upload: ${error.message}`);
         setUploading(false);
         return;
       }

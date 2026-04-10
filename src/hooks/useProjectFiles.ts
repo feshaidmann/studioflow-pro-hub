@@ -92,7 +92,7 @@ export function useProjectFiles(projectId: string) {
       const { error: uploadError } = await supabase.storage
         .from("project-files")
         .upload(storagePath, file);
-      if (uploadError) { toast.error("Erro ao enviar arquivo"); console.error(uploadError); setUploading(false); return null; }
+      if (uploadError) { console.error("Storage upload error:", uploadError, "path:", storagePath); toast.error(`Erro ao enviar: ${uploadError.message}`); setUploading(false); return null; }
 
       const { data: row, error: dbError } = await supabase
         .from("project_files")

@@ -69,7 +69,7 @@ export default function CollaboratorFilesTab({ projectId }: CollaboratorFilesTab
       const storagePath = `${projectId}/entregas/${fileName}`;
 
       const { error: uploadErr } = await supabase.storage.from("project-files").upload(storagePath, file);
-      if (uploadErr) { toast.error("Erro ao enviar"); console.error(uploadErr); return; }
+      if (uploadErr) { console.error("Storage upload error:", uploadErr, "path:", storagePath); toast.error(`Erro ao enviar: ${uploadErr.message}`); return; }
 
       const { data: row, error: dbErr } = await supabase.from("project_files").insert({
         project_id: projectId,
