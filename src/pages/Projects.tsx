@@ -697,15 +697,6 @@ export default function Projects() {
                 );
               })}
             </div>
-            <div className="mt-4">
-              <div className="flex items-center justify-between text-sm mb-1">
-                <span>{t("projects.mixProgress")}</span>
-                <span className="font-mono-nums">{getMixPercent(selectedProject.id)}%</span>
-              </div>
-              <div className="h-2 rounded-full bg-secondary overflow-hidden">
-                <div className="h-full rounded-full neon-progress-bar transition-all duration-700" style={{ width: `${getMixPercent(selectedProject.id)}%` }} />
-              </div>
-            </div>
 
             {selectedProject.completed ? (
               <div className="mt-4 rounded-lg bg-success/10 border border-success/30 p-3 flex items-center justify-between gap-2 animate-fade-in">
