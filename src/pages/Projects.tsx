@@ -241,12 +241,19 @@ export default function Projects() {
     if (!open) resetWizard();
   };
 
-  const filteredGlobals = globalProfessionals.filter((p) => {
+  const filteredGlobals = [...globalProfessionals].sort((a, b) => {
+    if (!wizardProfType) return 0;
     if (wizardProfType === "Instrumentista") {
-      return instrumentFilter ? p.specialty.toLowerCase().includes(instrumentFilter.toLowerCase()) || p.name.toLowerCase().includes(instrumentFilter.toLowerCase()) : true;
+      if (!instrumentFilter) return 0;
+      const aMatch = a.specialty.toLowerCase().includes(instrumentFilter.toLowerCase()) || a.name.toLowerCase().includes(instrumentFilter.toLowerCase());
+      const bMatch = b.specialty.toLowerCase().includes(instrumentFilter.toLowerCase()) || b.name.toLowerCase().includes(instrumentFilter.toLowerCase());
+      return aMatch === bMatch ? 0 : aMatch ? -1 : 1;
     }
-    const targetSpecialty = wizardProfType ? profTypeSpecialty[wizardProfType] : "";
-    return targetSpecialty ? p.specialty.toLowerCase() === targetSpecialty.toLowerCase() : true;
+    const target = profTypeSpecialty[wizardProfType].toLowerCase();
+    if (!target) return 0;
+    const aMatch = a.specialty.toLowerCase() === target;
+    const bMatch = b.specialty.toLowerCase() === target;
+    return aMatch === bMatch ? 0 : aMatch ? -1 : 1;
   });
 
 
