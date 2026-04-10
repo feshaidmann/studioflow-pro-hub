@@ -218,7 +218,7 @@ export default function Projects() {
     setInstrumentFilter("");
     setSelectedExistingProfId("");
     setNewContactForm({ name: "", specialty: "", email: "", phone: "" });
-    setProposalForm({ fee: "", deadline: "", scheduleNotes: "" });
+    setProposalForm({ fee: "", deadline: "", scheduleNotes: "", permissionsScope: "leitor" });
     setDeadlineWarningConfirmed(false);
     setWizardSaving(false);
   };
