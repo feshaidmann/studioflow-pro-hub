@@ -27,7 +27,7 @@ function SectionBlock({ section, items, toggleCheck, setValue }: {
   toggleCheck: (k: string) => void;
   setValue: (k: string, v: string) => void;
 }) {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
   const Icon = SECTION_ICON[section.key] ?? FileText;
   const done = section.items.filter((i) => items[i.key]?.checked).length;
   const total = section.items.length;
