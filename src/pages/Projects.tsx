@@ -40,7 +40,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Plus, Check, X as XIcon, Users, UserPlus, Mail, Phone, DollarSign, Music, Activity, Pencil, Trash2, CheckCircle2, AlertTriangle, Clock, ChevronLeft, Loader2, Guitar, Mic, Sliders, Layers, ChevronDown, Trophy, Copy, Link2, Upload, MessageSquare, ArrowRight } from "lucide-react";
+import { Plus, Check, X as XIcon, Users, UserPlus, Mail, Phone, DollarSign, Music, Activity, Pencil, Trash2, CheckCircle2, AlertTriangle, Clock, ChevronLeft, Loader2, Guitar, Mic, Sliders, Layers, ChevronDown, Trophy, Copy, Link2, Upload, MessageSquare, ArrowRight, FileText, Video, Camera } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { type Project, type Professional, type ProjectType } from "@/data/mockData";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -63,7 +63,7 @@ const stages = ["inicio", "gravacao", "mix", "master", "upload", "lancado"] as c
 
 type WizardStep = "select" | "proposal";
 type WizardSource = "new" | "existing";
-type WizardProfType = "Instrumentista" | "Produtor" | "Mix" | "Master";
+type WizardProfType = "Instrumentista" | "Produtor" | "Mix" | "Master" | "Compositor" | "Arranjador" | "Videomaker" | "Fotógrafo";
 
 type ProjectTemplate = "none" | "single_basico" | "banda_completa" | "producao_eletronica" | "podcast";
 const PROJECT_TEMPLATES: Record<ProjectTemplate, { label: string; description: string; tracks: string[] }> = {
@@ -79,6 +79,10 @@ const profTypeSpecialty: Record<WizardProfType, string> = {
   Produtor: "Produtor",
   Mix: "Mix Engineer",
   Master: "Mastering Engineer",
+  Compositor: "Compositor",
+  Arranjador: "Arranjador",
+  Videomaker: "Videomaker",
+  Fotógrafo: "Fotógrafo",
 };
 
 const profTypeIcons: Record<WizardProfType, React.ReactNode> = {
@@ -86,6 +90,10 @@ const profTypeIcons: Record<WizardProfType, React.ReactNode> = {
   Produtor: <Layers className="h-5 w-5" />,
   Mix: <Sliders className="h-5 w-5" />,
   Master: <Mic className="h-5 w-5" />,
+  Compositor: <FileText className="h-5 w-5" />,
+  Arranjador: <Music className="h-5 w-5" />,
+  Videomaker: <Video className="h-5 w-5" />,
+  Fotógrafo: <Camera className="h-5 w-5" />,
 };
 
 type PaymentMode = "single" | "installments";
@@ -778,8 +786,8 @@ export default function Projects() {
                       <div className="space-y-4 py-2">
                         <div>
                           <p className="text-xs text-muted-foreground mb-2 uppercase tracking-wide">Tipo de profissional</p>
-                          <div className="grid grid-cols-4 gap-2">
-                            {(["Instrumentista", "Produtor", "Mix", "Master"] as WizardProfType[]).map((tp) => (
+                          <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                            {(["Instrumentista", "Produtor", "Mix", "Master", "Compositor", "Arranjador", "Videomaker", "Fotógrafo"] as WizardProfType[]).map((tp) => (
                               <button
                                 key={tp}
                                 onClick={() => { setWizardProfType(tp); setNewContactForm((prev) => ({ ...prev, specialty: profTypeSpecialty[tp] })); }}
