@@ -154,7 +154,7 @@ export default function Projects() {
   const [selectedExistingProfId, setSelectedExistingProfId] = useState("");
   const [wizardSaving, setWizardSaving] = useState(false);
   const [newContactForm, setNewContactForm] = useState({ name: "", specialty: "", email: "", phone: "" });
-  const [proposalForm, setProposalForm] = useState({ fee: "", deadline: "", scheduleNotes: "" });
+  const [proposalForm, setProposalForm] = useState({ fee: "", deadline: "", scheduleNotes: "", permissionsScope: "leitor" as "admin_convidado" | "leitor" });
   const [deadlineWarningConfirmed, setDeadlineWarningConfirmed] = useState(false);
 
   /* ── Payment modal state ── */
@@ -218,7 +218,7 @@ export default function Projects() {
     setInstrumentFilter("");
     setSelectedExistingProfId("");
     setNewContactForm({ name: "", specialty: "", email: "", phone: "" });
-    setProposalForm({ fee: "", deadline: "", scheduleNotes: "" });
+    setProposalForm({ fee: "", deadline: "", scheduleNotes: "", permissionsScope: "leitor" });
     setDeadlineWarningConfirmed(false);
     setWizardSaving(false);
   };
@@ -325,7 +325,7 @@ export default function Projects() {
         await addProfessionalToGlobal({ name: newContactForm.name, specialty: newContactForm.specialty, email: newContactForm.email, phone: newContactForm.phone, bio: proposalForm.scheduleNotes, allowGlobalListing: false });
         let invitationId: string | null = null;
         if (newContactForm.email) invitationId = await createInviteRecord({ projectId: selectedProject.id, name: newContactForm.name, email: newContactForm.email, role: newContactForm.specialty || wizardProfType || "", fee, deadline: proposalForm.deadline, scheduleNotes: proposalForm.scheduleNotes });
-        await addProfessional(selectedProject.id, { name: newContactForm.name, role: wizardProfType ?? "", instrument: newContactForm.specialty, email: newContactForm.email, phone: newContactForm.phone, fee, notes: proposalForm.scheduleNotes, invitationId: invitationId ?? undefined });
+        await addProfessional(selectedProject.id, { name: newContactForm.name, role: wizardProfType ?? "", instrument: newContactForm.specialty, email: newContactForm.email, phone: newContactForm.phone, fee, notes: proposalForm.scheduleNotes, invitationId: invitationId ?? undefined, permissionsScope: proposalForm.permissionsScope });
         if (fee > 0) triggerPaymentModal(selectedProject.id, newContactForm.name, newContactForm.specialty || wizardProfType || "Profissional", fee);
         else addNotification({ title: "Profissional adicionado", message: `${newContactForm.name} adicionado à equipe`, link: "/projects", type: "general" });
         toast.success(`${newContactForm.name} adicionado à equipe ✅`);
@@ -334,7 +334,7 @@ export default function Projects() {
         if (!prof) { setWizardSaving(false); return; }
         let invitationId: string | null = null;
         if ((prof as any).email) invitationId = await createInviteRecord({ projectId: selectedProject.id, name: prof.name, email: (prof as any).email, role: prof.specialty || wizardProfType || "", fee, deadline: proposalForm.deadline, scheduleNotes: proposalForm.scheduleNotes });
-        await addProfessional(selectedProject.id, { name: prof.name, role: wizardProfType ?? "", instrument: prof.specialty, email: (prof as any).email || "", phone: (prof as any).phone || "", fee, notes: proposalForm.scheduleNotes, invitationId: invitationId ?? undefined });
+        await addProfessional(selectedProject.id, { name: prof.name, role: wizardProfType ?? "", instrument: prof.specialty, email: (prof as any).email || "", phone: (prof as any).phone || "", fee, notes: proposalForm.scheduleNotes, invitationId: invitationId ?? undefined, permissionsScope: proposalForm.permissionsScope });
         if (fee > 0) triggerPaymentModal(selectedProject.id, prof.name, prof.specialty || wizardProfType || "Profissional", fee);
         else addNotification({ title: "Profissional adicionado", message: `${prof.name} adicionado à equipe`, link: "/projects", type: "general" });
         toast.success(`${prof.name} adicionado à equipe ✅`);
@@ -862,6 +862,16 @@ export default function Projects() {
                             <Label>Prazo de entrega</Label>
                             <DatePickerField value={proposalForm.deadline} onChange={(v) => { setProposalForm((f) => ({ ...f, deadline: v })); setDeadlineWarningConfirmed(false); }} disablePast />
                           </div>
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label>Nível de acesso</Label>
+                          <Select value={proposalForm.permissionsScope} onValueChange={(v) => setProposalForm((f) => ({ ...f, permissionsScope: v as "admin_convidado" | "leitor" }))}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="leitor">Leitor — apenas dados relevantes</SelectItem>
+                              <SelectItem value="admin_convidado">Administrador Convidado — gerencia, mas não deleta</SelectItem>
+                            </SelectContent>
+                          </Select>
                         </div>
                         <div className="space-y-1.5">
                           <Label>Notas / Observações</Label>

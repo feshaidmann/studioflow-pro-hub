@@ -16,6 +16,8 @@ export interface MixTrack {
   truePeak?: number;
 }
 
+export type PermissionsScope = "admin_convidado" | "leitor";
+
 export interface Professional {
   id: string;
   name: string;
@@ -26,6 +28,7 @@ export interface Professional {
   fee: number;
   notes: string;
   invitationId?: string;
+  permissionsScope?: PermissionsScope;
 }
 
 export type TransactionType = "income" | "expense";
