@@ -34,10 +34,32 @@ interface MemberInfo {
   notes: string;
 }
 
+interface AcceptedInvitationInfo {
+  professional_role: string;
+  fee: number;
+  deadline: string;
+  schedule_notes: string;
+  accepted_at: string | null;
+  responded_at: string | null;
+}
+
 interface TeamMember {
   name: string;
   role: string;
   delivery_status: string;
+}
+
+function buildMemberFromInvitation(invitation: AcceptedInvitationInfo, projectStage: string): MemberInfo {
+  return {
+    role: invitation.professional_role || "",
+    delivery_status: "ativo",
+    expected_deliverable: invitation.schedule_notes || "",
+    delivery_due_date: invitation.deadline || null,
+    last_activity_at: invitation.accepted_at ?? invitation.responded_at ?? null,
+    stage: projectStage,
+    fee: Number(invitation.fee ?? 0),
+    notes: invitation.schedule_notes || "",
+  };
 }
 
 interface CollaboratorOverviewTabProps {
@@ -57,7 +79,9 @@ export default function CollaboratorOverviewTab({ projectId, project }: Collabor
     if (!user) return;
 
     const loadAll = async () => {
-      // My membership
+      let resolvedMember: MemberInfo | null = null;
+
+      // My membership (direct member row)
       const { data: memberData } = await supabase
         .from("project_members")
         .select("role, delivery_status, expected_deliverable, delivery_due_date, last_activity_at, stage, fee, notes")
@@ -65,16 +89,45 @@ export default function CollaboratorOverviewTab({ projectId, project }: Collabor
         .eq("user_id", user.id)
         .maybeSingle();
 
-      if (memberData) setMember(memberData as MemberInfo);
+      if (memberData) {
+        resolvedMember = memberData as MemberInfo;
+      } else if (user.email) {
+        // Fallback for accepted collaborators identified via invitation email
+        const { data: invitationData } = await supabase
+          .from("project_invitations")
+          .select("professional_role, fee, deadline, schedule_notes, accepted_at, responded_at")
+          .eq("project_id", projectId)
+          .eq("status", "accepted")
+          .ilike("professional_email", user.email)
+          .order("accepted_at", { ascending: false })
+          .maybeSingle();
 
-      // Team members (others)
-      const { data: team } = await supabase
-        .from("project_members")
-        .select("name, role, delivery_status")
+        if (invitationData) {
+          resolvedMember = buildMemberFromInvitation(invitationData as AcceptedInvitationInfo, project.stage);
+        }
+      }
+
+      setMember(resolvedMember);
+
+      // Team members from accepted invitations (safe fallback for collaborators)
+      const { data: teamInvites } = await supabase
+        .from("project_invitations")
+        .select("professional_name, professional_role, professional_email")
         .eq("project_id", projectId)
-        .neq("user_id", user.id);
+        .eq("status", "accepted");
 
-      if (team) setTeamMembers(team as TeamMember[]);
+      if (teamInvites) {
+        const normalizedEmail = user.email?.toLowerCase() ?? "";
+        setTeamMembers(
+          teamInvites
+            .filter((member) => (member.professional_email || "").toLowerCase() !== normalizedEmail)
+            .map((member) => ({
+              name: member.professional_name || "Colaborador",
+              role: member.professional_role || "",
+              delivery_status: "ativo",
+            }))
+        );
+      }
 
       // My tasks
       const { data: tasks } = await supabase
