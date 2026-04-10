@@ -19,7 +19,7 @@ const TYPE_LABEL: Record<string, string> = {
 
 interface ProjectOverviewTabProps {
   project: { id: string; name: string; artist: string; stage: string; completed: boolean; projectType: string };
-  progress: number;
+  progress?: number;
   isOwner: boolean;
   onSwitchTab?: (tab: string) => void;
 }
