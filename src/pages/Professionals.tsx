@@ -620,17 +620,17 @@ export default function Professionals() {
                           const status = invitesMap[p.email];
                           if (status === "accepted") return (
                             <span className="flex items-center gap-1 text-success text-xs font-medium">
-                              <CheckCircle2 className="h-3.5 w-3.5" /> Aceito
+                              <CheckCircle2 className="h-3.5 w-3.5" /> Conectado
                             </span>
                           );
                           if (status === "declined") return (
                             <span className="flex items-center gap-1 text-destructive text-xs font-medium">
-                              <XCircle className="h-3.5 w-3.5" /> Recusado
+                              <XCircle className="h-3.5 w-3.5" /> Recusou
                             </span>
                           );
                           if (status === "pending") return (
                             <span className="flex items-center gap-1 text-warning text-xs font-medium">
-                              <Mail className="h-3.5 w-3.5" /> Pendente
+                              <Clock className="h-3.5 w-3.5" /> Aguardando
                             </span>
                           );
                           return (
@@ -643,19 +643,13 @@ export default function Professionals() {
                                 e.stopPropagation();
                                 sendInviteToExisting(p);
                               }}
-                              title="Enviar convite para a plataforma"
+                              title="Convidar para a plataforma"
                             >
                               <Mail className="h-3 w-3" />
-                              {sendingInvite === p.id ? "Enviando..." : "Convidar"}
+                              {sendingInvite === p.id ? "..." : "Convidar"}
                             </Button>
                           );
                         })()}
-                      </TableCell>
-                      <TableCell>
-                        {p.active
-                          ? <span className="flex items-center gap-1 text-success text-xs font-medium"><CheckCircle2 className="h-3.5 w-3.5" /> Ativo</span>
-                          : <span className="flex items-center gap-1 text-muted-foreground text-xs font-medium"><XCircle className="h-3.5 w-3.5" /> Inativo</span>
-                        }
                       </TableCell>
                       <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                         <div className="flex gap-1 justify-end">
