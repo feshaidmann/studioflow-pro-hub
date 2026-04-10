@@ -61,7 +61,6 @@ import RatePartnersModal from "@/components/RatePartnersModal";
 
 const stages = ["inicio", "gravacao", "mix", "master", "upload", "lancado"] as const;
 
-type WizardStep = "select" | "proposal";
 type WizardSource = "new" | "existing";
 type WizardProfType = "Instrumentista" | "Produtor" | "Mix" | "Master" | "Compositor" | "Arranjador" | "Videomaker" | "Fotógrafo";
 
@@ -146,16 +145,16 @@ export default function Projects() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState({ name: "", artist: "", bpm: "120", key: "C", stage: "inicio" as Project["stage"], projectType: "single" as ProjectType, trackCount: "", uploadDate: "", template: "none" as ProjectTemplate });
 
-  /* ── Wizard state (2-step: select → proposal) ── */
-  const [wizardStep, setWizardStep] = useState<WizardStep>("select");
+  /* ── Wizard state (single-step) ── */
   const [wizardSource, setWizardSource] = useState<WizardSource>("new");
   const [wizardProfType, setWizardProfType] = useState<WizardProfType | null>(null);
   const [instrumentFilter, setInstrumentFilter] = useState("");
   const [selectedExistingProfId, setSelectedExistingProfId] = useState("");
   const [wizardSaving, setWizardSaving] = useState(false);
-  const [newContactForm, setNewContactForm] = useState({ name: "", specialty: "", email: "", phone: "" });
+  const [newContactForm, setNewContactForm] = useState({ name: "", email: "", phone: "" });
   const [proposalForm, setProposalForm] = useState({ fee: "", deadline: "", scheduleNotes: "", permissionsScope: "leitor" as "admin_convidado" | "leitor" });
   const [deadlineWarningConfirmed, setDeadlineWarningConfirmed] = useState(false);
+  const [optionalOpen, setOptionalOpen] = useState(false);
 
   /* ── Payment modal state ── */
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
@@ -212,14 +211,14 @@ export default function Projects() {
 
 
   const resetWizard = () => {
-    setWizardStep("select");
     setWizardSource("new");
     setWizardProfType(null);
     setInstrumentFilter("");
     setSelectedExistingProfId("");
-    setNewContactForm({ name: "", specialty: "", email: "", phone: "" });
+    setNewContactForm({ name: "", email: "", phone: "" });
     setProposalForm({ fee: "", deadline: "", scheduleNotes: "", permissionsScope: "leitor" });
     setDeadlineWarningConfirmed(false);
+    setOptionalOpen(false);
     setWizardSaving(false);
   };
 
@@ -313,20 +312,21 @@ export default function Projects() {
     setPendingPaymentData(null);
   };
 
-  /* ── Unified submit from step 2 ── */
+  /* ── Unified submit ── */
   const handleSubmitProposal = async () => {
     if (!selectedProject) return;
     const hasWarning = !!(proposalForm.deadline && selectedProject?.estimatedMonths && checkDeadlineExceedsProject(proposalForm.deadline));
     if (hasWarning && !deadlineWarningConfirmed) return;
     setWizardSaving(true);
+    const derivedSpecialty = wizardProfType === "Instrumentista" ? instrumentFilter : (profTypeSpecialty[wizardProfType!] || wizardProfType || "");
     try {
       const fee = Number(proposalForm.fee) || 0;
       if (wizardSource === "new") {
-        await addProfessionalToGlobal({ name: newContactForm.name, specialty: newContactForm.specialty, email: newContactForm.email, phone: newContactForm.phone, bio: proposalForm.scheduleNotes, allowGlobalListing: false });
+        await addProfessionalToGlobal({ name: newContactForm.name, specialty: derivedSpecialty, email: newContactForm.email, phone: newContactForm.phone, bio: proposalForm.scheduleNotes, allowGlobalListing: false });
         let invitationId: string | null = null;
-        if (newContactForm.email) invitationId = await createInviteRecord({ projectId: selectedProject.id, name: newContactForm.name, email: newContactForm.email, role: newContactForm.specialty || wizardProfType || "", fee, deadline: proposalForm.deadline, scheduleNotes: proposalForm.scheduleNotes });
-        await addProfessional(selectedProject.id, { name: newContactForm.name, role: wizardProfType ?? "", instrument: newContactForm.specialty, email: newContactForm.email, phone: newContactForm.phone, fee, notes: proposalForm.scheduleNotes, invitationId: invitationId ?? undefined, permissionsScope: proposalForm.permissionsScope });
-        if (fee > 0) triggerPaymentModal(selectedProject.id, newContactForm.name, newContactForm.specialty || wizardProfType || "Profissional", fee);
+        if (newContactForm.email) invitationId = await createInviteRecord({ projectId: selectedProject.id, name: newContactForm.name, email: newContactForm.email, role: derivedSpecialty || wizardProfType || "", fee, deadline: proposalForm.deadline, scheduleNotes: proposalForm.scheduleNotes });
+        await addProfessional(selectedProject.id, { name: newContactForm.name, role: wizardProfType ?? "", instrument: derivedSpecialty, email: newContactForm.email, phone: newContactForm.phone, fee, notes: proposalForm.scheduleNotes, invitationId: invitationId ?? undefined, permissionsScope: proposalForm.permissionsScope });
+        if (fee > 0) triggerPaymentModal(selectedProject.id, newContactForm.name, derivedSpecialty || wizardProfType || "Profissional", fee);
         else addNotification({ title: "Profissional adicionado", message: `${newContactForm.name} adicionado à equipe`, link: "/projects", type: "general" });
         toast.success(`${newContactForm.name} adicionado à equipe ✅`);
       } else {
@@ -765,44 +765,40 @@ export default function Projects() {
                   <DialogTrigger asChild>
                     <Button variant="outline" size="sm" className="h-7 text-xs"><UserPlus className="h-3 w-3 mr-1" /> {t("team.add")}</Button>
                   </DialogTrigger>
-                  <DialogContent className="glass-card border-border max-w-lg">
+                  <DialogContent className="glass-card border-border max-w-lg max-h-[85vh] overflow-y-auto">
                     <DialogHeader>
-                      <DialogTitle className="flex items-center gap-2">
-                        {wizardStep === "proposal" && (
-                          <button onClick={() => setWizardStep("select")} className="rounded-full p-1 hover:bg-secondary transition-colors"><ChevronLeft className="h-4 w-4" /></button>
-                        )}
-                        {wizardStep === "select" ? "Adicionar à equipe" : "Detalhes da proposta"}
-                      </DialogTitle>
-                      <DialogDescription>
-                        {selectedProject.name}
-                        {wizardStep === "proposal" && wizardSelectedName && <span className="ml-1 font-medium text-foreground">· {wizardSelectedName}</span>}
-                      </DialogDescription>
+                      <DialogTitle>Adicionar à equipe</DialogTitle>
+                      <DialogDescription>{selectedProject.name}</DialogDescription>
                     </DialogHeader>
 
-                    {/* STEP 1: SELECT */}
-                    {wizardStep === "select" && (
-                      <div className="space-y-4 py-2">
-                        <div>
-                          <p className="text-xs text-muted-foreground mb-2 uppercase tracking-wide">Tipo de profissional</p>
-                          <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-                            {(["Instrumentista", "Produtor", "Mix", "Master", "Compositor", "Arranjador", "Videomaker", "Fotógrafo"] as WizardProfType[]).map((tp) => (
-                              <button
-                                key={tp}
-                                onClick={() => { setWizardProfType(tp); setNewContactForm((prev) => ({ ...prev, specialty: profTypeSpecialty[tp] })); }}
-                                className={cn("flex flex-col items-center gap-1.5 rounded-xl border p-3 transition-all active:scale-95", wizardProfType === tp ? "border-primary bg-primary/10 text-primary" : "border-border bg-secondary/30 hover:bg-primary/5 hover:border-primary/40")}
-                              >
-                                <span>{profTypeIcons[tp]}</span>
-                                <span className="text-xs font-medium">{tp}</span>
-                              </button>
-                            ))}
-                          </div>
+                    <div className="space-y-4 py-2">
+                      {/* Professional type grid */}
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-2 uppercase tracking-wide">Tipo de profissional</p>
+                        <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                          {(["Instrumentista", "Produtor", "Mix", "Master", "Compositor", "Arranjador", "Videomaker", "Fotógrafo"] as WizardProfType[]).map((tp) => (
+                            <button
+                              key={tp}
+                              onClick={() => setWizardProfType(tp)}
+                              className={cn("flex flex-col items-center gap-1.5 rounded-xl border p-3 transition-all active:scale-95", wizardProfType === tp ? "border-primary bg-primary/10 text-primary" : "border-border bg-secondary/30 hover:bg-primary/5 hover:border-primary/40")}
+                            >
+                              <span>{profTypeIcons[tp]}</span>
+                              <span className="text-xs font-medium">{tp}</span>
+                            </button>
+                          ))}
                         </div>
-                        {wizardProfType === "Instrumentista" && (
-                          <div className="space-y-1.5 animate-fade-in">
-                            <Label>Instrumento</Label>
-                            <Input placeholder="ex: Guitarra, Baixo, Bateria…" value={instrumentFilter} onChange={(e) => setInstrumentFilter(e.target.value)} />
-                          </div>
-                        )}
+                      </div>
+
+                      {/* Instrument input inline (only for Instrumentista) */}
+                      {wizardProfType === "Instrumentista" && (
+                        <div className="space-y-1.5 animate-fade-in">
+                          <Label>Instrumento *</Label>
+                          <Input placeholder="ex: Guitarra, Baixo, Bateria…" value={instrumentFilter} onChange={(e) => setInstrumentFilter(e.target.value)} />
+                        </div>
+                      )}
+
+                      {/* Contact source — hide toggle if no contacts exist */}
+                      {!globalsLoading && filteredGlobals.length > 0 && (
                         <div>
                           <p className="text-xs text-muted-foreground mb-2 uppercase tracking-wide">Origem do contato</p>
                           <div className="flex gap-1 rounded-lg bg-secondary/40 p-1">
@@ -816,85 +812,99 @@ export default function Projects() {
                             })}
                           </div>
                         </div>
-                        {wizardSource === "new" && (
-                          <div className="grid grid-cols-2 gap-3 animate-fade-in">
-                            <div className="space-y-1.5"><Label>Nome *</Label><Input placeholder="Nome completo" value={newContactForm.name} onChange={(e) => setNewContactForm((f) => ({ ...f, name: e.target.value }))} /></div>
-                            <div className="space-y-1.5"><Label>Especialidade</Label><Input placeholder="ex: Guitarra, Mix…" value={newContactForm.specialty} onChange={(e) => setNewContactForm((f) => ({ ...f, specialty: e.target.value }))} /></div>
+                      )}
+
+                      {/* New contact form (no specialty field — derived automatically) */}
+                      {wizardSource === "new" && (
+                        <div className="space-y-3 animate-fade-in">
+                          <div className="space-y-1.5"><Label>Nome *</Label><Input placeholder="Nome completo" value={newContactForm.name} onChange={(e) => setNewContactForm((f) => ({ ...f, name: e.target.value }))} /></div>
+                          <div className="grid grid-cols-2 gap-3">
                             <div className="space-y-1.5"><Label>E-mail</Label><Input type="email" placeholder="email@exemplo.com" value={newContactForm.email} onChange={(e) => setNewContactForm((f) => ({ ...f, email: e.target.value }))} /></div>
                             <div className="space-y-1.5"><Label>Telefone</Label><Input placeholder="+55 11 9…" value={newContactForm.phone} onChange={(e) => setNewContactForm((f) => ({ ...f, phone: e.target.value }))} /></div>
                           </div>
-                        )}
-                        {wizardSource === "existing" && (
-                          <div className="space-y-2 animate-fade-in">
-                            {globalsLoading ? (
-                              <div className="flex items-center gap-2 text-muted-foreground text-sm py-2"><Loader2 className="h-4 w-4 animate-spin" /> {t("misc.loading")}</div>
-                            ) : filteredGlobals.length === 0 ? (
-                              <p className="text-sm text-muted-foreground py-2">Nenhum contato cadastrado. <button className="text-primary underline" onClick={() => setWizardSource("new")}>Adicionar novo?</button></p>
-                            ) : (
-                              <div className="space-y-2">
-                                <Select value={selectedExistingProfId} onValueChange={setSelectedExistingProfId}>
-                                  <SelectTrigger><SelectValue placeholder="Selecione um profissional…" /></SelectTrigger>
-                                  <SelectContent>
-                                    {filteredGlobals.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}{p.specialty ? ` — ${p.specialty}` : ""}</SelectItem>)}
-                                  </SelectContent>
-                                </Select>
-                                
-                              </div>
-                            )}
-                          </div>
-                        )}
+                        </div>
+                      )}
 
-                        <Button onClick={() => setWizardStep("proposal")} disabled={!canContinueToProposal} className="w-full neon-glow">
-                          Continuar — Detalhes da proposta →
-                        </Button>
+                      {/* Existing contact selector */}
+                      {wizardSource === "existing" && (
+                        <div className="space-y-2 animate-fade-in">
+                          {globalsLoading ? (
+                            <div className="flex items-center gap-2 text-muted-foreground text-sm py-2"><Loader2 className="h-4 w-4 animate-spin" /> {t("misc.loading")}</div>
+                          ) : (
+                            <Select value={selectedExistingProfId} onValueChange={setSelectedExistingProfId}>
+                              <SelectTrigger><SelectValue placeholder="Selecione um profissional…" /></SelectTrigger>
+                              <SelectContent>
+                                {filteredGlobals.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}{p.specialty ? ` — ${p.specialty}` : ""}</SelectItem>)}
+                              </SelectContent>
+                            </Select>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Access level — inline toggle with descriptions */}
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-2 uppercase tracking-wide">Nível de acesso</p>
+                        <div className="flex gap-2">
+                          {([
+                            { value: "leitor", label: "Leitor", desc: "Apenas dados relevantes para sua função" },
+                            { value: "admin_convidado", label: "Admin", desc: "Gerencia o projeto, mas não pode deletar" },
+                          ] as const).map((opt) => (
+                            <button
+                              key={opt.value}
+                              onClick={() => setProposalForm((f) => ({ ...f, permissionsScope: opt.value }))}
+                              className={cn("flex-1 rounded-lg border p-3 text-left transition-all", proposalForm.permissionsScope === opt.value ? "border-primary bg-primary/10" : "border-border bg-secondary/30 hover:border-primary/40")}
+                            >
+                              <span className="text-sm font-medium">{opt.label}</span>
+                              <p className="text-[10px] text-muted-foreground mt-0.5">{opt.desc}</p>
+                            </button>
+                          ))}
+                        </div>
                       </div>
-                    )}
 
-                    {/* STEP 2: PROPOSAL */}
-                    {wizardStep === "proposal" && (
-                      <div className="space-y-4 py-2">
-                        <div className="grid grid-cols-2 gap-3">
-                          <div className="space-y-1.5">
-                            <Label>Cachê (R$)</Label>
-                            <Input type="number" placeholder="0" value={proposalForm.fee} onChange={(e) => setProposalForm((f) => ({ ...f, fee: e.target.value }))} className="font-mono-nums" autoFocus />
-                          </div>
-                          <div className="space-y-1.5">
-                            <Label>Prazo de entrega</Label>
-                            <DatePickerField value={proposalForm.deadline} onChange={(v) => { setProposalForm((f) => ({ ...f, deadline: v })); setDeadlineWarningConfirmed(false); }} disablePast />
-                          </div>
-                        </div>
-                        <div className="space-y-1.5">
-                          <Label>Nível de acesso</Label>
-                          <Select value={proposalForm.permissionsScope} onValueChange={(v) => setProposalForm((f) => ({ ...f, permissionsScope: v as "admin_convidado" | "leitor" }))}>
-                            <SelectTrigger><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="leitor">Leitor — apenas dados relevantes</SelectItem>
-                              <SelectItem value="admin_convidado">Administrador Convidado — gerencia, mas não deleta</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="space-y-1.5">
-                          <Label>Notas / Observações</Label>
-                          <Textarea placeholder="Dias disponíveis, horário de gravação, detalhes do projeto…" value={proposalForm.scheduleNotes} onChange={(e) => setProposalForm((f) => ({ ...f, scheduleNotes: e.target.value }))} className="h-24 resize-none" />
-                        </div>
-                        {proposalHasDeadlineWarning && (
-                          <div className="flex flex-col gap-2 rounded-lg bg-warning/10 border border-warning/30 p-3 animate-fade-in">
-                            <div className="flex items-start gap-2">
-                              <AlertTriangle className="h-4 w-4 text-warning mt-0.5 shrink-0" />
-                              <p className="text-xs text-warning">O prazo excede o cronograma estimado ({selectedProject?.estimatedMonths} meses).</p>
+                      {/* Collapsible optional details */}
+                      <Collapsible open={optionalOpen} onOpenChange={setOptionalOpen}>
+                        <CollapsibleTrigger className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors w-full">
+                          <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", optionalOpen && "rotate-180")} />
+                          Detalhes opcionais
+                        </CollapsibleTrigger>
+                        <CollapsibleContent className="space-y-3 pt-3 animate-fade-in">
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-1.5">
+                              <Label>Cachê (R$)</Label>
+                              <Input type="number" placeholder="0" value={proposalForm.fee} onChange={(e) => setProposalForm((f) => ({ ...f, fee: e.target.value }))} className="font-mono-nums" />
                             </div>
-                            <label className="flex items-center gap-2 cursor-pointer">
-                              <Checkbox checked={deadlineWarningConfirmed} onCheckedChange={(v) => setDeadlineWarningConfirmed(!!v)} />
-                              <span className="text-xs">Confirmar mesmo assim</span>
-                            </label>
+                            <div className="space-y-1.5">
+                              <Label>Prazo de entrega</Label>
+                              <DatePickerField value={proposalForm.deadline} onChange={(v) => { setProposalForm((f) => ({ ...f, deadline: v })); setDeadlineWarningConfirmed(false); }} disablePast />
+                            </div>
                           </div>
-                        )}
-                        <Button onClick={handleSubmitProposal} disabled={wizardSaving || (proposalHasDeadlineWarning && !deadlineWarningConfirmed)} className="w-full neon-glow">
-                          {wizardSaving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-                          {wizardSelectedEmail ? "Enviar proposta" : "Adicionar à equipe"}
-                        </Button>
-                      </div>
-                    )}
+                          <div className="space-y-1.5">
+                            <Label>Notas / Observações</Label>
+                            <Textarea placeholder="Dias disponíveis, horário de gravação…" value={proposalForm.scheduleNotes} onChange={(e) => setProposalForm((f) => ({ ...f, scheduleNotes: e.target.value }))} className="h-20 resize-none" />
+                          </div>
+                        </CollapsibleContent>
+                      </Collapsible>
+
+                      {/* Deadline warning */}
+                      {proposalHasDeadlineWarning && (
+                        <div className="flex flex-col gap-2 rounded-lg bg-warning/10 border border-warning/30 p-3 animate-fade-in">
+                          <div className="flex items-start gap-2">
+                            <AlertTriangle className="h-4 w-4 text-warning mt-0.5 shrink-0" />
+                            <p className="text-xs text-warning">O prazo excede o cronograma estimado ({selectedProject?.estimatedMonths} meses).</p>
+                          </div>
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <Checkbox checked={deadlineWarningConfirmed} onCheckedChange={(v) => setDeadlineWarningConfirmed(!!v)} />
+                            <span className="text-xs">Confirmar mesmo assim</span>
+                          </label>
+                        </div>
+                      )}
+
+                      {/* Submit */}
+                      <Button onClick={handleSubmitProposal} disabled={!canContinueToProposal || wizardSaving || (proposalHasDeadlineWarning && !deadlineWarningConfirmed)} className="w-full neon-glow">
+                        {wizardSaving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                        {wizardSelectedEmail ? "Enviar proposta" : "Adicionar à equipe"}
+                      </Button>
+                    </div>
                   </DialogContent>
                 </Dialog>
               </div>
