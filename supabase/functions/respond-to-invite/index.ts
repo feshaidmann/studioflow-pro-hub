@@ -75,7 +75,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // If accepted: find or create user, create project_member
+    // If accepted: find or create user, update project_member with correct user_id
     if (status === "accepted") {
       try {
         const { data: usersData } = await adminClient.auth.admin.listUsers();
@@ -94,27 +94,54 @@ Deno.serve(async (req) => {
               allow_global_listing: allow_global_listing ?? false,
             }, { onConflict: "id" });
 
-          // Create project_member linking user to the project
-          const { error: memberErr } = await adminClient
+          // Find existing project_member by project_id + email (created by project owner)
+          const { data: existingMember } = await adminClient
             .from("project_members")
-            .upsert({
-              project_id: inv.project_id,
-              user_id: matchedUser.id,
-              name: inv.professional_name || "",
-              email: inv.professional_email || "",
-              role: inv.professional_role || "",
-              fee: inv.fee || 0,
-              invitation_id: inv.id,
-              delivery_status: "ativo",
-              expected_deliverable: inv.schedule_notes || "",
-              delivery_due_date: inv.deadline || null,
-              permissions_scope: "basic_collaborator",
-              member_type: "collaborator",
-              last_activity_at: now,
-            }, { onConflict: "project_id,user_id", ignoreDuplicates: false });
+            .select("id")
+            .eq("project_id", inv.project_id)
+            .ilike("email", inv.professional_email || "")
+            .maybeSingle();
 
-          if (memberErr) {
-            console.error("project_member upsert error (non-fatal):", memberErr);
+          if (existingMember) {
+            // UPDATE existing record with the collaborator's real user_id
+            const { error: updateMemberErr } = await adminClient
+              .from("project_members")
+              .update({
+                user_id: matchedUser.id,
+                invitation_id: inv.id,
+                delivery_status: "ativo",
+                member_type: "collaborator",
+                permissions_scope: "basic_collaborator",
+                last_activity_at: now,
+              })
+              .eq("id", existingMember.id);
+
+            if (updateMemberErr) {
+              console.error("project_member update error (non-fatal):", updateMemberErr);
+            }
+          } else {
+            // INSERT new record with the collaborator's user_id
+            const { error: insertErr } = await adminClient
+              .from("project_members")
+              .insert({
+                project_id: inv.project_id,
+                user_id: matchedUser.id,
+                name: inv.professional_name || "",
+                email: inv.professional_email || "",
+                role: inv.professional_role || "",
+                fee: inv.fee || 0,
+                invitation_id: inv.id,
+                delivery_status: "ativo",
+                expected_deliverable: inv.schedule_notes || "",
+                delivery_due_date: inv.deadline || null,
+                permissions_scope: "basic_collaborator",
+                member_type: "collaborator",
+                last_activity_at: now,
+              });
+
+            if (insertErr) {
+              console.error("project_member insert error (non-fatal):", insertErr);
+            }
           }
         }
       } catch (profileErr) {
