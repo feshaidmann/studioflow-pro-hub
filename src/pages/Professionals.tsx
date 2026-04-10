@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
   Users, Plus, Pencil, Trash2, CheckCircle2, XCircle,
-  Mail, Phone, Music, Briefcase, CalendarDays, Star, Globe, MessageCircle, Search, X, Filter, Link2, Copy, Check,
+  Mail, Phone, Music, Briefcase, CalendarDays, Star, Globe, MessageCircle, Search, X, Filter, Link2, Copy, Check, Clock,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
