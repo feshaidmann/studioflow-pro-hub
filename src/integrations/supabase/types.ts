@@ -1267,6 +1267,7 @@ export type Database = {
     }
     Functions: {
       get_auth_email: { Args: never; Returns: string }
+      get_file_download_url: { Args: { p_file_id: string }; Returns: string }
       get_member_projects: {
         Args: never
         Returns: {
