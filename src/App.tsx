@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -11,29 +12,42 @@ import { ProjectProvider } from "@/contexts/ProjectContext";
 
 import AppLayout from "@/components/AppLayout";
 import FeedbackButton from "@/components/FeedbackButton";
+
+// Eager-load the landing & auth pages (critical path)
 import Welcome from "@/pages/Welcome";
 import Auth from "@/pages/Auth";
-import ResetPassword from "@/pages/ResetPassword";
-import Onboarding from "@/pages/Onboarding";
-import Dashboard from "@/pages/Dashboard";
-import Projects from "@/pages/Projects";
-import ProjectDetail from "@/pages/ProjectDetail";
-import FinancialTracker from "@/pages/FinancialTracker";
-import Tutorial from "@/pages/Tutorial";
-import Professionals from "@/pages/Professionals";
-import Settings from "@/pages/Settings";
-import NotFound from "./pages/NotFound";
-import InviteResponse from "@/pages/InviteResponse";
-import PlatformInviteResponse from "@/pages/PlatformInviteResponse";
-import Admin from "@/pages/Admin";
-import Agenda from "@/pages/Agenda";
-import FreelancerProfile from "@/pages/FreelancerProfile";
-import UpgradeScreen from "@/pages/UpgradeScreen";
-import PublicProfile from "@/pages/PublicProfile";
-import Legal from "@/pages/Legal";
-import MusicDNA from "@/pages/MusicDNA";
+
+// Lazy-load everything else to reduce initial bundle
+const ResetPassword = lazy(() => import("@/pages/ResetPassword"));
+const Onboarding = lazy(() => import("@/pages/Onboarding"));
+const Dashboard = lazy(() => import("@/pages/Dashboard"));
+const Projects = lazy(() => import("@/pages/Projects"));
+const ProjectDetail = lazy(() => import("@/pages/ProjectDetail"));
+const FinancialTracker = lazy(() => import("@/pages/FinancialTracker"));
+const Tutorial = lazy(() => import("@/pages/Tutorial"));
+const Professionals = lazy(() => import("@/pages/Professionals"));
+const Settings = lazy(() => import("@/pages/Settings"));
+const NotFound = lazy(() => import("@/pages/NotFound"));
+const InviteResponse = lazy(() => import("@/pages/InviteResponse"));
+const PlatformInviteResponse = lazy(() => import("@/pages/PlatformInviteResponse"));
+const Admin = lazy(() => import("@/pages/Admin"));
+const Agenda = lazy(() => import("@/pages/Agenda"));
+const FreelancerProfile = lazy(() => import("@/pages/FreelancerProfile"));
+const UpgradeScreen = lazy(() => import("@/pages/UpgradeScreen"));
+const PublicProfile = lazy(() => import("@/pages/PublicProfile"));
+const Legal = lazy(() => import("@/pages/Legal"));
+const MusicDNA = lazy(() => import("@/pages/MusicDNA"));
 
 const queryClient = new QueryClient();
+
+const LazyFallback = () => {
+  const { t } = useLanguage();
+  return (
+    <div className="flex items-center justify-center min-h-screen">
+      <div className="animate-pulse text-muted-foreground">{t("misc.loading")}</div>
+    </div>
+  );
+};
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -48,22 +62,24 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 const AppRoutes = () => (
   <ProtectedRoute>
     <AppLayout>
-      <Routes>
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/projects" element={<Projects />} />
-        <Route path="/projects/:id" element={<ProjectDetail />} />
-        <Route path="/master" element={<Navigate to="/projects" replace />} />
-        <Route path="/finance" element={<FinancialTracker />} />
-        <Route path="/agenda" element={<Agenda />} />
-        <Route path="/tutorial" element={<Tutorial />} />
-        <Route path="/professionals" element={<Professionals />} />
-        <Route path="/settings" element={<Settings />} />
-        <Route path="/admin" element={<Admin />} />
-        <Route path="/perfil" element={<FreelancerProfile />} />
-        <Route path="/upgrade" element={<UpgradeScreen />} />
-        <Route path="/music-dna" element={<MusicDNA />} />
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
-      </Routes>
+      <Suspense fallback={<LazyFallback />}>
+        <Routes>
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/projects" element={<Projects />} />
+          <Route path="/projects/:id" element={<ProjectDetail />} />
+          <Route path="/master" element={<Navigate to="/projects" replace />} />
+          <Route path="/finance" element={<FinancialTracker />} />
+          <Route path="/agenda" element={<Agenda />} />
+          <Route path="/tutorial" element={<Tutorial />} />
+          <Route path="/professionals" element={<Professionals />} />
+          <Route path="/settings" element={<Settings />} />
+          <Route path="/admin" element={<Admin />} />
+          <Route path="/perfil" element={<FreelancerProfile />} />
+          <Route path="/upgrade" element={<UpgradeScreen />} />
+          <Route path="/music-dna" element={<MusicDNA />} />
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        </Routes>
+      </Suspense>
     </AppLayout>
     <FeedbackButton />
   </ProtectedRoute>
@@ -79,17 +95,19 @@ const App = () => (
               <Toaster />
               <Sonner />
               <BrowserRouter>
-                <Routes>
-                  <Route path="/" element={<Welcome />} />
-                  <Route path="/auth" element={<Auth />} />
-                  <Route path="/auth/reset-password" element={<ResetPassword />} />
-                  <Route path="/onboarding" element={<Onboarding />} />
-                  <Route path="/u/:username" element={<PublicProfile />} />
-                  <Route path="/invite/:token" element={<InviteResponse />} />
-                  <Route path="/platform-invite/:token" element={<PlatformInviteResponse />} />
-                  <Route path="/legal" element={<Legal />} />
-                  <Route path="/*" element={<AppRoutes />} />
-                </Routes>
+                <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><div className="animate-pulse text-muted-foreground">Carregando…</div></div>}>
+                  <Routes>
+                    <Route path="/" element={<Welcome />} />
+                    <Route path="/auth" element={<Auth />} />
+                    <Route path="/auth/reset-password" element={<ResetPassword />} />
+                    <Route path="/onboarding" element={<Onboarding />} />
+                    <Route path="/u/:username" element={<PublicProfile />} />
+                    <Route path="/invite/:token" element={<InviteResponse />} />
+                    <Route path="/platform-invite/:token" element={<PlatformInviteResponse />} />
+                    <Route path="/legal" element={<Legal />} />
+                    <Route path="/*" element={<AppRoutes />} />
+                  </Routes>
+                </Suspense>
               </BrowserRouter>
             </TooltipProvider>
           </ProjectProvider>
