@@ -864,6 +864,16 @@ export default function Projects() {
                           </div>
                         </div>
                         <div className="space-y-1.5">
+                          <Label>Nível de acesso</Label>
+                          <Select value={proposalForm.permissionsScope} onValueChange={(v) => setProposalForm((f) => ({ ...f, permissionsScope: v as "admin_convidado" | "leitor" }))}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="leitor">Leitor — apenas dados relevantes</SelectItem>
+                              <SelectItem value="admin_convidado">Administrador Convidado — gerencia, mas não deleta</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-1.5">
                           <Label>Notas / Observações</Label>
                           <Textarea placeholder="Dias disponíveis, horário de gravação, detalhes do projeto…" value={proposalForm.scheduleNotes} onChange={(e) => setProposalForm((f) => ({ ...f, scheduleNotes: e.target.value }))} className="h-24 resize-none" />
                         </div>
