@@ -1,38 +1,42 @@
 <!doctype html>
-<html lang="en">
+<html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <!-- TODO: Set the document title to the name of your application -->
     <title>StudioFlow</title>
-    <meta name="description" content=".">
-    <meta name="author" content="Lovable" />
+    <meta name="description" content="Gerencie seus projetos musicais com eficiência. StudioFlow é a plataforma completa para artistas independentes.">
+    <meta name="author" content="StudioFlow" />
 
-    <!-- TODO: Update og:title to match your application name -->
-    
-    
+    <meta property="og:title" content="StudioFlow">
+    <meta property="og:description" content="Gerencie seus projetos musicais com eficiência.">
     <meta property="og:type" content="website" />
     <meta property="og:image" content="https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/e54d2b26-8c36-4b5c-82c8-93e66f37d0a2?Expires=1775627516&amp;GoogleAccessId=go-api-on-aws%40gpt-engineer-390607.iam.gserviceaccount.com&amp;Signature=b7nluHeYMnYfoKU1YKl9UU6JYTUlXKXlbKcHRYRTNZ1qZHVfNv7CvFjGKSmmmDCsgGN8jFmBUik%2FLTbUMMencZyErofnQMbYvvanvr8%2BOBCNErCX4lgMmrlPRZaYaEEvqSPAz0Ut6lFY7DF01oh5C0JgXR1kAyhenbhJi43jHpuZnBRl3XBex%2BGdblui4%2Fkf48IARJ7Ntx1kdlg4u%2Ft32htTBCl7Q0kGf9cUi9yOQZuerbUsZlR85ZBC1WtFaMV5H3vr8LbtJIZ5zKKG5eXXZTW7bdIp3DyAadI0ToKoZlQmIkh6Ud0%2Bm9BQU6QdtJl7JNtzUVz%2FbDO0FKKN3%2FZH4A%3D%3D">
 
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:site" content="@Lovable" />
+    <meta name="twitter:title" content="StudioFlow">
+    <meta name="twitter:description" content="Gerencie seus projetos musicais com eficiência.">
     <meta name="twitter:image" content="https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/e54d2b26-8c36-4b5c-82c8-93e66f37d0a2?Expires=1775627516&amp;GoogleAccessId=go-api-on-aws%40gpt-engineer-390607.iam.gserviceaccount.com&amp;Signature=b7nluHeYMnYfoKU1YKl9UU6JYTUlXKXlbKcHRYRTNZ1qZHVfNv7CvFjGKSmmmDCsgGN8jFmBUik%2FLTbUMMencZyErofnQMbYvvanvr8%2BOBCNErCX4lgMmrlPRZaYaEEvqSPAz0Ut6lFY7DF01oh5C0JgXR1kAyhenbhJi43jHpuZnBRl3XBex%2BGdblui4%2Fkf48IARJ7Ntx1kdlg4u%2Ft32htTBCl7Q0kGf9cUi9yOQZuerbUsZlR85ZBC1WtFaMV5H3vr8LbtJIZ5zKKG5eXXZTW7bdIp3DyAadI0ToKoZlQmIkh6Ud0%2Bm9BQU6QdtJl7JNtzUVz%2FbDO0FKKN3%2FZH4A%3D%3D">
-    
-  
-  
-  
-  
-  
-  
-  
-  <meta property="og:title" content="StudioFlow">
-  <meta name="twitter:title" content="StudioFlow">
-  <meta property="og:description" content=".">
-  <meta name="twitter:description" content=".">
-</head>
+
+    <!-- Preload critical CSS to avoid render-blocking -->
+    <link rel="modulepreload" href="/src/main.tsx" />
+
+    <!-- Inline critical CSS for instant FCP -->
+    <style>
+      body{margin:0;font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}
+      #root-loader{display:flex;align-items:center;justify-content:center;min-height:100vh;background:#f0f1f4;color:#6b7280}
+      #root-loader .pulse{animation:pulse 1.5s ease-in-out infinite}
+      @keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}}
+      @media(prefers-color-scheme:dark){#root-loader{background:#0f1117;color:#6b7280}}
+    </style>
+  </head>
 
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!-- Static skeleton shown before React mounts — enables fast FCP -->
+      <div id="root-loader" aria-label="Carregando StudioFlow">
+        <p class="pulse">Carregando…</p>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
