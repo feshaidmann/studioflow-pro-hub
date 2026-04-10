@@ -12,12 +12,14 @@ import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import AudioPlayer from "@/components/ui/audio-player";
 
 interface ProjectChatProps {
   projectId: string;
+  isOwner?: boolean;
 }
 
-export default function ProjectChat({ projectId }: ProjectChatProps) {
+export default function ProjectChat({ projectId, isOwner = false }: ProjectChatProps) {
   const {
     messages, loading, sending, sendMessage, currentUserId,
     togglePending, toggleResolved, linkTask,
@@ -29,6 +31,7 @@ export default function ProjectChat({ projectId }: ProjectChatProps) {
   const [uploading, setUploading] = useState(false);
   const [actionMenuId, setActionMenuId] = useState<string | null>(null);
   const [creatingTask, setCreatingTask] = useState(false);
+  const [playbackUrls, setPlaybackUrls] = useState<Record<string, string>>({});
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -109,6 +112,10 @@ export default function ProjectChat({ projectId }: ProjectChatProps) {
   };
 
   const handleDownload = async (path: string, name: string) => {
+    if (!isOwner) {
+      toast.error("Apenas o dono do projeto pode baixar arquivos");
+      return;
+    }
     const { data } = await supabase.storage.from("project-files").createSignedUrl(path, 300);
     if (data?.signedUrl) {
       const a = document.createElement("a");
@@ -118,11 +125,22 @@ export default function ProjectChat({ projectId }: ProjectChatProps) {
     }
   };
 
+  const loadPlaybackUrl = async (path: string) => {
+    if (playbackUrls[path]) return;
+    const { data } = await supabase.storage.from("project-files").createSignedUrl(path, 300);
+    if (data?.signedUrl) setPlaybackUrls((prev) => ({ ...prev, [path]: data.signedUrl }));
+  };
+
   function relTime(d: string) {
     try { return formatDistanceToNow(new Date(d), { addSuffix: true, locale: ptBR }); } catch { return ""; }
   }
   function initials(name: string) {
     return name.split(" ").slice(0, 2).map((w) => w[0]).join("").toUpperCase();
+  }
+
+  function isAudioFile(name: string) {
+    const ext = name.split(".").pop()?.toLowerCase() || "";
+    return ["mp3", "wav", "flac", "aac", "ogg", "m4a"].includes(ext);
   }
 
   function getAttachIcon(name: string) {
@@ -143,15 +161,9 @@ export default function ProjectChat({ projectId }: ProjectChatProps) {
 
   return (
     <div className="flex flex-col h-[420px] lg:h-[580px]">
-      {/* Filter bar */}
       {pendingCount > 0 && (
         <div className="flex items-center gap-2 pb-2 border-b border-border mb-2">
-          <Button
-            variant={filterPending ? "default" : "outline"}
-            size="sm"
-            className="h-6 text-[10px] gap-1"
-            onClick={() => setFilterPending(!filterPending)}
-          >
+          <Button variant={filterPending ? "default" : "outline"} size="sm" className="h-6 text-[10px] gap-1" onClick={() => setFilterPending(!filterPending)}>
             <AlertCircle className="h-2.5 w-2.5" />
             {pendingCount} pendência{pendingCount > 1 ? "s" : ""}
             {filterPending && <XIcon className="h-2.5 w-2.5 ml-1" />}
@@ -159,7 +171,6 @@ export default function ProjectChat({ projectId }: ProjectChatProps) {
         </div>
       )}
 
-      {/* Messages */}
       <div className="flex-1 overflow-y-auto space-y-3 pr-1 pb-2">
         {loading ? (
           <div className="text-center py-8 text-muted-foreground text-sm">Carregando mensagens…</div>
@@ -172,14 +183,16 @@ export default function ProjectChat({ projectId }: ProjectChatProps) {
             const isMe = msg.user_id === currentUserId;
             const showActions = actionMenuId === msg.id;
             const AttachIcon = msg.attachment_name ? getAttachIcon(msg.attachment_name) : null;
+            const audioAttach = msg.attachment_name && msg.attachment_path && isAudioFile(msg.attachment_name);
+
+            if (audioAttach && !playbackUrls[msg.attachment_path]) {
+              loadPlaybackUrl(msg.attachment_path);
+            }
 
             return (
               <div key={msg.id} className={cn("group relative", isMe && "flex flex-col items-end")}>
                 <div className={cn("flex items-end gap-2", isMe && "flex-row-reverse")}>
-                  <div className={cn(
-                    "h-7 w-7 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0",
-                    isMe ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"
-                  )}>
+                  <div className={cn("h-7 w-7 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0", isMe ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground")}>
                     {initials(msg.display_name)}
                   </div>
                   <div className={cn("max-w-[72%] flex flex-col gap-0.5", isMe ? "items-end" : "items-start")}>
@@ -194,8 +207,6 @@ export default function ProjectChat({ projectId }: ProjectChatProps) {
                       onClick={() => setActionMenuId(showActions ? null : msg.id)}
                     >
                       {msg.content}
-
-                      {/* Status badges */}
                       {(msg.is_pending || msg.linked_task_id) && (
                         <div className="flex gap-1 mt-1.5">
                           {msg.is_pending && !msg.is_resolved && (
@@ -217,28 +228,46 @@ export default function ProjectChat({ projectId }: ProjectChatProps) {
                       )}
                     </div>
 
-                    {/* Attachment */}
+                    {/* Attachment: audio → player; other → download (owner only) */}
                     {msg.attachment_name && msg.attachment_path && AttachIcon && (
-                      <button
-                        className="flex items-center gap-1.5 mt-1 rounded-lg bg-muted/50 border border-border px-2 py-1.5 text-[10px] hover:bg-muted transition-colors max-w-[200px]"
-                        onClick={() => handleDownload(msg.attachment_path, msg.attachment_name)}
-                      >
-                        <AttachIcon className="h-3 w-3 text-primary shrink-0" />
-                        <span className="truncate">{msg.attachment_name}</span>
-                        <Download className="h-2.5 w-2.5 text-muted-foreground shrink-0" />
-                      </button>
+                      audioAttach && playbackUrls[msg.attachment_path] ? (
+                        <div className="mt-1 w-full max-w-[260px]">
+                          <div className="flex items-center gap-1.5 mb-1 px-1">
+                            <Music className="h-3 w-3 text-primary shrink-0" />
+                            <span className="text-[10px] truncate">{msg.attachment_name}</span>
+                            {isOwner && (
+                              <button onClick={() => handleDownload(msg.attachment_path, msg.attachment_name)} className="ml-auto shrink-0 p-0.5 text-muted-foreground hover:text-foreground">
+                                <Download className="h-2.5 w-2.5" />
+                              </button>
+                            )}
+                          </div>
+                          <AudioPlayer src={playbackUrls[msg.attachment_path]} />
+                        </div>
+                      ) : !audioAttach ? (
+                        isOwner ? (
+                          <button
+                            className="flex items-center gap-1.5 mt-1 rounded-lg bg-muted/50 border border-border px-2 py-1.5 text-[10px] hover:bg-muted transition-colors max-w-[200px]"
+                            onClick={() => handleDownload(msg.attachment_path, msg.attachment_name)}
+                          >
+                            <AttachIcon className="h-3 w-3 text-primary shrink-0" />
+                            <span className="truncate">{msg.attachment_name}</span>
+                            <Download className="h-2.5 w-2.5 text-muted-foreground shrink-0" />
+                          </button>
+                        ) : (
+                          <div className="flex items-center gap-1.5 mt-1 rounded-lg bg-muted/50 border border-border px-2 py-1.5 text-[10px] max-w-[200px]">
+                            <AttachIcon className="h-3 w-3 text-primary shrink-0" />
+                            <span className="truncate">{msg.attachment_name}</span>
+                          </div>
+                        )
+                      ) : null
                     )}
 
                     <span className="text-[10px] text-muted-foreground/60 px-1">{relTime(msg.created_at)}</span>
                   </div>
                 </div>
 
-                {/* Action menu */}
                 {showActions && (
-                  <div className={cn(
-                    "absolute z-10 mt-1 flex gap-1 bg-card border border-border rounded-lg shadow-lg p-1.5",
-                    isMe ? "right-9" : "left-9", "top-full"
-                  )}>
+                  <div className={cn("absolute z-10 mt-1 flex gap-1 bg-card border border-border rounded-lg shadow-lg p-1.5", isMe ? "right-9" : "left-9", "top-full")}>
                     {!msg.is_pending && (
                       <Button variant="ghost" size="sm" className="h-6 text-[10px] gap-1 px-2"
                         onClick={() => { togglePending(msg.id, true); setActionMenuId(null); toast.success("Marcado como pendência"); }}>
@@ -272,7 +301,6 @@ export default function ProjectChat({ projectId }: ProjectChatProps) {
         <div ref={bottomRef} />
       </div>
 
-      {/* Attachment preview */}
       {attachFile && (
         <div className="flex items-center gap-2 px-2 py-1.5 bg-muted/30 rounded-t-lg border border-b-0 border-border">
           <Paperclip className="h-3 w-3 text-primary shrink-0" />
@@ -283,20 +311,12 @@ export default function ProjectChat({ projectId }: ProjectChatProps) {
         </div>
       )}
 
-      {/* Input bar */}
       <div className="flex gap-2 pt-3 border-t border-border">
         <input ref={fileRef} type="file" className="hidden" onChange={handleFileChange} />
         <Button variant="ghost" size="sm" className="h-9 w-9 p-0 shrink-0" onClick={() => fileRef.current?.click()} disabled={uploading}>
           <Paperclip className="h-4 w-4" />
         </Button>
-        <Input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={handleKey}
-          placeholder="Digite uma mensagem…"
-          className="flex-1 h-9 text-sm"
-          disabled={sending || uploading}
-        />
+        <Input value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={handleKey} placeholder="Digite uma mensagem…" className="flex-1 h-9 text-sm" disabled={sending || uploading} />
         <Button size="sm" className="h-9 px-3 neon-glow" onClick={handleSend} disabled={(sending || uploading) || (!input.trim() && !attachFile)}>
           <Send className="h-3.5 w-3.5" />
         </Button>
