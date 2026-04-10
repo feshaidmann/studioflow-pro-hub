@@ -563,8 +563,7 @@ export default function Professionals() {
                     <TableHead>Especialidade</TableHead>
                     <TableHead>Nota</TableHead>
                     <TableHead>Em projeto</TableHead>
-                    <TableHead>Convite</TableHead>
-                    <TableHead>Status</TableHead>
+                     <TableHead>Convite</TableHead>
                     <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
