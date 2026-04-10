@@ -62,7 +62,6 @@ import RatePartnersModal from "@/components/RatePartnersModal";
 const stages = ["inicio", "gravacao", "mix", "master", "upload", "lancado"] as const;
 
 type WizardSource = "new" | "existing";
-type WizardSource = "new" | "existing";
 type WizardProfType = "Instrumentista" | "Produtor" | "Mix" | "Master" | "Compositor" | "Arranjador" | "Videomaker" | "Fotógrafo";
 
 type ProjectTemplate = "none" | "single_basico" | "banda_completa" | "producao_eletronica" | "podcast";
