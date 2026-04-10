@@ -323,7 +323,7 @@ export const AITaskAssistant = forwardRef<AITaskAssistantHandle, AITaskAssistant
 
             if (delta?.content) {
               assistantContent += delta.content;
-              const displayContent = assistantContent.replace(/<sugestoes>[\s\S]*$/i, "").trimEnd();
+              const displayContent = assistantContent.replace(/<sugestoes>[\s\S]*$/i, "").replace(/\[Instrução:[^\]]*\]/gi, "").trimEnd();
               setMessages((prev) =>
                 prev.map((m, i) =>
                   i === prev.length - 1 && m.role === "assistant"
@@ -349,7 +349,7 @@ export const AITaskAssistant = forwardRef<AITaskAssistantHandle, AITaskAssistant
         try {
           suggestions = JSON.parse(sugestoesMatch[1].trim());
         } catch { /* ignore */ }
-        cleanContent = assistantContent.replace(/<sugestoes>[\s\S]*?<\/sugestoes>/i, "").trimEnd();
+        cleanContent = assistantContent.replace(/<sugestoes>[\s\S]*?<\/sugestoes>/i, "").replace(/\[Instrução:[^\]]*\]/gi, "").trimEnd();
       }
 
       setMessages((prev) =>
