@@ -443,6 +443,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       fee: prof.fee,
       notes: prof.notes,
       invitation_id: prof.invitationId ?? null,
+      permissions_scope: prof.permissionsScope ?? "leitor",
     }).select("id").single();
     if (error || !row) return;
     const newProf: Professional = { ...prof, id: row.id };
