@@ -13,7 +13,7 @@ import {
 import {
   Users, Mail, Phone, DollarSign, Music, X as XIcon, Check, Clock,
   Copy, Link2, AlertTriangle, Package, ChevronDown, ChevronUp,
-  CalendarDays, FileText, UserCheck, Send,
+  CalendarDays, FileText, UserCheck, Send, UserPlus,
 } from "lucide-react";
 import { useProjects } from "@/contexts/ProjectContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -204,7 +204,9 @@ export default function ProjectTeamTab({ projectId }: ProjectTeamTabProps) {
       <div className="flex flex-col items-center justify-center py-12 gap-3 text-center">
         <Users className="h-8 w-8 text-muted-foreground/30" />
         <p className="text-sm text-muted-foreground">Nenhum colaborador neste projeto ainda.</p>
-        <p className="text-xs text-muted-foreground">Adicione membros pela tela de Projetos.</p>
+        <Button variant="outline" size="sm" className="gap-1.5 mt-2" onClick={() => navigate(`/projects?id=${projectId}&addMember=1`)}>
+          <UserPlus className="h-3.5 w-3.5" /> Adicionar membro
+        </Button>
       </div>
     );
   }
