@@ -39,7 +39,7 @@ const Legal = lazy(() => import("@/pages/Legal"));
 const MusicDNA = lazy(() => import("@/pages/MusicDNA"));
 const Editais = lazy(() => import("@/pages/Editais"));
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient(); // singleton
 
 const LazyFallback = () => {
   const { t } = useLanguage();
