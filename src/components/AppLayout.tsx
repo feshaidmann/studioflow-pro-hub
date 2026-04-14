@@ -82,9 +82,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   const primaryMobileItems = [
     ...principalItems,
-    gestaoItems[0],
-    gestaoItems[1],
-    gestaoItems[2],
+    gestaoItems[0], // Finanças
+    gestaoItems[1], // Agenda
+  ];
+
+  const drawerItems = [
+    gestaoItems[2], // DNA Musical
+    gestaoItems[3], // Editais
+    gestaoItems[4], // Profissionais
+    tutorialNavItem,
     settingsNavItem,
   ];
 
