@@ -1,5 +1,5 @@
-import { useState, useMemo } from "react";
-import { Search, Download, Save, Trash2, ExternalLink, ChevronDown, FileText, Pencil, Info, Plus, Play, Power, Rss } from "lucide-react";
+import { useState, useMemo, useEffect } from "react";
+import { Search, Download, Save, Trash2, ExternalLink, ChevronDown, FileText, Pencil, Info, Plus, Play, Power, Rss, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -18,6 +18,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { useEditais, type Edital } from "@/hooks/useEditais";
 import { useFontesEditais, type FonteEditalInsert } from "@/hooks/useFontesEditais";
+import { useMatchEditais, type MatchedEdital } from "@/hooks/useMatchEditais";
 import { useProjects } from "@/contexts/ProjectContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 
@@ -421,6 +422,104 @@ function FontesTab() {
     </div>
   );
 }
+// --- Recomendados Tab ---
+function RecomendadosTab({ projects, t }: { projects: Array<{ id: string; name: string; completed: boolean }>; t: (k: string) => string }) {
+  const { matches, loading, fetchMatches } = useMatchEditais();
+  const [selectedProject, setSelectedProject] = useState<string>("");
+
+  useEffect(() => {
+    if (selectedProject) fetchMatches(selectedProject);
+  }, [selectedProject, fetchMatches]);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-3 flex-wrap">
+        <p className="text-sm text-muted-foreground">
+          Selecione um projeto para ver editais recomendados com base no perfil cultural.
+        </p>
+        <Select value={selectedProject} onValueChange={setSelectedProject}>
+          <SelectTrigger className="w-56">
+            <SelectValue placeholder="Selecione um projeto" />
+          </SelectTrigger>
+          <SelectContent>
+            {projects.filter((p) => !p.completed).map((p) => (
+              <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {!selectedProject && (
+        <Card>
+          <CardContent className="py-12 flex flex-col items-center text-center text-muted-foreground">
+            <Star className="h-10 w-10 mb-3 opacity-40" />
+            <p className="text-sm">Selecione um projeto para ver recomendações.</p>
+            <p className="text-xs mt-1">Configure o perfil cultural do projeto na aba Resumo para melhores resultados.</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {selectedProject && loading && (
+        <div className="space-y-2">
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-10 w-full" />
+        </div>
+      )}
+
+      {selectedProject && !loading && matches.length === 0 && (
+        <Card>
+          <CardContent className="py-12 flex flex-col items-center text-center text-muted-foreground">
+            <FileText className="h-10 w-10 mb-3 opacity-40" />
+            <p className="text-sm">Nenhuma recomendação encontrada.</p>
+            <p className="text-xs mt-1">Salve editais via busca ou fontes automáticas e configure o perfil cultural do projeto.</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {selectedProject && !loading && matches.length > 0 && (
+        <div className="rounded-lg border border-border overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Título</TableHead>
+                <TableHead className="w-16">UF</TableHead>
+                <TableHead>Órgão</TableHead>
+                <TableHead className="w-24">Prazo</TableHead>
+                <TableHead className="w-24">Status</TableHead>
+                <TableHead className="w-20">Score</TableHead>
+                <TableHead className="w-16">Link</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {matches.map((e) => (
+                <TableRow key={e.id}>
+                  <TableCell className="font-medium max-w-[260px] truncate">{e.titulo}</TableCell>
+                  <TableCell className="text-xs">{e.estado || "—"}</TableCell>
+                  <TableCell className="text-xs max-w-[140px] truncate">{e.orgao || "—"}</TableCell>
+                  <TableCell className="text-xs tabular-nums">{formatDate(e.prazo)}</TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className={statusColor(e.status)}>{e.status}</Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="secondary" className="text-xs">{e.score}pts</Badge>
+                  </TableCell>
+                  <TableCell>
+                    {e.link ? (
+                      <a href={e.link} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                        <ExternalLink className="h-3.5 w-3.5" />
+                      </a>
+                    ) : "—"}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function Editais() {
   const { t } = useLanguage();
@@ -508,6 +607,10 @@ export default function Editais() {
           <TabsTrigger value="fontes">
             <Rss className="h-3.5 w-3.5 mr-1.5" />
             Fontes automáticas
+          </TabsTrigger>
+          <TabsTrigger value="recomendados">
+            <Star className="h-3.5 w-3.5 mr-1.5" />
+            Recomendados
           </TabsTrigger>
         </TabsList>
 
@@ -709,6 +812,10 @@ export default function Editais() {
 
         <TabsContent value="fontes" className="mt-4">
           <FontesTab />
+        </TabsContent>
+
+        <TabsContent value="recomendados" className="mt-4">
+          <RecomendadosTab projects={projects} t={t} />
         </TabsContent>
       </Tabs>
 
