@@ -18,6 +18,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { useEditais, type Edital } from "@/hooks/useEditais";
 import { useFontesEditais, type FonteEditalInsert } from "@/hooks/useFontesEditais";
+import { useMatchEditais, type MatchedEdital } from "@/hooks/useMatchEditais";
 import { useProjects } from "@/contexts/ProjectContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 
