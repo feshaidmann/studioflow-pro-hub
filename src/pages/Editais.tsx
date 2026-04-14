@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Search, Download, Save, Trash2, ExternalLink, ChevronDown, FileText } from "lucide-react";
+import { useState, useMemo } from "react";
+import { Search, Download, Save, Trash2, ExternalLink, ChevronDown, FileText, Pencil, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -9,6 +9,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { useEditais, type Edital } from "@/hooks/useEditais";
 import { useProjects } from "@/contexts/ProjectContext";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -20,8 +25,8 @@ const UF_OPTIONS = [
 ];
 
 const AREA_OPTIONS = ["Música", "Audiovisual", "Ambos", "Outra"];
-
 const STATUS_OPTIONS = ["Todos", "Aberto", "Encerrado", "Indefinido"];
+const ITEMS_PER_PAGE = 20;
 
 function statusColor(status: string) {
   if (status === "Aberto") return "bg-green-500/15 text-green-700 border-green-200";
@@ -59,12 +64,30 @@ function formatDate(d: string | null) {
   } catch { return d; }
 }
 
-function EditalTable({ items, onDelete }: { items: Edital[]; onDelete?: (id: string) => void }) {
+function EditalTable({
+  items, onDelete, onEdit, selectable, selectedKeys, onToggle, onToggleAll, t,
+}: {
+  items: Edital[];
+  onDelete?: (id: string) => void;
+  onEdit?: (e: Edital) => void;
+  selectable?: boolean;
+  selectedKeys?: Set<string>;
+  onToggle?: (key: string) => void;
+  onToggleAll?: () => void;
+  t: (k: string) => string;
+}) {
+  const allSelected = selectable && items.length > 0 && items.every((e) => selectedKeys?.has(e.session_key));
+
   return (
     <div className="rounded-lg border border-border overflow-hidden">
       <Table>
         <TableHeader>
           <TableRow>
+            {selectable && (
+              <TableHead className="w-10">
+                <Checkbox checked={allSelected} onCheckedChange={onToggleAll} />
+              </TableHead>
+            )}
             <TableHead>Título</TableHead>
             <TableHead className="w-16">UF</TableHead>
             <TableHead>Órgão</TableHead>
@@ -72,13 +95,35 @@ function EditalTable({ items, onDelete }: { items: Edital[]; onDelete?: (id: str
             <TableHead className="w-24">Status</TableHead>
             <TableHead className="w-24">Área</TableHead>
             <TableHead className="w-16">Link</TableHead>
-            {onDelete && <TableHead className="w-10" />}
+            {(onDelete || onEdit) && <TableHead className="w-20" />}
           </TableRow>
         </TableHeader>
         <TableBody>
           {items.map((e, i) => (
-            <TableRow key={e.id || i}>
-              <TableCell className="font-medium max-w-[260px] truncate">{e.titulo}</TableCell>
+            <TableRow key={e.id || e.session_key || i}>
+              {selectable && (
+                <TableCell>
+                  <Checkbox
+                    checked={selectedKeys?.has(e.session_key) || false}
+                    onCheckedChange={() => onToggle?.(e.session_key)}
+                  />
+                </TableCell>
+              )}
+              <TableCell className="font-medium max-w-[260px] truncate">
+                <span className="flex items-center gap-1">
+                  {e.titulo}
+                  {e.inferido && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Info className="h-3 w-3 text-muted-foreground shrink-0" />
+                        </TooltipTrigger>
+                        <TooltipContent>{t("editais.inferred")}</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
+                </span>
+              </TableCell>
               <TableCell className="text-xs">{e.estado || "—"}</TableCell>
               <TableCell className="text-xs max-w-[140px] truncate">{e.orgao || "—"}</TableCell>
               <TableCell className="text-xs tabular-nums">{formatDate(e.prazo)}</TableCell>
@@ -93,11 +138,20 @@ function EditalTable({ items, onDelete }: { items: Edital[]; onDelete?: (id: str
                   </a>
                 ) : "—"}
               </TableCell>
-              {onDelete && (
+              {(onDelete || onEdit) && (
                 <TableCell>
-                  <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => e.id && onDelete(e.id)}>
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
+                  <div className="flex gap-1">
+                    {onEdit && (
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={() => onEdit(e)}>
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                    )}
+                    {onDelete && (
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => e.id && onDelete(e.id)}>
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    )}
+                  </div>
                 </TableCell>
               )}
             </TableRow>
@@ -105,6 +159,85 @@ function EditalTable({ items, onDelete }: { items: Edital[]; onDelete?: (id: str
         </TableBody>
       </Table>
     </div>
+  );
+}
+
+function EditEditalDialog({
+  edital, open, onOpenChange, onSave, t,
+}: {
+  edital: Edital | null;
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  onSave: (id: string, fields: Partial<Edital>) => void;
+  t: (k: string) => string;
+}) {
+  const [form, setForm] = useState<Partial<Edital>>({});
+
+  const reset = (e: Edital | null) => {
+    if (e) setForm({ titulo: e.titulo, orgao: e.orgao, status: e.status, area: e.area, prazo: e.prazo, abertura: e.abertura, link: e.link });
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => { if (o && edital) reset(edital); onOpenChange(o); }}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>{t("editais.edit")}</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div>
+            <Label>Título</Label>
+            <Input value={form.titulo || ""} onChange={(e) => setForm((p) => ({ ...p, titulo: e.target.value }))} />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label>Órgão</Label>
+              <Input value={form.orgao || ""} onChange={(e) => setForm((p) => ({ ...p, orgao: e.target.value }))} />
+            </div>
+            <div>
+              <Label>Status</Label>
+              <Select value={form.status || "Indefinido"} onValueChange={(v) => setForm((p) => ({ ...p, status: v }))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Aberto">Aberto</SelectItem>
+                  <SelectItem value="Encerrado">Encerrado</SelectItem>
+                  <SelectItem value="Indefinido">Indefinido</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label>Área</Label>
+              <Select value={form.area || ""} onValueChange={(v) => setForm((p) => ({ ...p, area: v }))}>
+                <SelectTrigger><SelectValue placeholder="Área" /></SelectTrigger>
+                <SelectContent>
+                  {AREA_OPTIONS.map((a) => <SelectItem key={a} value={a}>{a}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Link</Label>
+              <Input value={form.link || ""} onChange={(e) => setForm((p) => ({ ...p, link: e.target.value }))} />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label>Abertura</Label>
+              <Input type="date" value={form.abertura || ""} onChange={(e) => setForm((p) => ({ ...p, abertura: e.target.value || null }))} />
+            </div>
+            <div>
+              <Label>Prazo</Label>
+              <Input type="date" value={form.prazo || ""} onChange={(e) => setForm((p) => ({ ...p, prazo: e.target.value || null }))} />
+            </div>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button onClick={() => { if (edital?.id) { onSave(edital.id, form); onOpenChange(false); } }}>
+            {t("editais.editSave")}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -118,10 +251,22 @@ export default function Editais() {
   const [filterStatus, setFilterStatus] = useState("Todos");
   const [linkedProjectId, setLinkedProjectId] = useState<string | null>(null);
 
-  const { editais, loading, searching, searchResult, search, saveResults, deleteEdital, exportCSV } = useEditais();
+  // Selection state for search results
+  const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
+
+  // Edit dialog state
+  const [editingEdital, setEditingEdital] = useState<Edital | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
+
+  // Saved section: search + pagination
+  const [savedSearch, setSavedSearch] = useState("");
+  const [savedPage, setSavedPage] = useState(1);
+
+  const { editais, loading, searching, searchResult, search, saveResults, deleteEdital, updateEdital, exportCSV } = useEditais();
 
   const handleSearch = () => {
     if (!query.trim()) return;
+    setSelectedKeys(new Set());
     const srcList = sources.split("\n").map(s => s.trim()).filter(Boolean);
     let fullQuery = query.trim();
     if (filterUF) fullQuery += ` em ${filterUF}`;
@@ -130,7 +275,48 @@ export default function Editais() {
   };
 
   const resultEditais = sortAndFilterEditais(searchResult?.editais || [], filterStatus);
-  const savedEditais = sortAndFilterEditais(editais as Edital[], filterStatus);
+
+  // Toggle selection
+  const toggleKey = (key: string) => {
+    setSelectedKeys((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  };
+  const toggleAll = () => {
+    if (selectedKeys.size === resultEditais.length) {
+      setSelectedKeys(new Set());
+    } else {
+      setSelectedKeys(new Set(resultEditais.map((e) => e.session_key)));
+    }
+  };
+
+  const handleSaveSelected = () => {
+    const items = resultEditais.filter((e) => selectedKeys.has(e.session_key));
+    if (items.length > 0) saveResults(items, linkedProjectId);
+  };
+
+  const handleSaveAll = () => {
+    saveResults(resultEditais, linkedProjectId);
+  };
+
+  // Saved editais: filter + paginate
+  const savedFiltered = useMemo(() => {
+    const sorted = sortAndFilterEditais(editais as Edital[], filterStatus);
+    if (!savedSearch.trim()) return sorted;
+    const q = savedSearch.toLowerCase();
+    return sorted.filter((e) => e.titulo.toLowerCase().includes(q) || (e.orgao || "").toLowerCase().includes(q));
+  }, [editais, filterStatus, savedSearch]);
+
+  const totalSavedPages = Math.max(1, Math.ceil(savedFiltered.length / ITEMS_PER_PAGE));
+  const clampedPage = Math.min(savedPage, totalSavedPages);
+  const savedPaginated = savedFiltered.slice((clampedPage - 1) * ITEMS_PER_PAGE, clampedPage * ITEMS_PER_PAGE);
+
+  const handleEdit = (e: Edital) => {
+    setEditingEdital(e);
+    setEditOpen(true);
+  };
 
   return (
     <div className="p-4 md:p-6 max-w-6xl mx-auto space-y-6">
@@ -173,35 +359,23 @@ export default function Editais() {
               />
               <div className="flex gap-2 flex-wrap">
                 <Select value={filterUF} onValueChange={setFilterUF}>
-                  <SelectTrigger className="w-36">
-                    <SelectValue placeholder="UF" />
-                  </SelectTrigger>
+                  <SelectTrigger className="w-36"><SelectValue placeholder="UF" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todos</SelectItem>
-                    {UF_OPTIONS.map((uf) => (
-                      <SelectItem key={uf} value={uf}>{uf}</SelectItem>
-                    ))}
+                    {UF_OPTIONS.map((uf) => <SelectItem key={uf} value={uf}>{uf}</SelectItem>)}
                   </SelectContent>
                 </Select>
                 <Select value={filterArea} onValueChange={setFilterArea}>
-                  <SelectTrigger className="w-36">
-                    <SelectValue placeholder="Área" />
-                  </SelectTrigger>
+                  <SelectTrigger className="w-36"><SelectValue placeholder="Área" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todas</SelectItem>
-                    {AREA_OPTIONS.map((a) => (
-                      <SelectItem key={a} value={a}>{a}</SelectItem>
-                    ))}
+                    {AREA_OPTIONS.map((a) => <SelectItem key={a} value={a}>{a}</SelectItem>)}
                   </SelectContent>
                 </Select>
                 <Select value={filterStatus} onValueChange={setFilterStatus}>
-                  <SelectTrigger className="w-36">
-                    <SelectValue placeholder="Status" />
-                  </SelectTrigger>
+                  <SelectTrigger className="w-36"><SelectValue placeholder="Status" /></SelectTrigger>
                   <SelectContent>
-                    {STATUS_OPTIONS.map((s) => (
-                      <SelectItem key={s} value={s}>{s}</SelectItem>
-                    ))}
+                    {STATUS_OPTIONS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
@@ -214,9 +388,7 @@ export default function Editais() {
       {searching && (
         <Card>
           <CardContent className="pt-5 space-y-2">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <Skeleton key={i} className="h-10 w-full" />
-            ))}
+            {Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
           </CardContent>
         </Card>
       )}
@@ -238,9 +410,15 @@ export default function Editais() {
           <CardContent className="space-y-4">
             {resultEditais.length > 0 ? (
               <>
-                <EditalTable items={resultEditais} />
+                <EditalTable
+                  items={resultEditais}
+                  selectable
+                  selectedKeys={selectedKeys}
+                  onToggle={toggleKey}
+                  onToggleAll={toggleAll}
+                  t={t}
+                />
 
-                {/* Report */}
                 {searchResult.message && (
                   <details className="text-xs text-muted-foreground">
                     <summary className="cursor-pointer hover:text-foreground">{t("editais.report")}</summary>
@@ -250,7 +428,6 @@ export default function Editais() {
                   </details>
                 )}
 
-                {/* Actions */}
                 <div className="flex gap-2 flex-wrap items-center pt-2 border-t border-border/40">
                   <Select value={linkedProjectId || ""} onValueChange={(v) => setLinkedProjectId(v || null)}>
                     <SelectTrigger className="w-48">
@@ -263,9 +440,16 @@ export default function Editais() {
                       ))}
                     </SelectContent>
                   </Select>
-                  <Button size="sm" onClick={() => saveResults(resultEditais, linkedProjectId)}>
+
+                  {selectedKeys.size > 0 && (
+                    <Button size="sm" onClick={handleSaveSelected}>
+                      <Save className="h-3.5 w-3.5 mr-1.5" />
+                      {t("editais.saveSelected")} ({selectedKeys.size})
+                    </Button>
+                  )}
+                  <Button size="sm" variant={selectedKeys.size > 0 ? "outline" : "default"} onClick={handleSaveAll}>
                     <Save className="h-3.5 w-3.5 mr-1.5" />
-                    {t("editais.save")}
+                    {t("editais.saveAll")}
                   </Button>
                   <Button size="sm" variant="outline" onClick={() => exportCSV(resultEditais)}>
                     <Download className="h-3.5 w-3.5 mr-1.5" />
@@ -281,13 +465,48 @@ export default function Editais() {
       )}
 
       {/* Saved editais */}
-      {savedEditais.length > 0 && (
+      {(savedFiltered.length > 0 || savedSearch) && (
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">{t("editais.saved")} ({savedEditais.length})</CardTitle>
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <CardTitle className="text-base">{t("editais.saved")} ({savedFiltered.length})</CardTitle>
+              <Input
+                value={savedSearch}
+                onChange={(e) => { setSavedSearch(e.target.value); setSavedPage(1); }}
+                placeholder={t("editais.searchSaved")}
+                className="w-64"
+              />
+            </div>
           </CardHeader>
-          <CardContent>
-            <EditalTable items={savedEditais} onDelete={deleteEdital} />
+          <CardContent className="space-y-3">
+            <EditalTable items={savedPaginated} onDelete={deleteEdital} onEdit={handleEdit} t={t} />
+
+            {totalSavedPages > 1 && (
+              <div className="flex items-center justify-between pt-2">
+                <p className="text-xs text-muted-foreground">
+                  {t("editais.showing")} {(clampedPage - 1) * ITEMS_PER_PAGE + 1}–{Math.min(clampedPage * ITEMS_PER_PAGE, savedFiltered.length)} {t("editais.of")} {savedFiltered.length}
+                </p>
+                <Pagination>
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious onClick={() => setSavedPage((p) => Math.max(1, p - 1))} className={clampedPage <= 1 ? "pointer-events-none opacity-50" : "cursor-pointer"} />
+                    </PaginationItem>
+                    {Array.from({ length: totalSavedPages }, (_, i) => i + 1)
+                      .filter((p) => p === 1 || p === totalSavedPages || Math.abs(p - clampedPage) <= 1)
+                      .map((p) => (
+                        <PaginationItem key={p}>
+                          <PaginationLink isActive={p === clampedPage} onClick={() => setSavedPage(p)} className="cursor-pointer">
+                            {p}
+                          </PaginationLink>
+                        </PaginationItem>
+                      ))}
+                    <PaginationItem>
+                      <PaginationNext onClick={() => setSavedPage((p) => Math.min(totalSavedPages, p + 1))} className={clampedPage >= totalSavedPages ? "pointer-events-none opacity-50" : "cursor-pointer"} />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
@@ -300,6 +519,15 @@ export default function Editais() {
           </CardContent>
         </Card>
       )}
+
+      {/* Edit dialog */}
+      <EditEditalDialog
+        edital={editingEdital}
+        open={editOpen}
+        onOpenChange={(o) => { setEditOpen(o); if (!o) setEditingEdital(null); }}
+        onSave={updateEdital}
+        t={t}
+      />
     </div>
   );
 }
