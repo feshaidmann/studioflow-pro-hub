@@ -250,6 +250,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
             <div className="my-2 border-t border-border/30" />
             {renderNavItem(settingsNavItem)}
+            {renderNavItem(tutorialNavItem)}
             {isAdmin && renderNavItem(adminNavItem)}
           </TooltipProvider>
         </nav>
