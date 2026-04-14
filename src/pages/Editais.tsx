@@ -709,6 +709,7 @@ function PainelTab({ editais }: { editais: Edital[] }) {
 
 export default function Editais() {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const { projects } = useProjects();
   const [query, setQuery] = useState("");
   const [sources, setSources] = useState("");
