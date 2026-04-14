@@ -21,10 +21,34 @@ const UF_OPTIONS = [
 
 const AREA_OPTIONS = ["Música", "Audiovisual", "Ambos", "Outra"];
 
+const STATUS_OPTIONS = ["Todos", "Aberto", "Encerrado", "Indefinido"];
+
 function statusColor(status: string) {
   if (status === "Aberto") return "bg-green-500/15 text-green-700 border-green-200";
   if (status === "Encerrado") return "bg-red-500/15 text-red-700 border-red-200";
   return "bg-muted text-muted-foreground border-border";
+}
+
+const STATUS_ORDER: Record<string, number> = { Aberto: 0, Indefinido: 1, Encerrado: 2 };
+
+function sortAndFilterEditais(items: Edital[], filterStatus: string): Edital[] {
+  let filtered = items;
+  if (filterStatus && filterStatus !== "Todos") {
+    filtered = items.filter((e) =>
+      filterStatus === "Indefinido"
+        ? e.status !== "Aberto" && e.status !== "Encerrado"
+        : e.status === filterStatus
+    );
+  }
+  return [...filtered].sort((a, b) => {
+    const oa = STATUS_ORDER[a.status] ?? 1;
+    const ob = STATUS_ORDER[b.status] ?? 1;
+    if (oa !== ob) return oa - ob;
+    if (!a.prazo && !b.prazo) return 0;
+    if (!a.prazo) return 1;
+    if (!b.prazo) return -1;
+    return a.prazo.localeCompare(b.prazo);
+  });
 }
 
 function formatDate(d: string | null) {
