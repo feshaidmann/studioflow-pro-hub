@@ -10,7 +10,6 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Upload, FileAudio, Lightbulb, CheckCircle2, AlertCircle, AlertTriangle, Info, Trophy, X } from "lucide-react";
 import { analyzeAudio, generateSuggestions, type AnalysisResult } from "@/lib/audioAnalysis";
-import { useLanguage } from "@/contexts/LanguageContext";
 import type { Project } from "@/data/mockData";
 
 function RadialGauge({ label, value, target, unit, min, max, reverse }: {
@@ -66,8 +65,6 @@ export default function MasterAnalyzerModal({
   onConfirmUpload,
   onCancelWithTask,
 }: MasterAnalyzerModalProps) {
-  const { lang } = useLanguage();
-
   const [file, setFile] = useState<File | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -110,14 +107,10 @@ export default function MasterAnalyzerModal({
       const analysisResult = await analyzeAudio(file);
       setProgress(90);
       setResult(analysisResult);
-      setSuggestions(generateSuggestions(analysisResult, lang as "pt" | "en"));
+      setSuggestions(generateSuggestions(analysisResult));
       setProgress(100);
     } catch {
-      setError(
-        lang === "pt"
-          ? "Não foi possível decodificar o arquivo. Verifique se é um WAV, MP3 ou FLAC válido."
-          : "Could not decode the audio file. Please make sure it's a valid WAV, MP3, or FLAC."
-      );
+      setError("Não foi possível decodificar o arquivo. Verifique se é um WAV, MP3 ou FLAC válido.");
     } finally {
       setAnalyzing(false);
     }
@@ -179,19 +172,13 @@ export default function MasterAnalyzerModal({
                 <>
                   <FileAudio className="h-10 w-10 text-primary mb-2" />
                   <p className="text-sm font-medium">{file.name}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {lang === "pt" ? "Clique ou arraste para substituir" : "Click or drag to replace"}
-                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Clique ou arraste para substituir</p>
                 </>
               ) : (
                 <>
                   <Upload className="h-10 w-10 text-muted-foreground mb-2" />
-                  <p className="text-sm font-medium">
-                    {lang === "pt" ? "Arraste WAV/MP3/FLAC aqui" : "Drop WAV/MP3/FLAC here"}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {lang === "pt" ? "ou clique para buscar" : "or click to browse"}
-                  </p>
+                  <p className="text-sm font-medium">Arraste WAV/MP3/FLAC aqui</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">ou clique para buscar</p>
                 </>
               )}
             </label>
@@ -201,9 +188,7 @@ export default function MasterAnalyzerModal({
           {analyzing && (
             <div className="space-y-1.5 animate-fade-in">
               <Progress value={progress} className="h-1.5" />
-              <p className="text-xs text-muted-foreground text-center">
-                {lang === "pt" ? "Analisando áudio…" : "Analyzing audio…"}
-              </p>
+              <p className="text-xs text-muted-foreground text-center">Analisando áudio…</p>
             </div>
           )}
 
@@ -221,9 +206,7 @@ export default function MasterAnalyzerModal({
             disabled={!file || analyzing}
             className="neon-glow active:scale-95 transition-transform w-full"
           >
-            {analyzing
-              ? (lang === "pt" ? "Analisando…" : "Analyzing…")
-              : (lang === "pt" ? "Analisar Master" : "Analyze Master")}
+            {analyzing ? "Analisando…" : "Analisar Master"}
           </Button>
 
           {/* Results */}
@@ -232,12 +215,10 @@ export default function MasterAnalyzerModal({
               {/* Gauges */}
               <div className="rounded-lg border border-border/60 bg-secondary/20 p-4">
                 <div className="flex items-center justify-between mb-3">
-                  <p className="text-sm font-medium">
-                    {lang === "pt" ? "Resultados da Análise" : "Analysis Results"}
-                  </p>
+                  <p className="text-sm font-medium">Resultados da Análise</p>
                   <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
                     <Info className="h-3 w-3" />
-                    {lang === "pt" ? "Medição aproximada" : "Approximate measurement"}
+                    Medição aproximada
                   </span>
                 </div>
                 <div className="grid grid-cols-3 gap-2">
@@ -252,7 +233,7 @@ export default function MasterAnalyzerModal({
                 <div className="rounded-lg border border-warning/30 bg-warning/5 p-4 space-y-2">
                   <p className="text-sm font-medium flex items-center gap-2">
                     <Lightbulb className="h-4 w-4 text-warning" />
-                    {lang === "pt" ? "Sugestões de Correção" : "Fix Suggestions"}
+                    Sugestões de Correção
                   </p>
                   {suggestions.map((s, i) => (
                     <div key={i} className="flex items-start gap-2 rounded bg-secondary/40 p-2">
@@ -268,18 +249,14 @@ export default function MasterAnalyzerModal({
                 <div className="flex items-center gap-2 rounded-lg bg-success/10 border border-success/30 p-3">
                   <CheckCircle2 className="h-5 w-5 text-success shrink-0" />
                   <p className="text-sm font-medium text-success">
-                    {lang === "pt"
-                      ? "Master dentro dos padrões de streaming! Pronto para envio."
-                      : "Master meets streaming standards! Ready to upload."}
+                    Master dentro dos padrões de streaming! Pronto para envio.
                   </p>
                 </div>
               ) : (
                 <div className="flex items-center gap-2 rounded-lg bg-destructive/10 border border-destructive/30 p-3">
                   <AlertTriangle className="h-5 w-5 text-destructive shrink-0" />
                   <p className="text-sm font-medium text-destructive">
-                    {lang === "pt"
-                      ? "Master precisa de ajustes antes do envio."
-                      : "Master needs adjustments before uploading."}
+                    Master precisa de ajustes antes do envio.
                   </p>
                 </div>
               )}
@@ -294,11 +271,11 @@ export default function MasterAnalyzerModal({
             <div className="flex gap-2">
               <Button variant="outline" className="flex-1" onClick={() => handleOpenChange(false)}>
                 <X className="h-4 w-4 mr-1" />
-                {lang === "pt" ? "Cancelar" : "Cancel"}
+                Cancelar
               </Button>
               <Button variant="secondary" className="flex-1" onClick={handleConfirmWithoutAnalysis}>
                 <Trophy className="h-4 w-4 mr-1" />
-                {lang === "pt" ? "Continuar sem analisar" : "Skip analysis & upload"}
+                Continuar sem analisar
               </Button>
             </div>
           )}
@@ -307,11 +284,11 @@ export default function MasterAnalyzerModal({
           {isSpotifyReady === true && (
             <div className="flex gap-2">
               <Button variant="outline" className="flex-1" onClick={() => handleOpenChange(false)}>
-                {lang === "pt" ? "Voltar" : "Back"}
+                Voltar
               </Button>
               <Button className="flex-1 neon-glow active:scale-95 transition-transform gap-2" onClick={handleConfirmOk}>
                 <Trophy className="h-4 w-4" />
-                {lang === "pt" ? "Confirmar Upload" : "Confirm Upload"}
+                Confirmar Upload
               </Button>
             </div>
           )}
@@ -325,7 +302,7 @@ export default function MasterAnalyzerModal({
                 onClick={handleCancelAndCreateTask}
               >
                 <X className="h-4 w-4 mr-1" />
-                {lang === "pt" ? "Cancelar envio e criar tarefa" : "Cancel & create task"}
+                Cancelar envio e criar tarefa
               </Button>
               <Button
                 variant="secondary"
@@ -333,7 +310,7 @@ export default function MasterAnalyzerModal({
                 onClick={handleConfirmOk}
               >
                 <AlertTriangle className="h-4 w-4 mr-1" />
-                {lang === "pt" ? "Continuar mesmo assim" : "Upload anyway"}
+                Continuar mesmo assim
               </Button>
             </div>
           )}
