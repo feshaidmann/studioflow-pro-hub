@@ -366,14 +366,19 @@ const translations: Record<string, string> = {
   "welcome.with": "com",
 
   // ── Editais ─────────────────────────────────────────────────────────────────
-  "editais.title": "Busca de Editais",
+  "editais.title": "Editais",
   "editais.subtitle": "Encontre chamadas públicas de fomento para música e audiovisual",
   "editais.searchPlaceholder": "Ex: editais de música em São Paulo, ProAC aberto, Funarte 2026...",
   "editais.search": "Buscar",
   "editais.searching": "Buscando…",
-  "editais.additionalSources": "Fontes adicionais",
-  "editais.sourcesPlaceholder": "Cole URLs de portais (uma por linha)",
-  "editais.emptyState": "Digite uma busca para encontrar editais de fomento cultural",
+  "editais.searchHint": "A IA vasculha portais federais, estaduais e municipais para encontrar oportunidades de fomento.",
+  "editais.tabSearch": "Buscar",
+  "editais.tabSaved": "Meus Editais",
+  "editais.emptyTitle": "Encontre editais culturais para seu projeto",
+  "editais.emptyDesc": "Digite uma busca e a IA vasculha portais federais, estaduais e municipais para encontrar oportunidades de fomento para artistas.",
+  "editais.metrics": "Métricas",
+  "editais.noSaved": "Nenhum edital salvo ainda.",
+  "editais.noSavedHint": "Busque editais na aba Buscar e salve os que interessam.",
   "editais.results": "Resultados",
   "editais.noResults": "Nenhum edital encontrado para esta busca.",
   
