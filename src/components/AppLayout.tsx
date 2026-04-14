@@ -42,7 +42,6 @@ const gestaoItems = [
   { labelKey: "nav.musicdna",      path: "/music-dna",     icon: Dna,          proOnly: false, mobileLabel: "nav.musicdna.short" },
   { labelKey: "nav.editais",      path: "/editais",       icon: FileText,     proOnly: false, mobileLabel: "" },
   { labelKey: "nav.professionals", path: "/professionals", icon: Users,        proOnly: false, mobileLabel: "" },
-  { labelKey: "nav.tutorial",      path: "/tutorial",      icon: HelpCircle,   proOnly: false, mobileLabel: "" },
 ];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -76,6 +75,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   const adminNavItem = { labelKey: "nav.admin", path: "/admin", icon: Shield, proOnly: false, mobileLabel: "" };
   const settingsNavItem = { labelKey: "nav.settings", path: "/settings", icon: Settings, proOnly: false, mobileLabel: "nav.settings.short" };
+  const tutorialNavItem = { labelKey: "nav.tutorial", path: "/tutorial", icon: HelpCircle, proOnly: false, mobileLabel: "" };
 
   const primaryMobileItems = [
     ...principalItems,
@@ -250,6 +250,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
             <div className="my-2 border-t border-border/30" />
             {renderNavItem(settingsNavItem)}
+            {renderNavItem(tutorialNavItem)}
             {isAdmin && renderNavItem(adminNavItem)}
           </TooltipProvider>
         </nav>
