@@ -162,11 +162,10 @@ export default function Projects() {
   const [paymentMode, setPaymentMode] = useState<PaymentMode>("single");
   const [installmentCount, setInstallmentCount] = useState("2");
 
-  /* ── Invite tokens ── */
+  /* ── Invite tokens (for wizard submission) ── */
   const [inviteTokens, setInviteTokens] = useState<Record<string, string>>({});
   const [inviteStatuses, setInviteStatuses] = useState<Record<string, string>>({});
   const [inviteIds, setInviteIds] = useState<Record<string, string>>({});
-  const [copiedToken, setCopiedToken] = useState<string | null>(null);
 
   useEffect(() => {
     if (!selectedProject) return;
@@ -185,29 +184,6 @@ export default function Projects() {
       setInviteIds(idMap);
     });
   }, [selectedProject?.id]);
-
-  useEffect(() => {
-    const idParam = searchParams.get("id");
-    const newParam = searchParams.get("new");
-    if (newParam === "1") {
-      setForm((prev) => ({ ...prev, artist: prev.artist || displayName }));
-      setDialogOpen(true);
-      // Remove the param so the dialog doesn't reopen on every projects update
-      setSearchParams((prev) => { prev.delete("new"); return prev; }, { replace: true });
-    }
-    if (!idParam || projects.length === 0) return;
-    const found = projects.find((p) => p.id === idParam);
-    if (found) setSelectedProject(found);
-  }, [searchParams, projects]);
-
-  const getInviteLink = (token: string) => `${window.location.origin}/invite/${token}`;
-
-  const handleCopyLink = async (token: string) => {
-    await navigator.clipboard.writeText(getInviteLink(token));
-    setCopiedToken(token);
-    toast.success("Link copiado! 🔗");
-    setTimeout(() => setCopiedToken(null), 2000);
-  };
 
 
   const resetWizard = () => {
