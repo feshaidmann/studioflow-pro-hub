@@ -21,6 +21,7 @@ const translations: Record<string, Record<Lang, string>> = {
   "nav.settings": { pt: "Configurações", en: "Settings" },
   "nav.settings.short": { pt: "Config.", en: "Settings" },
   "nav.admin": { pt: "Admin", en: "Admin" },
+  "nav.editais": { pt: "Editais", en: "Grants" },
   "nav.logout": { pt: "Sair", en: "Log out" },
   "nav.user": { pt: "Usuário", en: "User" },
   "nav.artist": { pt: "Artista", en: "Artist" },
@@ -371,6 +372,24 @@ const translations: Record<string, Record<Lang, string>> = {
   "welcome.terms": { pt: "Termos de Uso", en: "Terms of Use" },
   "welcome.privacy": { pt: "Privacidade", en: "Privacy" },
   "welcome.with": { pt: "com", en: "with" },
+
+  // ── Editais ─────────────────────────────────────────────────────────────────
+  "editais.title": { pt: "Busca de Editais", en: "Grant Search" },
+  "editais.subtitle": { pt: "Encontre chamadas públicas de fomento para música e audiovisual", en: "Find public funding calls for music and audiovisual" },
+  "editais.searchPlaceholder": { pt: "Ex: editais de música em São Paulo, ProAC aberto, Funarte 2026...", en: "E.g.: music grants in São Paulo, ProAC open, Funarte 2026..." },
+  "editais.search": { pt: "Buscar", en: "Search" },
+  "editais.searching": { pt: "Buscando…", en: "Searching…" },
+  "editais.additionalSources": { pt: "Fontes adicionais", en: "Additional sources" },
+  "editais.sourcesPlaceholder": { pt: "Cole URLs de portais (uma por linha)", en: "Paste portal URLs (one per line)" },
+  "editais.emptyState": { pt: "Digite uma busca para encontrar editais de fomento cultural", en: "Enter a search to find cultural funding grants" },
+  "editais.results": { pt: "Resultados", en: "Results" },
+  "editais.noResults": { pt: "Nenhum edital encontrado para esta busca.", en: "No grants found for this search." },
+  "editais.report": { pt: "Relatório completo", en: "Full report" },
+  "editais.linkProject": { pt: "Vincular ao projeto", en: "Link to project" },
+  "editais.noProject": { pt: "Sem vínculo", en: "No link" },
+  "editais.save": { pt: "Salvar no StudioFlow", en: "Save to StudioFlow" },
+  "editais.exportCSV": { pt: "Exportar CSV", en: "Export CSV" },
+  "editais.saved": { pt: "Editais salvos", en: "Saved grants" },
 };
 
 const LanguageContext = createContext<LanguageContextType | null>(null);

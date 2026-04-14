@@ -14,6 +14,7 @@ import {
   CalendarDays,
   Lock,
   BookOpen,
+  FileText,
   ChevronLeft,
   Dna,
 } from "lucide-react";
@@ -40,6 +41,7 @@ const gestaoItems = [
   { labelKey: "nav.finance",       path: "/finance",       icon: DollarSign,   proOnly: false, mobileLabel: "" },
   { labelKey: "nav.agenda",        path: "/agenda",        icon: CalendarDays, proOnly: false, mobileLabel: "" },
   { labelKey: "nav.musicdna",      path: "/music-dna",     icon: Dna,          proOnly: false, mobileLabel: "nav.musicdna.short" },
+  { labelKey: "nav.editais",      path: "/editais",       icon: FileText,     proOnly: false, mobileLabel: "" },
   { labelKey: "nav.professionals", path: "/professionals", icon: Users,        proOnly: false, mobileLabel: "" },
   { labelKey: "nav.tutorial",      path: "/tutorial",      icon: BookOpen,     proOnly: false, mobileLabel: "" },
 ];
@@ -97,7 +99,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     return location.pathname === item.path;
   };
 
-  const ROOT_ROUTES = ["/dashboard", "/projects", "/finance", "/agenda", "/professionals", "/settings", "/admin", "/tutorial", "/music-dna", "/"];
+  const ROOT_ROUTES = ["/dashboard", "/projects", "/finance", "/agenda", "/professionals", "/settings", "/admin", "/tutorial", "/music-dna", "/editais", "/"];
   const isRootRoute = ROOT_ROUTES.includes(location.pathname);
 
   // ── Mobile ─────────────────────────────────────────────────────────────────
