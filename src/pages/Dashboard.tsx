@@ -33,6 +33,7 @@ export default function Dashboard() {
   const [refreshing, setRefreshing] = useState(false);
   const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const { projects, getMixPercent, getProjectFinancials, transactions } = useProjects();
   const { displayName, isSimpleMode } = useProfile();
   const { activeTasks, completedTasks, loading: tasksLoading, addTask, toggleTask, deleteTask, updateTask, refresh: refreshTasks } = useTasks();
