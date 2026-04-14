@@ -42,6 +42,7 @@ const gestaoItems = [
   { labelKey: "nav.musicdna",      path: "/music-dna",     icon: Dna,          proOnly: false, mobileLabel: "nav.musicdna.short" },
   { labelKey: "nav.editais",      path: "/editais",       icon: FileText,     proOnly: false, mobileLabel: "" },
   { labelKey: "nav.professionals", path: "/professionals", icon: Users,        proOnly: false, mobileLabel: "" },
+  { labelKey: "nav.tutorial",      path: "/tutorial",      icon: HelpCircle,   proOnly: false, mobileLabel: "" },
 ];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -263,18 +264,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               className={sidebarOpen ? "w-full justify-start gap-2.5 text-[13px] text-muted-foreground hover:text-foreground" : "text-muted-foreground hover:text-foreground"}
             />
           </div>
-          <NavLink
-            to="/tutorial"
-            className={cn(
-              "flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-[13px] transition-all",
-              location.pathname === "/tutorial"
-                ? "bg-primary/10 text-primary font-medium"
-                : "text-muted-foreground hover:bg-secondary hover:text-foreground"
-            )}
-          >
-            <HelpCircle className="h-4 w-4 shrink-0" />
-            {sidebarOpen && <span className="truncate">Ajuda</span>}
-          </NavLink>
           <Button
             variant="ghost"
             size={sidebarOpen ? "sm" : "icon"}
