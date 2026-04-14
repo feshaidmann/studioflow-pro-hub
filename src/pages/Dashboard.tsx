@@ -9,6 +9,7 @@ import { useTasks } from "@/hooks/useTasks";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { toast } from "sonner";
 import { AITaskAssistant, type AITaskAssistantHandle } from "@/components/AITaskAssistant";
 import { useProfessionals } from "@/hooks/useProfessionals";
