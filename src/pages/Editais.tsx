@@ -129,7 +129,8 @@ export default function Editais() {
     search(fullQuery, srcList.length > 0 ? srcList : undefined, linkedProjectId || undefined);
   };
 
-  const resultEditais = searchResult?.editais || [];
+  const resultEditais = sortAndFilterEditais(searchResult?.editais || [], filterStatus);
+  const savedEditais = sortAndFilterEditais(editais as Edital[], filterStatus);
 
   return (
     <div className="p-4 md:p-6 max-w-6xl mx-auto space-y-6">
