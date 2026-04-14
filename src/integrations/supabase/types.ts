@@ -142,6 +142,68 @@ export type Database = {
         }
         Relationships: []
       }
+      editais: {
+        Row: {
+          abertura: string | null
+          area: string | null
+          created_at: string | null
+          estado: string | null
+          id: string
+          inferido: boolean | null
+          link: string | null
+          orgao: string | null
+          origem_url: string | null
+          prazo: string | null
+          project_id: string | null
+          session_key: string | null
+          status: string | null
+          titulo: string
+          user_id: string
+        }
+        Insert: {
+          abertura?: string | null
+          area?: string | null
+          created_at?: string | null
+          estado?: string | null
+          id?: string
+          inferido?: boolean | null
+          link?: string | null
+          orgao?: string | null
+          origem_url?: string | null
+          prazo?: string | null
+          project_id?: string | null
+          session_key?: string | null
+          status?: string | null
+          titulo: string
+          user_id: string
+        }
+        Update: {
+          abertura?: string | null
+          area?: string | null
+          created_at?: string | null
+          estado?: string | null
+          id?: string
+          inferido?: boolean | null
+          link?: string | null
+          orgao?: string | null
+          origem_url?: string | null
+          prazo?: string | null
+          project_id?: string | null
+          session_key?: string | null
+          status?: string | null
+          titulo?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "editais_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       events: {
         Row: {
           all_day: boolean

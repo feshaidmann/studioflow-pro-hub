@@ -37,6 +37,7 @@ const UpgradeScreen = lazy(() => import("@/pages/UpgradeScreen"));
 const PublicProfile = lazy(() => import("@/pages/PublicProfile"));
 const Legal = lazy(() => import("@/pages/Legal"));
 const MusicDNA = lazy(() => import("@/pages/MusicDNA"));
+const Editais = lazy(() => import("@/pages/Editais"));
 
 const queryClient = new QueryClient();
 
@@ -77,6 +78,7 @@ const AppRoutes = () => (
           <Route path="/perfil" element={<FreelancerProfile />} />
           <Route path="/upgrade" element={<UpgradeScreen />} />
           <Route path="/music-dna" element={<MusicDNA />} />
+          <Route path="/editais" element={<Editais />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </Suspense>
