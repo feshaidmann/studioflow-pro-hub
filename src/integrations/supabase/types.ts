@@ -112,6 +112,38 @@ export type Database = {
           },
         ]
       }
+      alertas_editais: {
+        Row: {
+          created_at: string
+          edital_id: string
+          id: string
+          lida: boolean
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          edital_id: string
+          id?: string
+          lida?: boolean
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          edital_id?: string
+          id?: string
+          lida?: boolean
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "alertas_editais_edital_id_fkey"
+            columns: ["edital_id"]
+            isOneToOne: false
+            referencedRelation: "editais"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       beta_feedback: {
         Row: {
           category: string
@@ -1009,6 +1041,7 @@ export type Database = {
           mix_percent: number
           name: string
           notes: string
+          perfil_cultural: Json
           project_type: string
           revenue_estimate: number
           stage: string
@@ -1033,6 +1066,7 @@ export type Database = {
           mix_percent?: number
           name: string
           notes?: string
+          perfil_cultural?: Json
           project_type?: string
           revenue_estimate?: number
           stage?: string
@@ -1057,6 +1091,7 @@ export type Database = {
           mix_percent?: number
           name?: string
           notes?: string
+          perfil_cultural?: Json
           project_type?: string
           revenue_estimate?: number
           stage?: string
