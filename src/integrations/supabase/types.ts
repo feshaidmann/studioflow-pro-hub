@@ -260,6 +260,45 @@ export type Database = {
           },
         ]
       }
+      fontes_editais: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          frequencia_horas: number
+          id: string
+          nome: string
+          parametros: Json
+          tipo: string
+          ultima_busca: string | null
+          url_base: string
+          user_id: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          frequencia_horas?: number
+          id?: string
+          nome: string
+          parametros?: Json
+          tipo?: string
+          ultima_busca?: string | null
+          url_base?: string
+          user_id: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          frequencia_horas?: number
+          id?: string
+          nome?: string
+          parametros?: Json
+          tipo?: string
+          ultima_busca?: string | null
+          url_base?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       function_logs: {
         Row: {
           created_at: string
