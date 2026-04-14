@@ -905,14 +905,6 @@ export default function Editais() {
                       t={t}
                     />
 
-                    {searchResult.message && (
-                      <details className="text-xs text-muted-foreground">
-                        <summary className="cursor-pointer hover:text-foreground">{t("editais.report")}</summary>
-                        <pre className="mt-2 whitespace-pre-wrap bg-muted/40 rounded p-3 max-h-60 overflow-auto">
-                          {searchResult.message}
-                        </pre>
-                      </details>
-                    )}
 
                     <div className="flex gap-2 flex-wrap items-center pt-2 border-t border-border/40">
                       <Select value={linkedProjectId || ""} onValueChange={(v) => setLinkedProjectId(v || null)}>
