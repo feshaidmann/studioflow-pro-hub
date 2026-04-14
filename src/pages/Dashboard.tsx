@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Bot } from "lucide-react";
+import { Bot, ChevronDown, ChevronUp } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useNavigate } from "react-router-dom";
 import { useProjects } from "@/contexts/ProjectContext";
 import { useProfile } from "@/contexts/ProfileContext";
@@ -237,58 +238,71 @@ export default function Dashboard() {
       )}
 
       {/* AI Assistant — prominent position */}
-      <Card className={cn("glass-card animate-fade-in border-primary/20 shadow-sm", isFirstRun && "hidden")} style={{ animationDelay: "50ms" }}>
-        <CardHeader className="pb-1 pt-3 px-4">
-          <CardTitle className="text-xs flex items-center gap-1.5 font-medium">
-            <Bot className="h-3.5 w-3.5 text-primary" />
-            <span className="text-primary">Assistente IA</span>
-            <span className="text-muted-foreground ml-1">— pergunte qualquer coisa sobre seus projetos</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pt-0 px-4 pb-3">
-          <AITaskAssistant
-            ref={aiRef}
-            alwaysOpen
-            contextChips={buildAIChips()}
-            context={{
-              projects: [
-                ...projects.map((p) => ({
-                  id: p.id, name: p.name, artist: p.artist, stage: p.stage,
-                  mixPercent: getMixPercent(p.id), projectType: p.projectType,
-                  totalContractValue: p.totalContractValue, amountPaid: p.amountPaid,
-                  estimatedMonths: p.estimatedMonths,
-                })),
-                ...guestProjects.filter(g => !g.completed).map((g) => ({
-                  id: g.id, name: `[Parceiro] ${g.name}`, artist: g.artist, stage: g.stage,
-                  mixPercent: 0, projectType: g.project_type,
-                })),
-              ],
-              activeTasks: [
-                ...activeTasks.map((t) => ({ description: t.description, source: t.source, dueDate: t.dueDate, assignedTo: t.assignedTo, blocked: t.blocked, blockedReason: t.blockedReason, severity: t.severity })),
-                ...guestTasks.map((t) => ({ description: `[${t.projectName}] ${t.description}`, source: t.source, dueDate: t.dueDate, assignedTo: t.assignedTo, blocked: t.blocked, blockedReason: t.blockedReason, severity: t.severity })),
-              ],
-              financials,
-              professionals: professionals.map((p) => ({ name: p.name, specialty: p.specialty, bio: p.bio ?? "", active: true, phone: p.phone ?? "" })),
-              alerts: alerts.slice(0, 10).map((a) => ({ title: a.title, severity: a.severity, project: a.projectName, category: a.category })),
-            }}
-            onAddTask={async (description, projectId) => {
-              const validProjectId = projectId && projects.some((p) => p.id === projectId) ? projectId : null;
-              const result = await addTask({ description, projectId: validProjectId, source: "manual" });
-              if (!result) await addTask({ description, projectId: null, source: "manual" });
-            }}
-            conversations={conversations}
-            activeConversationId={activeConversationId}
-            savedMessages={savedMessages}
-            loadingMessages={loadingMessages}
-            onCreateConversation={createConversation}
-            onSaveMessage={saveMessage}
-            onSelectConversation={setActiveConversationId}
-            onNewConversation={startNewConversation}
-            onDeleteConversation={deleteConversation}
-            onRenameConversation={renameConversation}
-          />
-        </CardContent>
-      </Card>
+      <Collapsible
+        defaultOpen={localStorage.getItem("sfp_ai_collapsed") !== "true"}
+        onOpenChange={(open) => localStorage.setItem("sfp_ai_collapsed", open ? "false" : "true")}
+        className={cn(isFirstRun && "hidden")}
+      >
+        <Card className="glass-card animate-fade-in border-primary/20 shadow-sm" style={{ animationDelay: "50ms" }}>
+          <CollapsibleTrigger asChild>
+            <CardHeader className="pb-1 pt-3 px-4 cursor-pointer select-none hover:bg-muted/40 rounded-t-lg transition-colors">
+              <CardTitle className="text-xs flex items-center gap-1.5 font-medium">
+                <Bot className="h-3.5 w-3.5 text-primary" />
+                <span className="text-primary">Assistente IA</span>
+                <span className="text-muted-foreground ml-1">— pergunte qualquer coisa sobre seus projetos</span>
+                <span className="ml-auto text-muted-foreground">
+                  <ChevronDown className="h-4 w-4 transition-transform duration-200 [[data-state=open]>&]:rotate-180" />
+                </span>
+              </CardTitle>
+            </CardHeader>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <CardContent className="pt-0 px-4 pb-3">
+              <AITaskAssistant
+                ref={aiRef}
+                alwaysOpen
+                contextChips={buildAIChips()}
+                context={{
+                  projects: [
+                    ...projects.map((p) => ({
+                      id: p.id, name: p.name, artist: p.artist, stage: p.stage,
+                      mixPercent: getMixPercent(p.id), projectType: p.projectType,
+                      totalContractValue: p.totalContractValue, amountPaid: p.amountPaid,
+                      estimatedMonths: p.estimatedMonths,
+                    })),
+                    ...guestProjects.filter(g => !g.completed).map((g) => ({
+                      id: g.id, name: `[Parceiro] ${g.name}`, artist: g.artist, stage: g.stage,
+                      mixPercent: 0, projectType: g.project_type,
+                    })),
+                  ],
+                  activeTasks: [
+                    ...activeTasks.map((t) => ({ description: t.description, source: t.source, dueDate: t.dueDate, assignedTo: t.assignedTo, blocked: t.blocked, blockedReason: t.blockedReason, severity: t.severity })),
+                    ...guestTasks.map((t) => ({ description: `[${t.projectName}] ${t.description}`, source: t.source, dueDate: t.dueDate, assignedTo: t.assignedTo, blocked: t.blocked, blockedReason: t.blockedReason, severity: t.severity })),
+                  ],
+                  financials,
+                  professionals: professionals.map((p) => ({ name: p.name, specialty: p.specialty, bio: p.bio ?? "", active: true, phone: p.phone ?? "" })),
+                  alerts: alerts.slice(0, 10).map((a) => ({ title: a.title, severity: a.severity, project: a.projectName, category: a.category })),
+                }}
+                onAddTask={async (description, projectId) => {
+                  const validProjectId = projectId && projects.some((p) => p.id === projectId) ? projectId : null;
+                  const result = await addTask({ description, projectId: validProjectId, source: "manual" });
+                  if (!result) await addTask({ description, projectId: null, source: "manual" });
+                }}
+                conversations={conversations}
+                activeConversationId={activeConversationId}
+                savedMessages={savedMessages}
+                loadingMessages={loadingMessages}
+                onCreateConversation={createConversation}
+                onSaveMessage={saveMessage}
+                onSelectConversation={setActiveConversationId}
+                onNewConversation={startNewConversation}
+                onDeleteConversation={deleteConversation}
+                onRenameConversation={renameConversation}
+              />
+            </CardContent>
+          </CollapsibleContent>
+        </Card>
+      </Collapsible>
 
       {/* 1. O que fazer hoje + Alertas */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
