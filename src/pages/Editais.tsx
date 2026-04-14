@@ -43,12 +43,14 @@ const STATUS_ORDER: Record<string, number> = { Aberto: 0, Indefinido: 1, Encerra
 
 function sortAndFilterEditais(items: Edital[], filterStatus: string): Edital[] {
   let filtered = items;
-  if (filterStatus && filterStatus !== "Todos") {
-    filtered = items.filter((e) =>
-      filterStatus === "Indefinido"
-        ? e.status !== "Aberto" && e.status !== "Encerrado"
-        : e.status === filterStatus
-    );
+  if (filterStatus === "Todos") {
+    filtered = items.filter((e) => e.status !== "Encerrado");
+  } else if (filterStatus === "Todos+Encerrados") {
+    filtered = items;
+  } else if (filterStatus === "Indefinido") {
+    filtered = items.filter((e) => e.status !== "Aberto" && e.status !== "Encerrado");
+  } else {
+    filtered = items.filter((e) => e.status === filterStatus);
   }
   return [...filtered].sort((a, b) => {
     const oa = STATUS_ORDER[a.status] ?? 1;
