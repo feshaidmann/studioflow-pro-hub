@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
   Users, Plus, Pencil, Trash2, CheckCircle2, XCircle,
-  Mail, Phone, Music, Briefcase, CalendarDays, Star, Globe, MessageCircle, Search, X, Filter, Link2, Copy, Check, Clock,
+  Mail, Phone, Music, Briefcase, CalendarDays, Star, Globe, MessageCircle, Search, X, Filter,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -97,10 +97,6 @@ export default function Professionals() {
   const [editTarget, setEditTarget] = useState<Professional | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [sendingInvite, setSendingInvite] = useState<string | null>(null);
-  const [inviteLink, setInviteLink] = useState<string | null>(null);
-  const [inviteLinkName, setInviteLinkName] = useState<string>("");
-  const [copiedLink, setCopiedLink] = useState(false);
 
   // Filters
   const [search, setSearch] = useState("");
@@ -112,7 +108,7 @@ export default function Professionals() {
   // Table enrichment
   const [ratingsMap, setRatingsMap] = useState<Record<string, { avg: number; count: number }>>({});
   const [allocationsMap, setAllocationsMap] = useState<Record<string, string[]>>({});
-  const [invitesMap, setInvitesMap] = useState<Record<string, string>>({}); // email → status
+  
 
   // Detail modal
   const [detailProf, setDetailProf] = useState<Professional | null>(null);
@@ -171,23 +167,6 @@ export default function Professionals() {
       });
       setAllocationsMap(aMap);
 
-      // Fetch platform invitation statuses for all emails
-      const emails = profs.map((p) => p.email).filter(Boolean);
-      const { data: invites } = await (supabase as any)
-        .from("platform_invitations")
-        .select("invitee_email, status")
-        .eq("invited_by", user?.id)
-        .in("invitee_email", emails);
-
-      const iMap: Record<string, string> = {};
-      (invites as any[] ?? []).forEach((inv: any) => {
-        // Keep the most recent/relevant status per email (accepted > declined > pending)
-        const prev = iMap[inv.invitee_email];
-        if (!prev || inv.status === "accepted" || (inv.status === "declined" && prev === "pending")) {
-          iMap[inv.invitee_email] = inv.status;
-        }
-      });
-      setInvitesMap(iMap);
     }
 
     setLoadingData(false);
@@ -302,36 +281,7 @@ export default function Professionals() {
       if (error) {
         toast.error("Erro ao cadastrar: " + error.message);
       } else {
-        // Create platform invitation (link only — no email)
-        const { data: invRow } = await (supabase as any)
-          .from("platform_invitations")
-          .insert({
-            invited_by: user.id,
-            invitee_email: values.email,
-            invitee_name: values.name,
-            status: "pending",
-          })
-          .select("id")
-          .single();
-
-        if (invRow?.id) {
-          const { data: invFull } = await (supabase as any)
-            .from("platform_invitations")
-            .select("token")
-            .eq("id", invRow.id)
-            .single();
-
-          if (invFull?.token) {
-            const baseUrl = window.location.origin;
-            const link = `${baseUrl}/platform-invite/${invFull.token}`;
-            setInviteLink(link);
-            setInviteLinkName(values.name);
-          }
-
-          toast.success("Contato cadastrado! Copie o link abaixo para compartilhar.");
-        } else {
-          toast.success("Contato salvo! Você pode convidá-lo para projetos.");
-        }
+        toast.success("Contato salvo!");
         setDialogOpen(false);
         fetchProfessionals();
       }
@@ -351,50 +301,6 @@ export default function Professionals() {
     setDeleteId(null);
   }
 
-  async function sendInviteToExisting(prof: Professional) {
-    if (!user) return;
-    setSendingInvite(prof.id);
-    const { data: invRow } = await (supabase as any)
-      .from("platform_invitations")
-      .insert({
-        invited_by: user.id,
-        invitee_email: prof.email,
-        invitee_name: prof.name,
-        status: "pending",
-      })
-      .select("id")
-      .single();
-
-    if (invRow?.id) {
-      const { data: invFull } = await (supabase as any)
-        .from("platform_invitations")
-        .select("token")
-        .eq("id", invRow.id)
-        .single();
-
-      if (invFull?.token) {
-        const baseUrl = window.location.origin;
-        const link = `${baseUrl}/platform-invite/${invFull.token}`;
-        setInviteLink(link);
-        setInviteLinkName(prof.name);
-      }
-
-      toast.success("Convite criado! Copie o link abaixo para compartilhar.");
-    } else {
-      toast.error("Erro ao criar convite.");
-    }
-    setInvitesMap((prev) => ({ ...prev, [prof.email]: "pending" }));
-    setSendingInvite(null);
-  }
-
-
-  function copyInviteLink() {
-    if (!inviteLink) return;
-    navigator.clipboard.writeText(inviteLink).then(() => {
-      setCopiedLink(true);
-      setTimeout(() => setCopiedLink(false), 2000);
-    });
-  }
 
   const memberSince = detailProf?.created_at
     ? format(new Date(detailProf.created_at), "MMM 'de' yyyy", { locale: ptBR })
@@ -563,7 +469,7 @@ export default function Professionals() {
                     <TableHead>Especialidade</TableHead>
                     <TableHead>Nota</TableHead>
                     <TableHead>Em projeto</TableHead>
-                    <TableHead>Na plataforma</TableHead>
+                    
                     <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -614,42 +520,6 @@ export default function Professionals() {
                             </div>
                           : <span className="text-muted-foreground/50 text-xs">—</span>
                         }
-                      </TableCell>
-                      <TableCell>
-                        {(() => {
-                          const status = invitesMap[p.email];
-                          if (status === "accepted") return (
-                            <span className="flex items-center gap-1 text-success text-xs font-medium">
-                              <CheckCircle2 className="h-3.5 w-3.5" /> Conectado
-                            </span>
-                          );
-                          if (status === "declined") return (
-                            <span className="flex items-center gap-1 text-destructive text-xs font-medium">
-                              <XCircle className="h-3.5 w-3.5" /> Recusou
-                            </span>
-                          );
-                          if (status === "pending") return (
-                            <span className="flex items-center gap-1 text-warning text-xs font-medium">
-                              <Clock className="h-3.5 w-3.5" /> Aguardando
-                            </span>
-                          );
-                          return (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-6 px-2 text-[11px] gap-1 text-muted-foreground hover:text-primary hover:bg-primary/10 border border-dashed border-border/40 hover:border-primary/30"
-                              disabled={sendingInvite === p.id}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                sendInviteToExisting(p);
-                              }}
-                              title="Convidar para a plataforma"
-                            >
-                              <Mail className="h-3 w-3" />
-                              {sendingInvite === p.id ? "..." : "Convidar"}
-                            </Button>
-                          );
-                        })()}
                       </TableCell>
                       <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                         <div className="flex gap-1 justify-end">
@@ -914,40 +784,6 @@ export default function Professionals() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* ── Share Invite Link Modal ── */}
-      <Dialog open={!!inviteLink} onOpenChange={(o) => !o && setInviteLink(null)}>
-        <DialogContent className="glass-card border-border sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Link2 className="h-5 w-5 text-primary" />
-              Link de convite gerado
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-1">
-            <p className="text-sm text-muted-foreground">
-              Compartilhe este link com <span className="font-medium text-foreground">{inviteLinkName}</span> para que ela possa aceitar o convite para a plataforma.
-            </p>
-            <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/40 p-3">
-              <span className="flex-1 text-xs text-muted-foreground break-all font-mono select-all">{inviteLink}</span>
-              <Button
-                size="sm"
-                variant="outline"
-                className="shrink-0 gap-1.5"
-                onClick={copyInviteLink}
-              >
-                {copiedLink ? <Check className="h-3.5 w-3.5 text-success" /> : <Copy className="h-3.5 w-3.5" />}
-                {copiedLink ? "Copiado!" : "Copiar"}
-              </Button>
-            </div>
-            <p className="text-[11px] text-muted-foreground/60 text-center">
-              O link expira em 7 dias · válido para aceitar ou recusar o convite
-            </p>
-          </div>
-          <DialogFooter>
-            <Button onClick={() => setInviteLink(null)}>Fechar</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
