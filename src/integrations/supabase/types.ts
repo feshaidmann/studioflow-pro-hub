@@ -182,6 +182,7 @@ export type Database = {
           estado: string | null
           id: string
           inferido: boolean | null
+          inscrito: boolean
           link: string | null
           orgao: string | null
           origem_url: string | null
@@ -199,6 +200,7 @@ export type Database = {
           estado?: string | null
           id?: string
           inferido?: boolean | null
+          inscrito?: boolean
           link?: string | null
           orgao?: string | null
           origem_url?: string | null
@@ -216,6 +218,7 @@ export type Database = {
           estado?: string | null
           id?: string
           inferido?: boolean | null
+          inscrito?: boolean
           link?: string | null
           orgao?: string | null
           origem_url?: string | null
@@ -1130,6 +1133,54 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      rascunhos_editais: {
+        Row: {
+          campos: Json
+          created_at: string
+          edital_id: string | null
+          id: string
+          progresso: number
+          project_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          campos?: Json
+          created_at?: string
+          edital_id?: string | null
+          id?: string
+          progresso?: number
+          project_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          campos?: Json
+          created_at?: string
+          edital_id?: string | null
+          id?: string
+          progresso?: number
+          project_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rascunhos_editais_edital_id_fkey"
+            columns: ["edital_id"]
+            isOneToOne: false
+            referencedRelation: "editais"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rascunhos_editais_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       release_checklists: {
         Row: {
