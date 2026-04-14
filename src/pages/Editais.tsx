@@ -965,7 +965,7 @@ export default function Editais() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-3">
-                <EditalTable items={savedPaginated} onDelete={deleteEdital} onEdit={handleEdit} t={t} />
+                <EditalTable items={savedPaginated} onDelete={deleteEdital} onEdit={handleEdit} onInscricao={(id) => navigate(`/editais/inscricao/${id}`)} t={t} />
 
                 {totalSavedPages > 1 && (
                   <div className="flex items-center justify-between pt-2">
