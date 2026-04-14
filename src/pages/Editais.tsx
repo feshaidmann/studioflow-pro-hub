@@ -522,7 +522,192 @@ function RecomendadosTab({ projects, t }: { projects: Array<{ id: string; name: 
   );
 }
 
-export default function Editais() {
+// --- Painel (Dashboard) Tab ---
+function PainelTab({ editais }: { editais: Edital[] }) {
+  const porMes = useMemo(() => {
+    const map: Record<string, number> = {};
+    editais.forEach((e) => {
+      const d = e.created_at ? new Date(e.created_at) : null;
+      if (!d) return;
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      map[key] = (map[key] || 0) + 1;
+    });
+    return Object.entries(map).sort(([a], [b]) => a.localeCompare(b)).slice(-12).map(([mes, total]) => ({ mes, total }));
+  }, [editais]);
+
+  const porArea = useMemo(() => {
+    const map: Record<string, number> = {};
+    editais.forEach((e) => { const a = e.area || "Indefinido"; map[a] = (map[a] || 0) + 1; });
+    return Object.entries(map).sort(([, a], [, b]) => b - a);
+  }, [editais]);
+
+  const porStatus = useMemo(() => {
+    const map: Record<string, number> = {};
+    editais.forEach((e) => { const s = e.status || "Indefinido"; map[s] = (map[s] || 0) + 1; });
+    return Object.entries(map).sort(([, a], [, b]) => b - a);
+  }, [editais]);
+
+  const topOrgaos = useMemo(() => {
+    const map: Record<string, number> = {};
+    editais.forEach((e) => { if (e.orgao) map[e.orgao] = (map[e.orgao] || 0) + 1; });
+    return Object.entries(map).sort(([, a], [, b]) => b - a).slice(0, 5);
+  }, [editais]);
+
+  const totalInscritos = editais.filter((e) => (e as any).inscrito).length;
+  const totalAbertos = editais.filter((e) => e.status === "Aberto").length;
+
+  const statusColors: Record<string, string> = {
+    Aberto: "bg-green-500",
+    Encerrado: "bg-red-400",
+    Indefinido: "bg-muted-foreground/40",
+  };
+
+  const areaColors = ["bg-primary", "bg-blue-400", "bg-amber-500", "bg-emerald-500", "bg-purple-400"];
+
+  if (editais.length === 0) {
+    return (
+      <Card>
+        <CardContent className="py-12 flex flex-col items-center text-center text-muted-foreground">
+          <BarChart3 className="h-10 w-10 mb-3 opacity-40" />
+          <p className="text-sm">Nenhum edital salvo ainda.</p>
+          <p className="text-xs mt-1">Salve editais pela aba de busca para visualizar métricas.</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* KPIs */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <Card>
+          <CardContent className="pt-4 pb-3 text-center">
+            <p className="text-2xl font-bold">{editais.length}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Total salvos</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4 pb-3 text-center">
+            <p className="text-2xl font-bold text-green-600">{totalAbertos}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Abertos</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4 pb-3 text-center">
+            <p className="text-2xl font-bold text-primary">{totalInscritos}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Inscritos</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4 pb-3 text-center">
+            <p className="text-2xl font-bold">{porArea.length}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Áreas</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Editais por mês */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Editais por mês</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {porMes.length > 0 ? (
+              <div className="space-y-1.5">
+                {porMes.map(({ mes, total }) => {
+                  const max = Math.max(...porMes.map((m) => m.total));
+                  return (
+                    <div key={mes} className="flex items-center gap-2 text-xs">
+                      <span className="w-14 text-muted-foreground tabular-nums">{mes}</span>
+                      <div className="flex-1 bg-muted rounded-full h-4 overflow-hidden">
+                        <div
+                          className="h-full bg-primary rounded-full transition-all"
+                          style={{ width: `${(total / max) * 100}%` }}
+                        />
+                      </div>
+                      <span className="w-6 text-right tabular-nums font-medium">{total}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground">Sem dados</p>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Por status */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Por status</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {porStatus.map(([status, count]) => (
+                <div key={status} className="flex items-center gap-2 text-sm">
+                  <div className={`h-3 w-3 rounded-full ${statusColors[status] || "bg-muted-foreground/40"}`} />
+                  <span className="flex-1">{status}</span>
+                  <span className="font-medium tabular-nums">{count}</span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Por área */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Por área</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {porArea.map(([area, count], i) => (
+                <div key={area} className="flex items-center gap-2 text-sm">
+                  <div className={`h-3 w-3 rounded-full ${areaColors[i % areaColors.length]}`} />
+                  <span className="flex-1 truncate">{area}</span>
+                  <span className="font-medium tabular-nums">{count}</span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Top órgãos */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Top 5 órgãos</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {topOrgaos.length > 0 ? (
+              <div className="space-y-1.5">
+                {topOrgaos.map(([orgao, count]) => {
+                  const max = topOrgaos[0][1] as number;
+                  return (
+                    <div key={orgao} className="flex items-center gap-2 text-xs">
+                      <span className="flex-1 truncate text-muted-foreground">{orgao}</span>
+                      <div className="w-24 bg-muted rounded-full h-3 overflow-hidden">
+                        <div
+                          className="h-full bg-accent-foreground/20 rounded-full"
+                          style={{ width: `${(count / max) * 100}%` }}
+                        />
+                      </div>
+                      <span className="w-5 text-right tabular-nums font-medium">{count}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground">Sem dados</p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+
   const { t } = useLanguage();
   const { projects } = useProjects();
   const [query, setQuery] = useState("");
