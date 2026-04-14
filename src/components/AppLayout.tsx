@@ -126,10 +126,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             </Button>
           </div>
         </header>
-        <main className="flex-1 overflow-y-auto pb-20">
+        <main className="flex-1 overflow-y-auto" style={{ paddingBottom: 'calc(3.5rem + 0.5rem + env(safe-area-inset-bottom, 0px))' }}>
           <div className="animate-slide-up">{children}</div>
         </main>
-        <nav className="fixed bottom-0 left-0 right-0 z-50 flex h-14 items-center justify-around px-2 border-t border-border/60 bg-background/70 backdrop-blur-xl">
+        <nav className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around px-2 border-t border-border/60 bg-background/70 backdrop-blur-xl" style={{ height: 'calc(3.5rem + env(safe-area-inset-bottom, 0px))', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
           {primaryMobileItems.map((item) => {
             const active = isItemActive(item);
             const locked = item.proOnly && !isPro;
