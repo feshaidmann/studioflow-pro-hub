@@ -40,7 +40,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Plus, Check, X as XIcon, Users, UserPlus, Mail, Phone, DollarSign, Music, Activity, Pencil, Trash2, CheckCircle2, AlertTriangle, Clock, ChevronLeft, Loader2, Guitar, Mic, Sliders, Layers, ChevronDown, Trophy, Copy, Link2, Upload, MessageSquare, ArrowRight, FileText, Video, Camera } from "lucide-react";
+import { Plus, Check, X as XIcon, Users, UserPlus, Mail, Phone, DollarSign, Music, Activity, Pencil, Trash2, CheckCircle2, AlertTriangle, Clock, ChevronLeft, Loader2, Guitar, Mic, Sliders, Layers, ChevronDown, Trophy, Upload, MessageSquare, ArrowRight, FileText, Video, Camera } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { type Project, type Professional, type ProjectType } from "@/data/mockData";
 import { useLanguage } from "@/contexts/LanguageContext";
