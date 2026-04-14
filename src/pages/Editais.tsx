@@ -21,10 +21,34 @@ const UF_OPTIONS = [
 
 const AREA_OPTIONS = ["Música", "Audiovisual", "Ambos", "Outra"];
 
+const STATUS_OPTIONS = ["Todos", "Aberto", "Encerrado", "Indefinido"];
+
 function statusColor(status: string) {
   if (status === "Aberto") return "bg-green-500/15 text-green-700 border-green-200";
   if (status === "Encerrado") return "bg-red-500/15 text-red-700 border-red-200";
   return "bg-muted text-muted-foreground border-border";
+}
+
+const STATUS_ORDER: Record<string, number> = { Aberto: 0, Indefinido: 1, Encerrado: 2 };
+
+function sortAndFilterEditais(items: Edital[], filterStatus: string): Edital[] {
+  let filtered = items;
+  if (filterStatus && filterStatus !== "Todos") {
+    filtered = items.filter((e) =>
+      filterStatus === "Indefinido"
+        ? e.status !== "Aberto" && e.status !== "Encerrado"
+        : e.status === filterStatus
+    );
+  }
+  return [...filtered].sort((a, b) => {
+    const oa = STATUS_ORDER[a.status] ?? 1;
+    const ob = STATUS_ORDER[b.status] ?? 1;
+    if (oa !== ob) return oa - ob;
+    if (!a.prazo && !b.prazo) return 0;
+    if (!a.prazo) return 1;
+    if (!b.prazo) return -1;
+    return a.prazo.localeCompare(b.prazo);
+  });
 }
 
 function formatDate(d: string | null) {
@@ -91,6 +115,7 @@ export default function Editais() {
   const [sources, setSources] = useState("");
   const [filterUF, setFilterUF] = useState("");
   const [filterArea, setFilterArea] = useState("");
+  const [filterStatus, setFilterStatus] = useState("Todos");
   const [linkedProjectId, setLinkedProjectId] = useState<string | null>(null);
 
   const { editais, loading, searching, searchResult, search, saveResults, deleteEdital, exportCSV } = useEditais();
@@ -104,7 +129,8 @@ export default function Editais() {
     search(fullQuery, srcList.length > 0 ? srcList : undefined, linkedProjectId || undefined);
   };
 
-  const resultEditais = searchResult?.editais || [];
+  const resultEditais = sortAndFilterEditais(searchResult?.editais || [], filterStatus);
+  const savedEditais = sortAndFilterEditais(editais as Edital[], filterStatus);
 
   return (
     <div className="p-4 md:p-6 max-w-6xl mx-auto space-y-6">
@@ -165,6 +191,16 @@ export default function Editais() {
                     <SelectItem value="all">Todas</SelectItem>
                     {AREA_OPTIONS.map((a) => (
                       <SelectItem key={a} value={a}>{a}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={filterStatus} onValueChange={setFilterStatus}>
+                  <SelectTrigger className="w-36">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {STATUS_OPTIONS.map((s) => (
+                      <SelectItem key={s} value={s}>{s}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -245,13 +281,13 @@ export default function Editais() {
       )}
 
       {/* Saved editais */}
-      {editais.length > 0 && (
+      {savedEditais.length > 0 && (
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">{t("editais.saved")} ({editais.length})</CardTitle>
+            <CardTitle className="text-base">{t("editais.saved")} ({savedEditais.length})</CardTitle>
           </CardHeader>
           <CardContent>
-            <EditalTable items={editais as any} onDelete={deleteEdital} />
+            <EditalTable items={savedEditais} onDelete={deleteEdital} />
           </CardContent>
         </Card>
       )}
