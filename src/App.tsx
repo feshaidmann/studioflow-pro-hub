@@ -29,7 +29,7 @@ const Professionals = lazy(() => import("@/pages/Professionals"));
 const Settings = lazy(() => import("@/pages/Settings"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
 const InviteResponse = lazy(() => import("@/pages/InviteResponse"));
-const PlatformInviteResponse = lazy(() => import("@/pages/PlatformInviteResponse"));
+
 const Admin = lazy(() => import("@/pages/Admin"));
 const Agenda = lazy(() => import("@/pages/Agenda"));
 const FreelancerProfile = lazy(() => import("@/pages/FreelancerProfile"));
@@ -105,7 +105,7 @@ const App = () => (
                     <Route path="/onboarding" element={<Onboarding />} />
                     <Route path="/u/:username" element={<PublicProfile />} />
                     <Route path="/invite/:token" element={<InviteResponse />} />
-                    <Route path="/platform-invite/:token" element={<PlatformInviteResponse />} />
+                    
                     <Route path="/legal" element={<Legal />} />
                     <Route path="/*" element={<AppRoutes />} />
                   </Routes>

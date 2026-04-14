@@ -40,7 +40,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Plus, Check, X as XIcon, Users, UserPlus, Mail, Phone, DollarSign, Music, Activity, Pencil, Trash2, CheckCircle2, AlertTriangle, Clock, ChevronLeft, Loader2, Guitar, Mic, Sliders, Layers, ChevronDown, Trophy, Copy, Link2, Upload, MessageSquare, ArrowRight, FileText, Video, Camera } from "lucide-react";
+import { Plus, Check, X as XIcon, Users, UserPlus, Mail, Phone, DollarSign, Music, Activity, Pencil, Trash2, CheckCircle2, AlertTriangle, Clock, ChevronLeft, Loader2, Guitar, Mic, Sliders, Layers, ChevronDown, Trophy, Upload, MessageSquare, ArrowRight, FileText, Video, Camera } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { type Project, type Professional, type ProjectType } from "@/data/mockData";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -162,11 +162,10 @@ export default function Projects() {
   const [paymentMode, setPaymentMode] = useState<PaymentMode>("single");
   const [installmentCount, setInstallmentCount] = useState("2");
 
-  /* ── Invite tokens ── */
+  /* ── Invite tokens (for wizard submission) ── */
   const [inviteTokens, setInviteTokens] = useState<Record<string, string>>({});
   const [inviteStatuses, setInviteStatuses] = useState<Record<string, string>>({});
   const [inviteIds, setInviteIds] = useState<Record<string, string>>({});
-  const [copiedToken, setCopiedToken] = useState<string | null>(null);
 
   useEffect(() => {
     if (!selectedProject) return;
@@ -192,22 +191,12 @@ export default function Projects() {
     if (newParam === "1") {
       setForm((prev) => ({ ...prev, artist: prev.artist || displayName }));
       setDialogOpen(true);
-      // Remove the param so the dialog doesn't reopen on every projects update
       setSearchParams((prev) => { prev.delete("new"); return prev; }, { replace: true });
     }
     if (!idParam || projects.length === 0) return;
     const found = projects.find((p) => p.id === idParam);
     if (found) setSelectedProject(found);
   }, [searchParams, projects]);
-
-  const getInviteLink = (token: string) => `${window.location.origin}/invite/${token}`;
-
-  const handleCopyLink = async (token: string) => {
-    await navigator.clipboard.writeText(getInviteLink(token));
-    setCopiedToken(token);
-    toast.success("Link copiado! 🔗");
-    setTimeout(() => setCopiedToken(null), 2000);
-  };
 
 
   const resetWizard = () => {
@@ -914,47 +903,29 @@ export default function Projects() {
                   {teamForSelected.length === 0 ? (
                     <p className="text-xs text-muted-foreground text-center py-4">{t("team.empty")}</p>
                   ) : (
-                    teamForSelected.map((prof) => {
-                      const token = prof.email ? inviteTokens[prof.email] : null;
-                      const inviteLink = token ? getInviteLink(token) : null;
-                      const isCopied = token && copiedToken === token;
-                      const inviteStatus = prof.email ? inviteStatuses[prof.email] : null;
-                      return (
-                        <div key={prof.id} className="rounded-lg bg-secondary/30 border border-border p-3 space-y-2">
+                    <>
+                      {teamForSelected.map((prof) => (
+                        <div key={prof.id} className="rounded-lg bg-secondary/30 border border-border p-3 space-y-1">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center flex-wrap gap-1.5">
                               <span className="font-medium text-sm">{prof.name}</span>
                               <Badge variant="secondary" className="text-xs">{prof.role}</Badge>
-                              {inviteStatus === "pending"  && <Badge variant="outline" className="text-[10px] gap-1 border-yellow-500/50 text-yellow-400"><Clock className="h-2.5 w-2.5"/>Pendente</Badge>}
-                              {inviteStatus === "accepted" && <Badge variant="outline" className="text-[10px] gap-1 border-green-500/50 text-green-400"><Check className="h-2.5 w-2.5"/>Aceito</Badge>}
-                              {inviteStatus === "declined" && <Badge variant="outline" className="text-[10px] gap-1 border-red-500/50 text-red-400"><XIcon className="h-2.5 w-2.5"/>Recusado</Badge>}
                             </div>
                             <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeProfessional(selectedProject.id, prof.id)}><XIcon className="h-3 w-3" /></Button>
                           </div>
-                          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                            {prof.instrument && prof.instrument !== "—" && <span className="flex items-center gap-1"><Music className="h-3 w-3" />{prof.instrument}</span>}
-                            {prof.email && <span className="flex items-center gap-1"><Mail className="h-3 w-3" />{prof.email}</span>}
-                            {prof.phone && <span className="flex items-center gap-1"><Phone className="h-3 w-3" />{prof.phone}</span>}
-                            {prof.fee > 0 && <span className="flex items-center gap-1 text-foreground"><DollarSign className="h-3 w-3" />R$ {prof.fee.toLocaleString()}</span>}
-                          </div>
-                          {prof.notes && <p className="text-xs text-muted-foreground italic">{prof.notes}</p>}
-                          {inviteLink ? (
-                            <div className="pt-1 border-t border-border/40 space-y-1.5">
-                              <div className="flex items-center gap-1.5 rounded-md bg-primary/5 border border-primary/20 px-2 py-1.5">
-                                <Link2 className="h-3 w-3 text-primary shrink-0" />
-                                <span className="text-[10px] text-muted-foreground truncate flex-1 font-mono">/invite/{token}</span>
-                              </div>
-                              <Button variant="outline" size="sm" className="h-7 text-xs gap-1 w-full" onClick={() => handleCopyLink(token!)}>
-                                {isCopied ? <Check className="h-3 w-3 text-success" /> : <Copy className="h-3 w-3" />}
-                                {isCopied ? "Copiado!" : "Copiar link"}
-                              </Button>
-                            </div>
-                          ) : prof.email ? (
-                            <p className="text-[10px] text-muted-foreground pt-1 border-t border-border/30">Convite não enviado ainda.</p>
-                          ) : null}
+                          {prof.instrument && prof.instrument !== "—" && (
+                            <p className="text-xs text-muted-foreground flex items-center gap-1"><Music className="h-3 w-3" />{prof.instrument}</p>
+                          )}
                         </div>
-                      );
-                    })
+                      ))}
+                      <Link to={`/projects/${selectedProject.id}`}>
+                        <Button variant="outline" size="sm" className="w-full text-xs gap-1.5 mt-1">
+                          <Users className="h-3.5 w-3.5" />
+                          Ver equipe completa e convites
+                          <ArrowRight className="h-3.5 w-3.5 ml-auto" />
+                        </Button>
+                      </Link>
+                    </>
                   )}
                 </div>
               )}
