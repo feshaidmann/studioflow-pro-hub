@@ -115,6 +115,7 @@ export default function Editais() {
   const [sources, setSources] = useState("");
   const [filterUF, setFilterUF] = useState("");
   const [filterArea, setFilterArea] = useState("");
+  const [filterStatus, setFilterStatus] = useState("Todos");
   const [linkedProjectId, setLinkedProjectId] = useState<string | null>(null);
 
   const { editais, loading, searching, searchResult, search, saveResults, deleteEdital, exportCSV } = useEditais();
