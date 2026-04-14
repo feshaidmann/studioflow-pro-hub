@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
-import { Search, Download, Save, Trash2, ExternalLink, ChevronDown, FileText, Pencil, Info, Plus, Play, Power, Rss, Star } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Search, Download, Save, Trash2, ExternalLink, ChevronDown, FileText, Pencil, Info, Plus, Play, Power, Rss, Star, BarChart3, ClipboardList } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
