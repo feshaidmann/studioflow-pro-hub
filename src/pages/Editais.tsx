@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Search, Download, Save, Trash2, ExternalLink, FileText, Pencil, Info, BarChart3, ClipboardList, Sparkles, ChevronDown } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -68,6 +69,54 @@ function EditalTable({
   onInscricao?: (id: string) => void;
   t: (k: string) => string;
 }) {
+  const isMobile = useIsMobile();
+
+  if (isMobile) {
+    return (
+      <div className="space-y-2">
+        {items.map((e, i) => (
+          <div key={e.id || e.session_key || i} className="rounded-lg border border-border p-3 space-y-2">
+            <div className="flex items-start justify-between gap-2">
+              <p className="text-sm font-medium leading-snug flex-1">
+                {e.titulo}
+                {e.inferido && <Info className="inline h-3 w-3 text-muted-foreground ml-1" />}
+              </p>
+              <Badge variant="outline" className={statusColor(e.status) + " shrink-0 text-[10px]"}>{e.status}</Badge>
+            </div>
+            <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-muted-foreground">
+              {e.orgao && <span>{e.orgao}</span>}
+              {e.estado && <span>UF: {e.estado}</span>}
+              {e.area && <span>{e.area}</span>}
+              <span>Prazo: {formatDate(e.prazo)}</span>
+            </div>
+            <div className="flex items-center gap-1 pt-1">
+              {e.link && e.link !== "—" && (
+                <a href={e.link} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                  <Button variant="ghost" size="icon" className="h-7 w-7"><ExternalLink className="h-3.5 w-3.5" /></Button>
+                </a>
+              )}
+              {onInscricao && e.id && (
+                <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary" onClick={() => onInscricao(e.id!)}>
+                  <ClipboardList className="h-3.5 w-3.5" />
+                </Button>
+              )}
+              {onEdit && (
+                <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={() => onEdit(e)}>
+                  <Pencil className="h-3.5 w-3.5" />
+                </Button>
+              )}
+              {onDelete && (
+                <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => e.id && onDelete(e.id)}>
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
   return (
     <div className="rounded-lg border border-border overflow-hidden">
       <Table>

@@ -17,6 +17,7 @@ import {
   ChevronLeft,
   Dna,
   HelpCircle,
+  MoreHorizontal,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -24,6 +25,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
 import NotificationsBell from "@/components/NotificationsPanel";
@@ -47,6 +49,7 @@ const gestaoItems = [
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   usePageTracking();
   const isMobile = useIsMobile();
+  const [moreOpen, setMoreOpen] = useState(false);
   const SIDEBAR_KEY = "sfp_sidebar_open";
   const [sidebarOpen, setSidebarOpen] = useState(() => {
     const saved = localStorage.getItem(SIDEBAR_KEY);
@@ -79,9 +82,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   const primaryMobileItems = [
     ...principalItems,
-    gestaoItems[0],
-    gestaoItems[1],
-    gestaoItems[2],
+    gestaoItems[0], // Finanças
+    gestaoItems[1], // Agenda
+  ];
+
+  const drawerItems = [
+    gestaoItems[2], // DNA Musical
+    gestaoItems[3], // Editais
+    gestaoItems[4], // Profissionais
+    tutorialNavItem,
     settingsNavItem,
   ];
 
@@ -102,6 +111,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const isRootRoute = ROOT_ROUTES.includes(location.pathname);
 
   // ── Mobile ─────────────────────────────────────────────────────────────────
+  const isMoreActive = drawerItems.some((item) => isItemActive(item));
+
   if (isMobile) {
     return (
       <div className="flex min-h-screen flex-col">
@@ -116,20 +127,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
           <div className="flex items-center gap-0.5">
             <NotificationsBell compact align="end" />
-            <NavLink to="/tutorial">
-              <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground">
-                <HelpCircle className="h-4 w-4" />
-              </Button>
-            </NavLink>
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={handleSignOut}>
-              <LogOut className="h-4 w-4" />
-            </Button>
           </div>
         </header>
-        <main className="flex-1 overflow-y-auto pb-20">
+        <main className="flex-1 overflow-y-auto" style={{ paddingBottom: 'calc(3.5rem + 0.5rem + env(safe-area-inset-bottom, 0px))' }}>
           <div className="animate-slide-up">{children}</div>
         </main>
-        <nav className="fixed bottom-0 left-0 right-0 z-50 flex h-14 items-center justify-around px-2 border-t border-border/60 bg-background/70 backdrop-blur-xl">
+        <nav className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around px-2 border-t border-border/60 bg-background/70 backdrop-blur-xl" style={{ height: 'calc(3.5rem + env(safe-area-inset-bottom, 0px))', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
           {primaryMobileItems.map((item) => {
             const active = isItemActive(item);
             const locked = item.proOnly && !isPro;
@@ -138,7 +141,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 key={item.path}
                 to={getNavTo(item)}
                 className={cn(
-                  "flex flex-1 flex-col items-center gap-0.5 py-1.5 text-[10px] transition-colors min-h-[44px] justify-center rounded-lg",
+                  "flex flex-1 flex-col items-center gap-0.5 py-1.5 text-[11px] transition-colors min-h-[44px] justify-center rounded-lg",
                   active ? "text-primary font-medium" : locked ? "text-muted-foreground/40" : "text-muted-foreground"
                 )}
               >
@@ -151,7 +154,66 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               </NavLink>
             );
           })}
+          {/* Botão "Mais" */}
+          <button
+            onClick={() => setMoreOpen(true)}
+            className={cn(
+              "flex flex-1 flex-col items-center gap-0.5 py-1.5 text-[11px] transition-colors min-h-[44px] justify-center rounded-lg",
+              isMoreActive ? "text-primary font-medium" : "text-muted-foreground"
+            )}
+          >
+            <MoreHorizontal className="h-5 w-5" />
+            {t("nav.more")}
+            {isMoreActive && <div className="h-1 w-1 rounded-full bg-primary mt-0.5" />}
+          </button>
         </nav>
+
+        {/* Drawer "Mais" */}
+        <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
+          <SheetContent side="bottom" className="rounded-t-2xl px-4 pb-8" style={{ paddingBottom: 'calc(2rem + env(safe-area-inset-bottom, 0px))' }}>
+            <SheetHeader className="pb-2">
+              <SheetTitle className="text-base">{t("nav.more")}</SheetTitle>
+            </SheetHeader>
+            <div className="grid grid-cols-3 gap-3">
+              {drawerItems.map((item) => {
+                const active = isItemActive(item);
+                const locked = item.proOnly && !isPro;
+                return (
+                  <NavLink
+                    key={item.path}
+                    to={getNavTo(item)}
+                    onClick={() => setMoreOpen(false)}
+                    className={cn(
+                      "flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-colors min-h-[72px] justify-center",
+                      active
+                        ? "border-primary/30 bg-primary/5 text-primary font-medium"
+                        : locked
+                        ? "border-border/40 text-muted-foreground/40"
+                        : "border-border/60 text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                    )}
+                  >
+                    <div className="relative">
+                      <item.icon className="h-5 w-5" />
+                      {locked && <Lock className="absolute -top-1 -right-1 h-2.5 w-2.5 text-muted-foreground/50" />}
+                    </div>
+                    <span className="text-xs">{t(item.labelKey)}</span>
+                  </NavLink>
+                );
+              })}
+            </div>
+            <div className="mt-4 pt-3 border-t border-border/40">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full justify-start gap-2.5 text-sm text-muted-foreground hover:text-destructive"
+                onClick={() => { setMoreOpen(false); handleSignOut(); }}
+              >
+                <LogOut className="h-4 w-4" />
+                {t("nav.logout")}
+              </Button>
+            </div>
+          </SheetContent>
+        </Sheet>
       </div>
     );
   }

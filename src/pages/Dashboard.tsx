@@ -9,6 +9,7 @@ import { useTasks } from "@/hooks/useTasks";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { toast } from "sonner";
 import { AITaskAssistant, type AITaskAssistantHandle } from "@/components/AITaskAssistant";
 import { useProfessionals } from "@/hooks/useProfessionals";
@@ -32,6 +33,7 @@ export default function Dashboard() {
   const [refreshing, setRefreshing] = useState(false);
   const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const { projects, getMixPercent, getProjectFinancials, transactions } = useProjects();
   const { displayName, isSimpleMode } = useProfile();
   const { activeTasks, completedTasks, loading: tasksLoading, addTask, toggleTask, deleteTask, updateTask, refresh: refreshTasks } = useTasks();
@@ -205,6 +207,74 @@ export default function Dashboard() {
     return null;
   }, [alerts, activeTasks, isFirstRun]);
 
+  const aiAssistantCard = (
+    <Collapsible
+      defaultOpen={!isMobile && localStorage.getItem("sfp_ai_collapsed") !== "true"}
+      onOpenChange={(open) => localStorage.setItem("sfp_ai_collapsed", open ? "false" : "true")}
+      className={cn(isFirstRun && "hidden")}
+    >
+      <Card className="glass-card animate-fade-in border-primary/20 shadow-sm" style={{ animationDelay: "50ms" }}>
+        <CollapsibleTrigger asChild>
+          <CardHeader className="pb-1 pt-3 px-4 cursor-pointer select-none hover:bg-muted/40 rounded-t-lg transition-colors">
+            <CardTitle className="text-xs flex items-center gap-1.5 font-medium">
+              <Bot className="h-3.5 w-3.5 text-primary" />
+              <span className="text-primary">Assistente IA</span>
+              {!isMobile && <span className="text-muted-foreground ml-1">— pergunte qualquer coisa sobre seus projetos</span>}
+              <span className="ml-auto text-muted-foreground">
+                <ChevronDown className="h-4 w-4 transition-transform duration-200 [[data-state=open]>&]:rotate-180" />
+              </span>
+            </CardTitle>
+          </CardHeader>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <CardContent className="pt-0 px-4 pb-3">
+            <AITaskAssistant
+              ref={aiRef}
+              alwaysOpen
+              contextChips={buildAIChips()}
+              context={{
+                projects: [
+                  ...projects.map((p) => ({
+                    id: p.id, name: p.name, artist: p.artist, stage: p.stage,
+                    mixPercent: getMixPercent(p.id), projectType: p.projectType,
+                    totalContractValue: p.totalContractValue, amountPaid: p.amountPaid,
+                    estimatedMonths: p.estimatedMonths,
+                  })),
+                  ...guestProjects.filter(g => !g.completed).map((g) => ({
+                    id: g.id, name: `[Parceiro] ${g.name}`, artist: g.artist, stage: g.stage,
+                    mixPercent: 0, projectType: g.project_type,
+                  })),
+                ],
+                activeTasks: [
+                  ...activeTasks.map((t) => ({ description: t.description, source: t.source, dueDate: t.dueDate, assignedTo: t.assignedTo, blocked: t.blocked, blockedReason: t.blockedReason, severity: t.severity })),
+                  ...guestTasks.map((t) => ({ description: `[${t.projectName}] ${t.description}`, source: t.source, dueDate: t.dueDate, assignedTo: t.assignedTo, blocked: t.blocked, blockedReason: t.blockedReason, severity: t.severity })),
+                ],
+                financials,
+                professionals: professionals.map((p) => ({ name: p.name, specialty: p.specialty, bio: p.bio ?? "", active: true, phone: p.phone ?? "" })),
+                alerts: alerts.slice(0, 10).map((a) => ({ title: a.title, severity: a.severity, project: a.projectName, category: a.category })),
+              }}
+              onAddTask={async (description, projectId) => {
+                const validProjectId = projectId && projects.some((p) => p.id === projectId) ? projectId : null;
+                const result = await addTask({ description, projectId: validProjectId, source: "manual" });
+                if (!result) await addTask({ description, projectId: null, source: "manual" });
+              }}
+              conversations={conversations}
+              activeConversationId={activeConversationId}
+              savedMessages={savedMessages}
+              loadingMessages={loadingMessages}
+              onCreateConversation={createConversation}
+              onSaveMessage={saveMessage}
+              onSelectConversation={setActiveConversationId}
+              onNewConversation={startNewConversation}
+              onDeleteConversation={deleteConversation}
+              onRenameConversation={renameConversation}
+            />
+          </CardContent>
+        </CollapsibleContent>
+      </Card>
+    </Collapsible>
+  );
+
   return (
     <div className="p-4 md:p-6 space-y-5 max-w-6xl mx-auto">
       <DashboardHeader
@@ -214,95 +284,31 @@ export default function Dashboard() {
         onSelectProject={setSelectedProjectId}
       />
 
-      {/* Next recommended action */}
+      {/* Next recommended action — compact on mobile */}
       {nextAction && (
         <div className={cn(
-          "rounded-lg border px-4 py-3 flex items-center gap-3 animate-fade-in",
+          "rounded-lg border px-3 py-2.5 md:px-4 md:py-3 flex items-center gap-2.5 animate-fade-in",
           nextAction.severity === "critical" ? "border-destructive/40 bg-destructive/5" :
           nextAction.severity === "warning" ? "border-warning/40 bg-warning/5" :
           "border-primary/30 bg-primary/5"
         )}>
           <div className={cn(
-            "h-8 w-8 rounded-full flex items-center justify-center shrink-0",
+            "h-7 w-7 md:h-8 md:w-8 rounded-full flex items-center justify-center shrink-0",
             nextAction.severity === "critical" ? "bg-destructive/15" :
             nextAction.severity === "warning" ? "bg-warning/15" : "bg-primary/15"
           )}>
-            <Bot className={cn("h-4 w-4", nextAction.severity === "critical" ? "text-destructive" : nextAction.severity === "warning" ? "text-warning" : "text-primary")} />
+            <Bot className={cn("h-3.5 w-3.5 md:h-4 md:w-4", nextAction.severity === "critical" ? "text-destructive" : nextAction.severity === "warning" ? "text-warning" : "text-primary")} />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Próxima ação recomendada</p>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium leading-tight">Próxima ação</p>
             <p className="text-sm font-medium truncate">{nextAction.label}</p>
-            <p className="text-[11px] text-muted-foreground">{nextAction.detail}</p>
+            {!isMobile && <p className="text-[11px] text-muted-foreground">{nextAction.detail}</p>}
           </div>
         </div>
       )}
 
-      {/* AI Assistant — prominent position */}
-      <Collapsible
-        defaultOpen={localStorage.getItem("sfp_ai_collapsed") !== "true"}
-        onOpenChange={(open) => localStorage.setItem("sfp_ai_collapsed", open ? "false" : "true")}
-        className={cn(isFirstRun && "hidden")}
-      >
-        <Card className="glass-card animate-fade-in border-primary/20 shadow-sm" style={{ animationDelay: "50ms" }}>
-          <CollapsibleTrigger asChild>
-            <CardHeader className="pb-1 pt-3 px-4 cursor-pointer select-none hover:bg-muted/40 rounded-t-lg transition-colors">
-              <CardTitle className="text-xs flex items-center gap-1.5 font-medium">
-                <Bot className="h-3.5 w-3.5 text-primary" />
-                <span className="text-primary">Assistente IA</span>
-                <span className="text-muted-foreground ml-1">— pergunte qualquer coisa sobre seus projetos</span>
-                <span className="ml-auto text-muted-foreground">
-                  <ChevronDown className="h-4 w-4 transition-transform duration-200 [[data-state=open]>&]:rotate-180" />
-                </span>
-              </CardTitle>
-            </CardHeader>
-          </CollapsibleTrigger>
-          <CollapsibleContent>
-            <CardContent className="pt-0 px-4 pb-3">
-              <AITaskAssistant
-                ref={aiRef}
-                alwaysOpen
-                contextChips={buildAIChips()}
-                context={{
-                  projects: [
-                    ...projects.map((p) => ({
-                      id: p.id, name: p.name, artist: p.artist, stage: p.stage,
-                      mixPercent: getMixPercent(p.id), projectType: p.projectType,
-                      totalContractValue: p.totalContractValue, amountPaid: p.amountPaid,
-                      estimatedMonths: p.estimatedMonths,
-                    })),
-                    ...guestProjects.filter(g => !g.completed).map((g) => ({
-                      id: g.id, name: `[Parceiro] ${g.name}`, artist: g.artist, stage: g.stage,
-                      mixPercent: 0, projectType: g.project_type,
-                    })),
-                  ],
-                  activeTasks: [
-                    ...activeTasks.map((t) => ({ description: t.description, source: t.source, dueDate: t.dueDate, assignedTo: t.assignedTo, blocked: t.blocked, blockedReason: t.blockedReason, severity: t.severity })),
-                    ...guestTasks.map((t) => ({ description: `[${t.projectName}] ${t.description}`, source: t.source, dueDate: t.dueDate, assignedTo: t.assignedTo, blocked: t.blocked, blockedReason: t.blockedReason, severity: t.severity })),
-                  ],
-                  financials,
-                  professionals: professionals.map((p) => ({ name: p.name, specialty: p.specialty, bio: p.bio ?? "", active: true, phone: p.phone ?? "" })),
-                  alerts: alerts.slice(0, 10).map((a) => ({ title: a.title, severity: a.severity, project: a.projectName, category: a.category })),
-                }}
-                onAddTask={async (description, projectId) => {
-                  const validProjectId = projectId && projects.some((p) => p.id === projectId) ? projectId : null;
-                  const result = await addTask({ description, projectId: validProjectId, source: "manual" });
-                  if (!result) await addTask({ description, projectId: null, source: "manual" });
-                }}
-                conversations={conversations}
-                activeConversationId={activeConversationId}
-                savedMessages={savedMessages}
-                loadingMessages={loadingMessages}
-                onCreateConversation={createConversation}
-                onSaveMessage={saveMessage}
-                onSelectConversation={setActiveConversationId}
-                onNewConversation={startNewConversation}
-                onDeleteConversation={deleteConversation}
-                onRenameConversation={renameConversation}
-              />
-            </CardContent>
-          </CollapsibleContent>
-        </Card>
-      </Collapsible>
+      {/* AI Assistant — desktop: prominent; mobile: after checklist */}
+      {!isMobile && aiAssistantCard}
 
       {/* 1. O que fazer hoje + Alertas */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
@@ -327,6 +333,9 @@ export default function Dashboard() {
         <ProjectAlertsCard alerts={alerts} hidden={isFirstRun} />
       </div>
 
+      {/* AI Assistant on mobile — after checklist */}
+      {isMobile && aiAssistantCard}
+
       {/* 2. Equipe pendente */}
       <PendingTeamCard hidden={isFirstRun} />
 
@@ -339,7 +348,7 @@ export default function Dashboard() {
       {/* 4. Próximos lançamentos */}
       <UpcomingReleases projects={projects} getMixPercent={getMixPercent} hidden={isFirstRun} />
 
-      {/* 4. Financeiro */}
+      {/* 5. Financeiro */}
       <FinancialSummary financials={financials} isSimpleMode={isSimpleMode} />
 
       {!isSimpleMode && <RecentTransactions transactions={transactions} />}

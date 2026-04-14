@@ -75,6 +75,7 @@ import { type Transaction } from "@/data/mockData";
 import TransactionForm from "@/components/finance/TransactionForm";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -152,6 +153,7 @@ export default function FinancialTracker() {
   const { t } = useLanguage();
   const { transactions, projects, deleteTransaction, getProjectFinancials } = useProjects();
   const { user } = useAuth();
+  const isMobile = useIsMobile();
 
   const [formOpen, setFormOpen] = useState(false);
   const [editTx, setEditTx] = useState<Transaction | null>(null);
@@ -585,49 +587,82 @@ export default function FinancialTracker() {
             </Button>
           </div>
 
-          {/* Table */}
+          {/* Table / Cards */}
           <Card className="glass-card overflow-hidden">
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Data</TableHead>
-                    <TableHead>Descrição</TableHead>
-                    <TableHead className="hidden sm:table-cell">Categoria</TableHead>
-                    <TableHead className="hidden md:table-cell">Projeto</TableHead>
-                    <TableHead className="text-right">Valor</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="w-[72px]">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filtered.length === 0 ? (
+            {filtered.length === 0 ? (
+              <div className="py-16 flex flex-col items-center justify-center gap-4 text-center px-4">
+                <div className="rounded-full bg-primary/10 p-4">
+                  <DollarSign className="h-10 w-10 text-primary/60" />
+                </div>
+                <div className="space-y-1">
+                  <p className="text-foreground font-medium">
+                    {transactions.length === 0 ? "Nenhuma transação registrada" : "Nenhuma transação encontrada"}
+                  </p>
+                  <p className="text-muted-foreground text-sm max-w-xs mx-auto">
+                    {transactions.length === 0
+                      ? "Registre receitas e despesas para acompanhar suas finanças."
+                      : "Tente ajustar os filtros para encontrar suas transações."}
+                  </p>
+                </div>
+                {transactions.length === 0 && (
+                  <Button className="mt-2" onClick={() => { setEditTx(null); setFormOpen(true); }}>
+                    <Plus className="h-4 w-4 mr-1" /> Registrar primeira transação
+                  </Button>
+                )}
+              </div>
+            ) : isMobile ? (
+              <div className="p-3 space-y-2">
+                {paginated.map((tx) => (
+                  <div key={tx.id} className="rounded-lg border border-border p-3 space-y-1.5">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{tx.description}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(tx.date + "T12:00:00").toLocaleDateString("pt-BR")}
+                          {tx.projectId ? ` · ${projectName(tx.projectId)}` : ""}
+                        </p>
+                      </div>
+                      <span className={cn("text-sm font-bold whitespace-nowrap", tx.type === "income" ? "text-success" : "text-destructive")}>
+                        {tx.type === "income" ? "+" : "-"}{formatCurrency(tx.amount)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <span>{tx.category === "Outros" && tx.customCategory ? `Outros (${tx.customCategory})` : tx.category}</span>
+                        {tx.paid ? (
+                          <span className="flex items-center gap-0.5 text-success"><CheckCircle2 className="h-3 w-3" /> Pago</span>
+                        ) : (
+                          <span className="flex items-center gap-0.5"><Clock className="h-3 w-3" /> Pendente</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-0.5">
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setEditTx(tx); setFormOpen(true); }}>
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => setDeleteId(tx.id)}>
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
                     <TableRow>
-                      <TableCell colSpan={7} className="py-16">
-                        <div className="flex flex-col items-center justify-center gap-4 text-center">
-                          <div className="rounded-full bg-primary/10 p-4">
-                            <DollarSign className="h-10 w-10 text-primary/60" />
-                          </div>
-                          <div className="space-y-1">
-                            <p className="text-foreground font-medium">
-                              {transactions.length === 0 ? "Nenhuma transação registrada" : "Nenhuma transação encontrada"}
-                            </p>
-                            <p className="text-muted-foreground text-sm max-w-xs mx-auto">
-                              {transactions.length === 0
-                                ? "Registre receitas e despesas para acompanhar suas finanças."
-                                : "Tente ajustar os filtros para encontrar suas transações."}
-                            </p>
-                          </div>
-                          {transactions.length === 0 && (
-                            <Button className="mt-2" onClick={() => { setEditTx(null); setFormOpen(true); }}>
-                              <Plus className="h-4 w-4 mr-1" /> Registrar primeira transação
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
+                      <TableHead>Data</TableHead>
+                      <TableHead>Descrição</TableHead>
+                      <TableHead className="hidden sm:table-cell">Categoria</TableHead>
+                      <TableHead className="hidden md:table-cell">Projeto</TableHead>
+                      <TableHead className="text-right">Valor</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="w-[72px]">Ações</TableHead>
                     </TableRow>
-                  ) : (
-                    paginated.map((tx, i) => (
+                  </TableHeader>
+                  <TableBody>
+                    {paginated.map((tx, i) => (
                       <TableRow key={tx.id} className={`transition-colors ${i % 2 === 1 ? "bg-secondary/10" : ""} hover:bg-primary/5`}>
                         <TableCell className="text-xs text-muted-foreground font-mono-nums whitespace-nowrap">
                           {new Date(tx.date + "T12:00:00").toLocaleDateString("pt-BR")}
@@ -673,11 +708,11 @@ export default function FinancialTracker() {
                           </div>
                         </TableCell>
                       </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
             {/* Footer: totals + pagination */}
             {filtered.length > 0 && (
               <div className="border-t border-border bg-muted/30">
