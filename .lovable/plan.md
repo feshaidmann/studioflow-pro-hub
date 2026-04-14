@@ -1,57 +1,74 @@
 
 
-## Diagnóstico
+# Plano: Módulo "Busca de Editais"
 
-Atualmente **não existe** um player de áudio inline no projeto. Todos os arquivos (inclusive áudio) exibem apenas um botão de download. Para implementar a proteção que você descreve, precisamos:
+## Resumo
+Criar um módulo completo de busca de editais culturais usando Perplexity (já conectado) como motor de busca web, com tabela no banco, Edge Function, hook e página integrada à navegação.
 
-1. **Criar um player de áudio inline** — para que membros/colaboradores possam ouvir sem baixar
-2. **Restringir o download** apenas ao dono do projeto (quem criou o projeto, `projects.user_id`)
-3. **Proteger no backend** — as signed URLs para download devem ser geradas apenas para o owner
+## Adaptação importante
+O spec original pedia Claude + web_search da Anthropic. Como optou por Perplexity, a Edge Function usará a API do Perplexity (modelo `sonar`) para busca com grounding em tempo real. O system prompt será preservado integralmente. A Perplexity já faz web search nativamente — não precisa de ferramenta extra.
 
 ---
 
-## Plano
+## 1. Migration SQL — Tabela `editais`
 
-### 1. Criar componente `AudioPlayer`
-- Componente reutilizável que recebe uma signed URL e renderiza um `<audio>` nativo com controles (play, pause, seek, volume)
-- A URL será gerada com tempo curto (ex: 5 min) e sem header de download forçado
-- Aplicado automaticamente quando o `mime_type` começa com `audio/`
+Nova tabela com todas as colunas especificadas. RLS restrita ao `user_id = auth.uid()`. Índice único em `(user_id, session_key)`.
 
-### 2. Diferenciar "ouvir" de "baixar" na UI
+## 2. Edge Function — `supabase/functions/edital-search/index.ts`
 
-**ProjectFilesTab (owner):** mantém player + botão de download (owner sempre pode baixar)
+- Segue padrão de `ai-task-assistant` (auth, CORS, logging)
+- Recebe `{ query, sources?, project_id?, save_results? }`
+- Chama Perplexity API (`https://api.perplexity.ai/chat/completions`) com modelo `sonar-pro` (multi-step reasoning + citations)
+- System prompt copiado literalmente do spec
+- User prompt construído com a query + sources do usuário
+- Parseia a resposta em markdown e extrai array estruturado de editais
+- Se `save_results = true`, persiste na tabela `editais` via service role client
+- Retorna `{ message, editais, session_key_list, citations }`
 
-**CollaboratorFilesTab e ProjectChat:** exibe o player inline para áudio, mas **remove o botão de download** para todos exceto o dono do projeto
+## 3. Hook — `src/hooks/useEditais.ts`
 
-- Nos componentes `ProjectChat`, `CollaboratorFilesTab` e `ProjectFilesTab`, verificar se o usuário atual é o `projects.user_id`
-- Se não for o owner: esconder ícone de Download, mostrar apenas o player
-- Se for o owner: mostrar ambos
+Seguindo padrão de `useTasks.ts`:
+- `editais` — query da tabela, filtrável por `project_id`
+- `loading`, `searching`
+- `search(query, sources?, projectId?)` — chama a edge function
+- `saveResults(editais)` — insere via `supabase.from('editais').insert()`
+- `deleteEdital(id)` — remove registro
+- `exportCSV()` — gera download CSV no cliente (separador `;`, UTF-8 BOM)
 
-### 3. Proteção backend (signed URLs)
-- Criar uma função RPC `get_file_download_url(p_file_id uuid)` com `SECURITY DEFINER` que:
-  - Verifica se `auth.uid()` é o `projects.user_id` do projeto vinculado ao arquivo
-  - Só gera a signed URL de download se for o owner
-  - Retorna erro se não for autorizado
-- Para **playback** (streaming): manter a signed URL curta existente (via `createSignedUrl` no cliente), já que o bucket é privado e a URL expira — o áudio toca mas não é facilmente salvável
+## 4. Página — `src/pages/Editais.tsx`
 
-### 4. Detalhes técnicos
+Layout seguindo `Professionals.tsx`:
+- Header: "Busca de Editais" + subtítulo
+- Campo de busca + botão "Buscar"
+- Accordion "Fontes adicionais" (textarea + filtros UF/área)
+- Área de resultado: empty state / skeleton / Table com colunas Título|Estado|Órgão|Prazo|Status|Área|Link
+- Badge colorido por status (verde/vermelho/cinza)
+- Barra de ações: Salvar, Exportar CSV, Vincular a projeto
+- Seção "Editais salvos" com tabela + botão de excluir
 
-**Novo componente:** `src/components/ui/audio-player.tsx`
-```
-<audio controls controlsList="nodownload" src={signedUrl} />
-```
-- O atributo `controlsList="nodownload"` remove o botão de download nativo do player do navegador
+## 5. Navegação
 
-**Arquivos editados:**
-- `src/components/project-hub/ProjectFilesTab.tsx` — adicionar player inline para arquivos de áudio; passar prop `isOwner`
-- `src/components/project-hub/CollaboratorFilesTab.tsx` — adicionar player, remover botão de download
-- `src/components/project-hub/ProjectChat.tsx` — player inline para anexos de áudio, download condicional
-- `src/pages/ProjectDetail.tsx` — passar `isOwner` para os componentes de arquivos
-- `src/hooks/useProjectFiles.ts` — adicionar função `getPlaybackUrl` com URL de 5min
+- `AppLayout.tsx`: novo item `nav.editais` com ícone `FileText`, após Agenda
+- `App.tsx`: rota lazy `/editais`
+- `LanguageContext.tsx`: traduções `nav.editais` pt/en
 
-**Nova migration SQL:**
-- Função RPC `get_file_download_url` que valida ownership antes de gerar URL
+## Arquivos criados/editados
 
-### Limitação importante
-A proteção é "best effort" no frontend — um usuário técnico poderia inspecionar o código e pegar a URL de streaming. Para proteção total seria necessário um proxy de streaming server-side, mas o player com `controlsList="nodownload"` + URLs curtas + sem botão de download oferece uma barreira prática sólida para o contexto da plataforma.
+| Ação | Arquivo |
+|------|---------|
+| Criar | `supabase/migrations/xxx_create_editais.sql` |
+| Criar | `supabase/functions/edital-search/index.ts` |
+| Criar | `src/hooks/useEditais.ts` |
+| Criar | `src/pages/Editais.tsx` |
+| Editar | `src/components/AppLayout.tsx` (nav item) |
+| Editar | `src/App.tsx` (rota) |
+| Editar | `src/contexts/LanguageContext.tsx` (traduções) |
+
+## Detalhes técnicos
+
+**Perplexity vs Claude web_search**: A API do Perplexity já inclui busca web nativa — cada resposta vem com `citations` (URLs fonte). Isso substitui diretamente o `web_search_20250305` do Claude. O modelo `sonar-pro` faz raciocínio multi-step e retorna até 2x mais citações.
+
+**Parsing**: Como a Perplexity retorna texto livre (não JSON estruturado), a Edge Function fará um segundo passo com Lovable AI (Gemini Flash) para extrair o array JSON de editais a partir do markdown retornado pela Perplexity. Isso garante dados estruturados confiáveis para persistência.
+
+**Deduplicação**: O índice `UNIQUE (user_id, session_key)` + `ON CONFLICT DO NOTHING` no insert garante que editais duplicados não sejam salvos.
 
