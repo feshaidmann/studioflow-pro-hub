@@ -376,7 +376,7 @@ const translations: Record<string, string> = {
   "editais.emptyState": "Digite uma busca para encontrar editais de fomento cultural",
   "editais.results": "Resultados",
   "editais.noResults": "Nenhum edital encontrado para esta busca.",
-  "editais.report": "Relatório completo",
+  
   "editais.linkProject": "Vincular ao projeto",
   "editais.noProject": "Sem vínculo",
   "editais.save": "Salvar no StudioFlow",
