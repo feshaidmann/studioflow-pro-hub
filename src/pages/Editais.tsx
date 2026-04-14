@@ -77,11 +77,12 @@ function formatDateTime(d: string | null) {
 }
 
 function EditalTable({
-  items, onDelete, onEdit, selectable, selectedKeys, onToggle, onToggleAll, t,
+  items, onDelete, onEdit, onInscricao, selectable, selectedKeys, onToggle, onToggleAll, t,
 }: {
   items: Edital[];
   onDelete?: (id: string) => void;
   onEdit?: (e: Edital) => void;
+  onInscricao?: (id: string) => void;
   selectable?: boolean;
   selectedKeys?: Set<string>;
   onToggle?: (key: string) => void;
@@ -107,7 +108,7 @@ function EditalTable({
             <TableHead className="w-24">Status</TableHead>
             <TableHead className="w-24">Área</TableHead>
             <TableHead className="w-16">Link</TableHead>
-            {(onDelete || onEdit) && <TableHead className="w-20" />}
+            {(onDelete || onEdit || onInscricao) && <TableHead className="w-28" />}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -150,9 +151,14 @@ function EditalTable({
                   </a>
                 ) : "—"}
               </TableCell>
-              {(onDelete || onEdit) && (
+              {(onDelete || onEdit || onInscricao) && (
                 <TableCell>
                   <div className="flex gap-1">
+                    {onInscricao && e.id && (
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary" onClick={() => onInscricao(e.id!)}>
+                        <ClipboardList className="h-3.5 w-3.5" />
+                      </Button>
+                    )}
                     {onEdit && (
                       <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={() => onEdit(e)}>
                         <Pencil className="h-3.5 w-3.5" />
