@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import {
   FolderKanban, DollarSign, ArrowRight, Users, LogIn, Mic2,
   CalendarDays, Sparkles, AlertTriangle, CheckCircle2, XCircle,
-  Rocket, Clock, FileCheck, Shield,
+  Rocket, Clock, FileCheck, Shield, FileText,
 } from "lucide-react";
 
 /* ── Features reposicionadas para gestão operacional ── */
@@ -18,6 +18,7 @@ const features = [
   { text: "Nunca mais perca um prazo de entrega ou gravação.", icon: Clock, accent: "from-primary/15 to-primary/5", iconColor: "text-primary", highlight: true },
   { text: "Controle equipe, cachês e custos por projeto.", icon: Users, accent: "from-[hsl(var(--warning)/0.15)] to-[hsl(var(--warning)/0.05)]", iconColor: "text-[hsl(var(--warning))]", highlight: false },
   { text: "Finanças claras: quanto gastou e o que falta.", icon: DollarSign, accent: "from-[hsl(var(--success)/0.15)] to-[hsl(var(--success)/0.05)]", iconColor: "text-[hsl(var(--success))]", highlight: false },
+  { text: "Encontre editais de fomento cultural com IA.", icon: FileText, accent: "from-violet-500/15 to-violet-500/5", iconColor: "text-violet-500", highlight: true },
   { text: "Arquivos organizados: stems, mixes, capas e contratos.", icon: FileCheck, accent: "from-primary/15 to-primary/5", iconColor: "text-primary", highlight: false },
   { text: "Agenda integrada com shows, ensaios e deadlines.", icon: CalendarDays, accent: "from-sky-500/15 to-sky-500/5", iconColor: "text-sky-500", highlight: false },
   { text: "IA que avisa o que está travando seu projeto.", icon: Sparkles, accent: "from-primary/15 to-primary/5", iconColor: "text-primary", highlight: false },
@@ -28,6 +29,7 @@ const comparison = [
   { before: "Conversas soltas no WhatsApp", after: "Chat do projeto com tarefas vinculadas" },
   { before: "Planilha de custos genérica", after: "Financeiro por projeto e por faixa" },
   { before: "Prazos esquecidos", after: "Alertas automáticos de risco" },
+  { before: "Buscar editais manualmente em dezenas de sites", after: "IA encontra editais abertos pra você" },
   { before: "Arquivos espalhados em pastas", after: "Central de arquivos por etapa" },
   { before: "Sem saber se está pronto pra lançar", after: "Checklist de lançamento completo" },
 ];
