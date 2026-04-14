@@ -510,6 +510,10 @@ export default function Editais() {
             <Rss className="h-3.5 w-3.5 mr-1.5" />
             Fontes automáticas
           </TabsTrigger>
+          <TabsTrigger value="recomendados">
+            <Star className="h-3.5 w-3.5 mr-1.5" />
+            Recomendados
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="busca" className="space-y-6 mt-4">
