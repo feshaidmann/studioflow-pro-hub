@@ -1,4 +1,5 @@
 import { Card, CardContent } from "@/components/ui/card";
+import ProjectCulturalProfile from "@/components/project-hub/ProjectCulturalProfile";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import {
@@ -197,6 +198,9 @@ export default function ProjectOverviewTab({ project, progress, isOwner, onSwitc
           </div>
         )}
       </div>
+
+      {/* Cultural Profile */}
+      {isOwner && <ProjectCulturalProfile projectId={project.id} />}
     </div>
   );
 }
