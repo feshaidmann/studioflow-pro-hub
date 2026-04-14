@@ -90,7 +90,7 @@ export function useEditais(projectId?: string | null) {
         inferido: e.inferido,
         session_key: e.session_key,
       }));
-      const { error } = await supabase.from("editais").insert(rows as any);
+      const { error } = await supabase.from("editais").upsert(rows as any, { onConflict: "user_id,session_key", ignoreDuplicates: true });
       if (error) throw error;
       toast({ title: "Editais salvos!", description: `${items.length} edital(is) salvo(s).` });
       await fetchEditais();
