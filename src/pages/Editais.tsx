@@ -194,6 +194,16 @@ export default function Editais() {
                     ))}
                   </SelectContent>
                 </Select>
+                <Select value={filterStatus} onValueChange={setFilterStatus}>
+                  <SelectTrigger className="w-36">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {STATUS_OPTIONS.map((s) => (
+                      <SelectItem key={s} value={s}>{s}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </CollapsibleContent>
           </Collapsible>
@@ -271,13 +281,13 @@ export default function Editais() {
       )}
 
       {/* Saved editais */}
-      {editais.length > 0 && (
+      {savedEditais.length > 0 && (
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">{t("editais.saved")} ({editais.length})</CardTitle>
+            <CardTitle className="text-base">{t("editais.saved")} ({savedEditais.length})</CardTitle>
           </CardHeader>
           <CardContent>
-            <EditalTable items={editais as any} onDelete={deleteEdital} />
+            <EditalTable items={savedEditais} onDelete={deleteEdital} />
           </CardContent>
         </Card>
       )}
