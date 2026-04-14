@@ -715,6 +715,10 @@ export default function Editais() {
         <TabsContent value="fontes" className="mt-4">
           <FontesTab />
         </TabsContent>
+
+        <TabsContent value="recomendados" className="mt-4">
+          <RecomendadosTab projects={projects} t={t} />
+        </TabsContent>
       </Tabs>
 
       {/* Edit dialog */}
