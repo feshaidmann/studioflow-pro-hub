@@ -42,6 +42,7 @@ const gestaoItems = [
   { labelKey: "nav.musicdna",      path: "/music-dna",     icon: Dna,          proOnly: false, mobileLabel: "nav.musicdna.short" },
   { labelKey: "nav.editais",      path: "/editais",       icon: FileText,     proOnly: false, mobileLabel: "" },
   { labelKey: "nav.professionals", path: "/professionals", icon: Users,        proOnly: false, mobileLabel: "" },
+  { labelKey: "nav.tutorial",      path: "/tutorial",      icon: HelpCircle,   proOnly: false, mobileLabel: "" },
 ];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
