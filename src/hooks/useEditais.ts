@@ -111,6 +111,17 @@ export function useEditais(projectId?: string | null) {
     }
   }, [toast]);
 
+  const updateEdital = useCallback(async (id: string, fields: Partial<Edital>) => {
+    try {
+      const { error } = await supabase.from("editais").update(fields as any).eq("id", id);
+      if (error) throw error;
+      setEditais((prev) => prev.map((e) => (e.id === id ? { ...e, ...fields } : e)));
+      toast({ title: "Edital atualizado" });
+    } catch (err: any) {
+      toast({ title: "Erro ao atualizar", description: err.message, variant: "destructive" });
+    }
+  }, [toast]);
+
   const exportCSV = useCallback((items: Edital[]) => {
     const header = "Título;Estado;Órgão;Abertura;Prazo;Status;Área;Link";
     const rows = items.map((e) =>
@@ -136,6 +147,7 @@ export function useEditais(projectId?: string | null) {
     search,
     saveResults,
     deleteEdital,
+    updateEdital,
     exportCSV,
   };
 }

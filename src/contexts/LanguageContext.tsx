@@ -388,8 +388,16 @@ const translations: Record<string, Record<Lang, string>> = {
   "editais.linkProject": { pt: "Vincular ao projeto", en: "Link to project" },
   "editais.noProject": { pt: "Sem vínculo", en: "No link" },
   "editais.save": { pt: "Salvar no StudioFlow", en: "Save to StudioFlow" },
+  "editais.saveSelected": { pt: "Salvar selecionados", en: "Save selected" },
+  "editais.saveAll": { pt: "Salvar todos", en: "Save all" },
   "editais.exportCSV": { pt: "Exportar CSV", en: "Export CSV" },
   "editais.saved": { pt: "Editais salvos", en: "Saved grants" },
+  "editais.edit": { pt: "Editar edital", en: "Edit grant" },
+  "editais.editSave": { pt: "Salvar alterações", en: "Save changes" },
+  "editais.inferred": { pt: "Dados inferidos pela IA", en: "AI-inferred data" },
+  "editais.searchSaved": { pt: "Buscar por título ou órgão…", en: "Search by title or organization…" },
+  "editais.showing": { pt: "Exibindo", en: "Showing" },
+  "editais.of": { pt: "de", en: "of" },
 };
 
 const LanguageContext = createContext<LanguageContextType | null>(null);
