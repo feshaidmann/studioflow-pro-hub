@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, KeyboardEvent, ChangeEvent } from "react";
+import { useState, useRef, useEffect, KeyboardEvent, ChangeEvent, useMemo } from "react";
 import { useProjectChat, ChatMessage } from "@/hooks/useProjectChat";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
   Send, Lock, AlertCircle, CheckCircle2, ListChecks, Paperclip,
-  Filter, X as XIcon, FileText, Download, Image as ImageIcon, Music,
+  Filter, X as XIcon, FileText, Download, Image as ImageIcon, Music, AtSign,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -17,6 +17,13 @@ import AudioPlayer from "@/components/ui/audio-player";
 interface ProjectChatProps {
   projectId: string;
   isOwner?: boolean;
+}
+
+interface ProjectMember {
+  name: string;
+  email: string;
+  role: string;
+  user_id: string;
 }
 
 export default function ProjectChat({ projectId, isOwner = false }: ProjectChatProps) {
@@ -32,18 +39,54 @@ export default function ProjectChat({ projectId, isOwner = false }: ProjectChatP
   const [actionMenuId, setActionMenuId] = useState<string | null>(null);
   const [creatingTask, setCreatingTask] = useState(false);
   const [playbackUrls, setPlaybackUrls] = useState<Record<string, string>>({});
+  const [members, setMembers] = useState<ProjectMember[]>([]);
+  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
+  const [mentionIdx, setMentionIdx] = useState(0);
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Fetch project members once
+  useEffect(() => {
+    if (!projectId) return;
+    supabase
+      .from("project_members")
+      .select("name, email, role, user_id")
+      .eq("project_id", projectId)
+      .then(({ data }) => {
+        if (data) setMembers(data.filter((m) => m.name));
+      });
+  }, [projectId]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  // Mention suggestions
+  const mentionSuggestions = useMemo(() => {
+    if (mentionQuery === null) return [];
+    const q = mentionQuery.toLowerCase();
+    return members.filter((m) => m.name.toLowerCase().includes(q)).slice(0, 5);
+  }, [mentionQuery, members]);
 
   const displayMessages = filterPending
     ? messages.filter((m) => m.is_pending && !m.is_resolved)
     : messages;
 
   const pendingCount = messages.filter((m) => m.is_pending && !m.is_resolved).length;
+
+  // Parse @mentions from text, return array of { name, member }
+  function parseMentions(text: string): { name: string; member: ProjectMember }[] {
+    const regex = /@([\w\s]+?)(?=\s@|\s*$|[.,;!?])/gi;
+    const results: { name: string; member: ProjectMember }[] = [];
+    let match;
+    while ((match = regex.exec(text)) !== null) {
+      const mentionName = match[1].trim().toLowerCase();
+      const member = members.find((m) => m.name.toLowerCase() === mentionName);
+      if (member) results.push({ name: match[1].trim(), member });
+    }
+    return results;
+  }
 
   const handleSend = async () => {
     if (!input.trim() && !attachFile) return;
@@ -68,12 +111,92 @@ export default function ProjectChat({ projectId, isOwner = false }: ProjectChatP
     }
 
     const content = input.trim() || (attachName ? `📎 ${attachName}` : "");
+
+    // Detect @mentions and create tasks
+    const mentions = parseMentions(content);
+    if (mentions.length > 0 && currentUserId) {
+      // Extract task description: remove the @mention prefix, keep the rest
+      for (const { name, member } of mentions) {
+        const taskDesc = content.replace(new RegExp(`@${name}`, "i"), "").trim();
+        if (taskDesc) {
+          const desc = taskDesc.length > 120 ? taskDesc.slice(0, 120) + "…" : taskDesc;
+          await supabase.from("tasks").insert({
+            user_id: currentUserId,
+            project_id: projectId,
+            description: `[Chat] ${desc}`,
+            source: "chat",
+            source_module: "chat",
+            assigned_to: member.name,
+          });
+        }
+      }
+      if (mentions.length > 0) {
+        const names = mentions.map((m) => m.name).join(", ");
+        toast.success(`Tarefa atribuída a ${names} ✅`);
+      }
+    }
+
     await sendMessage(content, attachPath, attachName);
     setInput("");
     setAttachFile(null);
+    setMentionQuery(null);
+  };
+
+  const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setInput(val);
+
+    // Detect mention trigger
+    const cursorPos = e.target.selectionStart ?? val.length;
+    const textBeforeCursor = val.slice(0, cursorPos);
+    const atIndex = textBeforeCursor.lastIndexOf("@");
+    if (atIndex >= 0 && (atIndex === 0 || textBeforeCursor[atIndex - 1] === " ")) {
+      const query = textBeforeCursor.slice(atIndex + 1);
+      if (!query.includes(" ") || query.length <= 30) {
+        setMentionQuery(query);
+        setMentionIdx(0);
+        return;
+      }
+    }
+    setMentionQuery(null);
+  };
+
+  const insertMention = (member: ProjectMember) => {
+    const cursorPos = inputRef.current?.selectionStart ?? input.length;
+    const textBeforeCursor = input.slice(0, cursorPos);
+    const atIndex = textBeforeCursor.lastIndexOf("@");
+    if (atIndex >= 0) {
+      const before = input.slice(0, atIndex);
+      const after = input.slice(cursorPos);
+      setInput(`${before}@${member.name} ${after}`);
+    }
+    setMentionQuery(null);
+    inputRef.current?.focus();
   };
 
   const handleKey = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (mentionQuery !== null && mentionSuggestions.length > 0) {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setMentionIdx((prev) => Math.min(prev + 1, mentionSuggestions.length - 1));
+        return;
+      }
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setMentionIdx((prev) => Math.max(prev - 1, 0));
+        return;
+      }
+      if (e.key === "Enter" || e.key === "Tab") {
+        e.preventDefault();
+        insertMention(mentionSuggestions[mentionIdx]);
+        return;
+      }
+      if (e.key === "Escape") {
+        e.preventDefault();
+        setMentionQuery(null);
+        return;
+      }
+    }
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); }
   };
 
@@ -150,6 +273,25 @@ export default function ProjectChat({ projectId, isOwner = false }: ProjectChatP
     return FileText;
   }
 
+  // Render message content with highlighted @mentions
+  function renderContent(text: string) {
+    const parts = text.split(/(@[\w\s]+?)(?=\s@|\s*$|[.,;!?])/gi);
+    return parts.map((part, i) => {
+      if (part.startsWith("@")) {
+        const mentionName = part.slice(1).trim().toLowerCase();
+        const isMember = members.some((m) => m.name.toLowerCase() === mentionName);
+        if (isMember) {
+          return (
+            <span key={i} className="bg-primary/20 text-primary font-medium rounded px-0.5">
+              {part}
+            </span>
+          );
+        }
+      }
+      return part;
+    });
+  }
+
   if (!currentUserId) {
     return (
       <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
@@ -206,7 +348,7 @@ export default function ProjectChat({ projectId, isOwner = false }: ProjectChatP
                       )}
                       onClick={() => setActionMenuId(showActions ? null : msg.id)}
                     >
-                      {msg.content}
+                      {renderContent(msg.content)}
                       {(msg.is_pending || msg.linked_task_id) && (
                         <div className="flex gap-1 mt-1.5">
                           {msg.is_pending && !msg.is_resolved && (
@@ -228,7 +370,7 @@ export default function ProjectChat({ projectId, isOwner = false }: ProjectChatP
                       )}
                     </div>
 
-                    {/* Attachment: audio → player; other → download (owner only) */}
+                    {/* Attachment */}
                     {msg.attachment_name && msg.attachment_path && AttachIcon && (
                       audioAttach && playbackUrls[msg.attachment_path] ? (
                         <div className="mt-1 w-full max-w-[260px]">
@@ -311,13 +453,55 @@ export default function ProjectChat({ projectId, isOwner = false }: ProjectChatP
         </div>
       )}
 
+      {/* Mention autocomplete */}
+      {mentionQuery !== null && mentionSuggestions.length > 0 && (
+        <div className="border border-border bg-card rounded-lg shadow-lg p-1 mb-1 max-h-40 overflow-y-auto">
+          {mentionSuggestions.map((m, i) => (
+            <button
+              key={m.email || m.name}
+              className={cn(
+                "flex items-center gap-2 w-full text-left rounded px-2 py-1.5 text-sm transition-colors",
+                i === mentionIdx ? "bg-primary/10 text-primary" : "hover:bg-muted"
+              )}
+              onMouseDown={(e) => { e.preventDefault(); insertMention(m); }}
+            >
+              <div className="h-5 w-5 rounded-full bg-muted flex items-center justify-center text-[9px] font-bold shrink-0">
+                {initials(m.name)}
+              </div>
+              <span className="truncate">{m.name}</span>
+              <span className="text-[10px] text-muted-foreground ml-auto shrink-0">{m.role}</span>
+            </button>
+          ))}
+          <div className="px-2 py-1 text-[10px] text-muted-foreground border-t border-border mt-1 pt-1">
+            <AtSign className="h-2.5 w-2.5 inline mr-0.5" />
+            Mencione para atribuir tarefa
+          </div>
+        </div>
+      )}
+
+      {/* Hint when members exist */}
+      {members.length > 0 && mentionQuery === null && !input && (
+        <div className="text-[10px] text-muted-foreground/50 px-1 pb-0.5 flex items-center gap-1">
+          <AtSign className="h-2.5 w-2.5" />
+          Digite @ para atribuir tarefa a um membro
+        </div>
+      )}
+
       <div className="flex gap-2 pt-3 border-t border-border">
         <input ref={fileRef} type="file" className="hidden" onChange={handleFileChange} />
         <Button variant="ghost" size="sm" className="h-9 w-9 p-0 shrink-0" onClick={() => fileRef.current?.click()} disabled={uploading}>
           <Paperclip className="h-4 w-4" />
         </Button>
-        <Input value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={handleKey} placeholder="Digite uma mensagem…" className="flex-1 h-9 text-sm" disabled={sending || uploading} />
-        <Button size="sm" className="h-9 px-3 neon-glow" onClick={handleSend} disabled={(sending || uploading) || (!input.trim() && !attachFile)}>
+        <Input
+          ref={inputRef}
+          value={input}
+          onChange={handleInputChange}
+          onKeyDown={handleKey}
+          placeholder="Digite uma mensagem…"
+          className="flex-1 h-9 text-sm"
+          disabled={sending || uploading}
+        />
+        <Button size="sm" className="h-9 px-3" onClick={handleSend} disabled={(sending || uploading) || (!input.trim() && !attachFile)}>
           <Send className="h-3.5 w-3.5" />
         </Button>
       </div>
