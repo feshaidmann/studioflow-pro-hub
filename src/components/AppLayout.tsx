@@ -49,6 +49,7 @@ const gestaoItems = [
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   usePageTracking();
   const isMobile = useIsMobile();
+  const [moreOpen, setMoreOpen] = useState(false);
   const SIDEBAR_KEY = "sfp_sidebar_open";
   const [sidebarOpen, setSidebarOpen] = useState(() => {
     const saved = localStorage.getItem(SIDEBAR_KEY);
