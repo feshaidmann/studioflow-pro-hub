@@ -1,35 +1,26 @@
 
 
-# Plano: Melhorias incrementais no módulo de Editais
+# Plano: Remover sistema bilíngue, manter apenas português
 
 ## Resumo
-Implementar 3 melhorias de alto valor sem criar rotas ou hooks novos, mantendo tudo na página existente.
+Eliminar toda a infraestrutura de i18n (LanguageContext, LanguageToggle, traduções EN) e substituir por strings PT hardcoded. A função `t()` será simplificada para apenas retornar o valor PT diretamente.
 
-## 1. Checkboxes de seleção nos resultados da busca
-- Adicionar estado `selectedKeys: Set<string>` para rastrear session_keys selecionados
-- Checkbox no header da tabela (selecionar/deselecionar todos)
-- Checkbox por linha nos resultados
-- Dois botões: "Salvar selecionados (N)" e "Salvar todos"
-- `saveResults` recebe apenas os itens selecionados
+## Estratégia
+Em vez de remover todas as ~150 chamadas `t("key")` de uma vez (alto risco de quebra), vamos simplificar o `LanguageContext` para sempre retornar PT e remover a UI de troca de idioma. Isso é seguro, rápido e elimina a funcionalidade bilíngue sem reescrever dezenas de componentes.
 
-## 2. Modal de edição para editais salvos
-- Dialog com form para editar: titulo, orgao, status, area, prazo, abertura, link
-- Novo método `updateEdital(id, fields)` no hook `useEditais` (UPDATE via Supabase)
-- Botao de editar (Pencil icon) na coluna de ações da tabela de salvos
-- Tooltip/asterisco para `inferido = true`
+## Alterações
 
-## 3. Paginação + busca textual nos salvos
-- Estado `savedPage` e `savedSearch` (texto)
-- Input de busca acima da tabela de salvos, filtrando por titulo/orgao client-side
-- Paginação simples (20 por pagina) usando componentes Pagination do shadcn/ui
-- Contador mostrando "X de Y editais"
+| Arquivo | Ação |
+|---------|------|
+| `src/contexts/LanguageContext.tsx` | Remover tipo `Lang`, remover coluna `en` das translations, simplificar `t()` para lookup direto. Remover `setLang` da interface (manter no-op para compatibilidade). |
+| `src/components/LanguageToggle.tsx` | Deletar arquivo |
+| `src/components/AppLayout.tsx` | Remover import e uso do `LanguageToggle` (2 ocorrências: header mobile e sidebar desktop) |
+| `src/components/MasterAnalyzerModal.tsx` | Substituir todos os ternários `lang === "pt" ? "X" : "Y"` por apenas "X" (a string PT). Remover `const { lang } = useLanguage()` |
+| `src/lib/audioAnalysis.ts` | Remover parâmetro `lang` de `generateSuggestions`, manter apenas strings PT |
+| `src/pages/Welcome.tsx` | Remover `LanguageToggle` se usado lá |
 
-## Arquivos editados
-
-| Arquivo | Alteracao |
-|---------|-----------|
-| `src/pages/Editais.tsx` | Checkboxes nos resultados, modal de edicao, paginacao e busca nos salvos |
-| `src/hooks/useEditais.ts` | Adicionar `updateEdital(id, fields)` |
-
-Nenhuma alteracao de banco, edge function ou rotas.
+## O que NÃO muda
+- Todas as chamadas `t("key")` continuam funcionando — apenas retornam sempre o valor PT
+- Nenhuma alteração de banco de dados
+- `LanguageProvider` permanece no App.tsx (wrapper inofensivo, evita quebrar imports)
 
