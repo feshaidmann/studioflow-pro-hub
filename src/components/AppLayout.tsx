@@ -13,10 +13,10 @@ import {
   Shield,
   CalendarDays,
   Lock,
-  BookOpen,
   FileText,
   ChevronLeft,
   Dna,
+  HelpCircle,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
