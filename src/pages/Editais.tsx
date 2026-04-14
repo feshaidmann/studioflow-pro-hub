@@ -799,6 +799,10 @@ export default function Editais() {
             <Star className="h-3.5 w-3.5 mr-1.5" />
             Recomendados
           </TabsTrigger>
+          <TabsTrigger value="painel">
+            <BarChart3 className="h-3.5 w-3.5 mr-1.5" />
+            Painel
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="busca" className="space-y-6 mt-4">
@@ -1003,6 +1007,10 @@ export default function Editais() {
 
         <TabsContent value="recomendados" className="mt-4">
           <RecomendadosTab projects={projects} t={t} />
+        </TabsContent>
+
+        <TabsContent value="painel" className="mt-4">
+          <PainelTab editais={editais as Edital[]} />
         </TabsContent>
       </Tabs>
 
