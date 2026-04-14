@@ -30,7 +30,7 @@ const UF_OPTIONS = [
 ];
 
 const AREA_OPTIONS = ["Música", "Audiovisual", "Ambos", "Outra"];
-const STATUS_OPTIONS = ["Todos", "Aberto", "Encerrado", "Indefinido"];
+const STATUS_OPTIONS = ["Todos", "Aberto", "Encerrado", "Indefinido", "Todos+Encerrados"];
 const ITEMS_PER_PAGE = 20;
 
 function statusColor(status: string) {
@@ -43,12 +43,14 @@ const STATUS_ORDER: Record<string, number> = { Aberto: 0, Indefinido: 1, Encerra
 
 function sortAndFilterEditais(items: Edital[], filterStatus: string): Edital[] {
   let filtered = items;
-  if (filterStatus && filterStatus !== "Todos") {
-    filtered = items.filter((e) =>
-      filterStatus === "Indefinido"
-        ? e.status !== "Aberto" && e.status !== "Encerrado"
-        : e.status === filterStatus
-    );
+  if (filterStatus === "Todos") {
+    filtered = items.filter((e) => e.status !== "Encerrado");
+  } else if (filterStatus === "Todos+Encerrados") {
+    filtered = items;
+  } else if (filterStatus === "Indefinido") {
+    filtered = items.filter((e) => e.status !== "Aberto" && e.status !== "Encerrado");
+  } else {
+    filtered = items.filter((e) => e.status === filterStatus);
   }
   return [...filtered].sort((a, b) => {
     const oa = STATUS_ORDER[a.status] ?? 1;
@@ -861,7 +863,11 @@ export default function Editais() {
                     <Select value={filterStatus} onValueChange={setFilterStatus}>
                       <SelectTrigger className="w-36"><SelectValue placeholder="Status" /></SelectTrigger>
                       <SelectContent>
-                        {STATUS_OPTIONS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                        <SelectItem value="Todos">Todos (sem encerrados)</SelectItem>
+                        <SelectItem value="Aberto">Aberto</SelectItem>
+                        <SelectItem value="Encerrado">Encerrado</SelectItem>
+                        <SelectItem value="Indefinido">Indefinido</SelectItem>
+                        <SelectItem value="Todos+Encerrados">Todos (com encerrados)</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
