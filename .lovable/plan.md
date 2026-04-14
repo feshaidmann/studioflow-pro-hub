@@ -1,32 +1,35 @@
 
 
-# Plano: Remover convites de plataforma da tela de Contatos
+# Plano: Melhorias incrementais no módulo de Editais
 
 ## Resumo
-Eliminar a redundância de convites mantendo convites apenas no fluxo de projetos. A tela de Contatos (`/professionals`) passa a ser exclusivamente gestão de agenda, sem gerar `platform_invitations`.
+Implementar 3 melhorias de alto valor sem criar rotas ou hooks novos, mantendo tudo na página existente.
 
-## Alterações em `src/pages/Professionals.tsx`
+## 1. Checkboxes de seleção nos resultados da busca
+- Adicionar estado `selectedKeys: Set<string>` para rastrear session_keys selecionados
+- Checkbox no header da tabela (selecionar/deselecionar todos)
+- Checkbox por linha nos resultados
+- Dois botões: "Salvar selecionados (N)" e "Salvar todos"
+- `saveResults` recebe apenas os itens selecionados
 
-### Remover
-1. **Estado e lógica de convite de plataforma**: `sendingInvite`, `inviteLink`, `inviteLinkName`, `copiedLink`, `invitesMap`
-2. **Função `sendInviteToExisting`** (linhas 354-388)
-3. **Função `copyInviteLink`** (linhas 391-397)
-4. **Criação de `platform_invitations` no `onSubmit`** (linhas 305-334) — manter apenas o `toast.success("Contato salvo!")` simples
-5. **Fetch de `platform_invitations`** no `fetchProfessionals` (linhas 174-190)
-6. **Coluna "Na plataforma"** na tabela (header linha 566, célula linhas 618-652)
-7. **Modal "Link de convite gerado"** (linhas 917-950)
-8. **Imports não utilizados**: `Link2`, `Copy`, `Check`, `Clock` (se ficarem órfãos)
+## 2. Modal de edição para editais salvos
+- Dialog com form para editar: titulo, orgao, status, area, prazo, abertura, link
+- Novo método `updateEdital(id, fields)` no hook `useEditais` (UPDATE via Supabase)
+- Botao de editar (Pencil icon) na coluna de ações da tabela de salvos
+- Tooltip/asterisco para `inferido = true`
 
-### Manter
-- Todo o resto: filtros, favoritos, modal de detalhes, métricas, CRUD de contatos
-- Os convites de projeto continuam funcionando normalmente em `ProjectTeamTab`
+## 3. Paginação + busca textual nos salvos
+- Estado `savedPage` e `savedSearch` (texto)
+- Input de busca acima da tabela de salvos, filtrando por titulo/orgao client-side
+- Paginação simples (20 por pagina) usando componentes Pagination do shadcn/ui
+- Contador mostrando "X de Y editais"
 
-## Nenhuma alteração de banco
-As tabelas `platform_invitations` e edge functions permanecem — podem ser usadas por outros fluxos futuros. Apenas a UI de convite sai da tela de Contatos.
+## Arquivos editados
 
-## Arquivo editado
+| Arquivo | Alteracao |
+|---------|-----------|
+| `src/pages/Editais.tsx` | Checkboxes nos resultados, modal de edicao, paginacao e busca nos salvos |
+| `src/hooks/useEditais.ts` | Adicionar `updateEdital(id, fields)` |
 
-| Arquivo | Ação |
-|---------|------|
-| `src/pages/Professionals.tsx` | Remoção de lógica/UI de convites de plataforma |
+Nenhuma alteracao de banco, edge function ou rotas.
 
