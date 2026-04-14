@@ -30,7 +30,7 @@ const UF_OPTIONS = [
 ];
 
 const AREA_OPTIONS = ["Música", "Audiovisual", "Ambos", "Outra"];
-const STATUS_OPTIONS = ["Todos", "Aberto", "Encerrado", "Indefinido"];
+const STATUS_OPTIONS = ["Todos", "Aberto", "Encerrado", "Indefinido", "Todos+Encerrados"];
 const ITEMS_PER_PAGE = 20;
 
 function statusColor(status: string) {
@@ -863,7 +863,11 @@ export default function Editais() {
                     <Select value={filterStatus} onValueChange={setFilterStatus}>
                       <SelectTrigger className="w-36"><SelectValue placeholder="Status" /></SelectTrigger>
                       <SelectContent>
-                        {STATUS_OPTIONS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                        <SelectItem value="Todos">Todos (sem encerrados)</SelectItem>
+                        <SelectItem value="Aberto">Aberto</SelectItem>
+                        <SelectItem value="Encerrado">Encerrado</SelectItem>
+                        <SelectItem value="Indefinido">Indefinido</SelectItem>
+                        <SelectItem value="Todos+Encerrados">Todos (com encerrados)</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
