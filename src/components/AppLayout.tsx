@@ -115,7 +115,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
           <div className="flex items-center gap-0.5">
             <NotificationsBell compact align="end" />
-            
+            <NavLink to="/tutorial">
+              <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground">
+                <HelpCircle className="h-4 w-4" />
+              </Button>
+            </NavLink>
             <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={handleSignOut}>
               <LogOut className="h-4 w-4" />
             </Button>
