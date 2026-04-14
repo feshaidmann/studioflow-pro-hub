@@ -609,53 +609,29 @@ export async function analyzeAudio(file: File): Promise<AnalysisResult> {
 /**
  * Generate dynamic fix suggestions based on measured values.
  */
-export function generateSuggestions(result: AnalysisResult, lang: "pt" | "en" = "en"): string[] {
+export function generateSuggestions(result: AnalysisResult): string[] {
   const suggestions: string[] = [];
 
-  if (lang === "pt") {
-    if (result.lufs > -14) {
-      suggestions.push(`LUFS está em ${result.lufs} — reduza o ganho do limiter em ~${(result.lufs + 14).toFixed(1)} dB para atingir -14 LUFS (Spotify)`);
-    } else if (result.lufs < -16) {
-      suggestions.push(`LUFS está em ${result.lufs} — o master pode soar baixo nas plataformas. Considere aumentar o ganho em ~${(-16 - result.lufs).toFixed(1)} dB`);
-    } else {
-      suggestions.push("Loudness dentro da faixa ideal para streaming (-14 a -16 LUFS) ✓");
-    }
-
-    if (result.truePeak > -1) {
-      suggestions.push(`True Peak em ${result.truePeak} dBTP — adicione um offset de ceiling de ${(result.truePeak + 1).toFixed(1)} dB no limiter para evitar clipping nos codecs`);
-    } else {
-      suggestions.push("True Peak dentro do limite seguro (≤ -1 dBTP) ✓");
-    }
-
-    if (result.dynamicRange < 5) {
-      suggestions.push(`Dynamic range de apenas ${result.dynamicRange} LU — considere usar menos compressão no master bus`);
-    } else if (result.dynamicRange > 12) {
-      suggestions.push(`Dynamic range de ${result.dynamicRange} LU — pode soar inconsistente. Considere um pouco mais de compressão`);
-    } else {
-      suggestions.push("Dynamic range saudável para streaming ✓");
-    }
+  if (result.lufs > -14) {
+    suggestions.push(`LUFS está em ${result.lufs} — reduza o ganho do limiter em ~${(result.lufs + 14).toFixed(1)} dB para atingir -14 LUFS (Spotify)`);
+  } else if (result.lufs < -16) {
+    suggestions.push(`LUFS está em ${result.lufs} — o master pode soar baixo nas plataformas. Considere aumentar o ganho em ~${(-16 - result.lufs).toFixed(1)} dB`);
   } else {
-    if (result.lufs > -14) {
-      suggestions.push(`LUFS is at ${result.lufs} — reduce limiter gain by ~${(result.lufs + 14).toFixed(1)} dB to hit -14 LUFS (Spotify target)`);
-    } else if (result.lufs < -16) {
-      suggestions.push(`LUFS is at ${result.lufs} — master may sound quiet on platforms. Consider raising gain by ~${(-16 - result.lufs).toFixed(1)} dB`);
-    } else {
-      suggestions.push("Loudness is within the ideal streaming range (-14 to -16 LUFS) ✓");
-    }
+    suggestions.push("Loudness dentro da faixa ideal para streaming (-14 a -16 LUFS) ✓");
+  }
 
-    if (result.truePeak > -1) {
-      suggestions.push(`True Peak at ${result.truePeak} dBTP — add a ceiling offset of ${(result.truePeak + 1).toFixed(1)} dB on the limiter to avoid codec clipping`);
-    } else {
-      suggestions.push("True Peak is within safe limits (≤ -1 dBTP) ✓");
-    }
+  if (result.truePeak > -1) {
+    suggestions.push(`True Peak em ${result.truePeak} dBTP — adicione um offset de ceiling de ${(result.truePeak + 1).toFixed(1)} dB no limiter para evitar clipping nos codecs`);
+  } else {
+    suggestions.push("True Peak dentro do limite seguro (≤ -1 dBTP) ✓");
+  }
 
-    if (result.dynamicRange < 5) {
-      suggestions.push(`Dynamic range is only ${result.dynamicRange} LU — consider using less compression on the master bus`);
-    } else if (result.dynamicRange > 12) {
-      suggestions.push(`Dynamic range is ${result.dynamicRange} LU — may sound inconsistent. Consider a bit more compression`);
-    } else {
-      suggestions.push("Dynamic range is healthy for streaming ✓");
-    }
+  if (result.dynamicRange < 5) {
+    suggestions.push(`Dynamic range de apenas ${result.dynamicRange} LU — considere usar menos compressão no master bus`);
+  } else if (result.dynamicRange > 12) {
+    suggestions.push(`Dynamic range de ${result.dynamicRange} LU — pode soar inconsistente. Considere um pouco mais de compressão`);
+  } else {
+    suggestions.push("Dynamic range saudável para streaming ✓");
   }
 
   return suggestions;

@@ -24,7 +24,6 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
-import LanguageToggle from "@/components/LanguageToggle";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
 import NotificationsBell from "@/components/NotificationsPanel";
@@ -118,7 +117,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <div className="flex items-center gap-0.5">
             <NotificationsBell compact align="end" />
             
-            <LanguageToggle />
             <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={handleSignOut}>
               <LogOut className="h-4 w-4" />
             </Button>
@@ -261,9 +259,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               align="end"
               className={sidebarOpen ? "w-full justify-start gap-2.5 text-[13px] text-muted-foreground hover:text-foreground" : "text-muted-foreground hover:text-foreground"}
             />
-          </div>
-          <div className={cn("flex", sidebarOpen ? "justify-start px-1" : "justify-center")}>
-            <LanguageToggle compact={!sidebarOpen} />
           </div>
           <Button
             variant="ghost"
