@@ -185,6 +185,19 @@ export default function Projects() {
     });
   }, [selectedProject?.id]);
 
+  useEffect(() => {
+    const idParam = searchParams.get("id");
+    const newParam = searchParams.get("new");
+    if (newParam === "1") {
+      setForm((prev) => ({ ...prev, artist: prev.artist || displayName }));
+      setDialogOpen(true);
+      setSearchParams((prev) => { prev.delete("new"); return prev; }, { replace: true });
+    }
+    if (!idParam || projects.length === 0) return;
+    const found = projects.find((p) => p.id === idParam);
+    if (found) setSelectedProject(found);
+  }, [searchParams, projects]);
+
 
   const resetWizard = () => {
     setWizardSource("new");
