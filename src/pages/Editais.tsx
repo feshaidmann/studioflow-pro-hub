@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, Download, Save, Trash2, ExternalLink, FileText, Pencil, Info, BarChart3, ClipboardList, Sparkles, ChevronDown } from "lucide-react";
+import { Search, Download, Save, Trash2, ExternalLink, FileText, Pencil, Info, BarChart3, ClipboardList, Sparkles, ChevronDown, ArrowRight, Plus, MoreHorizontal, KanbanSquare } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,7 +15,10 @@ import { Label } from "@/components/ui/label";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useEditais, type Edital } from "@/hooks/useEditais";
+import { useEditalApplications, useCreateApplication, useUpdateApplication, useDeleteApplication, APPLICATION_STATUS_LABELS, APPLICATION_STATUS_COLORS, type ApplicationStatus, type EditalApplication } from "@/hooks/useEditalApplications";
 import { useProjects } from "@/contexts/ProjectContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 
@@ -332,6 +335,159 @@ const SEARCH_EXAMPLES = [
   "Funarte fomento artista independente",
 ];
 
+/* ── Pipeline de candidaturas ── */
+function PipelineTab({ applications, onUpdate, onDelete, projects, t }: {
+  applications: EditalApplication[];
+  onUpdate: (params: { id: string; status?: ApplicationStatus; notas?: string; project_id?: string | null }) => void;
+  onDelete: (id: string) => void;
+  projects: { id: string; name: string }[];
+  t: (k: string) => string;
+}) {
+  const isMobile = useIsMobile();
+  const statuses: ApplicationStatus[] = ["interesse", "preparando", "inscrito", "resultado"];
+
+  const grouped = useMemo(() => {
+    const map: Record<ApplicationStatus, EditalApplication[]> = {
+      interesse: [], preparando: [], inscrito: [], resultado: [],
+    };
+    applications.forEach((a) => {
+      if (map[a.status]) map[a.status].push(a);
+    });
+    return map;
+  }, [applications]);
+
+  const nextStatus = (s: ApplicationStatus): ApplicationStatus | null => {
+    const idx = statuses.indexOf(s);
+    return idx < statuses.length - 1 ? statuses[idx + 1] : null;
+  };
+
+  if (isMobile) {
+    return (
+      <div className="space-y-4">
+        {statuses.map((status) => (
+          <div key={status}>
+            <div className="flex items-center gap-2 mb-2">
+              <Badge variant="outline" className={APPLICATION_STATUS_COLORS[status] + " text-xs"}>
+                {APPLICATION_STATUS_LABELS[status]}
+              </Badge>
+              <span className="text-xs text-muted-foreground">({grouped[status].length})</span>
+            </div>
+            {grouped[status].length === 0 ? (
+              <p className="text-xs text-muted-foreground pl-2 py-2">Nenhuma candidatura</p>
+            ) : (
+              <div className="space-y-2">
+                {grouped[status].map((app) => (
+                  <Card key={app.id} className="border">
+                    <CardContent className="p-3 space-y-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="text-sm font-medium leading-snug flex-1">{app.edital?.titulo || "Edital"}</p>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0"><MoreHorizontal className="h-3.5 w-3.5" /></Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            {nextStatus(app.status) && (
+                              <DropdownMenuItem onClick={() => onUpdate({ id: app.id, status: nextStatus(app.status)! })}>
+                                <ArrowRight className="h-3.5 w-3.5 mr-2" />
+                                Mover → {APPLICATION_STATUS_LABELS[nextStatus(app.status)!]}
+                              </DropdownMenuItem>
+                            )}
+                            {app.edital?.link && (
+                              <DropdownMenuItem asChild>
+                                <a href={app.edital.link} target="_blank" rel="noopener noreferrer">
+                                  <ExternalLink className="h-3.5 w-3.5 mr-2" />
+                                  Abrir edital
+                                </a>
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuItem className="text-destructive" onClick={() => onDelete(app.id)}>
+                              <Trash2 className="h-3.5 w-3.5 mr-2" />
+                              Remover
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                      <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+                        {app.edital?.orgao && <span>{app.edital.orgao}</span>}
+                        {app.edital?.prazo && <span>Prazo: {formatDate(app.edital.prazo)}</span>}
+                      </div>
+                      {app.notas && <p className="text-xs text-muted-foreground italic">{app.notas}</p>}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  // Desktop: columns layout
+  return (
+    <div className="grid grid-cols-4 gap-3">
+      {statuses.map((status) => (
+        <div key={status} className="space-y-2">
+          <div className="flex items-center gap-2 pb-2 border-b border-border">
+            <Badge variant="outline" className={APPLICATION_STATUS_COLORS[status] + " text-xs"}>
+              {APPLICATION_STATUS_LABELS[status]}
+            </Badge>
+            <span className="text-xs text-muted-foreground">({grouped[status].length})</span>
+          </div>
+          {grouped[status].length === 0 ? (
+            <p className="text-xs text-muted-foreground text-center py-6">Nenhuma candidatura</p>
+          ) : (
+            grouped[status].map((app) => (
+              <Card key={app.id} className="border">
+                <CardContent className="p-3 space-y-1.5">
+                  <div className="flex items-start justify-between gap-1">
+                    <p className="text-xs font-medium leading-snug flex-1 line-clamp-2">{app.edital?.titulo || "Edital"}</p>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0"><MoreHorizontal className="h-3 w-3" /></Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        {nextStatus(app.status) && (
+                          <DropdownMenuItem onClick={() => onUpdate({ id: app.id, status: nextStatus(app.status)! })}>
+                            <ArrowRight className="h-3.5 w-3.5 mr-2" />
+                            Mover → {APPLICATION_STATUS_LABELS[nextStatus(app.status)!]}
+                          </DropdownMenuItem>
+                        )}
+                        {statuses.filter(s => s !== app.status && s !== nextStatus(app.status)).map(s => (
+                          <DropdownMenuItem key={s} onClick={() => onUpdate({ id: app.id, status: s })}>
+                            Mover → {APPLICATION_STATUS_LABELS[s]}
+                          </DropdownMenuItem>
+                        ))}
+                        {app.edital?.link && (
+                          <DropdownMenuItem asChild>
+                            <a href={app.edital.link} target="_blank" rel="noopener noreferrer">
+                              <ExternalLink className="h-3.5 w-3.5 mr-2" />
+                              Abrir edital
+                            </a>
+                          </DropdownMenuItem>
+                        )}
+                        <DropdownMenuItem className="text-destructive" onClick={() => onDelete(app.id)}>
+                          <Trash2 className="h-3.5 w-3.5 mr-2" />
+                          Remover
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                  <div className="text-[11px] text-muted-foreground space-y-0.5">
+                    {app.edital?.orgao && <p>{app.edital.orgao}</p>}
+                    {app.edital?.prazo && <p>Prazo: {formatDate(app.edital.prazo)}</p>}
+                  </div>
+                  {app.notas && <p className="text-[11px] text-muted-foreground italic line-clamp-2">{app.notas}</p>}
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function Editais() {
   const navigate = useNavigate();
   const { t } = useLanguage();
@@ -345,6 +501,10 @@ export default function Editais() {
   const [savedFilterStatus, setSavedFilterStatus] = useState("Todos");
 
   const { editais, loading, searching, searchResult, search, saveResults, deleteEdital, updateEdital, exportCSV } = useEditais();
+  const { data: applications = [], isLoading: loadingApps } = useEditalApplications();
+  const createApplication = useCreateApplication();
+  const updateApplication = useUpdateApplication();
+  const deleteApplication = useDeleteApplication();
 
   const handleSearch = (q?: string) => {
     const searchQuery = (q || query).trim();
@@ -391,6 +551,10 @@ export default function Editais() {
           <TabsTrigger value="salvos">
             <FileText className="h-3.5 w-3.5 mr-1.5" />
             {t("editais.tabSaved")} {editais.length > 0 && `(${editais.length})`}
+          </TabsTrigger>
+          <TabsTrigger value="pipeline">
+            <KanbanSquare className="h-3.5 w-3.5 mr-1.5" />
+            Candidaturas {applications.length > 0 && `(${applications.length})`}
           </TabsTrigger>
         </TabsList>
 
@@ -549,7 +713,7 @@ export default function Editais() {
               </CardHeader>
               <CardContent className="space-y-3">
                 {savedPaginated.length > 0 ? (
-                  <EditalTable items={savedPaginated} onDelete={deleteEdital} onEdit={handleEdit} onInscricao={(id) => navigate(`/editais/inscricao/${id}`)} t={t} />
+                  <EditalTable items={savedPaginated} onDelete={deleteEdital} onEdit={handleEdit} onInscricao={(id) => createApplication.mutate({ edital_id: id })} t={t} />
                 ) : (
                   <p className="text-sm text-muted-foreground py-4 text-center">{t("editais.noResults")}</p>
                 )}
@@ -591,6 +755,36 @@ export default function Editais() {
                 <Skeleton className="h-8 w-full" />
               </CardContent>
             </Card>
+          )}
+        </TabsContent>
+
+        {/* ── Tab: Pipeline de Candidaturas ── */}
+        <TabsContent value="pipeline" className="space-y-6 mt-4">
+          {loadingApps ? (
+            <Card>
+              <CardContent className="pt-5 space-y-2">
+                <Skeleton className="h-8 w-full" />
+                <Skeleton className="h-8 w-full" />
+              </CardContent>
+            </Card>
+          ) : applications.length === 0 ? (
+            <Card>
+              <CardContent className="py-12 flex flex-col items-center text-center text-muted-foreground">
+                <KanbanSquare className="h-10 w-10 mb-3 opacity-40" />
+                <p className="text-sm font-medium">Nenhuma candidatura ativa</p>
+                <p className="text-xs mt-1 max-w-md">
+                  Use o botão <ClipboardList className="inline h-3 w-3" /> na aba "Meus Editais" para iniciar uma candidatura e acompanhar o progresso aqui.
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <PipelineTab
+              applications={applications}
+              onUpdate={(p) => updateApplication.mutate(p)}
+              onDelete={(id) => deleteApplication.mutate(id)}
+              projects={projects.map(p => ({ id: p.id, name: p.name }))}
+              t={t}
+            />
           )}
         </TabsContent>
       </Tabs>
