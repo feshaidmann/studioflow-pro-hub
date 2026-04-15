@@ -1,90 +1,72 @@
 
 
-# Proposta: IA Integrada na Jornada de Preenchimento de Editais
+# Enriquecer Editais com Dados Relevantes
 
 ## Problema atual
 
-A jornada de preenchimento de editais tem 3 camadas de IA desconectadas entre si:
+Cada edital exibe apenas: titulo, orgao, estado, area, status, abertura, prazo e link. Faltam informações decisivas para o artista avaliar se vale a pena se inscrever:
 
-1. **Extração de campos** (`extract-edital-fields`) — usa Perplexity para extrair campos do edital. Funciona, mas o resultado é genérico e não pré-preenche campos textuais com conteúdo relevante.
-2. **Pré-preenchimento** (`handlePreFill`) — apenas copia dados cadastrais do perfil (nome, email, cidade). Campos descritivos como "Memorial", "Justificativa", "Plano de trabalho" ficam vazios.
-3. **Assistente IA** (`EditalAIAssistant`) — gera memoriais e adapta linguagem, mas está num Sheet separado, desconectado dos campos do formulário. O artista precisa gerar, copiar e colar manualmente.
+- **Valor** (quanto o edital oferece)
+- **Público-alvo** (quem pode se inscrever)
+- **Documentos exigidos** (resumo)
+- **Resumo** (do que se trata)
 
-**Resultado:** O artista preenche campos textuais longos (memorial, justificativa, metodologia) na mão, mesmo tendo uma IA capaz de gerá-los. A ponte entre "campo vazio" e "IA que gera conteúdo" não existe.
+Essas informações existem nos sites dos editais mas não são extraídas pela busca atual.
 
----
+## Proposta
 
-## Proposta: IA inline por campo
+### 1. Ampliar a extração na busca (`edital-search`)
 
-### Conceito
-Cada campo do tipo `textarea` no formulário de inscrição (`EditalInscricao.tsx`) ganha um botão `✨ Gerar com IA` que:
-1. Envia o **nome do campo** + **contexto do edital** + **projeto vinculado** + **perfil do artista** para a edge function
-2. Recebe o texto gerado e preenche o campo automaticamente
-3. Permite refinar inline ("Mais formal", "Adicionar dados de público")
+Adicionar campos ao SYSTEM_PROMPT do Perplexity para que extraia também:
+- `valor`: texto livre ("R$ 50.000" ou "até R$ 200.000 por projeto")
+- `publico_alvo`: texto curto ("Artistas e grupos musicais de SP")
+- `resumo`: 1-2 frases descrevendo o edital
+- `documentos_resumo`: lista curta dos principais docs exigidos
 
-### Fluxo visual
-```text
-┌─────────────────────────────────┐
-│ Memorial descritivo *           │
-│ [Descrição: máximo 2000 palavras] │
-│ ┌─────────────────────────────┐ │
-│ │                             │ │
-│ │    (textarea vazio)         │ │
-│ │                             │ │
-│ └─────────────────────────────┘ │
-│ [✨ Gerar com IA]  [📋 Copiar] │
-│                                 │
-│ Se gerado pela IA:              │
-│ [🔄 Refinar] [input: instrução] │
-└─────────────────────────────────┘
-```
+Esses campos vão no JSON estruturado `<editais_json>` que já é retornado.
 
-### Mudanças
+### 2. Expandir a tabela `editais` no banco
 
-**1. Nova ação na edge function `edital-ai-assistant`**
-- Adicionar ação `fill_field` que recebe: `field_name`, `field_description`, `edital_title`, `edital_summary`, `project_id`, `max_words`
-- System prompt: "Preencha o campo '{field_name}' de um formulário de inscrição em edital cultural. Use linguagem técnica de editais. Considere o contexto do projeto e perfil do artista."
-- Retorna apenas o texto para o campo, sem formatação extra
+Adicionar colunas:
+- `valor text default ''`
+- `publico_alvo text default ''`
+- `resumo text default ''`
+- `documentos_resumo text default ''`
 
-**2. Componente `FieldInput` com IA (`EditalInscricao.tsx`)**
-- Para campos `textarea`, adicionar botão "Gerar com IA" abaixo do campo
-- Ao clicar: chama `edital-ai-assistant` com ação `fill_field`
-- Loading: skeleton dentro do textarea
-- Resultado preenche o campo (editável pelo artista)
-- Botão "Refinar" aparece após geração, com input inline para instrução
-- Contador de palavras ao lado do limite
+### 3. Mostrar dados no card/linha do edital
 
-**3. Pré-preenchimento inteligente em lote**
-- Renomear o botão "Pré-preencher com perfil" para "✨ Preencher tudo com IA"
-- Ao clicar:
-  - Campos simples (nome, email, cidade) → preenchidos do perfil (como hoje)
-  - Campos `textarea` (memorial, justificativa, etc.) → gerados em sequência pela IA, um por um, com indicador de progresso ("Gerando campo 3 de 7...")
-- Cada campo gerado fica editável e mostra badge "Gerado por IA"
+No mobile (card view), exibir os novos campos quando presentes:
+- Valor em destaque (badge ou texto bold)
+- Resumo como texto secundário abaixo do titulo
+- Público-alvo e documentos em um expandível "Ver detalhes"
 
-**4. Salvar conteúdo gerado no banco de documentos**
-- Após gerar um campo longo, mostrar opção "Salvar no banco de documentos" (reutilizável em outros editais)
-- Usa `edital_documents` existente
+No desktop (table view), adicionar coluna "Valor" e tooltip com resumo ao hover no titulo.
 
-**5. Contexto enriquecido na extração**
-- Ao extrair campos, passar o `resumo_edital` resultante como contexto para todas as gerações subsequentes
-- Armazenar `resumo_edital` no state e repassar ao `fill_field`
+### 4. Detalhe expandido
 
----
+Ao clicar num edital, abrir um Dialog/Sheet com todos os dados: titulo, orgao, valor, resumo, publico_alvo, documentos_resumo, prazo, link, status. Botões de ação: "Iniciar inscrição", "Abrir link", "Remover".
 
 ## Arquivos impactados
 
 | Arquivo | Mudança |
 |---|---|
-| `src/pages/EditalInscricao.tsx` | Refatorar `FieldInput` com botão IA inline, lógica de "preencher tudo", progresso por campo |
-| `supabase/functions/edital-ai-assistant/index.ts` | Adicionar ação `fill_field` com contexto de campo específico |
-| `src/hooks/useEditalAI.ts` | Adicionar método `fillField()` simplificado para chamadas por campo |
+| `supabase/functions/edital-search/index.ts` | Adicionar campos ao prompt e ao JSON de saída |
+| `src/hooks/useEditais.ts` | Expandir interface `Edital` com novos campos, salvar no insert |
+| `src/pages/Editais.tsx` | Card mobile com resumo/valor, dialog de detalhe, coluna Valor na tabela |
 
-## Sem alterações de banco de dados
-As tabelas existentes (`rascunhos_editais`, `edital_documents`, `ai_invocations`) já suportam toda a funcionalidade.
+### Migração de banco
+```sql
+ALTER TABLE public.editais
+  ADD COLUMN IF NOT EXISTS valor text NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS publico_alvo text NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS resumo text NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS documentos_resumo text NOT NULL DEFAULT '';
+```
 
-## Prioridade de implementação
-1. Botão "Gerar com IA" por campo textarea (maior impacto, menor fricção)
-2. "Preencher tudo com IA" em lote
-3. Refinar inline por campo
-4. Salvar campo no banco de documentos
+## Detalhes técnicos
+
+- O prompt do Perplexity já extrai dados estruturados — basta adicionar os campos ao schema solicitado na ETAPA 4
+- Editais já salvos ficam com campos vazios (retrocompatível)
+- O dialog de detalhe reutiliza o componente Sheet existente
+- Nenhuma edge function nova necessária
 
