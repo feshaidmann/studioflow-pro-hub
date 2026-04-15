@@ -593,7 +593,6 @@ export default function Editais() {
             <BarChart3 className="h-3.5 w-3.5 mr-1.5" />
             Métricas
           </TabsTrigger>
-          </TabsTrigger>
         </TabsList>
 
         {/* ── Tab: Buscar ── */}
