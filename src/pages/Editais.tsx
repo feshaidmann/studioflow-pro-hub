@@ -610,6 +610,8 @@ export default function Editais() {
 
   const [editingEdital, setEditingEdital] = useState<Edital | null>(null);
   const [editOpen, setEditOpen] = useState(false);
+  const [detailEdital, setDetailEdital] = useState<Edital | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
   const [savedSearch, setSavedSearch] = useState("");
   const [savedPage, setSavedPage] = useState(1);
   const [savedFilterStatus, setSavedFilterStatus] = useState("Todos");
