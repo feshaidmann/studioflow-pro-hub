@@ -26,6 +26,7 @@ import ProjectAlertsCard from "@/components/dashboard/ProjectAlertsCard";
 import ProjectHealthList from "@/components/dashboard/ProjectHealthList";
 import PendingTeamCard from "@/components/dashboard/PendingTeamCard";
 import GuestProjectsList from "@/components/dashboard/GuestProjectsList";
+import EditalProgressCard from "@/components/dashboard/EditalProgressCard";
 
 export default function Dashboard() {
   const aiRef = useRef<AITaskAssistantHandle>(null);
@@ -360,6 +361,9 @@ export default function Dashboard() {
 
       {/* 3b. Projetos como parceiro */}
       <GuestProjectsList projects={guestProjects} />
+
+      {/* 3c. Editais em andamento */}
+      <EditalProgressCard hidden={isFirstRun} />
 
       {/* 4. Próximos lançamentos */}
       <UpcomingReleases projects={projects} getMixPercent={getMixPercent} hidden={isFirstRun} />
