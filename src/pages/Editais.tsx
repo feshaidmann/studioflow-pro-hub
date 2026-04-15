@@ -282,11 +282,7 @@ function EditalTable({
   );
 }
 
-  if (isMobile) {
-    return (
-      <div className="space-y-2">
-        {items.map((e, i) => (
-          <div key={e.id || e.session_key || i} className="rounded-lg border border-border p-3 space-y-2">
+
             <div className="flex items-start justify-between gap-2">
               <p className="text-sm font-medium leading-snug flex-1">
                 {e.titulo}
