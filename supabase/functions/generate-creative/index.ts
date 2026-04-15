@@ -43,6 +43,9 @@ serve(async (req) => {
       fullPrompt += ` Channel context: ${channelContext}.`;
     }
 
+    // Force all text output in Brazilian Portuguese
+    fullPrompt += ` IMPORTANT: Any text, titles, labels, or captions in the image MUST be in Brazilian Portuguese (pt-BR).`;
+
     const messages: any[] = [];
 
     // Face preservation instruction when editing from a reference image
