@@ -284,14 +284,23 @@ export default function Dashboard() {
         onSelectProject={setSelectedProjectId}
       />
 
-      {/* Next recommended action — compact on mobile */}
+      {/* Next recommended action — click sends to AI */}
       {nextAction && (
-        <div className={cn(
-          "rounded-lg border px-3 py-2.5 md:px-4 md:py-3 flex items-center gap-2.5 animate-fade-in",
-          nextAction.severity === "critical" ? "border-destructive/40 bg-destructive/5" :
-          nextAction.severity === "warning" ? "border-warning/40 bg-warning/5" :
-          "border-primary/30 bg-primary/5"
-        )}>
+        <button
+          onClick={() => {
+            aiRef.current?.sendMessage(`Preciso de ajuda com: ${nextAction.label}. ${nextAction.detail ? `Contexto: ${nextAction.detail}` : ""} O que devo fazer?`);
+            // Ensure AI card is open
+            localStorage.setItem("sfp_ai_collapsed", "false");
+            const aiEl = document.querySelector("[data-ai-assistant]");
+            aiEl?.scrollIntoView({ behavior: "smooth", block: "center" });
+          }}
+          className={cn(
+            "w-full rounded-lg border px-3 py-2.5 md:px-4 md:py-3 flex items-center gap-2.5 animate-fade-in text-left transition-colors hover:bg-muted/30",
+            nextAction.severity === "critical" ? "border-destructive/40 bg-destructive/5" :
+            nextAction.severity === "warning" ? "border-warning/40 bg-warning/5" :
+            "border-primary/30 bg-primary/5"
+          )}
+        >
           <div className={cn(
             "h-7 w-7 md:h-8 md:w-8 rounded-full flex items-center justify-center shrink-0",
             nextAction.severity === "critical" ? "bg-destructive/15" :
@@ -300,11 +309,11 @@ export default function Dashboard() {
             <Bot className={cn("h-3.5 w-3.5 md:h-4 md:w-4", nextAction.severity === "critical" ? "text-destructive" : nextAction.severity === "warning" ? "text-warning" : "text-primary")} />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium leading-tight">Próxima ação</p>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium leading-tight">Próxima ação · clique para resolver com IA</p>
             <p className="text-sm font-medium truncate">{nextAction.label}</p>
             {!isMobile && <p className="text-[11px] text-muted-foreground">{nextAction.detail}</p>}
           </div>
-        </div>
+        </button>
       )}
 
       {/* AI Assistant — desktop: prominent; mobile: after checklist */}
