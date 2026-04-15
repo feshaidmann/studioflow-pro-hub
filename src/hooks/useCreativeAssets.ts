@@ -116,5 +116,5 @@ export function useCreativeAssets() {
     queryClient.invalidateQueries({ queryKey: ["creative-assets"] });
   };
 
-  return { assets, isLoading, generating, generate, deleteAsset };
+  return { assets, isLoading, generating, generate, generateBatch, deleteAsset };
 }
