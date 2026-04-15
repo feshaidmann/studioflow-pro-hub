@@ -833,6 +833,15 @@ export default function Editais() {
               onDelete={(id) => deleteApplication.mutate(id)}
               onOpenChecklist={(id) => setSelectedAppId(id)}
               onOpenResult={(id) => setResultAppId(id)}
+              onOpenAI={(app) => {
+                setAiContext({
+                  editalTitle: app.edital?.titulo || undefined,
+                  editalType: app.edital?.area || undefined,
+                  projectId: app.project_id || undefined,
+                  applicationId: app.id,
+                });
+                setAiSheetOpen(true);
+              }}
               projects={projects.map(p => ({ id: p.id, name: p.name }))}
               t={t}
             />
@@ -844,16 +853,38 @@ export default function Editais() {
           <EditalDocumentsBank />
         </TabsContent>
 
-        {/* ── Tab: IA ── */}
-        <TabsContent value="ia" className="space-y-6 mt-4">
-          <EditalAIAssistant projects={projects.map(p => ({ id: p.id, name: p.name }))} />
-        </TabsContent>
-
         {/* ── Tab: Métricas ── */}
         <TabsContent value="metricas" className="space-y-6 mt-4">
           <EditalMetricsDashboard applications={applications} />
         </TabsContent>
       </Tabs>
+
+      {/* FAB — Assistente IA */}
+      <Button
+        onClick={() => { setAiContext(undefined); setAiSheetOpen(true); }}
+        className="fixed bottom-20 right-4 md:bottom-6 md:right-6 h-12 w-12 rounded-full shadow-lg z-40"
+        size="icon"
+      >
+        <Sparkles className="h-5 w-5" />
+      </Button>
+
+      {/* AI Sheet */}
+      <Sheet open={aiSheetOpen} onOpenChange={setAiSheetOpen}>
+        <SheetContent side="right" className="w-full sm:max-w-lg overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-primary" />
+              Assistente IA para Editais
+            </SheetTitle>
+          </SheetHeader>
+          <div className="mt-4">
+            <EditalAIAssistant
+              projects={projects.map(p => ({ id: p.id, name: p.name }))}
+              context={aiContext}
+            />
+          </div>
+        </SheetContent>
+      </Sheet>
 
       <EditEditalDialog
         edital={editingEdital}
@@ -871,7 +902,17 @@ export default function Editais() {
               Checklist: {applications.find(a => a.id === selectedAppId)?.edital?.titulo || "Candidatura"}
             </DialogTitle>
           </DialogHeader>
-          {selectedAppId && <ApplicationChecklist applicationId={selectedAppId} />}
+          {selectedAppId && (() => {
+            const app = applications.find(a => a.id === selectedAppId);
+            return (
+              <ApplicationChecklist
+                applicationId={selectedAppId}
+                editalTitle={app?.edital?.titulo}
+                projectId={app?.project_id || undefined}
+                projects={projects.map(p => ({ id: p.id, name: p.name }))}
+              />
+            );
+          })()}
         </DialogContent>
       </Dialog>
 
