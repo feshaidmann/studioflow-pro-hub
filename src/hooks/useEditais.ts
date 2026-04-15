@@ -75,7 +75,24 @@ export function useEditais(projectId?: string | null) {
   const saveResults = useCallback(async (items: Edital[], linkedProjectId?: string | null) => {
     if (!user || items.length === 0) return;
     try {
-      const rows = items.map((e) => ({
+      // Fetch existing session_keys to avoid duplicate constraint violations
+      const sessionKeys = items.map((e) => e.session_key).filter(Boolean);
+      let existingKeys = new Set<string>();
+      if (sessionKeys.length > 0) {
+        const { data: existing } = await supabase
+          .from("editais")
+          .select("session_key")
+          .in("session_key", sessionKeys);
+        existingKeys = new Set((existing || []).map((e: any) => e.session_key));
+      }
+
+      const newItems = items.filter((e) => !e.session_key || !existingKeys.has(e.session_key));
+      if (newItems.length === 0) {
+        toast({ title: "Editais já salvos", description: "Todos os editais já estão na sua lista." });
+        return;
+      }
+
+      const rows = newItems.map((e) => ({
         user_id: user.id,
         project_id: linkedProjectId || null,
         titulo: e.titulo,
@@ -90,10 +107,9 @@ export function useEditais(projectId?: string | null) {
         inferido: e.inferido,
         session_key: e.session_key,
       }));
-      // Use plain insert — partial unique indexes don't support onConflict upsert
       const { error } = await supabase.from("editais").insert(rows as any);
       if (error) throw error;
-      toast({ title: "Editais salvos!", description: `${items.length} edital(is) salvo(s).` });
+      toast({ title: "Editais salvos!", description: `${newItems.length} edital(is) salvo(s).` });
       await fetchEditais();
     } catch (err: any) {
       console.error("Save error:", err);
