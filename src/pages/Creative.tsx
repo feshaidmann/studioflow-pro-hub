@@ -317,6 +317,17 @@ export default function Creative() {
           </Button>
         </DialogContent>
       </Dialog>
+
+      {/* Derive Batch Dialog */}
+      <DeriveBatchDialog
+        open={deriveDialogOpen}
+        onOpenChange={setDeriveDialogOpen}
+        baseImageUrl={deriveImageUrl}
+        basePrompt={prompt}
+        style={style}
+        projectId={projectIdParam || undefined}
+        onGenerateBatch={generateBatch}
+      />
     </div>
   );
 }
