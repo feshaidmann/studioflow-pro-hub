@@ -174,6 +174,56 @@ export type Database = {
         }
         Relationships: []
       }
+      creative_assets: {
+        Row: {
+          created_at: string
+          format: string
+          height: number
+          id: string
+          project_id: string | null
+          prompt: string
+          public_url: string | null
+          storage_path: string
+          style: string | null
+          user_id: string
+          width: number
+        }
+        Insert: {
+          created_at?: string
+          format: string
+          height: number
+          id?: string
+          project_id?: string | null
+          prompt: string
+          public_url?: string | null
+          storage_path: string
+          style?: string | null
+          user_id: string
+          width: number
+        }
+        Update: {
+          created_at?: string
+          format?: string
+          height?: number
+          id?: string
+          project_id?: string | null
+          prompt?: string
+          public_url?: string | null
+          storage_path?: string
+          style?: string | null
+          user_id?: string
+          width?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "creative_assets_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       editais: {
         Row: {
           abertura: string | null

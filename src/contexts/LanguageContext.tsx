@@ -20,6 +20,7 @@ const translations: Record<string, string> = {
   "nav.settings.short": "Config.",
   "nav.admin": "Admin",
   "nav.editais": "Editais",
+  "nav.creative": "Criativo",
   "nav.logout": "Sair",
   "nav.more": "Mais",
   "nav.user": "Usuário",
