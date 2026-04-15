@@ -1,6 +1,6 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, Download, Save, Trash2, ExternalLink, FileText, Pencil, Info, BarChart3, ClipboardList, Sparkles, ChevronDown, ArrowRight, Plus, MoreHorizontal, KanbanSquare, FolderOpen, Bot, Trophy, Eye, DollarSign, Users, FileCheck } from "lucide-react";
+import { Search, Download, Save, Trash2, ExternalLink, FileText, Pencil, Info, BarChart3, ClipboardList, Sparkles, ChevronDown, ArrowRight, Plus, MoreHorizontal, KanbanSquare, FolderOpen, Bot, Trophy, Eye, DollarSign, Users, FileCheck, Star } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
@@ -28,6 +28,7 @@ import ApplicationChecklist from "@/components/editais/ApplicationChecklist";
 import EditalAIAssistant, { type AIContext } from "@/components/editais/EditalAIAssistant";
 import EditalResultModal from "@/components/editais/EditalResultModal";
 import EditalMetricsDashboard from "@/components/editais/EditalMetricsDashboard";
+import { useMatchEditais, type MatchedEdital } from "@/hooks/useMatchEditais";
 
 const AREA_OPTIONS = ["Música", "Audiovisual", "Ambos", "Outra"];
 const ITEMS_PER_PAGE = 20;
