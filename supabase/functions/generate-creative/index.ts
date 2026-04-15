@@ -34,35 +34,42 @@ serve(async (req) => {
       });
     }
 
-    // Build the AI prompt
-    let fullPrompt = style
-      ? `${prompt}. Style: ${style}. Aspect ratio suitable for ${format}.`
-      : `${prompt}. Aspect ratio suitable for ${format}.`;
+    // Build system instructions (separate from user content)
+    const systemParts: string[] = [
+      "You are a visual art generator for musicians and artists.",
+      "Generate images based on the user's creative description below.",
+      `Target format: ${format}. Aspect ratio suitable for ${width}x${height}.`,
+      "Any text, titles, labels, or captions rendered in the image MUST be in Brazilian Portuguese (pt-BR).",
+    ];
 
-    if (channelContext) {
-      fullPrompt += ` Channel context: ${channelContext}.`;
+    if (style) {
+      systemParts.push(`Apply visual style: ${style}.`);
     }
 
-    // Force all text output in Brazilian Portuguese
-    fullPrompt += ` IMPORTANT: Any text, titles, labels, or captions in the image MUST be in Brazilian Portuguese (pt-BR).`;
+    if (channelContext) {
+      systemParts.push(`Adapt for this distribution channel: ${channelContext}.`);
+    }
 
-    const messages: any[] = [];
-
-    // Face preservation instruction when editing from a reference image
     if (editImageUrl) {
-      messages.push({
-        role: "system",
-        content: "IMPORTANT: If there are human faces in the reference image, preserve them exactly — do not alter, distort or replace any facial features. Keep the person's identity intact.",
-      });
+      systemParts.push("IMPORTANT: If there are human faces in the reference image, preserve them exactly — do not alter, distort or replace any facial features. Keep the person's identity intact.");
+      systemParts.push("Use the provided reference image as a base, adapting composition and layout while keeping the visual identity.");
+    }
+
+    const messages: any[] = [
+      { role: "system", content: systemParts.join("\n") },
+    ];
+
+    // User message is purely the creative description
+    if (editImageUrl) {
       messages.push({
         role: "user",
         content: [
-          { type: "text", text: fullPrompt },
+          { type: "text", text: prompt },
           { type: "image_url", image_url: { url: editImageUrl } },
         ],
       });
     } else {
-      messages.push({ role: "user", content: fullPrompt });
+      messages.push({ role: "user", content: prompt });
     }
 
     const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
