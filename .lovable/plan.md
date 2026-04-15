@@ -1,111 +1,107 @@
 
 
-# Melhorias Adicionais para a Jornada de Editais
+# Criador de Peças Visuais com IA — "Criativo"
 
-Após as 10 correções já implementadas, identifico 7 oportunidades de evolução que aumentariam conversão e retenção.
-
----
-
-## 1. Alertas de prazo inteligentes
-
-**Problema:** Editais vencem silenciosamente. O artista só descobre que perdeu o prazo ao revisitar a lista.
-
-**Solução:**
-- Na carga da página e no Dashboard, verificar editais com prazo nos próximos 3/7 dias
-- Mostrar banner de urgência no topo de "Meus Editais" com contagem regressiva
-- Criar notificação automática (tabela `notifications`) quando o prazo estiver a 3 dias
-- Badge visual vermelho nos cards de editais prestes a vencer
-
-**Arquivos:** `src/pages/Editais.tsx`, `src/pages/Dashboard.tsx`, `src/hooks/useEditais.ts`
+## Resumo
+Novo módulo `/criativo` que permite ao artista gerar capas, banners, posts para redes sociais e thumbnails para streaming usando IA generativa de imagens (Lovable AI — modelo `google/gemini-3.1-flash-image-preview`). O fluxo é simples: escolher formato, descrever a ideia, gerar, ajustar e baixar.
 
 ---
 
-## 2. Histórico e aprendizado por resultado
+## Funcionalidades
 
-**Problema:** A tab "Resultado" registra aprovação/reprovação mas não gera nenhum insight. O campo `licoes_aprendidas` é opcional e não é reutilizado.
+### Tela principal (`/criativo`)
+- **Seletor de formato** com presets visuais:
+  - Post Instagram (1080×1080)
+  - Story/Reels (1080×1920)
+  - Capa YouTube (2560×1440)
+  - Banner Spotify (2660×1140)
+  - Post Twitter/X (1600×900)
+  - Formato livre (custom)
+- **Campo de prompt** com sugestões contextuais (ex: "Capa do single 'Nome da Música' com estética lo-fi e cores quentes")
+- **Chips de estilo rápido**: Minimalista, Retro, Neon, Aquarela, Colagem, Fotorrealista
+- **Botão "Gerar"** → chama edge function → retorna imagem
+- **Preview** da imagem gerada com opções:
+  - "Gerar variação" (mesmo prompt, nova geração)
+  - "Editar com IA" (adicionar texto, mudar cor, ajustar elemento)
+  - "Baixar" (PNG em resolução original)
+  - "Salvar na galeria" (persiste no storage para reuso)
 
-**Solução:**
-- Após registrar resultado, exibir prompt: "O que funcionou?" / "O que melhorar?"
-- Na aba Meus Editais, mostrar card de resumo: taxa de aprovação, valor total aprovado, principais motivos de recusa
-- Quando a IA gerar textos para novas candidaturas, passar lições aprendidas de editais anteriores como contexto
+### Galeria de criações
+- Lista de imagens salvas pelo artista no bucket `creative-assets`
+- Filtro por formato e data
+- Re-edição a partir de imagem existente
 
-**Arquivos:** `src/components/editais/EditalResultModal.tsx`, `src/pages/Editais.tsx`, `supabase/functions/edital-ai-assistant/index.ts`
-
----
-
-## 3. Templates de candidatura reutilizáveis
-
-**Problema:** Cada inscrição começa do zero. Campos como "resumo do projeto", "currículo artístico", "justificativa" são reescritos a cada edital.
-
-**Solução:**
-- Ao salvar rascunho, oferecer "Salvar como template" para campos genéricos (que não mencionam o nome do edital)
-- No `EditalInscricao`, ao preencher um campo vazio, mostrar sugestão "Usar resposta de {edital anterior}" se existir texto similar no banco de documentos
-- Integrar com `edital_documents` existente, adicionando filtro por `doc_type` como "template_campo"
-
-**Arquivos:** `src/pages/EditalInscricao.tsx`, `src/components/editais/EditalDocumentsBank.tsx`
-
----
-
-## 4. Comparador de editais
-
-**Problema:** Artista com 10+ editais salvos não consegue comparar rapidamente qual priorizar (valor, prazo, compatibilidade).
-
-**Solução:**
-- Adicionar checkbox de seleção nos cards de editais salvos
-- Botão "Comparar selecionados" que abre um dialog lado a lado com: valor, prazo, área, público-alvo, score de compatibilidade
-- Máximo de 3 editais por comparação
-
-**Arquivos:** `src/pages/Editais.tsx` (novo componente `EditalCompareDialog`)
+### Integração com Projetos
+- No hub do projeto, aba ou seção "Material Visual" com link para `/criativo?project=ID`
+- Prompt pré-preenchido com nome do projeto/artista
 
 ---
 
-## 5. Onboarding contextual da jornada
+## Arquitetura técnica
 
-**Problema:** Artista novo não entende a relação entre Buscar → Salvar → Candidatar → Inscrição. Os empty states ajudam mas não conectam a jornada completa.
+### Edge Function: `supabase/functions/generate-creative/index.ts`
+- Recebe: `prompt`, `style`, `width`, `height`, `editImage?` (base64 opcional)
+- Chama Lovable AI Gateway com modelo `google/gemini-3.1-flash-image-preview`
+- Retorna imagem base64
+- Faz upload automático para bucket `creative-assets` e retorna URL pública
+- Registra uso em `ai_invocations`
 
-**Solução:**
-- Na primeira visita à aba Editais (sem editais salvos nem candidaturas), exibir um mini-walkthrough visual em 4 passos com ilustração simplificada
-- Usar `localStorage` para controlar se já foi visto
-- Incluir link direto para o Tutorial existente
+### Storage
+- Novo bucket `creative-assets` (público) para imagens geradas
+- Path: `{user_id}/{timestamp}_{format}.png`
 
-**Arquivos:** `src/pages/Editais.tsx`
+### Tabela (nova)
+```sql
+CREATE TABLE public.creative_assets (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  project_id UUID REFERENCES public.projects(id) ON DELETE SET NULL,
+  prompt TEXT NOT NULL,
+  style TEXT,
+  format TEXT NOT NULL, -- 'instagram_post', 'story', 'youtube_cover', etc.
+  width INTEGER NOT NULL,
+  height INTEGER NOT NULL,
+  storage_path TEXT NOT NULL,
+  public_url TEXT,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+ALTER TABLE public.creative_assets ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users manage own assets"
+  ON public.creative_assets FOR ALL TO authenticated
+  USING (user_id = auth.uid())
+  WITH CHECK (user_id = auth.uid());
+```
+
+### Frontend
+| Arquivo | Descrição |
+|---|---|
+| `src/pages/Creative.tsx` | Página principal com seletor de formato, prompt, preview e galeria |
+| `src/hooks/useCreativeAssets.ts` | CRUD de assets + chamada à edge function |
+| `src/components/creative/FormatSelector.tsx` | Grid visual com presets de dimensão |
+| `src/components/creative/ImagePreview.tsx` | Preview com ações (baixar, editar, salvar) |
+| `src/components/creative/StyleChips.tsx` | Chips de estilo rápido |
+
+### Navegação
+- Novo item no menu lateral: ícone `Palette` (lucide), label "Criativo"
+- Posição: após "DNA Musical" no grupo Gestão
 
 ---
 
-## 6. Filtro por prazo e valor nos editais salvos
+## Fluxo do usuário
 
-**Problema:** A lista de editais salvos só filtra por status. Artistas precisam filtrar por "vencendo esta semana" ou "acima de R$ 50k".
+```text
+1. Artista abre /criativo
+2. Escolhe formato (ex: "Post Instagram")
+3. Digita prompt: "Capa minimalista com violão acústico e tons terrosos"
+4. (Opcional) Seleciona estilo: "Minimalista"
+5. Clica "Gerar" → loading com skeleton
+6. Imagem aparece no preview
+7. Pode: baixar, gerar variação, editar com IA, ou salvar na galeria
+8. Imagens salvas ficam acessíveis na galeria para reuso
+```
 
-**Solução:**
-- Adicionar filtros rápidos: "Próximos 7 dias", "Próximos 30 dias", "Com valor"
-- Implementar como chips adicionais ao lado dos filtros de status existentes
-- Ordenação por valor (quando numérico) e por prazo
-
-**Arquivos:** `src/pages/Editais.tsx`
-
----
-
-## 7. Progresso global visível no Dashboard
-
-**Problema:** O Dashboard não mostra nada sobre editais. Artista precisa navegar até Editais para saber quantas candidaturas tem ativas.
-
-**Solução:**
-- Criar card "Editais em andamento" no Dashboard com: total de candidaturas por status, próximo prazo, e link direto para o pipeline
-- Reutilizar dados de `useEditalApplications`
-
-**Arquivos:** `src/pages/Dashboard.tsx`
-
----
-
-## Sem migrações de banco de dados
-Todas as funcionalidades usam tabelas existentes (`editais`, `edital_applications`, `notifications`, `edital_documents`).
-
-## Priorização sugerida
-1. **Alertas de prazo** (impacto direto em perda de oportunidades)
-2. **Progresso no Dashboard** (visibilidade sem navegar)
-3. **Filtros por prazo/valor** (eficiência na triagem)
-4. **Templates reutilizáveis** (reduz tempo por inscrição)
-5. **Histórico com aprendizado** (melhoria contínua)
-6. **Comparador** (decisão informada)
-7. **Onboarding contextual** (reduz abandono inicial)
+## Sem dependências externas
+Usa exclusivamente Lovable AI (`google/gemini-3.1-flash-image-preview`) — sem API key adicional.
 
