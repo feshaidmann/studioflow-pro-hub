@@ -341,11 +341,12 @@ const SEARCH_EXAMPLES = [
 ];
 
 /* ── Pipeline de candidaturas ── */
-function PipelineTab({ applications, onUpdate, onDelete, onOpenChecklist, projects, t }: {
+function PipelineTab({ applications, onUpdate, onDelete, onOpenChecklist, onOpenResult, projects, t }: {
   applications: EditalApplication[];
   onUpdate: (params: { id: string; status?: ApplicationStatus; notas?: string; project_id?: string | null }) => void;
   onDelete: (id: string) => void;
   onOpenChecklist: (appId: string) => void;
+  onOpenResult: (appId: string) => void;
   projects: { id: string; name: string }[];
   t: (k: string) => string;
 }) {
