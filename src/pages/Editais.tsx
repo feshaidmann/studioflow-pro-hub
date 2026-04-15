@@ -847,10 +847,30 @@ export default function Editais() {
 
   const savedFiltered = useMemo(() => {
     const sorted = sortAndFilterEditais(editais as Edital[], savedFilterStatus);
-    if (!savedSearch.trim()) return sorted;
-    const q = savedSearch.toLowerCase();
-    return sorted.filter((e) => e.titulo.toLowerCase().includes(q) || (e.orgao || "").toLowerCase().includes(q));
-  }, [editais, savedFilterStatus, savedSearch]);
+    let filtered = sorted;
+    if (savedSearch.trim()) {
+      const q = savedSearch.toLowerCase();
+      filtered = filtered.filter((e) => e.titulo.toLowerCase().includes(q) || (e.orgao || "").toLowerCase().includes(q));
+    }
+    // Apply deadline/value filters
+    const now = new Date();
+    if (deadlineFilter === "7days") {
+      filtered = filtered.filter((e) => {
+        if (!e.prazo) return false;
+        const diff = Math.ceil((new Date(e.prazo + "T23:59:59").getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+        return diff >= 0 && diff <= 7;
+      });
+    } else if (deadlineFilter === "30days") {
+      filtered = filtered.filter((e) => {
+        if (!e.prazo) return false;
+        const diff = Math.ceil((new Date(e.prazo + "T23:59:59").getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+        return diff >= 0 && diff <= 30;
+      });
+    } else if (deadlineFilter === "withValue") {
+      filtered = filtered.filter((e) => e.valor && e.valor !== "" && e.valor !== "—");
+    }
+    return filtered;
+  }, [editais, savedFilterStatus, savedSearch, deadlineFilter]);
 
   const totalSavedPages = Math.max(1, Math.ceil(savedFiltered.length / ITEMS_PER_PAGE));
   const clampedPage = Math.min(savedPage, totalSavedPages);
