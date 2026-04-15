@@ -1,0 +1,5 @@
+ALTER TABLE public.editais
+  ADD COLUMN IF NOT EXISTS valor text NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS publico_alvo text NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS resumo text NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS documentos_resumo text NOT NULL DEFAULT '';
