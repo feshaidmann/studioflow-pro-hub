@@ -713,7 +713,7 @@ export default function Editais() {
               </CardHeader>
               <CardContent className="space-y-3">
                 {savedPaginated.length > 0 ? (
-                  <EditalTable items={savedPaginated} onDelete={deleteEdital} onEdit={handleEdit} onInscricao={(id) => navigate(`/editais/inscricao/${id}`)} t={t} />
+                  <EditalTable items={savedPaginated} onDelete={deleteEdital} onEdit={handleEdit} onInscricao={(id) => createApplication.mutate({ edital_id: id })} t={t} />
                 ) : (
                   <p className="text-sm text-muted-foreground py-4 text-center">{t("editais.noResults")}</p>
                 )}
