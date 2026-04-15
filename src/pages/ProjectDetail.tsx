@@ -8,9 +8,11 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   ChevronLeft, Music2, Pencil, MessageSquare,
-  LayoutDashboard, Users, ListChecks, DollarSign, Rocket, FolderOpen,
+  LayoutDashboard, Users, ListChecks, DollarSign, Rocket, FolderOpen, Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import ProjectAISheet from "@/components/project-hub/ProjectAISheet";
+import { useTasks } from "@/hooks/useTasks";
 
 import ProjectOverviewTab from "@/components/project-hub/ProjectOverviewTab";
 import ProjectTeamTab from "@/components/project-hub/ProjectTeamTab";
