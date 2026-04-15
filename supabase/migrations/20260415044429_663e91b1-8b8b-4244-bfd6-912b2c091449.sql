@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX idx_editais_user_session ON public.editais (user_id, session_key) WHERE session_key IS NOT NULL AND session_key != '';
