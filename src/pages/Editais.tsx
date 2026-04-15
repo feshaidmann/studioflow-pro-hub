@@ -589,6 +589,11 @@ export default function Editais() {
             <Bot className="h-3.5 w-3.5 mr-1.5" />
             IA
           </TabsTrigger>
+          <TabsTrigger value="metricas">
+            <BarChart3 className="h-3.5 w-3.5 mr-1.5" />
+            Métricas
+          </TabsTrigger>
+          </TabsTrigger>
         </TabsList>
 
         {/* ── Tab: Buscar ── */}
@@ -816,6 +821,7 @@ export default function Editais() {
               onUpdate={(p) => updateApplication.mutate(p)}
               onDelete={(id) => deleteApplication.mutate(id)}
               onOpenChecklist={(id) => setSelectedAppId(id)}
+              onOpenResult={(id) => setResultAppId(id)}
               projects={projects.map(p => ({ id: p.id, name: p.name }))}
               t={t}
             />
@@ -831,6 +837,11 @@ export default function Editais() {
         <TabsContent value="ia" className="space-y-6 mt-4">
           <EditalAIAssistant projects={projects.map(p => ({ id: p.id, name: p.name }))} />
         </TabsContent>
+
+        {/* ── Tab: Métricas ── */}
+        <TabsContent value="metricas" className="space-y-6 mt-4">
+          <EditalMetricsDashboard applications={applications} />
+        </TabsContent>
       </Tabs>
 
       <EditEditalDialog
@@ -841,7 +852,7 @@ export default function Editais() {
         t={t}
       />
 
-      {/* Checklist dialog for selected application */}
+      {/* Checklist dialog */}
       <Dialog open={!!selectedAppId} onOpenChange={(o) => { if (!o) setSelectedAppId(null); }}>
         <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
           <DialogHeader>
@@ -852,6 +863,19 @@ export default function Editais() {
           {selectedAppId && <ApplicationChecklist applicationId={selectedAppId} />}
         </DialogContent>
       </Dialog>
+
+      {/* Result modal */}
+      {resultAppId && (() => {
+        const app = applications.find(a => a.id === resultAppId);
+        if (!app) return null;
+        return (
+          <EditalResultModal
+            application={app}
+            open={!!resultAppId}
+            onOpenChange={(o) => { if (!o) setResultAppId(null); }}
+          />
+        );
+      })()}
     </div>
   );
 }
