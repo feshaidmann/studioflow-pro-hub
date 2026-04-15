@@ -765,6 +765,65 @@ export default function Editais() {
   const updateApplication = useUpdateApplication();
   const deleteApplication = useDeleteApplication();
 
+  // Deadline alerts
+  const [deadlineFilter, setDeadlineFilter] = useState<"all" | "7days" | "30days" | "withValue">("all");
+  // Compare
+  const [compareIds, setCompareIds] = useState<Set<string>>(new Set());
+  const [compareOpen, setCompareOpen] = useState(false);
+  // Onboarding
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
+  // Check first visit for onboarding
+  useEffect(() => {
+    if (!loading && editais.length === 0 && applications.length === 0) {
+      const seen = localStorage.getItem("sfp_editais_onboarding_seen");
+      if (!seen) setShowOnboarding(true);
+    }
+  }, [loading, editais.length, applications.length]);
+
+  const dismissOnboarding = () => {
+    setShowOnboarding(false);
+    localStorage.setItem("sfp_editais_onboarding_seen", "true");
+  };
+
+  // Deadline alerts computation
+  const deadlineAlerts = useMemo(() => {
+    const now = new Date();
+    const alerts: { id: string; titulo: string; prazo: string; daysLeft: number; source: "edital" | "application" }[] = [];
+
+    editais.forEach((e) => {
+      if (!e.prazo || e.status === "Encerrado") return;
+      const d = new Date(e.prazo + "T23:59:59");
+      const diff = Math.ceil((d.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+      if (diff >= 0 && diff <= 7) {
+        alerts.push({ id: e.id!, titulo: e.titulo, prazo: e.prazo, daysLeft: diff, source: "edital" });
+      }
+    });
+
+    applications.forEach((a) => {
+      if (a.status === "resultado" || !a.edital?.prazo) return;
+      const d = new Date(a.edital.prazo + "T23:59:59");
+      const diff = Math.ceil((d.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+      if (diff >= 0 && diff <= 7) {
+        if (!alerts.find((al) => al.id === a.edital_id)) {
+          alerts.push({ id: a.edital_id, titulo: a.edital?.titulo || "Edital", prazo: a.edital.prazo, daysLeft: diff, source: "application" });
+        }
+      }
+    });
+
+    return alerts.sort((a, b) => a.daysLeft - b.daysLeft);
+  }, [editais, applications]);
+
+  // Toggle compare selection
+  const toggleCompare = (id: string) => {
+    setCompareIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else if (next.size < 3) next.add(id);
+      return next;
+    });
+  };
+
   const handleSearch = (q?: string) => {
     const searchQuery = (q || query).trim();
     if (!searchQuery) return;
