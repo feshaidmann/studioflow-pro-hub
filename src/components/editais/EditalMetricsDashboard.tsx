@@ -54,35 +54,35 @@ export default function EditalMetricsDashboard({ applications }: Props) {
   return (
     <div className="space-y-4">
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 gap-3">
         <Card>
-          <CardContent className="p-4 text-center">
-            <FileText className="h-5 w-5 mx-auto text-muted-foreground mb-1" />
-            <p className="text-2xl font-bold">{metrics.total}</p>
-            <p className="text-xs text-muted-foreground">Total candidaturas</p>
+          <CardContent className="p-3 sm:p-4 text-center">
+            <FileText className="h-4 w-4 sm:h-5 sm:w-5 mx-auto text-muted-foreground mb-1" />
+            <p className="text-xl sm:text-2xl font-bold">{metrics.total}</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">Candidaturas</p>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-4 text-center">
-            <Award className="h-5 w-5 mx-auto text-green-600 mb-1" />
-            <p className="text-2xl font-bold text-green-700">{metrics.aprovados.length}</p>
-            <p className="text-xs text-muted-foreground">Aprovadas</p>
+          <CardContent className="p-3 sm:p-4 text-center">
+            <Award className="h-4 w-4 sm:h-5 sm:w-5 mx-auto text-green-600 mb-1" />
+            <p className="text-xl sm:text-2xl font-bold text-green-700">{metrics.aprovados.length}</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">Aprovadas</p>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-4 text-center">
-            <TrendingUp className="h-5 w-5 mx-auto text-primary mb-1" />
-            <p className="text-2xl font-bold">{metrics.taxaAprovacao}%</p>
-            <p className="text-xs text-muted-foreground">Taxa de aprovação</p>
+          <CardContent className="p-3 sm:p-4 text-center">
+            <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 mx-auto text-primary mb-1" />
+            <p className="text-xl sm:text-2xl font-bold">{metrics.taxaAprovacao}%</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">Aprovação</p>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-4 text-center">
-            <Trophy className="h-5 w-5 mx-auto text-amber-600 mb-1" />
-            <p className="text-2xl font-bold">
+          <CardContent className="p-3 sm:p-4 text-center">
+            <Trophy className="h-4 w-4 sm:h-5 sm:w-5 mx-auto text-amber-600 mb-1" />
+            <p className="text-xl sm:text-2xl font-bold">
               {metrics.totalAprovado.toLocaleString("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 0 })}
             </p>
-            <p className="text-xs text-muted-foreground">Total captado</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">Total captado</p>
           </CardContent>
         </Card>
       </div>
