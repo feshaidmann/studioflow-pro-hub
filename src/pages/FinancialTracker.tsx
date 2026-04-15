@@ -66,6 +66,7 @@ import {
   ArrowDownRight,
   Minus,
   Download,
+  Sparkles,
 } from "lucide-react";
 import { useProjects } from "@/contexts/ProjectContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -76,6 +77,7 @@ import TransactionForm from "@/components/finance/TransactionForm";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
+import ProjectAISheet from "@/components/project-hub/ProjectAISheet";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
