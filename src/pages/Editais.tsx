@@ -753,7 +753,7 @@ export default function Editais() {
               <CardContent className="space-y-4">
                 {resultEditais.length > 0 ? (
                   <>
-                    <EditalTable items={resultEditais} t={t} />
+                    <EditalTable items={resultEditais} onViewDetail={(e) => { setDetailEdital(e); setDetailOpen(true); }} t={t} />
                     <div className="flex gap-2 flex-wrap items-center pt-2 border-t border-border/40">
                       <Button size="sm" onClick={handleSaveAll}>
                         <Save className="h-3.5 w-3.5 mr-1.5" />
@@ -841,7 +841,7 @@ export default function Editais() {
               </CardHeader>
               <CardContent className="space-y-3">
                 {savedPaginated.length > 0 ? (
-                  <EditalTable items={savedPaginated} onDelete={deleteEdital} onEdit={handleEdit} onInscricao={(id) => createApplication.mutate({ edital_id: id })} t={t} />
+                  <EditalTable items={savedPaginated} onDelete={deleteEdital} onEdit={handleEdit} onInscricao={(id) => createApplication.mutate({ edital_id: id })} onViewDetail={(e) => { setDetailEdital(e); setDetailOpen(true); }} t={t} />
                 ) : (
                   <p className="text-sm text-muted-foreground py-4 text-center">{t("editais.noResults")}</p>
                 )}
