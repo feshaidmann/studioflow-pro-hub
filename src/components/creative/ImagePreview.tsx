@@ -1,4 +1,4 @@
-import { Download, RefreshCw, Pencil, Save } from "lucide-react";
+import { Download, RefreshCw, Pencil, Save, Layers } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -11,11 +11,12 @@ interface Props {
   onEdit: () => void;
   onDownload: () => void;
   onSave: () => void;
+  onDerive?: () => void;
 }
 
 export default function ImagePreview({
   imageUrl, isLoading, isSaving, isSaved,
-  onRegenerate, onEdit, onDownload, onSave,
+  onRegenerate, onEdit, onDownload, onSave, onDerive,
 }: Props) {
   if (isLoading) {
     return (
@@ -48,6 +49,11 @@ export default function ImagePreview({
         <Button variant="outline" size="sm" onClick={onEdit}>
           <Pencil className="h-3.5 w-3.5 mr-1.5" /> Editar
         </Button>
+        {onDerive && (
+          <Button variant="outline" size="sm" onClick={onDerive}>
+            <Layers className="h-3.5 w-3.5 mr-1.5" /> Desdobrar
+          </Button>
+        )}
         <Button variant="outline" size="sm" onClick={onDownload}>
           <Download className="h-3.5 w-3.5 mr-1.5" /> Baixar
         </Button>
