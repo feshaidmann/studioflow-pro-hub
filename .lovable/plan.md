@@ -1,47 +1,61 @@
 
 
-# Upload de Ativos Próprios para Geração com IA
+# Desdobramentos de Arte — Geração em Lote por Canal
 
 ## Resumo
-Adicionar zona de upload de imagem de referência na tela Criativo, permitindo que o artista envie fotos, logos ou ilustrações como base para a geração/edição com IA. A infraestrutura backend já suporta isso (`editImageUrl`).
+Adicionar um fluxo "Desdobrar" que, a partir de uma arte-base (ex: capa de álbum), gera automaticamente versões adaptadas para múltiplos canais (Instagram Post, Story, YouTube, etc.) com conteúdo contextual por canal. O prompt da edge function incluirá instrução explícita de preservação facial.
+
+---
 
 ## Mudanças
 
-### 1. Componente de upload de referência
-**Novo:** `src/components/creative/ReferenceImageUpload.tsx`
-- Dropzone com drag-and-drop e botão "Escolher arquivo"
-- Aceita PNG, JPG, WEBP (max 5MB)
-- Preview da imagem carregada com botão de remover
-- Converte o arquivo para base64 `data:image/...` para enviar à edge function
-- Posicionado entre os chips de estilo e o campo de prompt
-
-### 2. Integrar na página Creative
-**Arquivo:** `src/pages/Creative.tsx`
-- Novo state `referenceImage: string | null` (base64)
-- Passar `referenceImage` como `editImageUrl` ao chamar `generate()`
-- Quando há imagem de referência, o label do botão muda para "Gerar a partir da referência"
-- Texto de ajuda: "A IA usará esta imagem como base para criar sua peça"
-
-### 3. Galeria como fonte de referência
-**Arquivo:** `src/pages/Creative.tsx`
-- Na galeria, adicionar botão "Usar como referência" no hover de cada asset
-- Ao clicar, carrega a `public_url` do asset como `editImageUrl` e volta para a aba "Criar"
-
-### 4. Hook — passar editImageUrl na geração principal
-**Arquivo:** `src/hooks/useCreativeAssets.ts`
-- Já suporta `editImageUrl` — nenhuma mudança necessária
-
-### 5. Edge function
+### 1. Instrução de preservação facial na Edge Function
 **Arquivo:** `supabase/functions/generate-creative/index.ts`
-- Já suporta `editImageUrl` via multimodal content — nenhuma mudança necessária
+- Quando `editImageUrl` estiver presente, injetar no prompt do sistema: *"IMPORTANT: If there are human faces in the reference image, preserve them exactly — do not alter, distort or replace any facial features."*
+- Novo campo opcional no body: `channelContext` (string) — texto descritivo do canal (ex: "Story vertical do Instagram com texto de divulgação do single")
 
-## Arquivos impactados
+### 2. Novo componente `DeriveBatchDialog`
+**Novo:** `src/components/creative/DeriveBatchDialog.tsx`
+- Dialog que recebe a imagem-base (URL ou base64)
+- Mostra checkboxes dos formatos disponíveis (Post Instagram, Story, YouTube, etc.)
+- Campo de prompt contextual por canal com sugestões pré-preenchidas:
+  - Story: "Adicionar 'Ouça agora' e nome do artista"
+  - YouTube: "Banner com título do álbum centralizado"
+  - Twitter: "Post de divulgação com data de lançamento"
+- Botão "Gerar todos" que dispara N chamadas em sequência (uma por formato selecionado)
+- Progress bar mostrando "Gerando 2/5..."
+- Ao finalizar, exibe grid com todas as variações geradas
+- Botão "Baixar todos" (zip via client-side) e download individual
 
-| Arquivo | Tipo |
-|---|---|
-| `src/components/creative/ReferenceImageUpload.tsx` | Novo |
-| `src/pages/Creative.tsx` | Modificado |
+### 3. Integrar na página Creative
+**Arquivo:** `src/pages/Creative.tsx`
+- No `ImagePreview`, adicionar botão "Desdobrar para canais" (ícone `Layers`) ao lado de "Editar com IA"
+- Na galeria, adicionar mesmo botão no hover de cada asset
+- Ao clicar, abre o `DeriveBatchDialog` com a imagem selecionada
 
-## Sem migrações de banco de dados
-Toda a infraestrutura já existe.
+### 4. Integrar no hook
+**Arquivo:** `src/hooks/useCreativeAssets.ts`
+- Nova função `generateBatch(params[])` que chama `generate()` sequencialmente com delay de 2s entre chamadas para evitar rate limit
+- Retorna array de resultados
+
+---
+
+## Fluxo do usuário
+
+```text
+1. Artista faz upload da capa do álbum como referência (ou seleciona da galeria)
+2. Clica em "Desdobrar para canais"
+3. Seleciona: Story, Post Instagram, Banner YouTube
+4. Cada formato já vem com sugestão de texto contextual
+5. Clica "Gerar todos"
+6. IA gera cada variação preservando rostos e adaptando composição
+7. Artista visualiza grid com os 3 resultados
+8. Baixa individualmente ou todos de uma vez
+```
+
+## Proteção facial
+A instrução de preservação é injetada automaticamente no backend sempre que houver imagem de referência — o artista não precisa lembrar de pedir isso manualmente.
+
+## Sem migrações de banco
+Usa a mesma tabela `creative_assets` e bucket `creative-assets`.
 
