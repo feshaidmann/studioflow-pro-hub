@@ -283,13 +283,6 @@ function EditalTable({
 }
 
 
-            <div className="flex items-start justify-between gap-2">
-              <p className="text-sm font-medium leading-snug flex-1">
-                {e.titulo}
-                {e.inferido && <Info className="inline h-3 w-3 text-muted-foreground ml-1" />}
-              </p>
-              <Badge variant="outline" className={statusColor(e.status) + " shrink-0 text-[10px]"}>{e.status}</Badge>
-            </div>
             <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-muted-foreground">
               {e.orgao && <span>{e.orgao}</span>}
               {e.estado && <span>UF: {e.estado}</span>}
