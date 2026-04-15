@@ -97,6 +97,11 @@ export default function Creative() {
     setActiveTab("create");
   };
 
+  const handleDerive = (imageUrl: string) => {
+    setDeriveImageUrl(imageUrl);
+    setDeriveDialogOpen(true);
+  };
+
   const handleEdit = () => {
     setEditPrompt("");
     setEditDialogOpen(true);
@@ -214,6 +219,7 @@ export default function Creative() {
                 onEdit={handleEdit}
                 onDownload={handleDownload}
                 onSave={() => {}}
+                onDerive={generatedImage ? () => handleDerive(generatedImage) : undefined}
               />
             </div>
           </div>
@@ -265,6 +271,14 @@ export default function Creative() {
                         >
                           <Upload className="h-3 w-3" />
                         </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 text-white/80 hover:text-primary"
+                          title="Desdobrar para canais"
+                          onClick={() => handleDerive(a.public_url || "")}
+                        >
+                          <Layers className="h-3 w-3" />
                         <Button
                           variant="ghost"
                           size="icon"
