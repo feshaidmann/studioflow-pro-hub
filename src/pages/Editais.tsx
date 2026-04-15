@@ -794,6 +794,11 @@ export default function Editais() {
             />
           )}
         </TabsContent>
+
+        {/* ── Tab: Documentos ── */}
+        <TabsContent value="documentos" className="space-y-6 mt-4">
+          <EditalDocumentsBank />
+        </TabsContent>
       </Tabs>
 
       <EditEditalDialog
@@ -803,6 +808,18 @@ export default function Editais() {
         onSave={updateEdital}
         t={t}
       />
+
+      {/* Checklist dialog for selected application */}
+      <Dialog open={!!selectedAppId} onOpenChange={(o) => { if (!o) setSelectedAppId(null); }}>
+        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              Checklist: {applications.find(a => a.id === selectedAppId)?.edital?.titulo || "Candidatura"}
+            </DialogTitle>
+          </DialogHeader>
+          {selectedAppId && <ApplicationChecklist applicationId={selectedAppId} />}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
