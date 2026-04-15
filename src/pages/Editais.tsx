@@ -295,12 +295,16 @@ function EditEditalDialog({
   const [form, setForm] = useState<Partial<Edital>>({});
 
   const reset = (e: Edital | null) => {
-    if (e) setForm({ titulo: e.titulo, orgao: e.orgao, status: e.status, area: e.area, prazo: e.prazo, abertura: e.abertura, link: e.link });
+    if (e) setForm({
+      titulo: e.titulo, orgao: e.orgao, estado: e.estado, status: e.status, area: e.area,
+      link: e.link, valor: e.valor, abertura: e.abertura, prazo: e.prazo,
+      publico_alvo: e.publico_alvo, resumo: e.resumo, documentos_resumo: e.documentos_resumo,
+    });
   };
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (o && edital) reset(edital); onOpenChange(o); }}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{t("editais.edit")}</DialogTitle>
         </DialogHeader>
@@ -315,6 +319,12 @@ function EditEditalDialog({
               <Input value={form.orgao || ""} onChange={(e) => setForm((p) => ({ ...p, orgao: e.target.value }))} />
             </div>
             <div>
+              <Label>Estado (UF)</Label>
+              <Input value={form.estado || ""} onChange={(e) => setForm((p) => ({ ...p, estado: e.target.value }))} placeholder="Ex: SP" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
               <Label>Status</Label>
               <Select value={form.status || "Indefinido"} onValueChange={(v) => setForm((p) => ({ ...p, status: v }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
@@ -325,8 +335,6 @@ function EditEditalDialog({
                 </SelectContent>
               </Select>
             </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
             <div>
               <Label>Área</Label>
               <Select value={form.area || ""} onValueChange={(v) => setForm((p) => ({ ...p, area: v }))}>
@@ -336,9 +344,15 @@ function EditEditalDialog({
                 </SelectContent>
               </Select>
             </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
             <div>
               <Label>Link</Label>
               <Input value={form.link || ""} onChange={(e) => setForm((p) => ({ ...p, link: e.target.value }))} />
+            </div>
+            <div>
+              <Label>Valor</Label>
+              <Input value={form.valor || ""} onChange={(e) => setForm((p) => ({ ...p, valor: e.target.value }))} placeholder="Ex: R$ 50.000" />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -350,6 +364,18 @@ function EditEditalDialog({
               <Label>Prazo</Label>
               <Input type="date" value={form.prazo || ""} onChange={(e) => setForm((p) => ({ ...p, prazo: e.target.value || null }))} />
             </div>
+          </div>
+          <div>
+            <Label>Público-alvo</Label>
+            <Input value={form.publico_alvo || ""} onChange={(e) => setForm((p) => ({ ...p, publico_alvo: e.target.value }))} placeholder="Quem pode se inscrever" />
+          </div>
+          <div>
+            <Label>Resumo</Label>
+            <Textarea rows={3} value={form.resumo || ""} onChange={(e) => setForm((p) => ({ ...p, resumo: e.target.value }))} placeholder="Descrição breve do edital" />
+          </div>
+          <div>
+            <Label>Documentos exigidos</Label>
+            <Textarea rows={2} value={form.documentos_resumo || ""} onChange={(e) => setForm((p) => ({ ...p, documentos_resumo: e.target.value }))} placeholder="Principais documentos necessários" />
           </div>
         </div>
         <DialogFooter>
