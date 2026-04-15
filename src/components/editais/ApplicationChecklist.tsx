@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Plus, Trash2, Check, Square, LinkIcon, FileText } from "lucide-react";
+import { toast } from "sonner";
+import { Plus, Trash2, LinkIcon, FileText, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -7,16 +8,21 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useApplicationDocs, useAddApplicationDoc, useToggleDocCompleted, useLinkDocumentToAppDoc, useDeleteApplicationDoc } from "@/hooks/useApplicationDocs";
 import { useEditalDocuments } from "@/hooks/useEditalDocuments";
 import { DOC_TYPE_LABELS, DOC_TYPES, type DocType, type ApplicationDoc } from "@/types/editais";
+import EditalAIAssistant, { type AIContext } from "./EditalAIAssistant";
 
 interface Props {
   applicationId: string;
+  editalTitle?: string;
+  projectId?: string;
+  projects?: { id: string; name: string }[];
 }
 
-export default function ApplicationChecklist({ applicationId }: Props) {
+export default function ApplicationChecklist({ applicationId, editalTitle, projectId, projects = [] }: Props) {
   const { data: docs = [], isLoading } = useApplicationDocs(applicationId);
   const { data: bankDocs = [] } = useEditalDocuments();
   const addDoc = useAddApplicationDoc();
@@ -32,6 +38,10 @@ export default function ApplicationChecklist({ applicationId }: Props) {
   const [linkOpen, setLinkOpen] = useState(false);
   const [linkingDoc, setLinkingDoc] = useState<ApplicationDoc | null>(null);
   const [selectedBankDocId, setSelectedBankDocId] = useState<string>("");
+
+  // AI Sheet state
+  const [aiOpen, setAiOpen] = useState(false);
+  const [aiDocContext, setAiDocContext] = useState<ApplicationDoc | null>(null);
 
   const completedCount = docs.filter(d => d.is_completed).length;
   const requiredCount = docs.filter(d => d.is_required).length;
@@ -66,10 +76,28 @@ export default function ApplicationChecklist({ applicationId }: Props) {
     setLinkOpen(true);
   };
 
-  // Filter bank docs by matching type
+  const openAI = (doc: ApplicationDoc) => {
+    setAiDocContext(doc);
+    setAiOpen(true);
+  };
+
+  const getDefaultAction = (docType: string | null) => {
+    if (docType === "memorial" || docType === "bio_curta" || docType === "bio_media" || docType === "bio_longa") return "generate_memorial" as const;
+    if (docType === "orcamento_base") return "review_budget" as const;
+    return "adapt_language" as const;
+  };
+
   const filteredBankDocs = linkingDoc?.doc_type
     ? bankDocs.filter(d => d.doc_type === linkingDoc.doc_type || d.doc_type === "outro")
     : bankDocs;
+
+  const aiContext: AIContext = {
+    editalTitle: editalTitle || undefined,
+    projectId: projectId || undefined,
+    applicationId,
+    docType: aiDocContext?.doc_type || undefined,
+    docLabel: aiDocContext?.doc_label || undefined,
+  };
 
   return (
     <div className="space-y-3">
@@ -147,6 +175,9 @@ export default function ApplicationChecklist({ applicationId }: Props) {
                 </div>
               </div>
               <div className="flex gap-0.5 shrink-0">
+                <Button variant="ghost" size="icon" className="h-6 w-6 text-primary/70 hover:text-primary" onClick={() => openAI(doc)} title="Gerar com IA">
+                  <Sparkles className="h-3 w-3" />
+                </Button>
                 <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => openLink(doc)} title="Vincular documento do banco">
                   <LinkIcon className="h-3 w-3" />
                 </Button>
@@ -222,6 +253,31 @@ export default function ApplicationChecklist({ applicationId }: Props) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* AI Sheet */}
+      <Sheet open={aiOpen} onOpenChange={setAiOpen}>
+        <SheetContent side="right" className="w-full sm:max-w-lg overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-primary" />
+              Gerar: {aiDocContext?.doc_label}
+            </SheetTitle>
+          </SheetHeader>
+          <div className="mt-4">
+            <EditalAIAssistant
+              projects={projects}
+              context={aiContext}
+              defaultAction={aiDocContext ? getDefaultAction(aiDocContext.doc_type) : undefined}
+              onSaveToChecklist={(content) => {
+                // Could save as custom_content on the doc — for now just copy
+                navigator.clipboard.writeText(content);
+                toast.success("Conteúdo copiado! Cole no documento.");
+                setAiOpen(false);
+              }}
+            />
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
