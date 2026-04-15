@@ -753,7 +753,9 @@ export default function Editais() {
   const [confirmAppOpen, setConfirmAppOpen] = useState(false);
   // Sub-view for "Meus Editais": 'salvos' or 'pipeline'
   const [meusView, setMeusView] = useState<"salvos" | "pipeline">("salvos");
-
+  // Recommendations
+  const [recoProjectId, setRecoProjectId] = useState<string>("");
+  const { matches, loading: loadingMatches, fetchMatches } = useMatchEditais();
   const { editais, loading, searching, searchResult, search, saveResults, deleteEdital, updateEdital, exportCSV } = useEditais();
   const { data: applications = [], isLoading: loadingApps } = useEditalApplications();
   const createApplication = useCreateApplication();
