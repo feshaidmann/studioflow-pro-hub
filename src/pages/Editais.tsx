@@ -403,6 +403,10 @@ function PipelineTab({ applications, onUpdate, onDelete, onOpenChecklist, onOpen
                               <ClipboardList className="h-3.5 w-3.5 mr-2" />
                               Checklist
                             </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => onOpenResult(app.id)}>
+                              <Trophy className="h-3.5 w-3.5 mr-2" />
+                              Registrar resultado
+                            </DropdownMenuItem>
                             {app.edital?.link && (
                               <DropdownMenuItem asChild>
                                 <a href={app.edital.link} target="_blank" rel="noopener noreferrer">
@@ -473,6 +477,10 @@ function PipelineTab({ applications, onUpdate, onDelete, onOpenChecklist, onOpen
                             <ClipboardList className="h-3.5 w-3.5 mr-2" />
                             Checklist
                           </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => onOpenResult(app.id)}>
+                            <Trophy className="h-3.5 w-3.5 mr-2" />
+                            Registrar resultado
+                          </DropdownMenuItem>
                           {app.edital?.link && (
                             <DropdownMenuItem asChild>
                               <a href={app.edital.link} target="_blank" rel="noopener noreferrer">
@@ -515,6 +523,7 @@ export default function Editais() {
   const [savedPage, setSavedPage] = useState(1);
   const [savedFilterStatus, setSavedFilterStatus] = useState("Todos");
   const [selectedAppId, setSelectedAppId] = useState<string | null>(null);
+  const [resultAppId, setResultAppId] = useState<string | null>(null);
 
   const { editais, loading, searching, searchResult, search, saveResults, deleteEdital, updateEdital, exportCSV } = useEditais();
   const { data: applications = [], isLoading: loadingApps } = useEditalApplications();
