@@ -114,6 +114,50 @@ export default function ProjectDetail() {
 
   const tabs = isOwner ? ownerTabs : guestTabs;
 
+  // Build context string for AI
+  const buildProjectContext = () => {
+    if (!project) return "";
+    const lines: string[] = [];
+    lines.push(`Projeto: ${project.name}`);
+    lines.push(`Artista: ${project.artist || "—"}`);
+    lines.push(`Tipo: ${TYPE_LABEL[project.projectType] ?? project.projectType}`);
+    lines.push(`Estágio: ${project.stage} | Progresso: ${progress}%`);
+    lines.push(`Concluído: ${project.completed ? "Sim" : "Não"}`);
+
+    if (isOwner && ownerProject) {
+      const fin = getProjectFinancials(project.id);
+      const team = professionals[project.id] || [];
+      const projTasks = activeTasks.filter(t => t.projectId === project.id);
+      const projTxs = transactions.filter(t => t.projectId === project.id);
+
+      lines.push(`\nEquipe (${team.length}):`);
+      team.forEach(p => lines.push(`- ${p.name} (${p.specialty}) — Fee: R$${p.fee}`));
+
+      lines.push(`\nTarefas pendentes (${projTasks.length}):`);
+      projTasks.slice(0, 10).forEach(t => {
+        let l = `- ${t.description}`;
+        if (t.dueDate) l += ` (vence: ${t.dueDate})`;
+        if (t.blocked) l += ` ⚠ BLOQUEADA`;
+        lines.push(l);
+      });
+
+      lines.push(`\nFinanceiro:`);
+      lines.push(`- Receita: R$${fin.totalIncome.toFixed(0)}`);
+      lines.push(`- Despesas: R$${fin.totalExpense.toFixed(0)}`);
+      lines.push(`- Lucro: R$${fin.profit.toFixed(0)}`);
+      lines.push(`- Transações pendentes: ${projTxs.filter(t => !t.paid).length}`);
+    }
+    return lines.join("\n");
+  };
+
+  const aiChips = isOwner ? [
+    { label: "📋 O que fazer agora?", msg: "Com base no estado atual deste projeto, o que devo priorizar agora? Me dá ações concretas." },
+    { label: "⚠️ Problemas?", msg: "Identifique problemas, gargalos ou riscos neste projeto. O que pode dar errado?" },
+    { label: "🚀 Próximo estágio", msg: "O que preciso finalizar para avançar para o próximo estágio deste projeto?" },
+  ] : [
+    { label: "📋 Minhas tarefas", msg: "Quais são minhas responsabilidades neste projeto? O que devo entregar?" },
+  ];
+
   return (
     <div className="p-4 md:p-6 max-w-4xl mx-auto space-y-5">
       {/* ── Back + Header ── */}
@@ -130,11 +174,23 @@ export default function ProjectDetail() {
           </div>
           {project.artist && <p className="text-sm text-muted-foreground font-medium">{project.artist}</p>}
         </div>
-        {isOwner && (
-          <Button variant="outline" size="sm" className="shrink-0 gap-1.5" onClick={() => navigate(`/projects?id=${project.id}`)}>
-            <Pencil className="h-3.5 w-3.5" /> Editar
+        <div className="flex items-center gap-1.5 shrink-0">
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5"
+            onClick={() => setAiSheetOpen(true)}
+            title="Assistente IA"
+          >
+            <Sparkles className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">IA</span>
           </Button>
-        )}
+          {isOwner && (
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => navigate(`/projects?id=${project.id}`)}>
+              <Pencil className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Editar</span>
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* ── Hub Tabs ── */}
@@ -216,6 +272,15 @@ export default function ProjectDetail() {
           </div>
         </div>
       )}
+
+      {/* AI Assistant Sheet */}
+      <ProjectAISheet
+        open={aiSheetOpen}
+        onOpenChange={setAiSheetOpen}
+        projectData={buildProjectContext()}
+        title={`IA — ${project.name}`}
+        chips={aiChips}
+      />
     </div>
   );
 }
