@@ -1275,7 +1275,39 @@ export default function Editais() {
                           {opt.label}
                         </button>
                       ))}
+                      <span className="text-xs text-muted-foreground self-center mx-1">·</span>
+                      {[
+                        { value: "all" as const, label: "Todos os prazos" },
+                        { value: "7days" as const, label: "⚡ 7 dias" },
+                        { value: "30days" as const, label: "📅 30 dias" },
+                        { value: "withValue" as const, label: "💰 Com valor" },
+                      ].map((opt) => (
+                        <button
+                          key={opt.value}
+                          onClick={() => { setDeadlineFilter(opt.value); setSavedPage(1); }}
+                          className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
+                            deadlineFilter === opt.value
+                              ? "bg-primary text-primary-foreground border-primary"
+                              : "bg-background text-muted-foreground border-border hover:bg-muted"
+                          }`}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
                     </div>
+                    {/* Compare bar */}
+                    {compareIds.size > 0 && (
+                      <div className="flex items-center gap-2 pt-2">
+                        <Badge variant="outline" className="text-[10px]">{compareIds.size} selecionado{compareIds.size > 1 ? "s" : ""}</Badge>
+                        <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setCompareOpen(true)} disabled={compareIds.size < 2}>
+                          <Scale className="h-3 w-3 mr-1" />
+                          Comparar
+                        </Button>
+                        <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setCompareIds(new Set())}>
+                          Limpar
+                        </Button>
+                      </div>
+                    )}
                   </CardHeader>
                   <CardContent className="space-y-3">
                     {savedPaginated.length > 0 ? (
