@@ -817,6 +817,17 @@ export default function Editais() {
     });
   };
 
+  const selectedRecoProject = projects.find(p => p.id === recoProjectId);
+  const hasCulturalProfile = selectedRecoProject?.perfil_cultural &&
+    typeof selectedRecoProject.perfil_cultural === "object" &&
+    (Array.isArray((selectedRecoProject.perfil_cultural as any).areas) && (selectedRecoProject.perfil_cultural as any).areas.length > 0);
+
+  useEffect(() => {
+    if (recoProjectId && hasCulturalProfile) {
+      fetchMatches(recoProjectId);
+    }
+  }, [recoProjectId, hasCulturalProfile, fetchMatches]);
+
   const projectList = projects.map(p => ({ id: p.id, name: p.name }));
 
   return (
