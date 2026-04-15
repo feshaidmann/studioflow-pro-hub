@@ -41,3 +41,4 @@
 - [Music DNA Tone](mem://funcionalidades/dna-musical/persona-e-tom) — Technical engineering persona with accessible summary critique
 - [Music DNA Tasks](mem://funcionalidades/dna-musical/integracao-e-tarefas) — [DNA] prefix task conversion and manual feedback loop
 - [Studio Module Deprecated](mem://funcionalidades/modulo-de-estudio-depreciado) — Rationale for removing /studio and keeping MasterAnalyzerModal
+- [Contextual AI](mem://funcionalidades/ia-contextual-modulos) — ProjectAISheet reusable component + project-ai-assistant edge function with project/finance/suggestions modes
