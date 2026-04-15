@@ -1516,6 +1516,13 @@ export default function Editais() {
           />
         );
       })()}
+
+      {/* Compare Dialog */}
+      <EditalCompareDialog
+        editais={editais.filter((e) => e.id && compareIds.has(e.id)) as Edital[]}
+        open={compareOpen}
+        onOpenChange={setCompareOpen}
+      />
     </div>
   );
 }
