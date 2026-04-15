@@ -21,6 +21,8 @@ import { useEditais, type Edital } from "@/hooks/useEditais";
 import { useEditalApplications, useCreateApplication, useUpdateApplication, useDeleteApplication, APPLICATION_STATUS_LABELS, APPLICATION_STATUS_COLORS, type ApplicationStatus, type EditalApplication } from "@/hooks/useEditalApplications";
 import { useProjects } from "@/contexts/ProjectContext";
 import { useLanguage } from "@/contexts/LanguageContext";
+import EditalDocumentsBank from "@/components/editais/EditalDocumentsBank";
+import ApplicationChecklist from "@/components/editais/ApplicationChecklist";
 
 const AREA_OPTIONS = ["Música", "Audiovisual", "Ambos", "Outra"];
 const ITEMS_PER_PAGE = 20;
