@@ -93,6 +93,13 @@ export default function EditalResultModal({ application, open, onOpenChange }: P
 
           <div>
             <Label className="text-xs">Lições aprendidas</Label>
+            <p className="text-[10px] text-muted-foreground mb-1">
+              {resultado === "aprovado"
+                ? "O que funcionou bem? Isso será usado como referência em candidaturas futuras."
+                : resultado === "reprovado"
+                ? "O que melhorar? A IA usará essas lições para ajustar textos futuros."
+                : "O que aprendeu com essa candidatura?"}
+            </p>
             <Textarea value={licoesAprendidas} onChange={(e) => setLicoesAprendidas(e.target.value)} placeholder="O que aprendeu com essa candidatura?" rows={3} />
           </div>
         </div>

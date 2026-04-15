@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, Download, Save, Trash2, ExternalLink, FileText, Pencil, Info, BarChart3, ClipboardList, Sparkles, ChevronDown, ArrowRight, Plus, MoreHorizontal, KanbanSquare, FolderOpen, Bot, Trophy, Eye, DollarSign, Users, FileCheck, Star } from "lucide-react";
+import { Search, Download, Save, Trash2, ExternalLink, FileText, Pencil, Info, BarChart3, ClipboardList, Sparkles, ChevronDown, ArrowRight, Plus, MoreHorizontal, KanbanSquare, FolderOpen, Bot, Trophy, Eye, DollarSign, Users, FileCheck, Star, AlertTriangle, Clock, Scale, X } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
@@ -30,6 +30,8 @@ import EditalResultModal from "@/components/editais/EditalResultModal";
 import EditalMetricsDashboard from "@/components/editais/EditalMetricsDashboard";
 import { useMatchEditais, type MatchedEdital } from "@/hooks/useMatchEditais";
 import { supabase } from "@/integrations/supabase/client";
+import EditalCompareDialog from "@/components/editais/EditalCompareDialog";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const AREA_OPTIONS = ["Música", "Audiovisual", "Ambos", "Outra"];
 const ITEMS_PER_PAGE = 20;
@@ -216,7 +218,7 @@ function StartApplicationDialog({
 }
 
 function EditalTable({
-  items, onDelete, onEdit, onStartApplication, onViewDetail, t,
+  items, onDelete, onEdit, onStartApplication, onViewDetail, t, compareIds, onToggleCompare,
 }: {
   items: Edital[];
   onDelete?: (id: string) => void;
@@ -224,6 +226,8 @@ function EditalTable({
   onStartApplication?: (e: Edital) => void;
   onViewDetail?: (e: Edital) => void;
   t: (k: string) => string;
+  compareIds?: Set<string>;
+  onToggleCompare?: (id: string) => void;
 }) {
   const isMobile = useIsMobile();
 
@@ -233,6 +237,11 @@ function EditalTable({
         {items.map((e, i) => (
           <div key={e.id || e.session_key || i} className="rounded-lg border border-border p-3 space-y-2 cursor-pointer hover:bg-muted/30 transition-colors" onClick={() => onViewDetail?.(e)}>
             <div className="flex items-start justify-between gap-2">
+              {onToggleCompare && e.id && (
+                <div className="shrink-0 mt-0.5" onClick={(ev) => ev.stopPropagation()}>
+                  <Checkbox checked={compareIds?.has(e.id) || false} onCheckedChange={() => onToggleCompare(e.id!)} />
+                </div>
+              )}
               <p className="text-sm font-medium leading-snug flex-1">
                 {e.titulo}
                 {e.inferido && <Info className="inline h-3 w-3 text-muted-foreground ml-1" />}
@@ -763,6 +772,65 @@ export default function Editais() {
   const updateApplication = useUpdateApplication();
   const deleteApplication = useDeleteApplication();
 
+  // Deadline alerts
+  const [deadlineFilter, setDeadlineFilter] = useState<"all" | "7days" | "30days" | "withValue">("all");
+  // Compare
+  const [compareIds, setCompareIds] = useState<Set<string>>(new Set());
+  const [compareOpen, setCompareOpen] = useState(false);
+  // Onboarding
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
+  // Check first visit for onboarding
+  useEffect(() => {
+    if (!loading && editais.length === 0 && applications.length === 0) {
+      const seen = localStorage.getItem("sfp_editais_onboarding_seen");
+      if (!seen) setShowOnboarding(true);
+    }
+  }, [loading, editais.length, applications.length]);
+
+  const dismissOnboarding = () => {
+    setShowOnboarding(false);
+    localStorage.setItem("sfp_editais_onboarding_seen", "true");
+  };
+
+  // Deadline alerts computation
+  const deadlineAlerts = useMemo(() => {
+    const now = new Date();
+    const alerts: { id: string; titulo: string; prazo: string; daysLeft: number; source: "edital" | "application" }[] = [];
+
+    editais.forEach((e) => {
+      if (!e.prazo || e.status === "Encerrado") return;
+      const d = new Date(e.prazo + "T23:59:59");
+      const diff = Math.ceil((d.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+      if (diff >= 0 && diff <= 7) {
+        alerts.push({ id: e.id!, titulo: e.titulo, prazo: e.prazo, daysLeft: diff, source: "edital" });
+      }
+    });
+
+    applications.forEach((a) => {
+      if (a.status === "resultado" || !a.edital?.prazo) return;
+      const d = new Date(a.edital.prazo + "T23:59:59");
+      const diff = Math.ceil((d.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+      if (diff >= 0 && diff <= 7) {
+        if (!alerts.find((al) => al.id === a.edital_id)) {
+          alerts.push({ id: a.edital_id, titulo: a.edital?.titulo || "Edital", prazo: a.edital.prazo, daysLeft: diff, source: "application" });
+        }
+      }
+    });
+
+    return alerts.sort((a, b) => a.daysLeft - b.daysLeft);
+  }, [editais, applications]);
+
+  // Toggle compare selection
+  const toggleCompare = (id: string) => {
+    setCompareIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else if (next.size < 3) next.add(id);
+      return next;
+    });
+  };
+
   const handleSearch = (q?: string) => {
     const searchQuery = (q || query).trim();
     if (!searchQuery) return;
@@ -786,10 +854,30 @@ export default function Editais() {
 
   const savedFiltered = useMemo(() => {
     const sorted = sortAndFilterEditais(editais as Edital[], savedFilterStatus);
-    if (!savedSearch.trim()) return sorted;
-    const q = savedSearch.toLowerCase();
-    return sorted.filter((e) => e.titulo.toLowerCase().includes(q) || (e.orgao || "").toLowerCase().includes(q));
-  }, [editais, savedFilterStatus, savedSearch]);
+    let filtered = sorted;
+    if (savedSearch.trim()) {
+      const q = savedSearch.toLowerCase();
+      filtered = filtered.filter((e) => e.titulo.toLowerCase().includes(q) || (e.orgao || "").toLowerCase().includes(q));
+    }
+    // Apply deadline/value filters
+    const now = new Date();
+    if (deadlineFilter === "7days") {
+      filtered = filtered.filter((e) => {
+        if (!e.prazo) return false;
+        const diff = Math.ceil((new Date(e.prazo + "T23:59:59").getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+        return diff >= 0 && diff <= 7;
+      });
+    } else if (deadlineFilter === "30days") {
+      filtered = filtered.filter((e) => {
+        if (!e.prazo) return false;
+        const diff = Math.ceil((new Date(e.prazo + "T23:59:59").getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+        return diff >= 0 && diff <= 30;
+      });
+    } else if (deadlineFilter === "withValue") {
+      filtered = filtered.filter((e) => e.valor && e.valor !== "" && e.valor !== "—");
+    }
+    return filtered;
+  }, [editais, savedFilterStatus, savedSearch, deadlineFilter]);
 
   const totalSavedPages = Math.max(1, Math.ceil(savedFiltered.length / ITEMS_PER_PAGE));
   const clampedPage = Math.min(savedPage, totalSavedPages);
@@ -950,6 +1038,66 @@ export default function Editais() {
 
         {/* ── Tab: Meus Editais (salvos + pipeline consolidated) ── */}
         <TabsContent value="meus" className="space-y-4 mt-4">
+          {/* Onboarding walkthrough for first-time users */}
+          {showOnboarding && (
+            <Card className="border-primary/30 bg-primary/5 relative">
+              <button onClick={dismissOnboarding} className="absolute top-3 right-3 text-muted-foreground hover:text-foreground">
+                <X className="h-4 w-4" />
+              </button>
+              <CardContent className="py-6 px-5">
+                <h3 className="font-medium text-base mb-3 flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-primary" />
+                  Como usar Editais
+                </h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {[
+                    { step: 1, label: "Buscar", desc: "Pesquise editais abertos com IA", icon: <Search className="h-5 w-5" /> },
+                    { step: 2, label: "Salvar", desc: "Guarde os que interessam na sua lista", icon: <Save className="h-5 w-5" /> },
+                    { step: 3, label: "Candidatar", desc: "Inicie o acompanhamento da inscrição", icon: <ClipboardList className="h-5 w-5" /> },
+                    { step: 4, label: "Inscrever", desc: "Preencha formulários com ajuda da IA", icon: <FileText className="h-5 w-5" /> },
+                  ].map((s) => (
+                    <div key={s.step} className="flex flex-col items-center text-center p-2">
+                      <div className="h-10 w-10 rounded-full bg-primary/10 text-primary flex items-center justify-center mb-2">
+                        {s.icon}
+                      </div>
+                      <span className="text-[10px] text-muted-foreground">Passo {s.step}</span>
+                      <span className="text-xs font-medium">{s.label}</span>
+                      <span className="text-[10px] text-muted-foreground mt-0.5">{s.desc}</span>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Deadline alerts banner */}
+          {deadlineAlerts.length > 0 && (
+            <div className={`rounded-lg border px-3 py-2.5 flex items-start gap-2.5 animate-fade-in ${
+              deadlineAlerts[0].daysLeft <= 3
+                ? "border-destructive/40 bg-destructive/5"
+                : "border-warning/40 bg-warning/5"
+            }`}>
+              <AlertTriangle className={`h-4 w-4 mt-0.5 shrink-0 ${
+                deadlineAlerts[0].daysLeft <= 3 ? "text-destructive" : "text-warning"
+              }`} />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium">
+                  {deadlineAlerts.length === 1
+                    ? `1 edital vence em ${deadlineAlerts[0].daysLeft === 0 ? "hoje" : deadlineAlerts[0].daysLeft === 1 ? "amanhã" : `${deadlineAlerts[0].daysLeft} dias`}`
+                    : `${deadlineAlerts.length} editais vencem nos próximos 7 dias`}
+                </p>
+                <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1">
+                  {deadlineAlerts.slice(0, 3).map((a) => (
+                    <span key={a.id} className="text-[11px] text-muted-foreground">
+                      <Clock className="inline h-3 w-3 mr-0.5" />
+                      {a.daysLeft}d · {a.titulo.slice(0, 40)}{a.titulo.length > 40 ? "…" : ""}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Sub-view toggle */}
           <div className="flex gap-1.5">
             <button
@@ -1134,7 +1282,39 @@ export default function Editais() {
                           {opt.label}
                         </button>
                       ))}
+                      <span className="text-xs text-muted-foreground self-center mx-1">·</span>
+                      {[
+                        { value: "all" as const, label: "Todos os prazos" },
+                        { value: "7days" as const, label: "⚡ 7 dias" },
+                        { value: "30days" as const, label: "📅 30 dias" },
+                        { value: "withValue" as const, label: "💰 Com valor" },
+                      ].map((opt) => (
+                        <button
+                          key={opt.value}
+                          onClick={() => { setDeadlineFilter(opt.value); setSavedPage(1); }}
+                          className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
+                            deadlineFilter === opt.value
+                              ? "bg-primary text-primary-foreground border-primary"
+                              : "bg-background text-muted-foreground border-border hover:bg-muted"
+                          }`}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
                     </div>
+                    {/* Compare bar */}
+                    {compareIds.size > 0 && (
+                      <div className="flex items-center gap-2 pt-2">
+                        <Badge variant="outline" className="text-[10px]">{compareIds.size} selecionado{compareIds.size > 1 ? "s" : ""}</Badge>
+                        <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setCompareOpen(true)} disabled={compareIds.size < 2}>
+                          <Scale className="h-3 w-3 mr-1" />
+                          Comparar
+                        </Button>
+                        <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setCompareIds(new Set())}>
+                          Limpar
+                        </Button>
+                      </div>
+                    )}
                   </CardHeader>
                   <CardContent className="space-y-3">
                     {savedPaginated.length > 0 ? (
@@ -1145,6 +1325,8 @@ export default function Editais() {
                         onStartApplication={handleStartApplication}
                         onViewDetail={(e) => { setDetailEdital(e); setDetailOpen(true); }}
                         t={t}
+                        compareIds={compareIds}
+                        onToggleCompare={toggleCompare}
                       />
                     ) : (
                       <p className="text-sm text-muted-foreground py-4 text-center">{t("editais.noResults")}</p>
@@ -1343,6 +1525,13 @@ export default function Editais() {
           />
         );
       })()}
+
+      {/* Compare Dialog */}
+      <EditalCompareDialog
+        editais={editais.filter((e) => e.id && compareIds.has(e.id)) as Edital[]}
+        open={compareOpen}
+        onOpenChange={setCompareOpen}
+      />
     </div>
   );
 }
