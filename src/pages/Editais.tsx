@@ -30,6 +30,8 @@ import EditalResultModal from "@/components/editais/EditalResultModal";
 import EditalMetricsDashboard from "@/components/editais/EditalMetricsDashboard";
 import { useMatchEditais, type MatchedEdital } from "@/hooks/useMatchEditais";
 import { supabase } from "@/integrations/supabase/client";
+import EditalCompareDialog from "@/components/editais/EditalCompareDialog";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const AREA_OPTIONS = ["Música", "Audiovisual", "Ambos", "Outra"];
 const ITEMS_PER_PAGE = 20;
