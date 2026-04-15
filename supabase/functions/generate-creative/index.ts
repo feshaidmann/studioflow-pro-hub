@@ -27,7 +27,7 @@ serve(async (req) => {
     const { data: { user }, error: authErr } = await anonClient.auth.getUser(authHeader.replace("Bearer ", ""));
     if (authErr || !user) throw new Error("Unauthorized");
 
-    const { prompt, style, format, width, height, editImageUrl, projectId } = await req.json();
+    const { prompt, style, format, width, height, editImageUrl, projectId, channelContext } = await req.json();
     if (!prompt || !format || !width || !height) {
       return new Response(JSON.stringify({ error: "Missing required fields" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -35,12 +35,22 @@ serve(async (req) => {
     }
 
     // Build the AI prompt
-    const fullPrompt = style
+    let fullPrompt = style
       ? `${prompt}. Style: ${style}. Aspect ratio suitable for ${format}.`
       : `${prompt}. Aspect ratio suitable for ${format}.`;
 
+    if (channelContext) {
+      fullPrompt += ` Channel context: ${channelContext}.`;
+    }
+
     const messages: any[] = [];
+
+    // Face preservation instruction when editing from a reference image
     if (editImageUrl) {
+      messages.push({
+        role: "system",
+        content: "IMPORTANT: If there are human faces in the reference image, preserve them exactly — do not alter, distort or replace any facial features. Keep the person's identity intact.",
+      });
       messages.push({
         role: "user",
         content: [
