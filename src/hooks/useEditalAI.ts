@@ -20,10 +20,14 @@ export const AI_ACTION_LABELS: Record<AIAction, string> = {
 export function useEditalAI() {
   const [isLoading, setIsLoading] = useState(false);
   const [lastResult, setLastResult] = useState<string | null>(null);
+  const [lastAction, setLastAction] = useState<AIAction | null>(null);
+  const [lastPayload, setLastPayload] = useState<Record<string, unknown> | null>(null);
 
   const callAI = async (action: AIAction, payload: Record<string, unknown>): Promise<string | null> => {
     setIsLoading(true);
     setLastResult(null);
+    setLastAction(action);
+    setLastPayload(payload);
     try {
       const { data, error } = await supabase.functions.invoke("edital-ai-assistant", {
         body: { action, payload },
@@ -51,5 +55,14 @@ export function useEditalAI() {
     }
   };
 
-  return { callAI, isLoading, lastResult, setLastResult };
+  const refine = async (instruction: string): Promise<string | null> => {
+    if (!lastAction || !lastPayload || !lastResult) return null;
+    const refinedPayload = {
+      ...lastPayload,
+      additional_context: `RESULTADO ANTERIOR:\n${lastResult}\n\nINSTRUÇÃO DE REFINAMENTO:\n${instruction}`,
+    };
+    return callAI(lastAction, refinedPayload);
+  };
+
+  return { callAI, refine, isLoading, lastResult, lastAction, setLastResult };
 }
