@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Sparkles, Copy, Check, Save, Loader2, FileText, ClipboardList, RefreshCw, BookmarkPlus } from "lucide-react";
+import { ArrowLeft, Sparkles, Copy, Check, Save, Loader2, FileText, ClipboardList, RefreshCw, BookmarkPlus, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -10,14 +10,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
+import { Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbSeparator, BreadcrumbPage } from "@/components/ui/breadcrumb";
+import { toast } from "sonner";
 import { useRascunhoEdital, type EditalField } from "@/hooks/useRascunhoEdital";
 import { useProjects } from "@/contexts/ProjectContext";
 import { useProfile } from "@/contexts/ProfileContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useEditalAI } from "@/hooks/useEditalAI";
+import { useEditalApplications, useUpdateApplication, APPLICATION_STATUS_LABELS, APPLICATION_STATUS_COLORS, type ApplicationStatus } from "@/hooks/useEditalApplications";
 
 interface EditalInfo {
   id: string;
@@ -31,7 +33,6 @@ export default function EditalInscricao() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { toast } = useToast();
   const { t } = useLanguage();
   const { projects } = useProjects();
   const { profile } = useProfile();
@@ -46,6 +47,14 @@ export default function EditalInscricao() {
   const [aiGeneratedFields, setAiGeneratedFields] = useState<Set<string>>(new Set());
   const [batchFilling, setBatchFilling] = useState(false);
   const [batchProgress, setBatchProgress] = useState({ current: 0, total: 0 });
+
+  // Load application data for this edital
+  const { data: allApplications = [] } = useEditalApplications();
+  const updateApplication = useUpdateApplication();
+  const application = useMemo(
+    () => allApplications.find((a) => a.edital_id === id),
+    [allApplications, id]
+  );
 
   // Load edital info
   useEffect(() => {
@@ -104,7 +113,7 @@ export default function EditalInscricao() {
     );
 
     if (textareaFields.length === 0) {
-      toast({ title: "Todos os campos já estão preenchidos" });
+      toast("Todos os campos já estão preenchidos");
       return;
     }
 
@@ -140,8 +149,8 @@ export default function EditalInscricao() {
     }
 
     setBatchFilling(false);
-    toast({ title: `${textareaFields.length} campos gerados com IA` });
-  }, [extractedFields, edital, formValues, selectedProject, preFillProfile, toast]);
+    toast.success(`${textareaFields.length} campos gerados com IA`);
+  }, [extractedFields, edital, formValues, selectedProject, preFillProfile]);
 
   // Calculate progress
   const progress = useMemo(() => {
@@ -169,20 +178,32 @@ export default function EditalInscricao() {
     navigator.clipboard.writeText(lines);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
-    toast({ title: "Textos copiados!" });
+    toast.success("Textos copiados!");
   };
 
   const handleSave = async () => {
     const newId = await saveRascunho(id || null, selectedProject || null, formValues, progress, rascunhoId);
     if (newId) {
       setRascunhoId(newId);
-      toast({ title: "Rascunho salvo!" });
+      toast.success("Rascunho salvo!");
     }
   };
 
   const handleFieldAIGenerated = (fieldName: string, value: string) => {
     setFormValues((prev) => ({ ...prev, [fieldName]: value }));
     setAiGeneratedFields((prev) => new Set(prev).add(fieldName));
+  };
+
+  const handleMarkAsInscrito = () => {
+    if (!application) return;
+    updateApplication.mutate(
+      { id: application.id, status: "inscrito" as ApplicationStatus },
+      {
+        onSuccess: () => {
+          toast.success("Candidatura marcada como inscrita!");
+        },
+      }
+    );
   };
 
   const fields = extractedFields?.campos || [];
@@ -211,7 +232,26 @@ export default function EditalInscricao() {
 
   return (
     <div className="p-4 md:p-6 max-w-4xl mx-auto space-y-6">
-      {/* Header */}
+      {/* Breadcrumb */}
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink className="cursor-pointer text-xs" onClick={() => navigate("/editais")}>
+              Editais
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage className="text-xs truncate max-w-[200px]">{edital.titulo}</BreadcrumbPage>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage className="text-xs">Inscrição</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
+      {/* Header with application status */}
       <div className="flex items-start gap-3">
         <Button variant="ghost" size="icon" onClick={() => navigate("/editais")} className="mt-0.5">
           <ArrowLeft className="h-4 w-4" />
@@ -220,13 +260,36 @@ export default function EditalInscricao() {
           <h1 className="text-xl font-semibold">Assistente de inscrição</h1>
           <p className="text-sm text-muted-foreground truncate mt-0.5">{edital.titulo}</p>
         </div>
-        {progress > 0 && (
-          <Badge variant="outline" className="shrink-0">{progress}%</Badge>
-        )}
+        <div className="flex items-center gap-2 shrink-0">
+          {application && (
+            <Badge variant="outline" className={APPLICATION_STATUS_COLORS[application.status as ApplicationStatus] + " text-[10px]"}>
+              {APPLICATION_STATUS_LABELS[application.status as ApplicationStatus] || application.status}
+            </Badge>
+          )}
+          {progress > 0 && (
+            <Badge variant="outline" className="shrink-0">{progress}%</Badge>
+          )}
+        </div>
       </div>
 
       {/* Progress bar */}
       {extractedFields && <Progress value={progress} className="h-1.5" />}
+
+      {/* Banner: 100% complete — mark as inscrito */}
+      {progress === 100 && application && application.status !== "inscrito" && application.status !== "resultado" && (
+        <Card className="border-green-200 bg-green-500/5">
+          <CardContent className="py-3 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <Check className="h-4 w-4 text-green-600" />
+              <p className="text-sm font-medium text-green-700">Formulário completo!</p>
+            </div>
+            <Button size="sm" onClick={handleMarkAsInscrito} disabled={updateApplication.isPending}>
+              <ClipboardList className="h-3.5 w-3.5 mr-1.5" />
+              Marcar como inscrito
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Step 0: Setup */}
       {!extractedFields && !extracting && (
@@ -464,11 +527,11 @@ function FieldInput({
     try {
       await supabase.from("edital_documents").insert({
         user_id: user.id,
-        title: campo.nome,
+        title: `${campo.nome}${editalTitle ? ` — ${editalTitle}` : ""}`,
         doc_type: "outro",
         content: value,
       });
-      // Toast handled by parent
+      toast.success("Salvo no banco de documentos!");
     } catch {
       // ignore
     } finally {
