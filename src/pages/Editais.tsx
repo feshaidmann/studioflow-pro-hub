@@ -974,7 +974,7 @@ export default function Editais() {
         t={t}
       />
 
-
+      <EditEditalDialog
         edital={editingEdital}
         open={editOpen}
         onOpenChange={(o) => { setEditOpen(o); if (!o) setEditingEdital(null); }}
