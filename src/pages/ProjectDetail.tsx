@@ -41,8 +41,10 @@ export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { t } = useLanguage();
-  const { projects, getMixPercent } = useProjects();
+  const { projects, getMixPercent, getProjectFinancials, professionals, transactions } = useProjects();
   const [activeTab, setActiveTab] = useState("overview");
+  const [aiSheetOpen, setAiSheetOpen] = useState(false);
+  const { activeTasks } = useTasks();
 
   const ownerProject = projects.find((p) => p.id === id);
   const [guestProject, setGuestProject] = useState<ProjectView | null>(null);
