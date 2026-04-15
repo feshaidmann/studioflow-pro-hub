@@ -965,7 +965,16 @@ export default function Editais() {
         </SheetContent>
       </Sheet>
 
-      <EditEditalDialog
+      <EditalDetailSheet
+        edital={detailEdital}
+        open={detailOpen}
+        onOpenChange={(o) => { setDetailOpen(o); if (!o) setDetailEdital(null); }}
+        onDelete={deleteEdital}
+        onInscricao={(id) => createApplication.mutate({ edital_id: id })}
+        t={t}
+      />
+
+
         edital={editingEdital}
         open={editOpen}
         onOpenChange={(o) => { setEditOpen(o); if (!o) setEditingEdital(null); }}
