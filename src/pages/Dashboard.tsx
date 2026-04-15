@@ -187,6 +187,13 @@ export default function Dashboard() {
       chips.length = 0;
       chips.push({ label: "🎵 Criar projeto", msg: "Como devo organizar meu primeiro projeto musical? Quais informações são essenciais?" });
       chips.push({ label: "🎙️ Dicas de gravação", msg: "Sou um artista independente. Me dá dicas fundamentais para começar a gravar com qualidade em casa." });
+    } else {
+      // Proactive chips
+      chips.push({ label: "🔍 Revisão geral", msg: "Faça uma revisão geral de todos os meus projetos. O que está indo bem e o que precisa de atenção? Me dê um resumo executivo com ações." });
+      const nearRelease = projects.find((p) => p.stage === "upload" || p.stage === "master");
+      if (nearRelease) {
+        chips.push({ label: `🚀 ${nearRelease.name} quase lá`, msg: `Meu projeto "${nearRelease.name}" está no estágio ${nearRelease.stage}. O que falta para lançar? Revise o checklist de lançamento.` });
+      }
     }
 
     return chips;
@@ -213,7 +220,7 @@ export default function Dashboard() {
       onOpenChange={(open) => localStorage.setItem("sfp_ai_collapsed", open ? "false" : "true")}
       className={cn(isFirstRun && "hidden")}
     >
-      <Card className="glass-card animate-fade-in border-primary/20 shadow-sm" style={{ animationDelay: "50ms" }}>
+      <Card data-ai-assistant className="glass-card animate-fade-in border-primary/20 shadow-sm" style={{ animationDelay: "50ms" }}>
         <CollapsibleTrigger asChild>
           <CardHeader className="pb-1 pt-3 px-4 cursor-pointer select-none hover:bg-muted/40 rounded-t-lg transition-colors">
             <CardTitle className="text-xs flex items-center gap-1.5 font-medium">
