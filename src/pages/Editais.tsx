@@ -534,6 +534,8 @@ export default function Editais() {
   const [savedFilterStatus, setSavedFilterStatus] = useState("Todos");
   const [selectedAppId, setSelectedAppId] = useState<string | null>(null);
   const [resultAppId, setResultAppId] = useState<string | null>(null);
+  const [aiSheetOpen, setAiSheetOpen] = useState(false);
+  const [aiContext, setAiContext] = useState<AIContext | undefined>(undefined);
 
   const { editais, loading, searching, searchResult, search, saveResults, deleteEdital, updateEdital, exportCSV } = useEditais();
   const { data: applications = [], isLoading: loadingApps } = useEditalApplications();
@@ -595,9 +597,9 @@ export default function Editais() {
             <FolderOpen className="h-3.5 w-3.5 mr-1.5" />
             Documentos
           </TabsTrigger>
-          <TabsTrigger value="ia">
-            <Bot className="h-3.5 w-3.5 mr-1.5" />
-            IA
+          <TabsTrigger value="metricas">
+            <BarChart3 className="h-3.5 w-3.5 mr-1.5" />
+            Métricas
           </TabsTrigger>
           <TabsTrigger value="metricas">
             <BarChart3 className="h-3.5 w-3.5 mr-1.5" />
