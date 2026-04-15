@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Palette, Sparkles, Trash2, ImageIcon, Upload } from "lucide-react";
+import { Palette, Sparkles, Trash2, ImageIcon, Upload, Layers } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -11,6 +11,7 @@ import FormatSelector, { FORMAT_OPTIONS, type FormatOption } from "@/components/
 import StyleChips from "@/components/creative/StyleChips";
 import ImagePreview from "@/components/creative/ImagePreview";
 import ReferenceImageUpload from "@/components/creative/ReferenceImageUpload";
+import DeriveBatchDialog from "@/components/creative/DeriveBatchDialog";
 import { useCreativeAssets } from "@/hooks/useCreativeAssets";
 import { useProjects } from "@/contexts/ProjectContext";
 import { toast } from "@/hooks/use-toast";
