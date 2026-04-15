@@ -32,8 +32,10 @@ export default function Creative() {
   const [editingLoading, setEditingLoading] = useState(false);
   const [referenceImage, setReferenceImage] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("create");
+  const [deriveDialogOpen, setDeriveDialogOpen] = useState(false);
+  const [deriveImageUrl, setDeriveImageUrl] = useState<string>("");
 
-  const { assets, isLoading: assetsLoading, generating, generate, deleteAsset } = useCreativeAssets();
+  const { assets, isLoading: assetsLoading, generating, generate, generateBatch, deleteAsset } = useCreativeAssets();
 
   // Pre-fill project context
   const linkedProject = projectIdParam
