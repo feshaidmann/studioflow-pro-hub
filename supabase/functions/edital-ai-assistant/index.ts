@@ -7,6 +7,55 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
+function buildFillFieldPrompt(
+  campo: { field_name: string; field_description?: string; max_words?: number },
+  edital: { title?: string; summary?: string },
+  profile: { display_name?: string; city?: string; specialties?: string[] } | null,
+  project: { name?: string; project_type?: string; notes?: string; artist?: string; stage?: string } | null
+) {
+  const systemPrompt = `Você é especialista em elaboração de projetos culturais para editais públicos brasileiros.
+Preencha o campo solicitado de um formulário de inscrição em edital cultural.
+Use linguagem técnica, clara e convincente, adequada a editais.
+Inclua termos como impacto social, contrapartidas, diversidade, acessibilidade quando pertinentes.
+Retorne APENAS o texto do campo, sem explicações, títulos ou markdown.`;
+
+  const userMessage = `Preencha o campo "${campo.field_name}" de um formulário de inscrição em edital.
+
+${campo.field_description ? `DESCRIÇÃO DO CAMPO: ${campo.field_description}` : ""}
+LIMITE: ${campo.max_words || 500} palavras
+
+EDITAL: ${edital.title || "Edital cultural"}
+${edital.summary ? `RESUMO DO EDITAL: ${edital.summary}` : ""}
+
+ARTISTA: ${profile?.display_name || "Artista independente"}
+CIDADE: ${profile?.city || "Brasil"}
+${profile?.specialties?.length ? `ESPECIALIDADES: ${profile.specialties.join(", ")}` : ""}
+
+${project ? `PROJETO: ${project.name || "Projeto musical"}
+TIPO: ${project.project_type || "single"}
+DESCRIÇÃO: ${project.notes || "Projeto musical independente"}
+ARTISTA: ${project.artist || ""}` : ""}`;
+
+  return { systemPrompt, userMessage };
+}
+
+function buildRefineFieldPrompt(
+  campo: { field_name: string; current_text: string; instruction: string }
+) {
+  const systemPrompt = `Você é especialista em elaboração de projetos culturais para editais públicos brasileiros.
+Reescreva o texto conforme a instrução de refinamento. Mantenha a linguagem técnica de editais.
+Retorne APENAS o texto refinado, sem explicações ou markdown.`;
+
+  const userMessage = `Refine o campo "${campo.field_name}":
+
+TEXTO ATUAL:
+${campo.current_text}
+
+INSTRUÇÃO: ${campo.instruction}`;
+
+  return { systemPrompt, userMessage };
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -43,7 +92,41 @@ serve(async (req) => {
     let systemPrompt = "";
     let userMessage = "";
 
-    if (action === "generate_memorial") {
+    if (action === "fill_field") {
+      let projectData = null;
+      if (payload.project_id) {
+        const { data } = await adminClient
+          .from("projects")
+          .select("name, artist, notes, project_type, stage")
+          .eq("id", payload.project_id)
+          .eq("user_id", userId)
+          .single();
+        projectData = data;
+      }
+
+      const prompts = buildFillFieldPrompt(
+        {
+          field_name: payload.field_name,
+          field_description: payload.field_description,
+          max_words: payload.max_words,
+        },
+        { title: payload.edital_title, summary: payload.edital_summary },
+        profileData,
+        projectData
+      );
+      systemPrompt = prompts.systemPrompt;
+      userMessage = prompts.userMessage;
+
+    } else if (action === "refine_field") {
+      const prompts = buildRefineFieldPrompt({
+        field_name: payload.field_name,
+        current_text: payload.current_text,
+        instruction: payload.instruction,
+      });
+      systemPrompt = prompts.systemPrompt;
+      userMessage = prompts.userMessage;
+
+    } else if (action === "generate_memorial") {
       const { data: projectData } = payload.project_id
         ? await adminClient
             .from("projects")

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Sparkles, Copy, Check, Save, Loader2, FileText, ClipboardList } from "lucide-react";
+import { ArrowLeft, Sparkles, Copy, Check, Save, Loader2, FileText, ClipboardList, RefreshCw, BookmarkPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -17,6 +17,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useEditalAI } from "@/hooks/useEditalAI";
 
 interface EditalInfo {
   id: string;
@@ -41,8 +42,10 @@ export default function EditalInscricao() {
   const [selectedProject, setSelectedProject] = useState<string>("");
   const [formValues, setFormValues] = useState<Record<string, string>>({});
   const [rascunhoId, setRascunhoId] = useState<string | undefined>();
-  const [step, setStep] = useState(0); // 0=config, 1=fields, 2=docs, 3=review
   const [copied, setCopied] = useState(false);
+  const [aiGeneratedFields, setAiGeneratedFields] = useState<Set<string>>(new Set());
+  const [batchFilling, setBatchFilling] = useState(false);
+  const [batchProgress, setBatchProgress] = useState({ current: 0, total: 0 });
 
   // Load edital info
   useEffect(() => {
@@ -73,13 +76,13 @@ export default function EditalInscricao() {
     extractFields(edital.link || undefined, edital.titulo);
   };
 
-  // Pre-fill from profile/project
-  const handlePreFill = useCallback(() => {
+  // Pre-fill simple fields from profile
+  const preFillProfile = useCallback(() => {
     if (!extractedFields?.campos || !profile) return;
     const vals = { ...formValues };
     for (const campo of extractedFields.campos) {
       const key = campo.nome;
-      if (vals[key]) continue; // don't overwrite existing
+      if (vals[key]) continue;
       const lower = key.toLowerCase();
       if (lower.includes("nome") && lower.includes("proponente")) vals[key] = profile.display_name || "";
       else if (lower.includes("email")) vals[key] = profile.public_email || "";
@@ -87,8 +90,58 @@ export default function EditalInscricao() {
       else if (lower.includes("cidade") || lower.includes("município")) vals[key] = profile.city || "";
     }
     setFormValues(vals);
-    toast({ title: "Campos pré-preenchidos com dados do perfil" });
-  }, [extractedFields, profile, formValues, toast]);
+  }, [extractedFields, profile, formValues]);
+
+  // Batch fill all textarea fields with AI
+  const handleBatchFill = useCallback(async () => {
+    if (!extractedFields?.campos || !edital) return;
+
+    // First fill profile fields
+    preFillProfile();
+
+    const textareaFields = extractedFields.campos.filter(
+      (c) => c.tipo === "textarea" && !formValues[c.nome]?.trim()
+    );
+
+    if (textareaFields.length === 0) {
+      toast({ title: "Todos os campos já estão preenchidos" });
+      return;
+    }
+
+    setBatchFilling(true);
+    setBatchProgress({ current: 0, total: textareaFields.length });
+
+    for (let i = 0; i < textareaFields.length; i++) {
+      const campo = textareaFields[i];
+      setBatchProgress({ current: i + 1, total: textareaFields.length });
+
+      try {
+        const { data } = await supabase.functions.invoke("edital-ai-assistant", {
+          body: {
+            action: "fill_field",
+            payload: {
+              field_name: campo.nome,
+              field_description: campo.descricao,
+              max_words: 500,
+              edital_title: edital.titulo,
+              edital_summary: extractedFields.resumo_edital,
+              project_id: selectedProject && selectedProject !== "none" ? selectedProject : undefined,
+            },
+          },
+        });
+
+        if (data?.response) {
+          setFormValues((prev) => ({ ...prev, [campo.nome]: data.response }));
+          setAiGeneratedFields((prev) => new Set(prev).add(campo.nome));
+        }
+      } catch {
+        // Continue with next field
+      }
+    }
+
+    setBatchFilling(false);
+    toast({ title: `${textareaFields.length} campos gerados com IA` });
+  }, [extractedFields, edital, formValues, selectedProject, preFillProfile, toast]);
 
   // Calculate progress
   const progress = useMemo(() => {
@@ -125,6 +178,11 @@ export default function EditalInscricao() {
       setRascunhoId(newId);
       toast({ title: "Rascunho salvo!" });
     }
+  };
+
+  const handleFieldAIGenerated = (fieldName: string, value: string) => {
+    setFormValues((prev) => ({ ...prev, [fieldName]: value }));
+    setAiGeneratedFields((prev) => new Set(prev).add(fieldName));
   };
 
   const fields = extractedFields?.campos || [];
@@ -231,9 +289,11 @@ export default function EditalInscricao() {
 
           {/* Actions bar */}
           <div className="flex gap-2 flex-wrap">
-            <Button size="sm" variant="outline" onClick={handlePreFill}>
+            <Button size="sm" onClick={handleBatchFill} disabled={batchFilling}>
               <Sparkles className="h-3.5 w-3.5 mr-1.5" />
-              Pré-preencher com perfil
+              {batchFilling
+                ? `Gerando campo ${batchProgress.current} de ${batchProgress.total}...`
+                : "✨ Preencher tudo com IA"}
             </Button>
             <Button size="sm" variant="outline" onClick={handleSave} disabled={saving}>
               <Save className="h-3.5 w-3.5 mr-1.5" />
@@ -241,7 +301,7 @@ export default function EditalInscricao() {
             </Button>
             <Button size="sm" variant="outline" onClick={handleCopyAll}>
               {copied ? <Check className="h-3.5 w-3.5 mr-1.5" /> : <Copy className="h-3.5 w-3.5 mr-1.5" />}
-              Copiar todos os textos
+              Copiar tudo
             </Button>
           </div>
 
@@ -258,6 +318,11 @@ export default function EditalInscricao() {
                     campo={campo}
                     value={formValues[campo.nome] || ""}
                     onChange={(v) => setFormValues((prev) => ({ ...prev, [campo.nome]: v }))}
+                    onAIGenerated={(v) => handleFieldAIGenerated(campo.nome, v)}
+                    isAIGenerated={aiGeneratedFields.has(campo.nome)}
+                    editalTitle={edital.titulo}
+                    editalSummary={extractedFields.resumo_edital}
+                    projectId={selectedProject && selectedProject !== "none" ? selectedProject : undefined}
                   />
                 ))}
               </CardContent>
@@ -277,6 +342,11 @@ export default function EditalInscricao() {
                     campo={campo}
                     value={formValues[campo.nome] || ""}
                     onChange={(v) => setFormValues((prev) => ({ ...prev, [campo.nome]: v }))}
+                    onAIGenerated={(v) => handleFieldAIGenerated(campo.nome, v)}
+                    isAIGenerated={aiGeneratedFields.has(campo.nome)}
+                    editalTitle={edital.titulo}
+                    editalSummary={extractedFields.resumo_edital}
+                    projectId={selectedProject && selectedProject !== "none" ? selectedProject : undefined}
                   />
                 ))}
               </CardContent>
@@ -311,11 +381,101 @@ function FieldInput({
   campo,
   value,
   onChange,
+  onAIGenerated,
+  isAIGenerated,
+  editalTitle,
+  editalSummary,
+  projectId,
 }: {
   campo: EditalField;
   value: string;
   onChange: (v: string) => void;
+  onAIGenerated: (v: string) => void;
+  isAIGenerated: boolean;
+  editalTitle?: string;
+  editalSummary?: string;
+  projectId?: string;
 }) {
+  const [generating, setGenerating] = useState(false);
+  const [refining, setRefining] = useState(false);
+  const [showRefine, setShowRefine] = useState(false);
+  const [refineInstruction, setRefineInstruction] = useState("");
+  const [savingToBank, setSavingToBank] = useState(false);
+  const { user } = useAuth();
+
+  const wordCount = value.trim() ? value.trim().split(/\s+/).length : 0;
+
+  const handleGenerate = async () => {
+    setGenerating(true);
+    try {
+      const { data } = await supabase.functions.invoke("edital-ai-assistant", {
+        body: {
+          action: "fill_field",
+          payload: {
+            field_name: campo.nome,
+            field_description: campo.descricao,
+            max_words: 500,
+            edital_title: editalTitle,
+            edital_summary: editalSummary,
+            project_id: projectId,
+          },
+        },
+      });
+      if (data?.response) {
+        onAIGenerated(data.response);
+        setShowRefine(false);
+      }
+    } catch {
+      // Error handled by edge function
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const handleRefine = async () => {
+    if (!refineInstruction.trim() || !value) return;
+    setRefining(true);
+    try {
+      const { data } = await supabase.functions.invoke("edital-ai-assistant", {
+        body: {
+          action: "refine_field",
+          payload: {
+            field_name: campo.nome,
+            current_text: value,
+            instruction: refineInstruction,
+          },
+        },
+      });
+      if (data?.response) {
+        onAIGenerated(data.response);
+        setRefineInstruction("");
+        setShowRefine(false);
+      }
+    } catch {
+      // Error handled
+    } finally {
+      setRefining(false);
+    }
+  };
+
+  const handleSaveToBank = async () => {
+    if (!value.trim() || !user) return;
+    setSavingToBank(true);
+    try {
+      await supabase.from("edital_documents").insert({
+        user_id: user.id,
+        title: campo.nome,
+        doc_type: "outro",
+        content: value,
+      });
+      // Toast handled by parent
+    } catch {
+      // ignore
+    } finally {
+      setSavingToBank(false);
+    }
+  };
+
   if (campo.tipo === "select" && campo.opcoes?.length) {
     return (
       <div>
@@ -338,13 +498,72 @@ function FieldInput({
 
   if (campo.tipo === "textarea") {
     return (
-      <div>
-        <Label className="flex items-center gap-1.5">
-          {campo.nome}
-          {campo.obrigatorio && <span className="text-destructive">*</span>}
-        </Label>
-        {campo.descricao && <p className="text-xs text-muted-foreground mb-1">{campo.descricao}</p>}
-        <Textarea value={value} onChange={(e) => onChange(e.target.value)} rows={4} />
+      <div className="space-y-1.5">
+        <div className="flex items-center justify-between">
+          <Label className="flex items-center gap-1.5">
+            {campo.nome}
+            {campo.obrigatorio && <span className="text-destructive">*</span>}
+            {isAIGenerated && (
+              <Badge variant="secondary" className="text-[10px] px-1.5 py-0">IA</Badge>
+            )}
+          </Label>
+          {value && <span className="text-[10px] text-muted-foreground">{wordCount} palavras</span>}
+        </div>
+        {campo.descricao && <p className="text-xs text-muted-foreground">{campo.descricao}</p>}
+
+        {generating ? (
+          <div className="flex items-center justify-center h-24 border rounded-md bg-muted/30">
+            <Loader2 className="h-5 w-5 animate-spin text-primary mr-2" />
+            <span className="text-sm text-muted-foreground">Gerando com IA...</span>
+          </div>
+        ) : (
+          <Textarea value={value} onChange={(e) => onChange(e.target.value)} rows={4} />
+        )}
+
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {!value && !generating && (
+            <Button size="sm" variant="outline" onClick={handleGenerate} className="h-7 text-xs">
+              <Sparkles className="h-3 w-3 mr-1" />
+              Gerar com IA
+            </Button>
+          )}
+          {value && isAIGenerated && (
+            <>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setShowRefine(!showRefine)}
+                className="h-7 text-xs"
+              >
+                <RefreshCw className="h-3 w-3 mr-1" />
+                Refinar
+              </Button>
+              <Button size="sm" variant="outline" onClick={handleGenerate} disabled={generating} className="h-7 text-xs">
+                <Sparkles className="h-3 w-3 mr-1" />
+                Regerar
+              </Button>
+              <Button size="sm" variant="ghost" onClick={handleSaveToBank} disabled={savingToBank} className="h-7 text-xs">
+                <BookmarkPlus className="h-3 w-3 mr-1" />
+                Salvar no banco
+              </Button>
+            </>
+          )}
+        </div>
+
+        {showRefine && (
+          <div className="flex gap-1.5 mt-1">
+            <Input
+              placeholder="Ex: Mais formal, adicionar dados de público..."
+              value={refineInstruction}
+              onChange={(e) => setRefineInstruction(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleRefine()}
+              className="text-xs h-8"
+            />
+            <Button size="sm" onClick={handleRefine} disabled={refining || !refineInstruction.trim()} className="h-8 text-xs shrink-0">
+              {refining ? <Loader2 className="h-3 w-3 animate-spin" /> : "Aplicar"}
+            </Button>
+          </div>
+        )}
       </div>
     );
   }

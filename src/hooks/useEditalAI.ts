@@ -7,14 +7,18 @@ export type AIAction =
   | "adapt_language"
   | "review_budget"
   | "generate_checklist"
-  | "suggest_project_fit";
+  | "suggest_project_fit"
+  | "fill_field"
+  | "refine_field";
 
-export const AI_ACTION_LABELS: Record<AIAction, string> = {
+export const AI_ACTION_LABELS: Record<string, string> = {
   generate_memorial: "Gerar Memorial",
   adapt_language: "Adaptar Linguagem",
   review_budget: "Revisar Orçamento",
   generate_checklist: "Gerar Checklist",
   suggest_project_fit: "Sugerir Projeto",
+  fill_field: "Gerar Campo",
+  refine_field: "Refinar Campo",
 };
 
 export function useEditalAI() {
@@ -55,6 +59,25 @@ export function useEditalAI() {
     }
   };
 
+  const fillField = async (params: {
+    field_name: string;
+    field_description?: string;
+    max_words?: number;
+    edital_title?: string;
+    edital_summary?: string;
+    project_id?: string;
+  }): Promise<string | null> => {
+    return callAI("fill_field", params);
+  };
+
+  const refineField = async (params: {
+    field_name: string;
+    current_text: string;
+    instruction: string;
+  }): Promise<string | null> => {
+    return callAI("refine_field", params);
+  };
+
   const refine = async (instruction: string): Promise<string | null> => {
     if (!lastAction || !lastPayload || !lastResult) return null;
     const refinedPayload = {
@@ -64,5 +87,5 @@ export function useEditalAI() {
     return callAI(lastAction, refinedPayload);
   };
 
-  return { callAI, refine, isLoading, lastResult, lastAction, setLastResult };
+  return { callAI, fillField, refineField, refine, isLoading, lastResult, lastAction, setLastResult };
 }
