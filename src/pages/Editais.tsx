@@ -790,6 +790,7 @@ export default function Editais() {
               applications={applications}
               onUpdate={(p) => updateApplication.mutate(p)}
               onDelete={(id) => deleteApplication.mutate(id)}
+              onOpenChecklist={(id) => setSelectedAppId(id)}
               projects={projects.map(p => ({ id: p.id, name: p.name }))}
               t={t}
             />
