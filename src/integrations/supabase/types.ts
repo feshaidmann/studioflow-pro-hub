@@ -239,6 +239,66 @@ export type Database = {
           },
         ]
       }
+      edital_application_docs: {
+        Row: {
+          application_id: string
+          completed_at: string | null
+          created_at: string
+          custom_content: string | null
+          doc_label: string
+          doc_type: string | null
+          edital_document_id: string | null
+          id: string
+          is_completed: boolean
+          is_required: boolean
+          notes: string | null
+          user_id: string
+        }
+        Insert: {
+          application_id: string
+          completed_at?: string | null
+          created_at?: string
+          custom_content?: string | null
+          doc_label: string
+          doc_type?: string | null
+          edital_document_id?: string | null
+          id?: string
+          is_completed?: boolean
+          is_required?: boolean
+          notes?: string | null
+          user_id: string
+        }
+        Update: {
+          application_id?: string
+          completed_at?: string | null
+          created_at?: string
+          custom_content?: string | null
+          doc_label?: string
+          doc_type?: string | null
+          edital_document_id?: string | null
+          id?: string
+          is_completed?: boolean
+          is_required?: boolean
+          notes?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "edital_application_docs_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "edital_applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "edital_application_docs_edital_document_id_fkey"
+            columns: ["edital_document_id"]
+            isOneToOne: false
+            referencedRelation: "edital_documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       edital_applications: {
         Row: {
           created_at: string
@@ -292,6 +352,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      edital_documents: {
+        Row: {
+          content: string
+          created_at: string
+          doc_type: string
+          id: string
+          last_used_at: string | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content?: string
+          created_at?: string
+          doc_type?: string
+          id?: string
+          last_used_at?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          doc_type?: string
+          id?: string
+          last_used_at?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       events: {
         Row: {

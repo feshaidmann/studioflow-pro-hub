@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, Download, Save, Trash2, ExternalLink, FileText, Pencil, Info, BarChart3, ClipboardList, Sparkles, ChevronDown, ArrowRight, Plus, MoreHorizontal, KanbanSquare } from "lucide-react";
+import { Search, Download, Save, Trash2, ExternalLink, FileText, Pencil, Info, BarChart3, ClipboardList, Sparkles, ChevronDown, ArrowRight, Plus, MoreHorizontal, KanbanSquare, FolderOpen } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +21,8 @@ import { useEditais, type Edital } from "@/hooks/useEditais";
 import { useEditalApplications, useCreateApplication, useUpdateApplication, useDeleteApplication, APPLICATION_STATUS_LABELS, APPLICATION_STATUS_COLORS, type ApplicationStatus, type EditalApplication } from "@/hooks/useEditalApplications";
 import { useProjects } from "@/contexts/ProjectContext";
 import { useLanguage } from "@/contexts/LanguageContext";
+import EditalDocumentsBank from "@/components/editais/EditalDocumentsBank";
+import ApplicationChecklist from "@/components/editais/ApplicationChecklist";
 
 const AREA_OPTIONS = ["Música", "Audiovisual", "Ambos", "Outra"];
 const ITEMS_PER_PAGE = 20;
@@ -336,10 +338,11 @@ const SEARCH_EXAMPLES = [
 ];
 
 /* ── Pipeline de candidaturas ── */
-function PipelineTab({ applications, onUpdate, onDelete, projects, t }: {
+function PipelineTab({ applications, onUpdate, onDelete, onOpenChecklist, projects, t }: {
   applications: EditalApplication[];
   onUpdate: (params: { id: string; status?: ApplicationStatus; notas?: string; project_id?: string | null }) => void;
   onDelete: (id: string) => void;
+  onOpenChecklist: (appId: string) => void;
   projects: { id: string; name: string }[];
   t: (k: string) => string;
 }) {
@@ -392,6 +395,10 @@ function PipelineTab({ applications, onUpdate, onDelete, projects, t }: {
                                 Mover → {APPLICATION_STATUS_LABELS[nextStatus(app.status)!]}
                               </DropdownMenuItem>
                             )}
+                            <DropdownMenuItem onClick={() => onOpenChecklist(app.id)}>
+                              <ClipboardList className="h-3.5 w-3.5 mr-2" />
+                              Checklist
+                            </DropdownMenuItem>
                             {app.edital?.link && (
                               <DropdownMenuItem asChild>
                                 <a href={app.edital.link} target="_blank" rel="noopener noreferrer">
@@ -458,14 +465,18 @@ function PipelineTab({ applications, onUpdate, onDelete, projects, t }: {
                             Mover → {APPLICATION_STATUS_LABELS[s]}
                           </DropdownMenuItem>
                         ))}
-                        {app.edital?.link && (
-                          <DropdownMenuItem asChild>
-                            <a href={app.edital.link} target="_blank" rel="noopener noreferrer">
-                              <ExternalLink className="h-3.5 w-3.5 mr-2" />
-                              Abrir edital
-                            </a>
+                          <DropdownMenuItem onClick={() => onOpenChecklist(app.id)}>
+                            <ClipboardList className="h-3.5 w-3.5 mr-2" />
+                            Checklist
                           </DropdownMenuItem>
-                        )}
+                          {app.edital?.link && (
+                            <DropdownMenuItem asChild>
+                              <a href={app.edital.link} target="_blank" rel="noopener noreferrer">
+                                <ExternalLink className="h-3.5 w-3.5 mr-2" />
+                                Abrir edital
+                              </a>
+                            </DropdownMenuItem>
+                          )}
                         <DropdownMenuItem className="text-destructive" onClick={() => onDelete(app.id)}>
                           <Trash2 className="h-3.5 w-3.5 mr-2" />
                           Remover
@@ -499,6 +510,7 @@ export default function Editais() {
   const [savedSearch, setSavedSearch] = useState("");
   const [savedPage, setSavedPage] = useState(1);
   const [savedFilterStatus, setSavedFilterStatus] = useState("Todos");
+  const [selectedAppId, setSelectedAppId] = useState<string | null>(null);
 
   const { editais, loading, searching, searchResult, search, saveResults, deleteEdital, updateEdital, exportCSV } = useEditais();
   const { data: applications = [], isLoading: loadingApps } = useEditalApplications();
@@ -555,6 +567,10 @@ export default function Editais() {
           <TabsTrigger value="pipeline">
             <KanbanSquare className="h-3.5 w-3.5 mr-1.5" />
             Candidaturas {applications.length > 0 && `(${applications.length})`}
+          </TabsTrigger>
+          <TabsTrigger value="documentos">
+            <FolderOpen className="h-3.5 w-3.5 mr-1.5" />
+            Documentos
           </TabsTrigger>
         </TabsList>
 
@@ -782,10 +798,16 @@ export default function Editais() {
               applications={applications}
               onUpdate={(p) => updateApplication.mutate(p)}
               onDelete={(id) => deleteApplication.mutate(id)}
+              onOpenChecklist={(id) => setSelectedAppId(id)}
               projects={projects.map(p => ({ id: p.id, name: p.name }))}
               t={t}
             />
           )}
+        </TabsContent>
+
+        {/* ── Tab: Documentos ── */}
+        <TabsContent value="documentos" className="space-y-6 mt-4">
+          <EditalDocumentsBank />
         </TabsContent>
       </Tabs>
 
@@ -796,6 +818,18 @@ export default function Editais() {
         onSave={updateEdital}
         t={t}
       />
+
+      {/* Checklist dialog for selected application */}
+      <Dialog open={!!selectedAppId} onOpenChange={(o) => { if (!o) setSelectedAppId(null); }}>
+        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              Checklist: {applications.find(a => a.id === selectedAppId)?.edital?.titulo || "Candidatura"}
+            </DialogTitle>
+          </DialogHeader>
+          {selectedAppId && <ApplicationChecklist applicationId={selectedAppId} />}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
