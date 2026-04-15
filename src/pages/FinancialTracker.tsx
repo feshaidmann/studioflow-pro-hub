@@ -391,9 +391,14 @@ export default function FinancialTracker() {
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <h1 className="text-2xl md:text-3xl font-bold neon-text">Financeiro</h1>
-        <Button className="neon-glow active:scale-95 transition-transform" onClick={() => { setEditTx(null); setFormOpen(true); }}>
-          <Plus className="h-4 w-4 mr-1" /> Nova Transação
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setFinAiOpen(true)}>
+            <Sparkles className="h-3.5 w-3.5" /> IA
+          </Button>
+          <Button className="neon-glow active:scale-95 transition-transform" onClick={() => { setEditTx(null); setFormOpen(true); }}>
+            <Plus className="h-4 w-4 mr-1" /> Nova Transação
+          </Button>
+        </div>
       </div>
 
       {/* KPI Cards */}
