@@ -1003,6 +1003,88 @@ export default function Editais() {
             </Collapsible>
           )}
 
+          {/* Recomendações por perfil cultural */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Star className="h-4 w-4 text-primary" />
+                Recomendações para seu projeto
+              </CardTitle>
+              <p className="text-xs text-muted-foreground">Selecione um projeto com Perfil Cultural configurado para ver editais compatíveis.</p>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Select value={recoProjectId} onValueChange={setRecoProjectId}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Selecione um projeto" />
+                </SelectTrigger>
+                <SelectContent>
+                  {projects.filter(p => !p.completed).map((p) => (
+                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {recoProjectId && !hasCulturalProfile && (
+                <div className="rounded-lg border border-border p-4 text-center space-y-2">
+                  <p className="text-sm text-muted-foreground">Este projeto ainda não tem Perfil Cultural configurado.</p>
+                  <Button size="sm" variant="outline" onClick={() => navigate(`/projects?id=${recoProjectId}`)}>
+                    Configurar Perfil Cultural →
+                  </Button>
+                </div>
+              )}
+
+              {recoProjectId && hasCulturalProfile && loadingMatches && (
+                <div className="space-y-2">
+                  <Skeleton className="h-16 w-full" />
+                  <Skeleton className="h-16 w-full" />
+                </div>
+              )}
+
+              {recoProjectId && hasCulturalProfile && !loadingMatches && matches.length === 0 && (
+                <p className="text-sm text-muted-foreground text-center py-4">Nenhum edital compatível encontrado. Salve mais editais na aba "Buscar".</p>
+              )}
+
+              {recoProjectId && hasCulturalProfile && !loadingMatches && matches.length > 0 && (
+                <div className="space-y-2">
+                  {matches.slice(0, 10).map((m) => (
+                    <div
+                      key={m.id}
+                      className="rounded-lg border border-border p-3 space-y-1.5 cursor-pointer hover:bg-muted/30 transition-colors"
+                      onClick={() => {
+                        setDetailEdital({
+                          id: m.id, titulo: m.titulo, orgao: m.orgao, estado: m.estado,
+                          area: m.area, status: m.status, abertura: m.abertura, prazo: m.prazo,
+                          link: m.link, inferido: m.inferido, valor: m.valor || "", resumo: m.resumo || "",
+                          publico_alvo: m.publico_alvo || "", documentos_resumo: "",
+                        } as Edital);
+                        setDetailOpen(true);
+                      }}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="text-sm font-medium leading-snug flex-1">{m.titulo}</p>
+                        <Badge variant="secondary" className="shrink-0 text-[10px]">
+                          Score {m.score}
+                        </Badge>
+                      </div>
+                      <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+                        {m.orgao && <span>{m.orgao}</span>}
+                        {m.estado && <span>UF: {m.estado}</span>}
+                        <span>Prazo: {formatDate(m.prazo)}</span>
+                        <Badge variant="outline" className={statusColor(m.status) + " text-[10px]"}>{m.status}</Badge>
+                      </div>
+                      {m.valor && m.valor !== "" && (
+                        <div className="flex items-center gap-1">
+                          <DollarSign className="h-3 w-3 text-green-600" />
+                          <span className="text-xs font-semibold text-green-700">{m.valor}</span>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           {/* Sub-view: Editais salvos */}
           {meusView === "salvos" && (
             <>
