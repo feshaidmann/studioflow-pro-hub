@@ -89,6 +89,21 @@ serve(async (req) => {
       .eq("id", userId)
       .single();
 
+    // Fetch recent lessons learned for context enrichment
+    const { data: recentLessons } = await adminClient
+      .from("edital_applications")
+      .select("licoes_aprendidas, resultado, motivo_recusa")
+      .eq("user_id", userId)
+      .not("licoes_aprendidas", "eq", "")
+      .order("updated_at", { ascending: false })
+      .limit(5);
+    
+    const lessonsContext = recentLessons?.length
+      ? `\n\nLIÇÕES DE CANDIDATURAS ANTERIORES:\n${recentLessons.map((l: any) => 
+          `- ${l.resultado === "aprovado" ? "✅" : "❌"} ${l.licoes_aprendidas}${l.motivo_recusa ? ` (Motivo recusa: ${l.motivo_recusa})` : ""}`
+        ).join("\n")}`
+      : "";
+
     let systemPrompt = "";
     let userMessage = "";
 
@@ -115,7 +130,7 @@ serve(async (req) => {
         projectData
       );
       systemPrompt = prompts.systemPrompt;
-      userMessage = prompts.userMessage;
+      userMessage = prompts.userMessage + lessonsContext;
 
     } else if (action === "refine_field") {
       const prompts = buildRefineFieldPrompt({
