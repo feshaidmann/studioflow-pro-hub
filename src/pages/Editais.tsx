@@ -465,14 +465,18 @@ function PipelineTab({ applications, onUpdate, onDelete, onOpenChecklist, projec
                             Mover → {APPLICATION_STATUS_LABELS[s]}
                           </DropdownMenuItem>
                         ))}
-                        {app.edital?.link && (
-                          <DropdownMenuItem asChild>
-                            <a href={app.edital.link} target="_blank" rel="noopener noreferrer">
-                              <ExternalLink className="h-3.5 w-3.5 mr-2" />
-                              Abrir edital
-                            </a>
+                          <DropdownMenuItem onClick={() => onOpenChecklist(app.id)}>
+                            <ClipboardList className="h-3.5 w-3.5 mr-2" />
+                            Checklist
                           </DropdownMenuItem>
-                        )}
+                          {app.edital?.link && (
+                            <DropdownMenuItem asChild>
+                              <a href={app.edital.link} target="_blank" rel="noopener noreferrer">
+                                <ExternalLink className="h-3.5 w-3.5 mr-2" />
+                                Abrir edital
+                              </a>
+                            </DropdownMenuItem>
+                          )}
                         <DropdownMenuItem className="text-destructive" onClick={() => onDelete(app.id)}>
                           <Trash2 className="h-3.5 w-3.5 mr-2" />
                           Remover
