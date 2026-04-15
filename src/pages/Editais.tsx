@@ -69,16 +69,218 @@ function formatDate(d: string | null) {
   } catch { return d; }
 }
 
+function EditalDetailSheet({
+  edital, open, onOpenChange, onDelete, onInscricao, t,
+}: {
+  edital: Edital | null;
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  onDelete?: (id: string) => void;
+  onInscricao?: (id: string) => void;
+  t: (k: string) => string;
+}) {
+  if (!edital) return null;
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="right" className="w-full sm:max-w-lg overflow-y-auto">
+        <SheetHeader>
+          <SheetTitle className="text-left leading-snug pr-6">{edital.titulo}</SheetTitle>
+        </SheetHeader>
+        <div className="mt-4 space-y-4">
+          <div className="flex flex-wrap gap-2">
+            <Badge variant="outline" className={statusColor(edital.status)}>{edital.status}</Badge>
+            {edital.area && <Badge variant="secondary" className="text-xs">{edital.area}</Badge>}
+            {edital.estado && <Badge variant="outline" className="text-xs">{edital.estado}</Badge>}
+          </div>
+          {edital.valor && edital.valor !== "—" && edital.valor !== "" && (
+            <div className="flex items-center gap-2 p-3 rounded-lg bg-green-500/10 border border-green-200">
+              <DollarSign className="h-4 w-4 text-green-600 shrink-0" />
+              <span className="text-sm font-semibold text-green-700">{edital.valor}</span>
+            </div>
+          )}
+          {edital.resumo && edital.resumo !== "—" && edital.resumo !== "" && (
+            <div>
+              <p className="text-xs font-medium text-muted-foreground mb-1">Resumo</p>
+              <p className="text-sm leading-relaxed">{edital.resumo}</p>
+            </div>
+          )}
+          {edital.publico_alvo && edital.publico_alvo !== "—" && edital.publico_alvo !== "" && (
+            <div>
+              <p className="text-xs font-medium text-muted-foreground mb-1">Público-alvo</p>
+              <p className="text-sm">{edital.publico_alvo}</p>
+            </div>
+          )}
+          {edital.documentos_resumo && edital.documentos_resumo !== "—" && edital.documentos_resumo !== "" && (
+            <div>
+              <p className="text-xs font-medium text-muted-foreground mb-1">Documentos exigidos</p>
+              <p className="text-sm">{edital.documentos_resumo}</p>
+            </div>
+          )}
+          <div className="grid grid-cols-2 gap-3 text-sm">
+            <div><p className="text-xs text-muted-foreground">Órgão</p><p className="font-medium">{edital.orgao || "—"}</p></div>
+            <div><p className="text-xs text-muted-foreground">Prazo</p><p className="font-medium">{formatDate(edital.prazo)}</p></div>
+            <div><p className="text-xs text-muted-foreground">Abertura</p><p className="font-medium">{formatDate(edital.abertura)}</p></div>
+            <div><p className="text-xs text-muted-foreground">Área</p><p className="font-medium">{edital.area || "—"}</p></div>
+          </div>
+          <div className="flex flex-wrap gap-2 pt-2 border-t border-border">
+            {edital.link && edital.link !== "—" && (
+              <Button size="sm" asChild>
+                <a href={edital.link} target="_blank" rel="noopener noreferrer">
+                  <ExternalLink className="h-3.5 w-3.5 mr-1.5" />Abrir edital
+                </a>
+              </Button>
+            )}
+            {onInscricao && edital.id && (
+              <Button size="sm" variant="outline" onClick={() => { onInscricao(edital.id!); onOpenChange(false); }}>
+                <ClipboardList className="h-3.5 w-3.5 mr-1.5" />Iniciar inscrição
+              </Button>
+            )}
+            {onDelete && edital.id && (
+              <Button size="sm" variant="ghost" className="text-destructive" onClick={() => { onDelete(edital.id!); onOpenChange(false); }}>
+                <Trash2 className="h-3.5 w-3.5 mr-1.5" />Remover
+              </Button>
+            )}
+          </div>
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
 function EditalTable({
-  items, onDelete, onEdit, onInscricao, t,
+  items, onDelete, onEdit, onInscricao, onViewDetail, t,
 }: {
   items: Edital[];
   onDelete?: (id: string) => void;
   onEdit?: (e: Edital) => void;
   onInscricao?: (id: string) => void;
+  onViewDetail?: (e: Edital) => void;
   t: (k: string) => string;
 }) {
   const isMobile = useIsMobile();
+
+  if (isMobile) {
+    return (
+      <div className="space-y-2">
+        {items.map((e, i) => (
+          <div key={e.id || e.session_key || i} className="rounded-lg border border-border p-3 space-y-2 cursor-pointer hover:bg-muted/30 transition-colors" onClick={() => onViewDetail?.(e)}>
+            <div className="flex items-start justify-between gap-2">
+              <p className="text-sm font-medium leading-snug flex-1">
+                {e.titulo}
+                {e.inferido && <Info className="inline h-3 w-3 text-muted-foreground ml-1" />}
+              </p>
+              <Badge variant="outline" className={statusColor(e.status) + " shrink-0 text-[10px]"}>{e.status}</Badge>
+            </div>
+            {e.resumo && e.resumo !== "—" && e.resumo !== "" && (
+              <p className="text-xs text-muted-foreground line-clamp-2">{e.resumo}</p>
+            )}
+            <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-muted-foreground">
+              {e.orgao && <span>{e.orgao}</span>}
+              {e.estado && <span>UF: {e.estado}</span>}
+              {e.area && <span>{e.area}</span>}
+              <span>Prazo: {formatDate(e.prazo)}</span>
+            </div>
+            {e.valor && e.valor !== "—" && e.valor !== "" && (
+              <div className="flex items-center gap-1">
+                <DollarSign className="h-3 w-3 text-green-600" />
+                <span className="text-xs font-semibold text-green-700">{e.valor}</span>
+              </div>
+            )}
+            <div className="flex items-center gap-1 pt-1" onClick={(ev) => ev.stopPropagation()}>
+              {e.link && e.link !== "—" && (
+                <a href={e.link} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                  <Button variant="ghost" size="icon" className="h-7 w-7"><ExternalLink className="h-3.5 w-3.5" /></Button>
+                </a>
+              )}
+              {onInscricao && e.id && (
+                <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary" onClick={() => onInscricao(e.id!)}>
+                  <ClipboardList className="h-3.5 w-3.5" />
+                </Button>
+              )}
+              {onEdit && (
+                <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={() => onEdit(e)}>
+                  <Pencil className="h-3.5 w-3.5" />
+                </Button>
+              )}
+              {onDelete && (
+                <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => e.id && onDelete(e.id)}>
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-lg border border-border overflow-hidden">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Título</TableHead>
+            <TableHead className="w-16">UF</TableHead>
+            <TableHead>Órgão</TableHead>
+            <TableHead className="w-28">Valor</TableHead>
+            <TableHead className="w-24">Prazo</TableHead>
+            <TableHead className="w-24">Status</TableHead>
+            <TableHead className="w-24">Área</TableHead>
+            <TableHead className="w-16">Link</TableHead>
+            {(onDelete || onEdit || onInscricao) && <TableHead className="w-28" />}
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {items.map((e, i) => (
+            <TableRow key={e.id || e.session_key || i} className="cursor-pointer hover:bg-muted/30" onClick={() => onViewDetail?.(e)}>
+              <TableCell className="font-medium max-w-[260px]">
+                <span className="flex items-center gap-1">
+                  <span className="truncate">{e.titulo}</span>
+                  {e.inferido && (
+                    <TooltipProvider><Tooltip><TooltipTrigger asChild><Info className="h-3 w-3 text-muted-foreground shrink-0" /></TooltipTrigger><TooltipContent>{t("editais.inferred")}</TooltipContent></Tooltip></TooltipProvider>
+                  )}
+                </span>
+                {e.resumo && e.resumo !== "—" && e.resumo !== "" && (
+                  <p className="text-[11px] text-muted-foreground truncate mt-0.5 font-normal">{e.resumo}</p>
+                )}
+              </TableCell>
+              <TableCell className="text-xs">{e.estado || "—"}</TableCell>
+              <TableCell className="text-xs max-w-[140px] truncate">{e.orgao || "—"}</TableCell>
+              <TableCell className="text-xs">
+                {e.valor && e.valor !== "—" && e.valor !== "" ? (
+                  <span className="font-semibold text-green-700">{e.valor}</span>
+                ) : "—"}
+              </TableCell>
+              <TableCell className="text-xs tabular-nums">{formatDate(e.prazo)}</TableCell>
+              <TableCell><Badge variant="outline" className={statusColor(e.status)}>{e.status}</Badge></TableCell>
+              <TableCell className="text-xs">{e.area || "—"}</TableCell>
+              <TableCell onClick={(ev) => ev.stopPropagation()}>
+                {e.link && e.link !== "—" ? (
+                  <a href={e.link} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline"><ExternalLink className="h-3.5 w-3.5" /></a>
+                ) : "—"}
+              </TableCell>
+              {(onDelete || onEdit || onInscricao) && (
+                <TableCell onClick={(ev) => ev.stopPropagation()}>
+                  <div className="flex gap-1">
+                    {onInscricao && e.id && (
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary" onClick={() => onInscricao(e.id!)}><ClipboardList className="h-3.5 w-3.5" /></Button>
+                    )}
+                    {onEdit && (
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={() => onEdit(e)}><Pencil className="h-3.5 w-3.5" /></Button>
+                    )}
+                    {onDelete && (
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => e.id && onDelete(e.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
+                    )}
+                  </div>
+                </TableCell>
+              )}
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  );
+}
 
   if (isMobile) {
     return (
