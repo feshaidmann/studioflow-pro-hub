@@ -45,6 +45,7 @@ export function useCreativeAssets() {
     height: number;
     editImageUrl?: string;
     projectId?: string;
+    channelContext?: string;
   }) => {
     if (!user) return null;
     setGenerating(true);
@@ -58,6 +59,7 @@ export function useCreativeAssets() {
           height: params.height,
           editImageUrl: params.editImageUrl,
           projectId: params.projectId,
+          channelContext: params.channelContext,
         },
       });
 
@@ -79,6 +81,33 @@ export function useCreativeAssets() {
     } finally {
       setGenerating(false);
     }
+  };
+
+  const generateBatch = async (
+    paramsList: Array<{
+      prompt: string;
+      style: string | null;
+      format: string;
+      width: number;
+      height: number;
+      editImageUrl?: string;
+      projectId?: string;
+      channelContext?: string;
+    }>,
+    onProgress?: (current: number, total: number) => void
+  ) => {
+    if (!user) return [];
+    const results: Array<{ imageUrl: string; imageBase64: string; asset: CreativeAsset } | null> = [];
+    for (let i = 0; i < paramsList.length; i++) {
+      onProgress?.(i + 1, paramsList.length);
+      const result = await generate(paramsList[i]);
+      results.push(result);
+      if (i < paramsList.length - 1) {
+        await new Promise((r) => setTimeout(r, 2000));
+      }
+    }
+    queryClient.invalidateQueries({ queryKey: ["creative-assets"] });
+    return results;
   };
 
   const deleteAsset = async (id: string, storagePath: string) => {
