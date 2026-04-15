@@ -66,6 +66,7 @@ import {
   ArrowDownRight,
   Minus,
   Download,
+  Sparkles,
 } from "lucide-react";
 import { useProjects } from "@/contexts/ProjectContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -76,6 +77,7 @@ import TransactionForm from "@/components/finance/TransactionForm";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
+import ProjectAISheet from "@/components/project-hub/ProjectAISheet";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -158,6 +160,7 @@ export default function FinancialTracker() {
   const [formOpen, setFormOpen] = useState(false);
   const [editTx, setEditTx] = useState<Transaction | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [finAiOpen, setFinAiOpen] = useState(false);
 
   // Pending fees by collaborator
   interface PendingFee {
@@ -388,9 +391,14 @@ export default function FinancialTracker() {
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <h1 className="text-2xl md:text-3xl font-bold neon-text">Financeiro</h1>
-        <Button className="neon-glow active:scale-95 transition-transform" onClick={() => { setEditTx(null); setFormOpen(true); }}>
-          <Plus className="h-4 w-4 mr-1" /> Nova Transação
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setFinAiOpen(true)}>
+            <Sparkles className="h-3.5 w-3.5" /> IA
+          </Button>
+          <Button className="neon-glow active:scale-95 transition-transform" onClick={() => { setEditTx(null); setFormOpen(true); }}>
+            <Plus className="h-4 w-4 mr-1" /> Nova Transação
+          </Button>
+        </div>
       </div>
 
       {/* KPI Cards */}
@@ -1066,6 +1074,39 @@ export default function FinancialTracker() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Financial AI Sheet */}
+      <ProjectAISheet
+        open={finAiOpen}
+        onOpenChange={setFinAiOpen}
+        projectData={(() => {
+          const lines: string[] = [];
+          lines.push(`Saldo total (pagas): R$${kpis.balanceAll.toFixed(2)}`);
+          lines.push(`Receitas do mês: R$${kpis.incomeMonth.toFixed(2)}`);
+          lines.push(`Despesas do mês: R$${kpis.expenseMonth.toFixed(2)}`);
+          lines.push(`Resultado do mês: R$${kpis.resultMonth.toFixed(2)}`);
+          lines.push(`A receber: R$${kpis.pendingIncome.toFixed(2)}`);
+          lines.push(`A pagar: R$${kpis.pendingExpense.toFixed(2)}`);
+          if (pendingFees.length > 0) {
+            lines.push(`\nPagamentos pendentes por colaborador (${pendingFees.length}):`);
+            pendingFees.forEach(f => lines.push(`- ${f.name} (${f.role}) — R$${f.fee.toFixed(2)} — ${f.projectName}`));
+          }
+          lines.push(`\nCategorias de despesa:`);
+          categoryExpense.slice(0, 8).forEach(c => lines.push(`- ${c.name}: R$${c.total.toFixed(2)}`));
+          lines.push(`\nCategorias de receita:`);
+          categoryIncome.slice(0, 8).forEach(c => lines.push(`- ${c.name}: R$${c.total.toFixed(2)}`));
+          lines.push(`\nEvolução últimos 6 meses:`);
+          evolutionData.forEach(d => lines.push(`- ${d.mes}: Receita R$${d.receitas.toFixed(0)} | Despesa R$${d.despesas.toFixed(0)} | Saldo R$${d.saldo.toFixed(0)}`));
+          return lines.join("\n");
+        })()}
+        mode="finance"
+        title="Assistente Financeiro IA"
+        chips={[
+          { label: "📊 Análise geral", msg: "Analise meus dados financeiros. Quais padrões você identifica? Onde posso economizar?" },
+          { label: "🔥 Burn rate", msg: "Qual meu burn rate mensal? Em quanto tempo meu saldo vai acabar no ritmo atual?" },
+          { label: "💡 Otimizações", msg: "Sugira otimizações concretas para melhorar minha saúde financeira como artista independente." },
+        ]}
+      />
     </div>
   );
 }

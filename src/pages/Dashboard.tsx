@@ -187,6 +187,13 @@ export default function Dashboard() {
       chips.length = 0;
       chips.push({ label: "🎵 Criar projeto", msg: "Como devo organizar meu primeiro projeto musical? Quais informações são essenciais?" });
       chips.push({ label: "🎙️ Dicas de gravação", msg: "Sou um artista independente. Me dá dicas fundamentais para começar a gravar com qualidade em casa." });
+    } else {
+      // Proactive chips
+      chips.push({ label: "🔍 Revisão geral", msg: "Faça uma revisão geral de todos os meus projetos. O que está indo bem e o que precisa de atenção? Me dê um resumo executivo com ações." });
+      const nearRelease = projects.find((p) => p.stage === "upload" || p.stage === "master");
+      if (nearRelease) {
+        chips.push({ label: `🚀 ${nearRelease.name} quase lá`, msg: `Meu projeto "${nearRelease.name}" está no estágio ${nearRelease.stage}. O que falta para lançar? Revise o checklist de lançamento.` });
+      }
     }
 
     return chips;
@@ -213,7 +220,7 @@ export default function Dashboard() {
       onOpenChange={(open) => localStorage.setItem("sfp_ai_collapsed", open ? "false" : "true")}
       className={cn(isFirstRun && "hidden")}
     >
-      <Card className="glass-card animate-fade-in border-primary/20 shadow-sm" style={{ animationDelay: "50ms" }}>
+      <Card data-ai-assistant className="glass-card animate-fade-in border-primary/20 shadow-sm" style={{ animationDelay: "50ms" }}>
         <CollapsibleTrigger asChild>
           <CardHeader className="pb-1 pt-3 px-4 cursor-pointer select-none hover:bg-muted/40 rounded-t-lg transition-colors">
             <CardTitle className="text-xs flex items-center gap-1.5 font-medium">
@@ -284,14 +291,23 @@ export default function Dashboard() {
         onSelectProject={setSelectedProjectId}
       />
 
-      {/* Next recommended action — compact on mobile */}
+      {/* Next recommended action — click sends to AI */}
       {nextAction && (
-        <div className={cn(
-          "rounded-lg border px-3 py-2.5 md:px-4 md:py-3 flex items-center gap-2.5 animate-fade-in",
-          nextAction.severity === "critical" ? "border-destructive/40 bg-destructive/5" :
-          nextAction.severity === "warning" ? "border-warning/40 bg-warning/5" :
-          "border-primary/30 bg-primary/5"
-        )}>
+        <button
+          onClick={() => {
+            aiRef.current?.sendMessage(`Preciso de ajuda com: ${nextAction.label}. ${nextAction.detail ? `Contexto: ${nextAction.detail}` : ""} O que devo fazer?`);
+            // Ensure AI card is open
+            localStorage.setItem("sfp_ai_collapsed", "false");
+            const aiEl = document.querySelector("[data-ai-assistant]");
+            aiEl?.scrollIntoView({ behavior: "smooth", block: "center" });
+          }}
+          className={cn(
+            "w-full rounded-lg border px-3 py-2.5 md:px-4 md:py-3 flex items-center gap-2.5 animate-fade-in text-left transition-colors hover:bg-muted/30",
+            nextAction.severity === "critical" ? "border-destructive/40 bg-destructive/5" :
+            nextAction.severity === "warning" ? "border-warning/40 bg-warning/5" :
+            "border-primary/30 bg-primary/5"
+          )}
+        >
           <div className={cn(
             "h-7 w-7 md:h-8 md:w-8 rounded-full flex items-center justify-center shrink-0",
             nextAction.severity === "critical" ? "bg-destructive/15" :
@@ -300,11 +316,11 @@ export default function Dashboard() {
             <Bot className={cn("h-3.5 w-3.5 md:h-4 md:w-4", nextAction.severity === "critical" ? "text-destructive" : nextAction.severity === "warning" ? "text-warning" : "text-primary")} />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium leading-tight">Próxima ação</p>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium leading-tight">Próxima ação · clique para resolver com IA</p>
             <p className="text-sm font-medium truncate">{nextAction.label}</p>
             {!isMobile && <p className="text-[11px] text-muted-foreground">{nextAction.detail}</p>}
           </div>
-        </div>
+        </button>
       )}
 
       {/* AI Assistant — desktop: prominent; mobile: after checklist */}
