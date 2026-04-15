@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, Download, Save, Trash2, ExternalLink, FileText, Pencil, Info, BarChart3, ClipboardList, Sparkles, ChevronDown, ArrowRight, Plus, MoreHorizontal, KanbanSquare, FolderOpen } from "lucide-react";
+import { Search, Download, Save, Trash2, ExternalLink, FileText, Pencil, Info, BarChart3, ClipboardList, Sparkles, ChevronDown, ArrowRight, Plus, MoreHorizontal, KanbanSquare, FolderOpen, Bot } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +23,7 @@ import { useProjects } from "@/contexts/ProjectContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import EditalDocumentsBank from "@/components/editais/EditalDocumentsBank";
 import ApplicationChecklist from "@/components/editais/ApplicationChecklist";
+import EditalAIAssistant from "@/components/editais/EditalAIAssistant";
 
 const AREA_OPTIONS = ["Música", "Audiovisual", "Ambos", "Outra"];
 const ITEMS_PER_PAGE = 20;
@@ -572,6 +573,10 @@ export default function Editais() {
             <FolderOpen className="h-3.5 w-3.5 mr-1.5" />
             Documentos
           </TabsTrigger>
+          <TabsTrigger value="ia">
+            <Bot className="h-3.5 w-3.5 mr-1.5" />
+            IA
+          </TabsTrigger>
         </TabsList>
 
         {/* ── Tab: Buscar ── */}
@@ -808,6 +813,11 @@ export default function Editais() {
         {/* ── Tab: Documentos ── */}
         <TabsContent value="documentos" className="space-y-6 mt-4">
           <EditalDocumentsBank />
+        </TabsContent>
+
+        {/* ── Tab: IA ── */}
+        <TabsContent value="ia" className="space-y-6 mt-4">
+          <EditalAIAssistant projects={projects.map(p => ({ id: p.id, name: p.name }))} />
         </TabsContent>
       </Tabs>
 

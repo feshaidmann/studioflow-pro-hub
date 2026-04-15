@@ -44,3 +44,18 @@ export interface ApplicationDoc {
   created_at: string;
   edital_document?: EditalDocument;
 }
+
+export type AIAction =
+  | 'generate_memorial'
+  | 'adapt_language'
+  | 'review_budget'
+  | 'generate_checklist'
+  | 'suggest_project_fit';
+
+export interface ResultadoCandidatura {
+  resultado: 'aprovado' | 'reprovado' | 'lista_espera' | 'desistencia';
+  valor_aprovado?: number;
+  motivo_recusa?: string;
+  data_resultado: string;
+  licoes_aprendidas?: string;
+}
