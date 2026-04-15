@@ -501,6 +501,7 @@ export default function Editais() {
   const [savedSearch, setSavedSearch] = useState("");
   const [savedPage, setSavedPage] = useState(1);
   const [savedFilterStatus, setSavedFilterStatus] = useState("Todos");
+  const [selectedAppId, setSelectedAppId] = useState<string | null>(null);
 
   const { editais, loading, searching, searchResult, search, saveResults, deleteEdital, updateEdital, exportCSV } = useEditais();
   const { data: applications = [], isLoading: loadingApps } = useEditalApplications();
