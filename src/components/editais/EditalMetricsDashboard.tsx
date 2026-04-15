@@ -54,35 +54,35 @@ export default function EditalMetricsDashboard({ applications }: Props) {
   return (
     <div className="space-y-4">
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 gap-3">
         <Card>
-          <CardContent className="p-4 text-center">
-            <FileText className="h-5 w-5 mx-auto text-muted-foreground mb-1" />
-            <p className="text-2xl font-bold">{metrics.total}</p>
-            <p className="text-xs text-muted-foreground">Total candidaturas</p>
+          <CardContent className="p-3 sm:p-4 text-center">
+            <FileText className="h-4 w-4 sm:h-5 sm:w-5 mx-auto text-muted-foreground mb-1" />
+            <p className="text-xl sm:text-2xl font-bold">{metrics.total}</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">Candidaturas</p>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-4 text-center">
-            <Award className="h-5 w-5 mx-auto text-green-600 mb-1" />
-            <p className="text-2xl font-bold text-green-700">{metrics.aprovados.length}</p>
-            <p className="text-xs text-muted-foreground">Aprovadas</p>
+          <CardContent className="p-3 sm:p-4 text-center">
+            <Award className="h-4 w-4 sm:h-5 sm:w-5 mx-auto text-green-600 mb-1" />
+            <p className="text-xl sm:text-2xl font-bold text-green-700">{metrics.aprovados.length}</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">Aprovadas</p>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-4 text-center">
-            <TrendingUp className="h-5 w-5 mx-auto text-primary mb-1" />
-            <p className="text-2xl font-bold">{metrics.taxaAprovacao}%</p>
-            <p className="text-xs text-muted-foreground">Taxa de aprovação</p>
+          <CardContent className="p-3 sm:p-4 text-center">
+            <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 mx-auto text-primary mb-1" />
+            <p className="text-xl sm:text-2xl font-bold">{metrics.taxaAprovacao}%</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">Aprovação</p>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-4 text-center">
-            <Trophy className="h-5 w-5 mx-auto text-amber-600 mb-1" />
-            <p className="text-2xl font-bold">
+          <CardContent className="p-3 sm:p-4 text-center">
+            <Trophy className="h-4 w-4 sm:h-5 sm:w-5 mx-auto text-amber-600 mb-1" />
+            <p className="text-xl sm:text-2xl font-bold">
               {metrics.totalAprovado.toLocaleString("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 0 })}
             </p>
-            <p className="text-xs text-muted-foreground">Total captado</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">Total captado</p>
           </CardContent>
         </Card>
       </div>
@@ -97,10 +97,10 @@ export default function EditalMetricsDashboard({ applications }: Props) {
             const count = metrics.byStatus[status];
             const pct = metrics.total > 0 ? (count / metrics.total) * 100 : 0;
             return (
-              <div key={status} className="flex items-center gap-3">
-                <span className="text-xs w-20 text-right text-muted-foreground">{APPLICATION_STATUS_LABELS[status]}</span>
+              <div key={status} className="flex items-center gap-2">
+                <span className="text-[10px] sm:text-xs w-16 sm:w-20 text-right text-muted-foreground truncate">{APPLICATION_STATUS_LABELS[status]}</span>
                 <Progress value={pct} className="flex-1 h-2" />
-                <span className="text-xs font-medium w-8">{count}</span>
+                <span className="text-xs font-medium w-6 text-right">{count}</span>
               </div>
             );
           })}

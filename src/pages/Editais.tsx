@@ -580,25 +580,25 @@ export default function Editais() {
       </div>
 
       <Tabs defaultValue="buscar">
-        <TabsList>
-          <TabsTrigger value="buscar">
-            <Search className="h-3.5 w-3.5 mr-1.5" />
+        <TabsList className="w-full overflow-x-auto flex justify-start gap-0.5 no-scrollbar">
+          <TabsTrigger value="buscar" className="text-xs px-2.5 md:px-3 shrink-0">
+            <Search className="h-3.5 w-3.5 mr-1" />
             {t("editais.tabSearch")}
           </TabsTrigger>
-          <TabsTrigger value="salvos">
-            <FileText className="h-3.5 w-3.5 mr-1.5" />
+          <TabsTrigger value="salvos" className="text-xs px-2.5 md:px-3 shrink-0">
+            <FileText className="h-3.5 w-3.5 mr-1" />
             {t("editais.tabSaved")} {editais.length > 0 && `(${editais.length})`}
           </TabsTrigger>
-          <TabsTrigger value="pipeline">
-            <KanbanSquare className="h-3.5 w-3.5 mr-1.5" />
+          <TabsTrigger value="pipeline" className="text-xs px-2.5 md:px-3 shrink-0">
+            <KanbanSquare className="h-3.5 w-3.5 mr-1" />
             Candidaturas {applications.length > 0 && `(${applications.length})`}
           </TabsTrigger>
-          <TabsTrigger value="documentos">
-            <FolderOpen className="h-3.5 w-3.5 mr-1.5" />
+          <TabsTrigger value="documentos" className="text-xs px-2.5 md:px-3 shrink-0">
+            <FolderOpen className="h-3.5 w-3.5 mr-1" />
             Documentos
           </TabsTrigger>
-          <TabsTrigger value="metricas">
-            <BarChart3 className="h-3.5 w-3.5 mr-1.5" />
+          <TabsTrigger value="metricas" className="text-xs px-2.5 md:px-3 shrink-0">
+            <BarChart3 className="h-3.5 w-3.5 mr-1" />
             Métricas
           </TabsTrigger>
         </TabsList>
