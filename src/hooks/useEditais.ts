@@ -90,7 +90,8 @@ export function useEditais(projectId?: string | null) {
         inferido: e.inferido,
         session_key: e.session_key,
       }));
-      const { error } = await supabase.from("editais").upsert(rows as any, { onConflict: "user_id,session_key", ignoreDuplicates: true });
+      // Use plain insert — partial unique indexes don't support onConflict upsert
+      const { error } = await supabase.from("editais").insert(rows as any);
       if (error) throw error;
       toast({ title: "Editais salvos!", description: `${items.length} edital(is) salvo(s).` });
       await fetchEditais();
