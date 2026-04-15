@@ -15,7 +15,11 @@ interface PerfilCultural {
   porte: string;
 }
 
-const AREA_OPTIONS = ["Música", "Audiovisual"];
+const AREA_OPTIONS = [
+  "Música", "Audiovisual", "Artes Cênicas", "Artes Visuais",
+  "Literatura", "Patrimônio Cultural", "Cultura Popular",
+  "Dança", "Circo", "Cultura Digital",
+];
 const UF_OPTIONS = [
   "Nacional", "AC", "AL", "AM", "AP", "BA", "CE", "DF", "ES", "GO",
   "MA", "MG", "MS", "MT", "PA", "PB", "PE", "PI", "PR", "RJ",
@@ -76,7 +80,7 @@ export default function ProjectCulturalProfile({ projectId }: { projectId: strin
         .update({ perfil_cultural: perfil as any })
         .eq("id", projectId);
       if (error) throw error;
-      toast({ title: "Perfil cultural salvo" });
+      toast({ title: "Perfil cultural salvo!", description: "Veja recomendações de editais na aba Editais → Meus Editais" });
     } catch (err: any) {
       toast({ title: "Erro ao salvar", description: err.message, variant: "destructive" });
     } finally {
@@ -90,6 +94,7 @@ export default function ProjectCulturalProfile({ projectId }: { projectId: strin
     <Card>
       <CardHeader className="pb-3">
         <CardTitle className="text-base">Perfil Cultural do Projeto</CardTitle>
+        <p className="text-xs text-muted-foreground mt-1">Estes filtros são usados para recomendar editais compatíveis com seu projeto.</p>
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Áreas */}

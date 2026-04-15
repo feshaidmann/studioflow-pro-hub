@@ -1,6 +1,6 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, Download, Save, Trash2, ExternalLink, FileText, Pencil, Info, BarChart3, ClipboardList, Sparkles, ChevronDown, ArrowRight, Plus, MoreHorizontal, KanbanSquare, FolderOpen, Bot, Trophy, Eye, DollarSign, Users, FileCheck } from "lucide-react";
+import { Search, Download, Save, Trash2, ExternalLink, FileText, Pencil, Info, BarChart3, ClipboardList, Sparkles, ChevronDown, ArrowRight, Plus, MoreHorizontal, KanbanSquare, FolderOpen, Bot, Trophy, Eye, DollarSign, Users, FileCheck, Star } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
@@ -28,6 +28,8 @@ import ApplicationChecklist from "@/components/editais/ApplicationChecklist";
 import EditalAIAssistant, { type AIContext } from "@/components/editais/EditalAIAssistant";
 import EditalResultModal from "@/components/editais/EditalResultModal";
 import EditalMetricsDashboard from "@/components/editais/EditalMetricsDashboard";
+import { useMatchEditais, type MatchedEdital } from "@/hooks/useMatchEditais";
+import { supabase } from "@/integrations/supabase/client";
 
 const AREA_OPTIONS = ["Música", "Audiovisual", "Ambos", "Outra"];
 const ITEMS_PER_PAGE = 20;
@@ -752,7 +754,9 @@ export default function Editais() {
   const [confirmAppOpen, setConfirmAppOpen] = useState(false);
   // Sub-view for "Meus Editais": 'salvos' or 'pipeline'
   const [meusView, setMeusView] = useState<"salvos" | "pipeline">("salvos");
-
+  // Recommendations
+  const [recoProjectId, setRecoProjectId] = useState<string>("");
+  const { matches, loading: loadingMatches, fetchMatches } = useMatchEditais();
   const { editais, loading, searching, searchResult, search, saveResults, deleteEdital, updateEdital, exportCSV } = useEditais();
   const { data: applications = [], isLoading: loadingApps } = useEditalApplications();
   const createApplication = useCreateApplication();
@@ -813,6 +817,24 @@ export default function Editais() {
       },
     });
   };
+
+  // Fetch cultural profile for selected project
+  const [recoProfile, setRecoProfile] = useState<any>(null);
+  useEffect(() => {
+    if (!recoProjectId) { setRecoProfile(null); return; }
+    supabase.from("projects").select("perfil_cultural").eq("id", recoProjectId).single()
+      .then(({ data }) => setRecoProfile(data?.perfil_cultural || null));
+  }, [recoProjectId]);
+
+  const hasCulturalProfile = recoProfile &&
+    typeof recoProfile === "object" &&
+    Array.isArray(recoProfile.areas) && recoProfile.areas.length > 0;
+
+  useEffect(() => {
+    if (recoProjectId && hasCulturalProfile) {
+      fetchMatches(recoProjectId);
+    }
+  }, [recoProjectId, hasCulturalProfile, fetchMatches]);
 
   const projectList = projects.map(p => ({ id: p.id, name: p.name }));
 
@@ -980,6 +1002,88 @@ export default function Editais() {
               </CollapsibleContent>
             </Collapsible>
           )}
+
+          {/* Recomendações por perfil cultural */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Star className="h-4 w-4 text-primary" />
+                Recomendações para seu projeto
+              </CardTitle>
+              <p className="text-xs text-muted-foreground">Selecione um projeto com Perfil Cultural configurado para ver editais compatíveis.</p>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Select value={recoProjectId} onValueChange={setRecoProjectId}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Selecione um projeto" />
+                </SelectTrigger>
+                <SelectContent>
+                  {projects.filter(p => !p.completed).map((p) => (
+                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {recoProjectId && !hasCulturalProfile && (
+                <div className="rounded-lg border border-border p-4 text-center space-y-2">
+                  <p className="text-sm text-muted-foreground">Este projeto ainda não tem Perfil Cultural configurado.</p>
+                  <Button size="sm" variant="outline" onClick={() => navigate(`/projects?id=${recoProjectId}`)}>
+                    Configurar Perfil Cultural →
+                  </Button>
+                </div>
+              )}
+
+              {recoProjectId && hasCulturalProfile && loadingMatches && (
+                <div className="space-y-2">
+                  <Skeleton className="h-16 w-full" />
+                  <Skeleton className="h-16 w-full" />
+                </div>
+              )}
+
+              {recoProjectId && hasCulturalProfile && !loadingMatches && matches.length === 0 && (
+                <p className="text-sm text-muted-foreground text-center py-4">Nenhum edital compatível encontrado. Salve mais editais na aba "Buscar".</p>
+              )}
+
+              {recoProjectId && hasCulturalProfile && !loadingMatches && matches.length > 0 && (
+                <div className="space-y-2">
+                  {matches.slice(0, 10).map((m) => (
+                    <div
+                      key={m.id}
+                      className="rounded-lg border border-border p-3 space-y-1.5 cursor-pointer hover:bg-muted/30 transition-colors"
+                      onClick={() => {
+                        setDetailEdital({
+                          id: m.id, titulo: m.titulo, orgao: m.orgao, estado: m.estado,
+                          area: m.area, status: m.status, abertura: m.abertura, prazo: m.prazo,
+                          link: m.link, inferido: m.inferido, valor: m.valor || "", resumo: m.resumo || "",
+                          publico_alvo: m.publico_alvo || "", documentos_resumo: "",
+                        } as Edital);
+                        setDetailOpen(true);
+                      }}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="text-sm font-medium leading-snug flex-1">{m.titulo}</p>
+                        <Badge variant="secondary" className="shrink-0 text-[10px]">
+                          Score {m.score}
+                        </Badge>
+                      </div>
+                      <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+                        {m.orgao && <span>{m.orgao}</span>}
+                        {m.estado && <span>UF: {m.estado}</span>}
+                        <span>Prazo: {formatDate(m.prazo)}</span>
+                        <Badge variant="outline" className={statusColor(m.status) + " text-[10px]"}>{m.status}</Badge>
+                      </div>
+                      {m.valor && m.valor !== "" && (
+                        <div className="flex items-center gap-1">
+                          <DollarSign className="h-3 w-3 text-green-600" />
+                          <span className="text-xs font-semibold text-green-700">{m.valor}</span>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
           {/* Sub-view: Editais salvos */}
           {meusView === "salvos" && (
