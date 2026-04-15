@@ -1,72 +1,160 @@
 
 
-# Redesign da Jornada IA nos Editais
+# Diagnostico Completo — Friccao, Layout, Jornada e Uso de IA em Todos os Modulos
 
-## Diagnostico dos problemas atuais
+## Bug detectado durante analise
 
-### Friccao alta
-1. A IA esta isolada numa aba separada ("IA") — o artista precisa sair do contexto do edital, ir ate outra aba, e preencher manualmente dados que o sistema ja tem (titulo do edital, projeto vinculado, tipo)
-2. O componente exige que o usuario escolha uma acao ANTES de ver o formulario — dois cliques so para comecar
-3. Nenhuma acao e pre-populada com dados do edital ou candidatura em questao — o usuario redigita tudo
-4. O resultado e texto puro sem formatacao, sem acao de "salvar no banco de documentos"
-
-### Layout pobre
-5. Os 5 cards de acao ocupam muito espaco vertical com pouca hierarquia visual — parecem todos iguais em importancia
-6. O formulario dentro de um Card generico sem indicacao de progresso ou contexto
-7. A area de resultado nao tem acoes uteis (so copiar) — falta "Salvar como documento", "Refinar com IA", "Usar nesta candidatura"
-
-### Jornada desconectada
-8. Nao ha ponte entre o Pipeline (candidatura) e a IA — deveria ser possivel chamar a IA direto do card de candidatura
-9. O checklist de documentos nao oferece "Gerar com IA" para cada item
-10. Ao gerar um memorial, nao ha como salvar direto na `edital_documents` do banco
+A aba "Metricas" nos Editais esta **duplicada** (linhas 600-607 em Editais.tsx). Precisa remover a segunda ocorrencia.
 
 ---
 
-## Plano de melhorias
+## 1. DASHBOARD
 
-### 1. IA contextual no Pipeline (maior impacto)
-- Adicionar botao "Assistente IA" no DropdownMenu de cada card de candidatura no Pipeline
-- Ao clicar, abrir um Dialog/Sheet pre-populado com os dados do edital (titulo, tipo, criterios) e projeto vinculado
-- Elimina a necessidade de preencher campos manualmente
+### Problemas
+- **Excesso de informacao sem hierarquia clara.** O dashboard empilha 8+ cards (alertas, checklist, AI, equipe pendente, saude dos projetos, lancamentos, financeiro, transacoes recentes) sem separacao visual por relevancia. O artista nao sabe onde olhar primeiro.
+- **AI Assistant colapsavel mas sem call-to-action claro.** O Collapsible "Assistente IA" parece um card generico — nao ha indicacao do que a IA pode fazer ate o usuario expandir e ler.
+- **Chips de contexto da IA sao reativos, nao proativos.** Os chips so aparecem quando ja ha problemas. Faltam sugestoes positivas ("Seu projeto X esta quase pronto — que tal revisar o checklist de lancamento?").
+- **"Proxima Acao" esta desconectada da IA.** O banner mostra a proxima acao mas nao oferece "Resolver com IA" ou "Me ajude com isso".
 
-### 2. Acoes IA no Checklist de documentos
-- Para cada item do checklist (ex: "Memorial descritivo"), adicionar botao inline "Gerar com IA"
-- Ao clicar, chamar a acao correspondente (generate_memorial, adapt_language) ja com contexto da candidatura
-- O resultado pode ser salvo como `custom_content` no item OU salvo no banco de documentos e vinculado
+### Melhorias propostas
+- Conectar o banner "Proxima Acao" ao AI Assistant — clicar no banner envia a acao como prompt pre-formatado para a IA
+- Adicionar chip proativo: "Revisao geral" — a IA analisa todos os projetos e sugere prioridades do dia
+- Reduzir cards visiveis por padrao: agrupar "Equipe pendente + Alertas" num unico card com tabs internas
+- Adicionar skeleton loading nos cards em vez de bloco "Carregando..."
 
-### 3. Redesign do EditalAIAssistant
-- Remover a tela de selecao de acao (5 cards) — substituir por lista compacta com radio/toggle horizontal
-- Pre-popular campos quando vindo de contexto (candidatura ou edital)
-- Adicionar acoes no resultado:
-  - "Salvar no Banco de Documentos" (cria registro em `edital_documents`)
-  - "Refinar" (re-envia com instrucao de ajuste, mantendo historico)
-  - "Copiar" (ja existe)
-- Renderizar resultado com formatacao markdown basica (paragrafos, listas)
+---
 
-### 4. Simplificar tabs — mover IA para drawer contextual
-- Remover a aba "IA" standalone da TabsList (reduz de 6 para 5 tabs)
-- A IA fica acessivel via:
-  - Botao flutuante/FAB na pagina de Editais (acesso rapido global)
-  - Dentro do Pipeline (contextual por candidatura)
-  - Dentro do Checklist (contextual por documento)
-- Isso elimina a sensacao de "ferramenta separada" e integra a IA no fluxo natural
+## 2. PROJETOS (Lista + Detalhe)
 
-### 5. Feedback visual e hierarquia
-- Loading state com skeleton de texto (nao so spinner)
-- Indicador de tokens/custo apos cada geracao (transparencia)
-- Badge "IA" nos documentos gerados pela IA no banco
+### Problemas
+- **Arquivo monolito** — Projects.tsx tem 1163 linhas com wizard de equipe, modais de pagamento, convites e filtros. Isso causa lentidao de desenvolvimento e bugs.
+- **Wizard de equipe complexo** — O fluxo new/existing + tipo profissional + proposta + pagamento tem muitos passos sem indicacao de progresso.
+- **Sem IA no projeto.** Nao ha assistente contextual no detalhe do projeto. O artista precisa voltar ao Dashboard para usar a IA geral.
+- **ProjectDetail tem 7 tabs (Overview, Equipe, Chat, Tarefas, Financeiro, Release, Arquivos)** — sem hierarquia de importancia. Na mobile sao dificeis de navegar.
+- **Nenhuma sugestao inteligente.** O Overview mostra dados mas nao sugere acoes ("Mix esta em 55% — falta stem de guitarra do Joao").
+
+### Melhorias propostas
+- Adicionar botao "Assistente IA" no ProjectDetail (FAB ou header) que abre um Sheet contextual pre-populado com dados do projeto (estagio, equipe, tarefas, financeiro)
+- Na OverviewTab, adicionar secao "Sugestoes IA" que analisa automaticamente o estado do projeto e mostra 2-3 acoes concretas
+- No wizard de equipe, adicionar barra de progresso visual (3 steps: Tipo → Contato → Proposta)
+- Agrupar tabs em ProjectDetail: "Producao" (Overview+Tarefas+Release) e "Gestao" (Equipe+Financeiro+Arquivos+Chat)
+
+---
+
+## 3. FINANCEIRO
+
+### Problemas
+- **Sem IA.** E o modulo mais numerico e que mais se beneficiaria de analise por IA ("Suas despesas com musicos subiram 40% — quer que eu compare com o mercado?").
+- **Sem previsoes.** Mostra dados historicos mas nao projeta futuro (burn rate, quando o orcamento vai acabar).
+- **Filtros basicos.** So filtra por projeto e periodo. Falta filtro por categoria, por status (pago/pendente).
+- **Tabela de transacoes sem acoes em lote.** Nao da para marcar varias como pagas de uma vez.
+
+### Melhorias propostas
+- Adicionar FAB "Assistente IA" que analisa padroes financeiros, sugere cortes, projeta break-even
+- Adicionar card "Previsao" com burn rate e data estimada de esgotamento do orcamento do projeto
+- Filtro por categoria e status pago/pendente
+- Acao "Marcar como pago" em lote na tabela
+
+---
+
+## 4. AGENDA
+
+### Problemas
+- **Sem IA.** A agenda nao sugere horarios, nao detecta padroes ("Voce sempre marca ensaio na quarta — quer criar um evento recorrente?").
+- **Sem visao de calendario.** E uma lista cronologica — falta a visao mensal/semanal classica.
+- **Deadlines de equipe isolados.** Os prazos de entrega de colaboradores aparecem num card separado sem integracao visual com os eventos.
+- **Sem eventos recorrentes.** O artista precisa criar cada ensaio individualmente.
+
+### Melhorias propostas
+- Adicionar IA contextual: "Crie evento" com sugestao inteligente de horario baseada em conflitos
+- Implementar visao de calendario mensal (grid) como alternativa a lista
+- Unificar deadlines de equipe na timeline de eventos com badge visual distinto
+- Suporte a eventos recorrentes (semanal/quinzenal/mensal)
+
+---
+
+## 5. DNA MUSICAL
+
+### Problemas
+- **IA somente via edge function de analise** — nao ha chat ou sugestoes interativas apos a analise.
+- **Resultado estatico.** Apos a analise, o usuario ve o radar chart e o diagnostico, mas nao pode perguntar "O que devo melhorar primeiro?" ou "Compare com referencia X".
+- **Sem ponte com projetos.** A analise nao esta vinculada a nenhum projeto — o artista precisa manualmente "converter em tarefa".
+- **Formulario de upload pesado.** Exige selecao de genero e referencias ANTES do upload — friccao alta.
+
+### Melhorias propostas
+- Adicionar chat pos-analise: "Pergunte sobre sua mix" — IA conversa sobre o diagnostico com contexto dos dados tecnicos
+- Simplificar formulario: upload primeiro, genero/referencias opcionais (a IA pode inferir)
+- Vincular analise a projeto: ao abrir DNA Musical, pre-selecionar o projeto ativo
+- Botao "Criar tarefas a partir do diagnostico" com pre-selecao inteligente das sugestoes mais impactantes
+
+---
+
+## 6. PARCEIROS/PROFISSIONAIS
+
+### Problemas
+- **Sem IA.** Nao ha recomendacao de profissionais ("Para seu projeto de Forro, recomendo um sanfoneiro — voce ja trabalhou com o Joao").
+- **Metricas basicas.** Mostra contagem de projetos e nota media, mas nao compara nem destaca profissionais ideais para o proximo projeto.
+- **Sem integracao direta com projetos.** Para adicionar um profissional a um projeto, o usuario precisa ir ate Projetos → Equipe → Wizard. Deveria ser possivel direto da ficha do profissional.
+
+### Melhorias propostas
+- Adicionar "Recomendar para projeto" na ficha do profissional — lista projetos sem aquela especialidade
+- Adicionar IA: "Sugerir equipe ideal" para um projeto — analisa historico e sugere combinacao
+- Botao "Adicionar ao projeto X" direto na ficha do profissional
+
+---
+
+## 7. CONFIGURACOES
+
+### Problemas
+- **Regras de tarefas automaticas sao obscuras.** Os sliders e switches nao explicam o impacto real de cada regra.
+- **Demo data e gerado sem feedback.** Clicar em "Gerar dados" nao mostra progresso nem resultado.
+
+### Melhorias (menor prioridade)
+- Tooltip com exemplo concreto em cada regra de tarefa
+- Progress bar ao gerar dados demo
+
+---
+
+## 8. EDITAIS (pos-redesign)
+
+### Bug
+- Tab "Metricas" duplicada — remover a segunda ocorrencia
+
+### Melhorias residuais
+- O FAB de IA poderia ter tooltip "Assistente IA" ao hover
+- A busca de editais poderia ter "Buscar editais para meu projeto" — pre-filtra por area do projeto ativo
+
+---
+
+## Resumo — Priorizacao por impacto
+
+| Prioridade | Modulo | Melhoria principal |
+|---|---|---|
+| 1 | Projetos | IA contextual no ProjectDetail + sugestoes no Overview |
+| 2 | Dashboard | Conectar "Proxima Acao" a IA + chips proativos |
+| 3 | Financeiro | IA de analise financeira + previsao de burn rate |
+| 4 | DNA Musical | Chat pos-analise + simplificar upload |
+| 5 | Editais | Fix tab duplicada |
+| 6 | Parceiros | Recomendacao IA + "Adicionar ao projeto" direto |
+| 7 | Agenda | Visao calendario + IA de sugestao |
+| 8 | Config | Tooltips nas regras |
 
 ---
 
 ## Detalhes tecnicos
 
-**Arquivos modificados:**
-- `src/components/editais/EditalAIAssistant.tsx` — redesign completo: layout horizontal de acoes, props para contexto pre-populado, acoes no resultado (salvar, refinar), markdown rendering
-- `src/components/editais/ApplicationChecklist.tsx` — adicionar botao "Gerar com IA" por item, integrar com `useEditalAI`
-- `src/pages/Editais.tsx` — remover tab "IA", adicionar Sheet/Dialog com EditalAIAssistant contextual, botao FAB para acesso rapido, integrar IA no Pipeline dropdown
-- `src/hooks/useEditalAI.ts` — adicionar metodo `refine()` para re-prompting, retornar flag `isAIGenerated`
+### Arquivos impactados
+- `src/pages/Dashboard.tsx` — conectar banner ao AI, chips proativos
+- `src/pages/ProjectDetail.tsx` — FAB de IA contextual, Sheet com AIAssistant
+- `src/components/project-hub/ProjectOverviewTab.tsx` — secao "Sugestoes IA"
+- `src/pages/FinancialTracker.tsx` — FAB de IA financeira, card de previsao
+- `src/components/music-dna/MusicDNAAnalyzer.tsx` — chat pos-analise, vinculo com projeto
+- `src/pages/Professionals.tsx` — botao "Adicionar ao projeto", recomendacao IA
+- `src/pages/Editais.tsx` — fix tab duplicada
+- `src/pages/Agenda.tsx` — IA contextual (futuro)
+- Edge functions novas: `project-ai-assistant` (contexto de projeto), `finance-ai-assistant` (analise financeira)
 
-**Nenhuma alteracao de banco de dados necessaria** — as tabelas existentes ja suportam tudo (salvar em `edital_documents`, vincular via `edital_application_docs`).
+### Nenhuma alteracao de banco necessaria para a maioria — os dados ja existem nas tabelas atuais. As edge functions usam o Lovable AI Gateway existente.
 
-**Dependencia nova:** `react-markdown` (ja pode estar instalado) para renderizar resultado formatado.
+Deseja que eu implemente por prioridade, comecando pela correcao do bug e pela IA contextual nos Projetos?
 
