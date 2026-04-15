@@ -1325,6 +1325,8 @@ export default function Editais() {
                         onStartApplication={handleStartApplication}
                         onViewDetail={(e) => { setDetailEdital(e); setDetailOpen(true); }}
                         t={t}
+                        compareIds={compareIds}
+                        onToggleCompare={toggleCompare}
                       />
                     ) : (
                       <p className="text-sm text-muted-foreground py-4 text-center">{t("editais.noResults")}</p>
