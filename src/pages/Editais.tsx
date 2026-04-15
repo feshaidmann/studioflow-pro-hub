@@ -552,6 +552,10 @@ export default function Editais() {
             <FileText className="h-3.5 w-3.5 mr-1.5" />
             {t("editais.tabSaved")} {editais.length > 0 && `(${editais.length})`}
           </TabsTrigger>
+          <TabsTrigger value="pipeline">
+            <KanbanSquare className="h-3.5 w-3.5 mr-1.5" />
+            Candidaturas {applications.length > 0 && `(${applications.length})`}
+          </TabsTrigger>
         </TabsList>
 
         {/* ── Tab: Buscar ── */}
