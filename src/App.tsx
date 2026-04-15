@@ -39,6 +39,7 @@ const Legal = lazy(() => import("@/pages/Legal"));
 const MusicDNA = lazy(() => import("@/pages/MusicDNA"));
 const Editais = lazy(() => import("@/pages/Editais"));
 const EditalInscricao = lazy(() => import("@/pages/EditalInscricao"));
+const Creative = lazy(() => import("@/pages/Creative"));
 
 const queryClient = new QueryClient(); // singleton
 
@@ -81,6 +82,7 @@ const AppRoutes = () => (
           <Route path="/music-dna" element={<MusicDNA />} />
           <Route path="/editais" element={<Editais />} />
           <Route path="/editais/inscricao/:id" element={<EditalInscricao />} />
+          <Route path="/criativo" element={<Creative />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </Suspense>

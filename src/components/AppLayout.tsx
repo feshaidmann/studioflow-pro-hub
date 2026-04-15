@@ -18,6 +18,7 @@ import {
   Dna,
   HelpCircle,
   MoreHorizontal,
+  Palette,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -43,6 +44,7 @@ const gestaoItems = [
   { labelKey: "nav.agenda",        path: "/agenda",        icon: CalendarDays, proOnly: false, mobileLabel: "" },
   { labelKey: "nav.musicdna",      path: "/music-dna",     icon: Dna,          proOnly: false, mobileLabel: "nav.musicdna.short" },
   { labelKey: "nav.editais",      path: "/editais",       icon: FileText,     proOnly: false, mobileLabel: "" },
+  { labelKey: "nav.creative",     path: "/criativo",      icon: Palette,      proOnly: false, mobileLabel: "" },
   { labelKey: "nav.professionals", path: "/professionals", icon: Users,        proOnly: false, mobileLabel: "" },
 ];
 
@@ -107,7 +109,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     return location.pathname === item.path;
   };
 
-  const ROOT_ROUTES = ["/dashboard", "/projects", "/finance", "/agenda", "/professionals", "/settings", "/admin", "/tutorial", "/music-dna", "/editais", "/"];
+  const ROOT_ROUTES = ["/dashboard", "/projects", "/finance", "/agenda", "/professionals", "/settings", "/admin", "/tutorial", "/music-dna", "/editais", "/criativo", "/"];
   const isRootRoute = ROOT_ROUTES.includes(location.pathname);
 
   // ── Mobile ─────────────────────────────────────────────────────────────────
