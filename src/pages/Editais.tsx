@@ -401,6 +401,10 @@ function PipelineTab({ applications, onUpdate, onDelete, onOpenChecklist, onOpen
                                 Mover → {APPLICATION_STATUS_LABELS[nextStatus(app.status)!]}
                               </DropdownMenuItem>
                             )}
+                            <DropdownMenuItem onClick={() => onOpenAI(app)}>
+                              <Sparkles className="h-3.5 w-3.5 mr-2" />
+                              Assistente IA
+                            </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => onOpenChecklist(app.id)}>
                               <ClipboardList className="h-3.5 w-3.5 mr-2" />
                               Checklist
