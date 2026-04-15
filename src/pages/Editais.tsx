@@ -335,6 +335,159 @@ const SEARCH_EXAMPLES = [
   "Funarte fomento artista independente",
 ];
 
+/* ── Pipeline de candidaturas ── */
+function PipelineTab({ applications, onUpdate, onDelete, projects, t }: {
+  applications: EditalApplication[];
+  onUpdate: (params: { id: string; status?: ApplicationStatus; notas?: string; project_id?: string | null }) => void;
+  onDelete: (id: string) => void;
+  projects: { id: string; name: string }[];
+  t: (k: string) => string;
+}) {
+  const isMobile = useIsMobile();
+  const statuses: ApplicationStatus[] = ["interesse", "preparando", "inscrito", "resultado"];
+
+  const grouped = useMemo(() => {
+    const map: Record<ApplicationStatus, EditalApplication[]> = {
+      interesse: [], preparando: [], inscrito: [], resultado: [],
+    };
+    applications.forEach((a) => {
+      if (map[a.status]) map[a.status].push(a);
+    });
+    return map;
+  }, [applications]);
+
+  const nextStatus = (s: ApplicationStatus): ApplicationStatus | null => {
+    const idx = statuses.indexOf(s);
+    return idx < statuses.length - 1 ? statuses[idx + 1] : null;
+  };
+
+  if (isMobile) {
+    return (
+      <div className="space-y-4">
+        {statuses.map((status) => (
+          <div key={status}>
+            <div className="flex items-center gap-2 mb-2">
+              <Badge variant="outline" className={APPLICATION_STATUS_COLORS[status] + " text-xs"}>
+                {APPLICATION_STATUS_LABELS[status]}
+              </Badge>
+              <span className="text-xs text-muted-foreground">({grouped[status].length})</span>
+            </div>
+            {grouped[status].length === 0 ? (
+              <p className="text-xs text-muted-foreground pl-2 py-2">Nenhuma candidatura</p>
+            ) : (
+              <div className="space-y-2">
+                {grouped[status].map((app) => (
+                  <Card key={app.id} className="border">
+                    <CardContent className="p-3 space-y-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="text-sm font-medium leading-snug flex-1">{app.edital?.titulo || "Edital"}</p>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0"><MoreHorizontal className="h-3.5 w-3.5" /></Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            {nextStatus(app.status) && (
+                              <DropdownMenuItem onClick={() => onUpdate({ id: app.id, status: nextStatus(app.status)! })}>
+                                <ArrowRight className="h-3.5 w-3.5 mr-2" />
+                                Mover → {APPLICATION_STATUS_LABELS[nextStatus(app.status)!]}
+                              </DropdownMenuItem>
+                            )}
+                            {app.edital?.link && (
+                              <DropdownMenuItem asChild>
+                                <a href={app.edital.link} target="_blank" rel="noopener noreferrer">
+                                  <ExternalLink className="h-3.5 w-3.5 mr-2" />
+                                  Abrir edital
+                                </a>
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuItem className="text-destructive" onClick={() => onDelete(app.id)}>
+                              <Trash2 className="h-3.5 w-3.5 mr-2" />
+                              Remover
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                      <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+                        {app.edital?.orgao && <span>{app.edital.orgao}</span>}
+                        {app.edital?.prazo && <span>Prazo: {formatDate(app.edital.prazo)}</span>}
+                      </div>
+                      {app.notas && <p className="text-xs text-muted-foreground italic">{app.notas}</p>}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  // Desktop: columns layout
+  return (
+    <div className="grid grid-cols-4 gap-3">
+      {statuses.map((status) => (
+        <div key={status} className="space-y-2">
+          <div className="flex items-center gap-2 pb-2 border-b border-border">
+            <Badge variant="outline" className={APPLICATION_STATUS_COLORS[status] + " text-xs"}>
+              {APPLICATION_STATUS_LABELS[status]}
+            </Badge>
+            <span className="text-xs text-muted-foreground">({grouped[status].length})</span>
+          </div>
+          {grouped[status].length === 0 ? (
+            <p className="text-xs text-muted-foreground text-center py-6">Nenhuma candidatura</p>
+          ) : (
+            grouped[status].map((app) => (
+              <Card key={app.id} className="border">
+                <CardContent className="p-3 space-y-1.5">
+                  <div className="flex items-start justify-between gap-1">
+                    <p className="text-xs font-medium leading-snug flex-1 line-clamp-2">{app.edital?.titulo || "Edital"}</p>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0"><MoreHorizontal className="h-3 w-3" /></Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        {nextStatus(app.status) && (
+                          <DropdownMenuItem onClick={() => onUpdate({ id: app.id, status: nextStatus(app.status)! })}>
+                            <ArrowRight className="h-3.5 w-3.5 mr-2" />
+                            Mover → {APPLICATION_STATUS_LABELS[nextStatus(app.status)!]}
+                          </DropdownMenuItem>
+                        )}
+                        {statuses.filter(s => s !== app.status && s !== nextStatus(app.status)).map(s => (
+                          <DropdownMenuItem key={s} onClick={() => onUpdate({ id: app.id, status: s })}>
+                            Mover → {APPLICATION_STATUS_LABELS[s]}
+                          </DropdownMenuItem>
+                        ))}
+                        {app.edital?.link && (
+                          <DropdownMenuItem asChild>
+                            <a href={app.edital.link} target="_blank" rel="noopener noreferrer">
+                              <ExternalLink className="h-3.5 w-3.5 mr-2" />
+                              Abrir edital
+                            </a>
+                          </DropdownMenuItem>
+                        )}
+                        <DropdownMenuItem className="text-destructive" onClick={() => onDelete(app.id)}>
+                          <Trash2 className="h-3.5 w-3.5 mr-2" />
+                          Remover
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                  <div className="text-[11px] text-muted-foreground space-y-0.5">
+                    {app.edital?.orgao && <p>{app.edital.orgao}</p>}
+                    {app.edital?.prazo && <p>Prazo: {formatDate(app.edital.prazo)}</p>}
+                  </div>
+                  {app.notas && <p className="text-[11px] text-muted-foreground italic line-clamp-2">{app.notas}</p>}
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function Editais() {
   const navigate = useNavigate();
   const { t } = useLanguage();
@@ -348,6 +501,10 @@ export default function Editais() {
   const [savedFilterStatus, setSavedFilterStatus] = useState("Todos");
 
   const { editais, loading, searching, searchResult, search, saveResults, deleteEdital, updateEdital, exportCSV } = useEditais();
+  const { data: applications = [], isLoading: loadingApps } = useEditalApplications();
+  const createApplication = useCreateApplication();
+  const updateApplication = useUpdateApplication();
+  const deleteApplication = useDeleteApplication();
 
   const handleSearch = (q?: string) => {
     const searchQuery = (q || query).trim();
