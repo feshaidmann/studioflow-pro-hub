@@ -29,6 +29,7 @@ import EditalAIAssistant, { type AIContext } from "@/components/editais/EditalAI
 import EditalResultModal from "@/components/editais/EditalResultModal";
 import EditalMetricsDashboard from "@/components/editais/EditalMetricsDashboard";
 import { useMatchEditais, type MatchedEdital } from "@/hooks/useMatchEditais";
+import { supabase } from "@/integrations/supabase/client";
 
 const AREA_OPTIONS = ["Música", "Audiovisual", "Ambos", "Outra"];
 const ITEMS_PER_PAGE = 20;
