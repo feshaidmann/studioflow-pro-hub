@@ -1,0 +1,1 @@
+DROP INDEX IF EXISTS public.idx_editais_user_session;
