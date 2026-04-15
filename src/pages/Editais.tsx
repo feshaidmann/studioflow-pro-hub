@@ -559,6 +559,10 @@ export default function Editais() {
             <KanbanSquare className="h-3.5 w-3.5 mr-1.5" />
             Candidaturas {applications.length > 0 && `(${applications.length})`}
           </TabsTrigger>
+          <TabsTrigger value="documentos">
+            <FolderOpen className="h-3.5 w-3.5 mr-1.5" />
+            Documentos
+          </TabsTrigger>
         </TabsList>
 
         {/* ── Tab: Buscar ── */}
