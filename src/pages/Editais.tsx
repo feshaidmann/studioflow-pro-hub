@@ -814,6 +814,11 @@ export default function Editais() {
         <TabsContent value="documentos" className="space-y-6 mt-4">
           <EditalDocumentsBank />
         </TabsContent>
+
+        {/* ── Tab: IA ── */}
+        <TabsContent value="ia" className="space-y-6 mt-4">
+          <EditalAIAssistant projects={projects.map(p => ({ id: p.id, name: p.name }))} />
+        </TabsContent>
       </Tabs>
 
       <EditEditalDialog
