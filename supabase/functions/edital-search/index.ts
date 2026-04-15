@@ -102,6 +102,10 @@ Para cada item relevante extraia:
 - abertura: dd/mm/aaaa (use * se inferido por texto, não explícito)
 - prazo: dd/mm/aaaa (use * se inferido; se expirado: status = Encerrado)
 - link: URL completa e verificada (descarte se 404)
+- valor: texto livre com o valor de fomento oferecido (ex: "R$ 50.000", "até R$ 200.000 por projeto"). Use — se não informado.
+- publico_alvo: texto curto descrevendo quem pode se inscrever (ex: "Artistas e grupos musicais de SP"). Use — se não informado.
+- resumo: 1-2 frases descrevendo do que se trata o edital. Use — se não informado.
+- documentos_resumo: lista curta dos principais documentos exigidos, separados por vírgula. Use — se não informado.
 
 Se um campo estiver ausente, use —.
 
@@ -174,13 +178,17 @@ Não mencione valores, taxas ou modelo de negócio.
 IMPORTANTE: Após a tabela markdown e o relatório, você DEVE incluir um bloco JSON
 delimitado por <editais_json> e </editais_json> com o array de editais encontrados.
 Cada objeto deve ter exatamente estas chaves:
-{ "titulo", "orgao", "estado", "area", "status", "abertura", "prazo", "link", "origem_url", "inferido", "session_key" }
+{ "titulo", "orgao", "estado", "area", "status", "abertura", "prazo", "link", "origem_url", "inferido", "session_key", "valor", "publico_alvo", "resumo", "documentos_resumo" }
 
 Regras para o JSON:
 - abertura e prazo: formato "YYYY-MM-DD" ou null se ausente
 - inferido: true se alguma data foi inferida
 - session_key: slug(titulo)_slug(orgao)_slug(prazo) onde slug = minúsculas, sem acentos, sem pontuação, espaços→_
-- origem_url: URL da fonte que gerou o item`;
+- origem_url: URL da fonte que gerou o item
+- valor: texto livre ou "" se não informado
+- publico_alvo: texto curto ou "" se não informado
+- resumo: 1-2 frases ou "" se não informado
+- documentos_resumo: lista separada por vírgula ou "" se não informado`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -301,6 +309,10 @@ serve(async (req) => {
         origem_url: e.origem_url || "",
         inferido: e.inferido || false,
         session_key: e.session_key || "",
+        valor: e.valor || "",
+        publico_alvo: e.publico_alvo || "",
+        resumo: e.resumo || "",
+        documentos_resumo: e.documentos_resumo || "",
       }));
 
       const { error: insertError } = await getAdminClient()
