@@ -91,7 +91,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const drawerItems = [
     gestaoItems[2], // DNA Musical
     gestaoItems[3], // Editais
-    gestaoItems[4], // Profissionais
+    gestaoItems[4], // Criativo
+    gestaoItems[5], // Profissionais
     tutorialNavItem,
     settingsNavItem,
   ];
