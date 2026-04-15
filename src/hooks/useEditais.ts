@@ -18,6 +18,10 @@ export interface Edital {
   session_key: string;
   project_id?: string | null;
   created_at?: string;
+  valor?: string;
+  publico_alvo?: string;
+  resumo?: string;
+  documentos_resumo?: string;
 }
 
 export interface SearchResult {
@@ -106,6 +110,10 @@ export function useEditais(projectId?: string | null) {
         origem_url: e.origem_url,
         inferido: e.inferido,
         session_key: e.session_key,
+        valor: e.valor || "",
+        publico_alvo: e.publico_alvo || "",
+        resumo: e.resumo || "",
+        documentos_resumo: e.documentos_resumo || "",
       }));
       const { error } = await supabase.from("editais").insert(rows as any);
       if (error) throw error;
@@ -140,9 +148,9 @@ export function useEditais(projectId?: string | null) {
   }, [toast]);
 
   const exportCSV = useCallback((items: Edital[]) => {
-    const header = "Título;Estado;Órgão;Abertura;Prazo;Status;Área;Link";
+    const header = "Título;Estado;Órgão;Abertura;Prazo;Status;Área;Valor;Público-alvo;Resumo;Link";
     const rows = items.map((e) =>
-      [e.titulo, e.estado, e.orgao, e.abertura || "—", e.prazo || "—", e.status, e.area, e.link]
+      [e.titulo, e.estado, e.orgao, e.abertura || "—", e.prazo || "—", e.status, e.area, e.valor || "—", e.publico_alvo || "—", e.resumo || "—", e.link]
         .map((v) => `"${(v || "").replace(/"/g, '""')}"`)
         .join(";")
     );

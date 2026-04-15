@@ -179,6 +179,7 @@ export type Database = {
           abertura: string | null
           area: string | null
           created_at: string | null
+          documentos_resumo: string
           estado: string | null
           id: string
           inferido: boolean | null
@@ -188,15 +189,19 @@ export type Database = {
           origem_url: string | null
           prazo: string | null
           project_id: string | null
+          publico_alvo: string
+          resumo: string
           session_key: string | null
           status: string | null
           titulo: string
           user_id: string
+          valor: string
         }
         Insert: {
           abertura?: string | null
           area?: string | null
           created_at?: string | null
+          documentos_resumo?: string
           estado?: string | null
           id?: string
           inferido?: boolean | null
@@ -206,15 +211,19 @@ export type Database = {
           origem_url?: string | null
           prazo?: string | null
           project_id?: string | null
+          publico_alvo?: string
+          resumo?: string
           session_key?: string | null
           status?: string | null
           titulo: string
           user_id: string
+          valor?: string
         }
         Update: {
           abertura?: string | null
           area?: string | null
           created_at?: string | null
+          documentos_resumo?: string
           estado?: string | null
           id?: string
           inferido?: boolean | null
@@ -224,10 +233,13 @@ export type Database = {
           origem_url?: string | null
           prazo?: string | null
           project_id?: string | null
+          publico_alvo?: string
+          resumo?: string
           session_key?: string | null
           status?: string | null
           titulo?: string
           user_id?: string
+          valor?: string
         }
         Relationships: [
           {
