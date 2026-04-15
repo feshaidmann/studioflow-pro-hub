@@ -237,6 +237,11 @@ function EditalTable({
         {items.map((e, i) => (
           <div key={e.id || e.session_key || i} className="rounded-lg border border-border p-3 space-y-2 cursor-pointer hover:bg-muted/30 transition-colors" onClick={() => onViewDetail?.(e)}>
             <div className="flex items-start justify-between gap-2">
+              {onToggleCompare && e.id && (
+                <div className="shrink-0 mt-0.5" onClick={(ev) => ev.stopPropagation()}>
+                  <Checkbox checked={compareIds?.has(e.id) || false} onCheckedChange={() => onToggleCompare(e.id!)} />
+                </div>
+              )}
               <p className="text-sm font-medium leading-snug flex-1">
                 {e.titulo}
                 {e.inferido && <Info className="inline h-3 w-3 text-muted-foreground ml-1" />}
