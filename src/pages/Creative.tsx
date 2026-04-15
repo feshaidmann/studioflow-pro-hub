@@ -279,6 +279,7 @@ export default function Creative() {
                           onClick={() => handleDerive(a.public_url || "")}
                         >
                           <Layers className="h-3 w-3" />
+                        </Button>
                         <Button
                           variant="ghost"
                           size="icon"
