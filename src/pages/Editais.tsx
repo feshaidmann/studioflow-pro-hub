@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Search, Download, Save, Trash2, ExternalLink, FileText, Pencil, Info, BarChart3, ClipboardList, Sparkles, ChevronDown, ArrowRight, Plus, MoreHorizontal, KanbanSquare, FolderOpen, Bot, Trophy } from "lucide-react";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,7 +24,7 @@ import { useProjects } from "@/contexts/ProjectContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import EditalDocumentsBank from "@/components/editais/EditalDocumentsBank";
 import ApplicationChecklist from "@/components/editais/ApplicationChecklist";
-import EditalAIAssistant from "@/components/editais/EditalAIAssistant";
+import EditalAIAssistant, { type AIContext } from "@/components/editais/EditalAIAssistant";
 import EditalResultModal from "@/components/editais/EditalResultModal";
 import EditalMetricsDashboard from "@/components/editais/EditalMetricsDashboard";
 
@@ -341,12 +342,13 @@ const SEARCH_EXAMPLES = [
 ];
 
 /* ── Pipeline de candidaturas ── */
-function PipelineTab({ applications, onUpdate, onDelete, onOpenChecklist, onOpenResult, projects, t }: {
+function PipelineTab({ applications, onUpdate, onDelete, onOpenChecklist, onOpenResult, onOpenAI, projects, t }: {
   applications: EditalApplication[];
   onUpdate: (params: { id: string; status?: ApplicationStatus; notas?: string; project_id?: string | null }) => void;
   onDelete: (id: string) => void;
   onOpenChecklist: (appId: string) => void;
   onOpenResult: (appId: string) => void;
+  onOpenAI: (app: EditalApplication) => void;
   projects: { id: string; name: string }[];
   t: (k: string) => string;
 }) {
