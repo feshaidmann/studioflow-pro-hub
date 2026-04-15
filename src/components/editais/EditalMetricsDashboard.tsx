@@ -97,10 +97,10 @@ export default function EditalMetricsDashboard({ applications }: Props) {
             const count = metrics.byStatus[status];
             const pct = metrics.total > 0 ? (count / metrics.total) * 100 : 0;
             return (
-              <div key={status} className="flex items-center gap-3">
-                <span className="text-xs w-20 text-right text-muted-foreground">{APPLICATION_STATUS_LABELS[status]}</span>
+              <div key={status} className="flex items-center gap-2">
+                <span className="text-[10px] sm:text-xs w-16 sm:w-20 text-right text-muted-foreground truncate">{APPLICATION_STATUS_LABELS[status]}</span>
                 <Progress value={pct} className="flex-1 h-2" />
-                <span className="text-xs font-medium w-8">{count}</span>
+                <span className="text-xs font-medium w-6 text-right">{count}</span>
               </div>
             );
           })}
