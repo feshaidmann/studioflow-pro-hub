@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import FormatSelector, { FORMAT_OPTIONS, type FormatOption } from "@/components/creative/FormatSelector";
 import StyleChips from "@/components/creative/StyleChips";
 import ImagePreview from "@/components/creative/ImagePreview";
+import ReferenceImageUpload from "@/components/creative/ReferenceImageUpload";
 import { useCreativeAssets } from "@/hooks/useCreativeAssets";
 import { useProjects } from "@/contexts/ProjectContext";
 import { toast } from "@/hooks/use-toast";
@@ -28,6 +29,8 @@ export default function Creative() {
   const [isSaved, setIsSaved] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingLoading, setEditingLoading] = useState(false);
+  const [referenceImage, setReferenceImage] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState("create");
 
   const { assets, isLoading: assetsLoading, generating, generate, deleteAsset } = useCreativeAssets();
 
@@ -52,6 +55,7 @@ export default function Creative() {
       format: selectedFormat.id,
       width: selectedFormat.width,
       height: selectedFormat.height,
+      editImageUrl: referenceImage || undefined,
       projectId: projectIdParam || undefined,
     });
 
@@ -60,7 +64,7 @@ export default function Creative() {
       setGeneratedBase64(result.imageBase64);
       setIsSaved(true); // auto-saved by edge function
     }
-  }, [prompt, style, selectedFormat, linkedProject, projectIdParam, generate]);
+  }, [prompt, style, selectedFormat, linkedProject, projectIdParam, generate, referenceImage]);
 
   const handleRegenerate = useCallback(async () => {
     setIsSaved(false);
@@ -74,6 +78,7 @@ export default function Creative() {
       format: selectedFormat.id,
       width: selectedFormat.width,
       height: selectedFormat.height,
+      editImageUrl: referenceImage || undefined,
       projectId: projectIdParam || undefined,
     });
 
@@ -82,7 +87,12 @@ export default function Creative() {
       setGeneratedBase64(result.imageBase64);
       setIsSaved(true);
     }
-  }, [prompt, style, selectedFormat, linkedProject, projectIdParam, generate]);
+  }, [prompt, style, selectedFormat, linkedProject, projectIdParam, generate, referenceImage]);
+
+  const handleUseAsReference = (url: string) => {
+    setReferenceImage(url);
+    setActiveTab("create");
+  };
 
   const handleEdit = () => {
     setEditPrompt("");
@@ -132,7 +142,7 @@ export default function Creative() {
         )}
       </div>
 
-      <Tabs defaultValue="create">
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="create">
             <Sparkles className="h-3.5 w-3.5 mr-1" /> Criar
@@ -157,6 +167,18 @@ export default function Creative() {
               </div>
 
               <div>
+                <label className="text-xs font-medium text-muted-foreground mb-2 block">
+                  Imagem de referência (opcional)
+                </label>
+                <ReferenceImageUpload image={referenceImage} onImageChange={setReferenceImage} />
+                {referenceImage && (
+                  <p className="text-[10px] text-muted-foreground mt-1">
+                    A IA usará esta imagem como base para criar sua peça.
+                  </p>
+                )}
+              </div>
+
+              <div>
                 <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Descreva sua ideia</label>
                 <Textarea
                   value={prompt}
@@ -173,7 +195,7 @@ export default function Creative() {
                 disabled={generating || !prompt.trim()}
               >
                 <Sparkles className="h-4 w-4 mr-1.5" />
-                {generating ? "Gerando…" : "Gerar Imagem"}
+                {generating ? "Gerando…" : referenceImage ? "Gerar a partir da referência" : "Gerar Imagem"}
               </Button>
             </div>
 
@@ -230,6 +252,15 @@ export default function Creative() {
                           }}
                         >
                           <ImageIcon className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 text-white/80 hover:text-primary"
+                          title="Usar como referência"
+                          onClick={() => handleUseAsReference(a.public_url || "")}
+                        >
+                          <Upload className="h-3 w-3" />
                         </Button>
                         <Button
                           variant="ghost"
