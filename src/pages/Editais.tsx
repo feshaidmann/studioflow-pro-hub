@@ -11,13 +11,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { toast } from "sonner";
 import { useEditais, type Edital } from "@/hooks/useEditais";
 import { useEditalApplications, useCreateApplication, useUpdateApplication, useDeleteApplication, APPLICATION_STATUS_LABELS, APPLICATION_STATUS_COLORS, type ApplicationStatus, type EditalApplication } from "@/hooks/useEditalApplications";
 import { useProjects } from "@/contexts/ProjectContext";
@@ -70,13 +71,13 @@ function formatDate(d: string | null) {
 }
 
 function EditalDetailSheet({
-  edital, open, onOpenChange, onDelete, onInscricao, t,
+  edital, open, onOpenChange, onDelete, onStartApplication, t,
 }: {
   edital: Edital | null;
   open: boolean;
   onOpenChange: (o: boolean) => void;
   onDelete?: (id: string) => void;
-  onInscricao?: (id: string) => void;
+  onStartApplication?: (edital: Edital) => void;
   t: (k: string) => string;
 }) {
   if (!edital) return null;
@@ -130,9 +131,9 @@ function EditalDetailSheet({
                 </a>
               </Button>
             )}
-            {onInscricao && edital.id && (
-              <Button size="sm" variant="outline" onClick={() => { onInscricao(edital.id!); onOpenChange(false); }}>
-                <ClipboardList className="h-3.5 w-3.5 mr-1.5" />Iniciar inscrição
+            {onStartApplication && edital.id && (
+              <Button size="sm" variant="outline" onClick={() => { onStartApplication(edital); onOpenChange(false); }}>
+                <ClipboardList className="h-3.5 w-3.5 mr-1.5" />Candidatar
               </Button>
             )}
             {onDelete && edital.id && (
@@ -147,13 +148,78 @@ function EditalDetailSheet({
   );
 }
 
+/* ── Confirmation dialog for starting application ── */
+function StartApplicationDialog({
+  edital, open, onOpenChange, projects, onConfirm,
+}: {
+  edital: Edital | null;
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  projects: { id: string; name: string }[];
+  onConfirm: (params: { edital_id: string; project_id?: string | null; notas?: string }) => void;
+}) {
+  const [projectId, setProjectId] = useState<string>("none");
+  const [notas, setNotas] = useState("");
+
+  if (!edital) return null;
+
+  const handleConfirm = () => {
+    onConfirm({
+      edital_id: edital.id!,
+      project_id: projectId !== "none" ? projectId : null,
+      notas: notas.trim() || undefined,
+    });
+    setProjectId("none");
+    setNotas("");
+    onOpenChange(false);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Iniciar candidatura</DialogTitle>
+          <DialogDescription className="text-sm">
+            {edital.titulo}
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div>
+            <Label className="text-xs">Vincular a um projeto (opcional)</Label>
+            <Select value={projectId} onValueChange={setProjectId}>
+              <SelectTrigger><SelectValue placeholder="Nenhum" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Nenhum</SelectItem>
+                {projects.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label className="text-xs">Nota inicial (opcional)</Label>
+            <Input value={notas} onChange={(e) => setNotas(e.target.value)} placeholder="Ex: Vi no Instagram, prazo curto" />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+          <Button onClick={handleConfirm}>
+            <ClipboardList className="h-3.5 w-3.5 mr-1.5" />
+            Iniciar
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function EditalTable({
-  items, onDelete, onEdit, onInscricao, onViewDetail, t,
+  items, onDelete, onEdit, onStartApplication, onViewDetail, t,
 }: {
   items: Edital[];
   onDelete?: (id: string) => void;
   onEdit?: (e: Edital) => void;
-  onInscricao?: (id: string) => void;
+  onStartApplication?: (e: Edital) => void;
   onViewDetail?: (e: Edital) => void;
   t: (k: string) => string;
 }) {
@@ -186,26 +252,39 @@ function EditalTable({
                 <span className="text-xs font-semibold text-green-700">{e.valor}</span>
               </div>
             )}
-            <div className="flex items-center gap-1 pt-1" onClick={(ev) => ev.stopPropagation()}>
-              {e.link && e.link !== "—" && (
-                <a href={e.link} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                  <Button variant="ghost" size="icon" className="h-7 w-7"><ExternalLink className="h-3.5 w-3.5" /></Button>
-                </a>
-              )}
-              {onInscricao && e.id && (
-                <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary" onClick={() => onInscricao(e.id!)}>
-                  <ClipboardList className="h-3.5 w-3.5" />
+            {/* Mobile: labeled CTA + secondary actions in dropdown */}
+            <div className="flex items-center gap-1.5 pt-1" onClick={(ev) => ev.stopPropagation()}>
+              {onStartApplication && e.id && (
+                <Button variant="default" size="sm" className="h-7 text-xs" onClick={() => onStartApplication(e)}>
+                  <ClipboardList className="h-3 w-3 mr-1" />
+                  Candidatar
                 </Button>
               )}
-              {onEdit && (
-                <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={() => onEdit(e)}>
-                  <Pencil className="h-3.5 w-3.5" />
-                </Button>
-              )}
-              {onDelete && (
-                <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => e.id && onDelete(e.id)}>
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
+              {(onEdit || onDelete || (e.link && e.link !== "—")) && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-7 w-7"><MoreHorizontal className="h-3.5 w-3.5" /></Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    {e.link && e.link !== "—" && (
+                      <DropdownMenuItem asChild>
+                        <a href={e.link} target="_blank" rel="noopener noreferrer">
+                          <ExternalLink className="h-3.5 w-3.5 mr-2" />Abrir edital
+                        </a>
+                      </DropdownMenuItem>
+                    )}
+                    {onEdit && (
+                      <DropdownMenuItem onClick={() => onEdit(e)}>
+                        <Pencil className="h-3.5 w-3.5 mr-2" />Editar
+                      </DropdownMenuItem>
+                    )}
+                    {onDelete && e.id && (
+                      <DropdownMenuItem className="text-destructive" onClick={() => onDelete(e.id!)}>
+                        <Trash2 className="h-3.5 w-3.5 mr-2" />Remover
+                      </DropdownMenuItem>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               )}
             </div>
           </div>
@@ -227,7 +306,7 @@ function EditalTable({
             <TableHead className="w-24">Status</TableHead>
             <TableHead className="w-24">Área</TableHead>
             <TableHead className="w-16">Link</TableHead>
-            {(onDelete || onEdit || onInscricao) && <TableHead className="w-28" />}
+            {(onDelete || onEdit || onStartApplication) && <TableHead className="w-28" />}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -259,17 +338,23 @@ function EditalTable({
                   <a href={e.link} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline"><ExternalLink className="h-3.5 w-3.5" /></a>
                 ) : "—"}
               </TableCell>
-              {(onDelete || onEdit || onInscricao) && (
+              {(onDelete || onEdit || onStartApplication) && (
                 <TableCell onClick={(ev) => ev.stopPropagation()}>
                   <div className="flex gap-1">
-                    {onInscricao && e.id && (
-                      <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary" onClick={() => onInscricao(e.id!)}><ClipboardList className="h-3.5 w-3.5" /></Button>
+                    {onStartApplication && e.id && (
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary" onClick={() => onStartApplication(e)}>
+                        <ClipboardList className="h-3.5 w-3.5" />
+                      </Button>
                     )}
                     {onEdit && (
-                      <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={() => onEdit(e)}><Pencil className="h-3.5 w-3.5" /></Button>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={() => onEdit(e)}>
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
                     )}
                     {onDelete && (
-                      <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => e.id && onDelete(e.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => e.id && onDelete(e.id)}>
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
                     )}
                   </div>
                 </TableCell>
@@ -449,13 +534,14 @@ const SEARCH_EXAMPLES = [
 ];
 
 /* ── Pipeline de candidaturas ── */
-function PipelineTab({ applications, onUpdate, onDelete, onOpenChecklist, onOpenResult, onOpenAI, projects, t }: {
+function PipelineTab({ applications, onUpdate, onDelete, onOpenChecklist, onOpenResult, onOpenAI, onGoToInscricao, projects, t }: {
   applications: EditalApplication[];
   onUpdate: (params: { id: string; status?: ApplicationStatus; notas?: string; project_id?: string | null }) => void;
   onDelete: (id: string) => void;
   onOpenChecklist: (appId: string) => void;
   onOpenResult: (appId: string) => void;
   onOpenAI: (app: EditalApplication) => void;
+  onGoToInscricao: (editalId: string) => void;
   projects: { id: string; name: string }[];
   t: (k: string) => string;
 }) {
@@ -476,6 +562,50 @@ function PipelineTab({ applications, onUpdate, onDelete, onOpenChecklist, onOpen
     const idx = statuses.indexOf(s);
     return idx < statuses.length - 1 ? statuses[idx + 1] : null;
   };
+
+  const renderCardActions = (app: EditalApplication) => (
+    <DropdownMenuContent align="end">
+      {nextStatus(app.status) && (
+        <DropdownMenuItem onClick={() => onUpdate({ id: app.id, status: nextStatus(app.status)! })}>
+          <ArrowRight className="h-3.5 w-3.5 mr-2" />
+          Mover → {APPLICATION_STATUS_LABELS[nextStatus(app.status)!]}
+        </DropdownMenuItem>
+      )}
+      {statuses.filter(s => s !== app.status && s !== nextStatus(app.status)).map(s => (
+        <DropdownMenuItem key={s} onClick={() => onUpdate({ id: app.id, status: s })}>
+          Mover → {APPLICATION_STATUS_LABELS[s]}
+        </DropdownMenuItem>
+      ))}
+      <DropdownMenuItem onClick={() => onGoToInscricao(app.edital_id)}>
+        <FileText className="h-3.5 w-3.5 mr-2" />
+        Preencher inscrição
+      </DropdownMenuItem>
+      <DropdownMenuItem onClick={() => onOpenAI(app)}>
+        <Sparkles className="h-3.5 w-3.5 mr-2" />
+        Assistente IA
+      </DropdownMenuItem>
+      <DropdownMenuItem onClick={() => onOpenChecklist(app.id)}>
+        <ClipboardList className="h-3.5 w-3.5 mr-2" />
+        Checklist
+      </DropdownMenuItem>
+      <DropdownMenuItem onClick={() => onOpenResult(app.id)}>
+        <Trophy className="h-3.5 w-3.5 mr-2" />
+        Registrar resultado
+      </DropdownMenuItem>
+      {app.edital?.link && (
+        <DropdownMenuItem asChild>
+          <a href={app.edital.link} target="_blank" rel="noopener noreferrer">
+            <ExternalLink className="h-3.5 w-3.5 mr-2" />
+            Abrir edital
+          </a>
+        </DropdownMenuItem>
+      )}
+      <DropdownMenuItem className="text-destructive" onClick={() => onDelete(app.id)}>
+        <Trash2 className="h-3.5 w-3.5 mr-2" />
+        Remover
+      </DropdownMenuItem>
+    </DropdownMenuContent>
+  );
 
   if (isMobile) {
     return (
@@ -501,38 +631,7 @@ function PipelineTab({ applications, onUpdate, onDelete, onOpenChecklist, onOpen
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0"><MoreHorizontal className="h-3.5 w-3.5" /></Button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            {nextStatus(app.status) && (
-                              <DropdownMenuItem onClick={() => onUpdate({ id: app.id, status: nextStatus(app.status)! })}>
-                                <ArrowRight className="h-3.5 w-3.5 mr-2" />
-                                Mover → {APPLICATION_STATUS_LABELS[nextStatus(app.status)!]}
-                              </DropdownMenuItem>
-                            )}
-                            <DropdownMenuItem onClick={() => onOpenAI(app)}>
-                              <Sparkles className="h-3.5 w-3.5 mr-2" />
-                              Assistente IA
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => onOpenChecklist(app.id)}>
-                              <ClipboardList className="h-3.5 w-3.5 mr-2" />
-                              Checklist
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => onOpenResult(app.id)}>
-                              <Trophy className="h-3.5 w-3.5 mr-2" />
-                              Registrar resultado
-                            </DropdownMenuItem>
-                            {app.edital?.link && (
-                              <DropdownMenuItem asChild>
-                                <a href={app.edital.link} target="_blank" rel="noopener noreferrer">
-                                  <ExternalLink className="h-3.5 w-3.5 mr-2" />
-                                  Abrir edital
-                                </a>
-                              </DropdownMenuItem>
-                            )}
-                            <DropdownMenuItem className="text-destructive" onClick={() => onDelete(app.id)}>
-                              <Trash2 className="h-3.5 w-3.5 mr-2" />
-                              Remover
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
+                          {renderCardActions(app)}
                         </DropdownMenu>
                       </div>
                       <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
@@ -540,6 +639,25 @@ function PipelineTab({ applications, onUpdate, onDelete, onOpenChecklist, onOpen
                         {app.edital?.prazo && <span>Prazo: {formatDate(app.edital.prazo)}</span>}
                       </div>
                       {app.notas && <p className="text-xs text-muted-foreground italic">{app.notas}</p>}
+                      {/* Primary CTA based on status */}
+                      {(app.status === "interesse" || app.status === "preparando") && (
+                        <Button
+                          size="sm"
+                          variant={app.status === "interesse" ? "outline" : "default"}
+                          className="h-7 text-xs w-full"
+                          onClick={() => {
+                            if (app.status === "interesse") {
+                              onUpdate({ id: app.id, status: "preparando" });
+                              onGoToInscricao(app.edital_id);
+                            } else {
+                              onGoToInscricao(app.edital_id);
+                            }
+                          }}
+                        >
+                          <FileText className="h-3 w-3 mr-1" />
+                          {app.status === "interesse" ? "Começar preparação" : "Preencher inscrição"}
+                        </Button>
+                      )}
                     </CardContent>
                   </Card>
                 ))}
@@ -574,43 +692,7 @@ function PipelineTab({ applications, onUpdate, onDelete, onOpenChecklist, onOpen
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0"><MoreHorizontal className="h-3 w-3" /></Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        {nextStatus(app.status) && (
-                          <DropdownMenuItem onClick={() => onUpdate({ id: app.id, status: nextStatus(app.status)! })}>
-                            <ArrowRight className="h-3.5 w-3.5 mr-2" />
-                            Mover → {APPLICATION_STATUS_LABELS[nextStatus(app.status)!]}
-                          </DropdownMenuItem>
-                        )}
-                        {statuses.filter(s => s !== app.status && s !== nextStatus(app.status)).map(s => (
-                          <DropdownMenuItem key={s} onClick={() => onUpdate({ id: app.id, status: s })}>
-                            Mover → {APPLICATION_STATUS_LABELS[s]}
-                          </DropdownMenuItem>
-                        ))}
-                          <DropdownMenuItem onClick={() => onOpenAI(app)}>
-                            <Sparkles className="h-3.5 w-3.5 mr-2" />
-                            Assistente IA
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => onOpenChecklist(app.id)}>
-                            <ClipboardList className="h-3.5 w-3.5 mr-2" />
-                            Checklist
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => onOpenResult(app.id)}>
-                            <Trophy className="h-3.5 w-3.5 mr-2" />
-                            Registrar resultado
-                          </DropdownMenuItem>
-                          {app.edital?.link && (
-                            <DropdownMenuItem asChild>
-                              <a href={app.edital.link} target="_blank" rel="noopener noreferrer">
-                                <ExternalLink className="h-3.5 w-3.5 mr-2" />
-                                Abrir edital
-                              </a>
-                            </DropdownMenuItem>
-                          )}
-                        <DropdownMenuItem className="text-destructive" onClick={() => onDelete(app.id)}>
-                          <Trash2 className="h-3.5 w-3.5 mr-2" />
-                          Remover
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
+                      {renderCardActions(app)}
                     </DropdownMenu>
                   </div>
                   <div className="text-[11px] text-muted-foreground space-y-0.5">
@@ -618,6 +700,25 @@ function PipelineTab({ applications, onUpdate, onDelete, onOpenChecklist, onOpen
                     {app.edital?.prazo && <p>Prazo: {formatDate(app.edital.prazo)}</p>}
                   </div>
                   {app.notas && <p className="text-[11px] text-muted-foreground italic line-clamp-2">{app.notas}</p>}
+                  {/* CTA: Go to inscription form */}
+                  {(app.status === "interesse" || app.status === "preparando") && (
+                    <Button
+                      size="sm"
+                      variant={app.status === "interesse" ? "outline" : "default"}
+                      className="h-6 text-[10px] w-full"
+                      onClick={() => {
+                        if (app.status === "interesse") {
+                          onUpdate({ id: app.id, status: "preparando" });
+                          onGoToInscricao(app.edital_id);
+                        } else {
+                          onGoToInscricao(app.edital_id);
+                        }
+                      }}
+                    >
+                      <FileText className="h-2.5 w-2.5 mr-0.5" />
+                      {app.status === "interesse" ? "Começar" : "Inscrição"}
+                    </Button>
+                  )}
                 </CardContent>
               </Card>
             ))
@@ -633,6 +734,7 @@ export default function Editais() {
   const { t } = useLanguage();
   const { projects } = useProjects();
   const [query, setQuery] = useState("");
+  const isMobile = useIsMobile();
 
   const [editingEdital, setEditingEdital] = useState<Edital | null>(null);
   const [editOpen, setEditOpen] = useState(false);
@@ -645,6 +747,11 @@ export default function Editais() {
   const [resultAppId, setResultAppId] = useState<string | null>(null);
   const [aiSheetOpen, setAiSheetOpen] = useState(false);
   const [aiContext, setAiContext] = useState<AIContext | undefined>(undefined);
+  // Confirmation dialog for candidatura
+  const [confirmAppEdital, setConfirmAppEdital] = useState<Edital | null>(null);
+  const [confirmAppOpen, setConfirmAppOpen] = useState(false);
+  // Sub-view for "Meus Editais": 'salvos' or 'pipeline'
+  const [meusView, setMeusView] = useState<"salvos" | "pipeline">("salvos");
 
   const { editais, loading, searching, searchResult, search, saveResults, deleteEdital, updateEdital, exportCSV } = useEditais();
   const { data: applications = [], isLoading: loadingApps } = useEditalApplications();
@@ -662,7 +769,15 @@ export default function Editais() {
   const resultEditais = sortAndFilterEditais(searchResult?.editais || [], "Todos");
 
   const handleSaveAll = () => {
-    if (resultEditais.length > 0) saveResults(resultEditais);
+    if (resultEditais.length > 0) {
+      saveResults(resultEditais);
+      toast.success("Editais salvos!", {
+        action: {
+          label: "Iniciar candidatura →",
+          onClick: () => setMeusView("salvos"),
+        },
+      });
+    }
   };
 
   const savedFiltered = useMemo(() => {
@@ -681,6 +796,26 @@ export default function Editais() {
     setEditOpen(true);
   };
 
+  const handleStartApplication = (edital: Edital) => {
+    setConfirmAppEdital(edital);
+    setConfirmAppOpen(true);
+  };
+
+  const handleConfirmApplication = (params: { edital_id: string; project_id?: string | null; notas?: string }) => {
+    createApplication.mutate(params, {
+      onSuccess: () => {
+        toast.success("Candidatura iniciada!", {
+          action: {
+            label: "Ir para inscrição →",
+            onClick: () => navigate(`/editais/inscricao/${params.edital_id}`),
+          },
+        });
+      },
+    });
+  };
+
+  const projectList = projects.map(p => ({ id: p.id, name: p.name }));
+
   return (
     <div className="p-4 md:p-6 max-w-6xl mx-auto space-y-6">
       <div>
@@ -694,21 +829,13 @@ export default function Editais() {
             <Search className="h-3.5 w-3.5 mr-1" />
             {t("editais.tabSearch")}
           </TabsTrigger>
-          <TabsTrigger value="salvos" className="text-xs px-2.5 md:px-3 shrink-0">
+          <TabsTrigger value="meus" className="text-xs px-2.5 md:px-3 shrink-0">
             <FileText className="h-3.5 w-3.5 mr-1" />
-            {t("editais.tabSaved")} {editais.length > 0 && `(${editais.length})`}
-          </TabsTrigger>
-          <TabsTrigger value="pipeline" className="text-xs px-2.5 md:px-3 shrink-0">
-            <KanbanSquare className="h-3.5 w-3.5 mr-1" />
-            Candidaturas {applications.length > 0 && `(${applications.length})`}
+            Meus Editais {(editais.length + applications.length) > 0 && `(${editais.length + applications.length})`}
           </TabsTrigger>
           <TabsTrigger value="documentos" className="text-xs px-2.5 md:px-3 shrink-0">
             <FolderOpen className="h-3.5 w-3.5 mr-1" />
             Documentos
-          </TabsTrigger>
-          <TabsTrigger value="metricas" className="text-xs px-2.5 md:px-3 shrink-0">
-            <BarChart3 className="h-3.5 w-3.5 mr-1" />
-            Métricas
           </TabsTrigger>
         </TabsList>
 
@@ -799,168 +926,229 @@ export default function Editais() {
           )}
         </TabsContent>
 
-        {/* ── Tab: Meus Editais ── */}
-        <TabsContent value="salvos" className="space-y-6 mt-4">
-          {/* Métricas colapsáveis */}
-          {editais.length > 0 && (
+        {/* ── Tab: Meus Editais (salvos + pipeline consolidated) ── */}
+        <TabsContent value="meus" className="space-y-4 mt-4">
+          {/* Sub-view toggle */}
+          <div className="flex gap-1.5">
+            <button
+              onClick={() => setMeusView("salvos")}
+              className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
+                meusView === "salvos"
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "bg-background text-muted-foreground border-border hover:bg-muted"
+              }`}
+            >
+              <FileText className="inline h-3 w-3 mr-1" />
+              Editais salvos ({editais.length})
+            </button>
+            <button
+              onClick={() => setMeusView("pipeline")}
+              className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
+                meusView === "pipeline"
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "bg-background text-muted-foreground border-border hover:bg-muted"
+              }`}
+            >
+              <KanbanSquare className="inline h-3 w-3 mr-1" />
+              Candidaturas ({applications.length})
+            </button>
+          </div>
+
+          {/* Collapsible metrics */}
+          {(editais.length > 0 || applications.length > 0) && (
             <Collapsible>
               <CollapsibleTrigger asChild>
-                <Button variant="ghost" size="sm" className="text-xs text-muted-foreground gap-1 mb-2">
+                <Button variant="ghost" size="sm" className="text-xs text-muted-foreground gap-1">
                   <BarChart3 className="h-3.5 w-3.5" />
-                  {t("editais.metrics")}
+                  Métricas
                   <ChevronDown className="h-3 w-3" />
                 </Button>
               </CollapsibleTrigger>
-              <CollapsibleContent>
-                <MetricasPanel editais={editais as Edital[]} />
+              <CollapsibleContent className="space-y-4 pt-2">
+                {editais.length > 0 && (
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground mb-2">Editais salvos</p>
+                    <MetricasPanel editais={editais as Edital[]} />
+                  </div>
+                )}
+                {applications.length > 0 && (
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground mb-2">Candidaturas ativas</p>
+                    <EditalMetricsDashboard applications={applications} />
+                  </div>
+                )}
               </CollapsibleContent>
             </Collapsible>
           )}
 
-          {editais.length === 0 && !loading ? (
-            <Card>
-              <CardContent className="py-12 flex flex-col items-center text-center text-muted-foreground">
-                <FileText className="h-10 w-10 mb-3 opacity-40" />
-                <p className="text-sm">{t("editais.noSaved")}</p>
-                <p className="text-xs mt-1">{t("editais.noSavedHint")}</p>
-              </CardContent>
-            </Card>
-          ) : (
-            <Card>
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between gap-3 flex-wrap">
-                  <CardTitle className="text-base">{t("editais.saved")} ({savedFiltered.length})</CardTitle>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      value={savedSearch}
-                      onChange={(e) => { setSavedSearch(e.target.value); setSavedPage(1); }}
-                      placeholder={t("editais.searchSaved")}
-                      className="w-56"
-                    />
-                    <Button size="sm" variant="outline" onClick={() => exportCSV(savedFiltered)}>
-                      <Download className="h-3.5 w-3.5 mr-1.5" />
-                      CSV
-                    </Button>
-                  </div>
-                </div>
-                {/* Status filter badges */}
-                <div className="flex gap-1.5 flex-wrap pt-2">
-                  {[
-                    { value: "Todos", label: "Todos" },
-                    { value: "Aberto", label: "Abertos" },
-                    { value: "Encerrado", label: "Encerrados" },
-                    { value: "Indefinido", label: "Indefinido" },
-                  ].map((opt) => (
-                    <button
-                      key={opt.value}
-                      onClick={() => { setSavedFilterStatus(opt.value); setSavedPage(1); }}
-                      className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
-                        savedFilterStatus === opt.value
-                          ? "bg-primary text-primary-foreground border-primary"
-                          : "bg-background text-muted-foreground border-border hover:bg-muted"
-                      }`}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {savedPaginated.length > 0 ? (
-                  <EditalTable items={savedPaginated} onDelete={deleteEdital} onEdit={handleEdit} onInscricao={(id) => createApplication.mutate({ edital_id: id })} onViewDetail={(e) => { setDetailEdital(e); setDetailOpen(true); }} t={t} />
-                ) : (
-                  <p className="text-sm text-muted-foreground py-4 text-center">{t("editais.noResults")}</p>
-                )}
+          {/* Sub-view: Editais salvos */}
+          {meusView === "salvos" && (
+            <>
+              {editais.length === 0 && !loading ? (
+                <Card>
+                  <CardContent className="py-12 flex flex-col items-center text-center text-muted-foreground">
+                    <FileText className="h-10 w-10 mb-3 opacity-40" />
+                    <p className="text-sm">{t("editais.noSaved")}</p>
+                    <p className="text-xs mt-1">{t("editais.noSavedHint")}</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <Card>
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center justify-between gap-3 flex-wrap">
+                      <CardTitle className="text-base">{t("editais.saved")} ({savedFiltered.length})</CardTitle>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          value={savedSearch}
+                          onChange={(e) => { setSavedSearch(e.target.value); setSavedPage(1); }}
+                          placeholder={t("editais.searchSaved")}
+                          className="w-56"
+                        />
+                        <Button size="sm" variant="outline" onClick={() => exportCSV(savedFiltered)}>
+                          <Download className="h-3.5 w-3.5 mr-1.5" />
+                          CSV
+                        </Button>
+                      </div>
+                    </div>
+                    {/* Status filter badges */}
+                    <div className="flex gap-1.5 flex-wrap pt-2">
+                      {[
+                        { value: "Todos", label: "Todos" },
+                        { value: "Aberto", label: "Abertos" },
+                        { value: "Encerrado", label: "Encerrados" },
+                        { value: "Indefinido", label: "Indefinido" },
+                      ].map((opt) => (
+                        <button
+                          key={opt.value}
+                          onClick={() => { setSavedFilterStatus(opt.value); setSavedPage(1); }}
+                          className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
+                            savedFilterStatus === opt.value
+                              ? "bg-primary text-primary-foreground border-primary"
+                              : "bg-background text-muted-foreground border-border hover:bg-muted"
+                          }`}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {savedPaginated.length > 0 ? (
+                      <EditalTable
+                        items={savedPaginated}
+                        onDelete={deleteEdital}
+                        onEdit={handleEdit}
+                        onStartApplication={handleStartApplication}
+                        onViewDetail={(e) => { setDetailEdital(e); setDetailOpen(true); }}
+                        t={t}
+                      />
+                    ) : (
+                      <p className="text-sm text-muted-foreground py-4 text-center">{t("editais.noResults")}</p>
+                    )}
 
-                {totalSavedPages > 1 && (
-                  <div className="flex items-center justify-between pt-2">
-                    <p className="text-xs text-muted-foreground">
-                      {t("editais.showing")} {(clampedPage - 1) * ITEMS_PER_PAGE + 1}–{Math.min(clampedPage * ITEMS_PER_PAGE, savedFiltered.length)} {t("editais.of")} {savedFiltered.length}
-                    </p>
-                    <Pagination>
-                      <PaginationContent>
-                        <PaginationItem>
-                          <PaginationPrevious onClick={() => setSavedPage((p) => Math.max(1, p - 1))} className={clampedPage <= 1 ? "pointer-events-none opacity-50" : "cursor-pointer"} />
-                        </PaginationItem>
-                        {Array.from({ length: totalSavedPages }, (_, i) => i + 1)
-                          .filter((p) => p === 1 || p === totalSavedPages || Math.abs(p - clampedPage) <= 1)
-                          .map((p) => (
-                            <PaginationItem key={p}>
-                              <PaginationLink isActive={p === clampedPage} onClick={() => setSavedPage(p)} className="cursor-pointer">
-                                {p}
-                              </PaginationLink>
+                    {totalSavedPages > 1 && (
+                      <div className="flex items-center justify-between pt-2">
+                        <p className="text-xs text-muted-foreground">
+                          {t("editais.showing")} {(clampedPage - 1) * ITEMS_PER_PAGE + 1}–{Math.min(clampedPage * ITEMS_PER_PAGE, savedFiltered.length)} {t("editais.of")} {savedFiltered.length}
+                        </p>
+                        <Pagination>
+                          <PaginationContent>
+                            <PaginationItem>
+                              <PaginationPrevious onClick={() => setSavedPage((p) => Math.max(1, p - 1))} className={clampedPage <= 1 ? "pointer-events-none opacity-50" : "cursor-pointer"} />
                             </PaginationItem>
-                          ))}
-                        <PaginationItem>
-                          <PaginationNext onClick={() => setSavedPage((p) => Math.min(totalSavedPages, p + 1))} className={clampedPage >= totalSavedPages ? "pointer-events-none opacity-50" : "cursor-pointer"} />
-                        </PaginationItem>
-                      </PaginationContent>
-                    </Pagination>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                            {Array.from({ length: totalSavedPages }, (_, i) => i + 1)
+                              .filter((p) => p === 1 || p === totalSavedPages || Math.abs(p - clampedPage) <= 1)
+                              .map((p) => (
+                                <PaginationItem key={p}>
+                                  <PaginationLink isActive={p === clampedPage} onClick={() => setSavedPage(p)} className="cursor-pointer">
+                                    {p}
+                                  </PaginationLink>
+                                </PaginationItem>
+                              ))}
+                            <PaginationItem>
+                              <PaginationNext onClick={() => setSavedPage((p) => Math.min(totalSavedPages, p + 1))} className={clampedPage >= totalSavedPages ? "pointer-events-none opacity-50" : "cursor-pointer"} />
+                            </PaginationItem>
+                          </PaginationContent>
+                        </Pagination>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+
+              {loading && editais.length === 0 && (
+                <Card>
+                  <CardContent className="pt-5 space-y-2">
+                    <Skeleton className="h-8 w-full" />
+                    <Skeleton className="h-8 w-full" />
+                  </CardContent>
+                </Card>
+              )}
+            </>
           )}
 
-          {loading && editais.length === 0 && (
-            <Card>
-              <CardContent className="pt-5 space-y-2">
-                <Skeleton className="h-8 w-full" />
-                <Skeleton className="h-8 w-full" />
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-
-        {/* ── Tab: Pipeline de Candidaturas ── */}
-        <TabsContent value="pipeline" className="space-y-6 mt-4">
-          {loadingApps ? (
-            <Card>
-              <CardContent className="pt-5 space-y-2">
-                <Skeleton className="h-8 w-full" />
-                <Skeleton className="h-8 w-full" />
-              </CardContent>
-            </Card>
-          ) : applications.length === 0 ? (
-            <Card>
-              <CardContent className="py-12 flex flex-col items-center text-center text-muted-foreground">
-                <KanbanSquare className="h-10 w-10 mb-3 opacity-40" />
-                <p className="text-sm font-medium">Nenhuma candidatura ativa</p>
-                <p className="text-xs mt-1 max-w-md">
-                  Use o botão <ClipboardList className="inline h-3 w-3" /> na aba "Meus Editais" para iniciar uma candidatura e acompanhar o progresso aqui.
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            <PipelineTab
-              applications={applications}
-              onUpdate={(p) => updateApplication.mutate(p)}
-              onDelete={(id) => deleteApplication.mutate(id)}
-              onOpenChecklist={(id) => setSelectedAppId(id)}
-              onOpenResult={(id) => setResultAppId(id)}
-              onOpenAI={(app) => {
-                setAiContext({
-                  editalTitle: app.edital?.titulo || undefined,
-                  editalType: app.edital?.area || undefined,
-                  projectId: app.project_id || undefined,
-                  applicationId: app.id,
-                });
-                setAiSheetOpen(true);
-              }}
-              projects={projects.map(p => ({ id: p.id, name: p.name }))}
-              t={t}
-            />
+          {/* Sub-view: Pipeline */}
+          {meusView === "pipeline" && (
+            <>
+              {loadingApps ? (
+                <Card>
+                  <CardContent className="pt-5 space-y-2">
+                    <Skeleton className="h-8 w-full" />
+                    <Skeleton className="h-8 w-full" />
+                  </CardContent>
+                </Card>
+              ) : applications.length === 0 ? (
+                <Card>
+                  <CardContent className="py-12 flex flex-col items-center text-center text-muted-foreground">
+                    <KanbanSquare className="h-10 w-10 mb-3 opacity-40" />
+                    <p className="text-sm font-medium">Nenhuma candidatura ativa</p>
+                    <p className="text-xs mt-2 max-w-sm">
+                      Comece sua jornada em 3 passos:
+                    </p>
+                    <div className="flex flex-col gap-1.5 mt-3 text-xs text-left max-w-xs">
+                      <div className="flex items-center gap-2">
+                        <span className="h-5 w-5 rounded-full bg-primary/10 text-primary text-[10px] flex items-center justify-center font-bold shrink-0">1</span>
+                        <span>Busque editais na aba "Buscar"</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="h-5 w-5 rounded-full bg-primary/10 text-primary text-[10px] flex items-center justify-center font-bold shrink-0">2</span>
+                        <span>Salve os que interessam</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="h-5 w-5 rounded-full bg-primary/10 text-primary text-[10px] flex items-center justify-center font-bold shrink-0">3</span>
+                        <span>Clique "Candidatar" para iniciar o acompanhamento</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : (
+                <PipelineTab
+                  applications={applications}
+                  onUpdate={(p) => updateApplication.mutate(p)}
+                  onDelete={(id) => deleteApplication.mutate(id)}
+                  onOpenChecklist={(id) => setSelectedAppId(id)}
+                  onOpenResult={(id) => setResultAppId(id)}
+                  onOpenAI={(app) => {
+                    setAiContext({
+                      editalTitle: app.edital?.titulo || undefined,
+                      editalType: app.edital?.area || undefined,
+                      projectId: app.project_id || undefined,
+                      applicationId: app.id,
+                    });
+                    setAiSheetOpen(true);
+                  }}
+                  onGoToInscricao={(editalId) => navigate(`/editais/inscricao/${editalId}`)}
+                  projects={projectList}
+                  t={t}
+                />
+              )}
+            </>
           )}
         </TabsContent>
 
         {/* ── Tab: Documentos ── */}
         <TabsContent value="documentos" className="space-y-6 mt-4">
           <EditalDocumentsBank />
-        </TabsContent>
-
-        {/* ── Tab: Métricas ── */}
-        <TabsContent value="metricas" className="space-y-6 mt-4">
-          <EditalMetricsDashboard applications={applications} />
         </TabsContent>
       </Tabs>
 
@@ -984,7 +1172,7 @@ export default function Editais() {
           </SheetHeader>
           <div className="mt-4">
             <EditalAIAssistant
-              projects={projects.map(p => ({ id: p.id, name: p.name }))}
+              projects={projectList}
               context={aiContext}
             />
           </div>
@@ -996,7 +1184,7 @@ export default function Editais() {
         open={detailOpen}
         onOpenChange={(o) => { setDetailOpen(o); if (!o) setDetailEdital(null); }}
         onDelete={deleteEdital}
-        onInscricao={(id) => createApplication.mutate({ edital_id: id })}
+        onStartApplication={handleStartApplication}
         t={t}
       />
 
@@ -1006,6 +1194,15 @@ export default function Editais() {
         onOpenChange={(o) => { setEditOpen(o); if (!o) setEditingEdital(null); }}
         onSave={updateEdital}
         t={t}
+      />
+
+      {/* Start Application Confirmation Dialog */}
+      <StartApplicationDialog
+        edital={confirmAppEdital}
+        open={confirmAppOpen}
+        onOpenChange={(o) => { setConfirmAppOpen(o); if (!o) setConfirmAppEdital(null); }}
+        projects={projectList.filter(p => !projects.find(pr => pr.id === p.id)?.completed)}
+        onConfirm={handleConfirmApplication}
       />
 
       {/* Checklist dialog */}
@@ -1023,7 +1220,7 @@ export default function Editais() {
                 applicationId={selectedAppId}
                 editalTitle={app?.edital?.titulo}
                 projectId={app?.project_id || undefined}
-                projects={projects.map(p => ({ id: p.id, name: p.name }))}
+                projects={projectList}
               />
             );
           })()}
