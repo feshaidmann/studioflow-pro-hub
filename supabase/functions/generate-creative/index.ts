@@ -39,7 +39,7 @@ serve(async (req) => {
       "You are a visual art generator for musicians and artists.",
       "Generate images based on the user's creative description below.",
       `Target format: ${format}. Aspect ratio suitable for ${width}x${height}.`,
-      "Any text, titles, labels, or captions rendered in the image MUST be in Brazilian Portuguese (pt-BR).",
+      "All supporting text, labels, captions, and descriptions rendered in the image MUST be in Brazilian Portuguese (pt-BR). However, preserve proper names exactly as given — song titles, album titles, artist names, and band names must appear in their ORIGINAL language, never translated.",
     ];
 
     if (style) {
