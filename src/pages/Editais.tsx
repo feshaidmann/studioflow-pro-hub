@@ -757,6 +757,36 @@ export default function Editais() {
             </Card>
           )}
         </TabsContent>
+
+        {/* ── Tab: Pipeline de Candidaturas ── */}
+        <TabsContent value="pipeline" className="space-y-6 mt-4">
+          {loadingApps ? (
+            <Card>
+              <CardContent className="pt-5 space-y-2">
+                <Skeleton className="h-8 w-full" />
+                <Skeleton className="h-8 w-full" />
+              </CardContent>
+            </Card>
+          ) : applications.length === 0 ? (
+            <Card>
+              <CardContent className="py-12 flex flex-col items-center text-center text-muted-foreground">
+                <KanbanSquare className="h-10 w-10 mb-3 opacity-40" />
+                <p className="text-sm font-medium">Nenhuma candidatura ativa</p>
+                <p className="text-xs mt-1 max-w-md">
+                  Use o botão <ClipboardList className="inline h-3 w-3" /> na aba "Meus Editais" para iniciar uma candidatura e acompanhar o progresso aqui.
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <PipelineTab
+              applications={applications}
+              onUpdate={(p) => updateApplication.mutate(p)}
+              onDelete={(id) => deleteApplication.mutate(id)}
+              projects={projects.map(p => ({ id: p.id, name: p.name }))}
+              t={t}
+            />
+          )}
+        </TabsContent>
       </Tabs>
 
       <EditEditalDialog
