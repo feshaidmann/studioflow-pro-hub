@@ -16,15 +16,16 @@ interface ChannelConfig {
 }
 
 const DEFAULT_CONTEXTS: Record<string, string> = {
-  "ig-post": "Post de divulgação para Instagram com nome do artista",
-  "ig-story": "Story vertical com 'Ouça agora' e nome do artista",
-  "ig-reel": "Capa de Reel vertical com título do projeto",
-  "yt-thumb": "Thumbnail chamativa com título do single/álbum",
-  "yt-banner": "Banner com título do álbum centralizado",
-  "twitter": "Post de divulgação com data de lançamento",
-  "fb-cover": "Capa do Facebook com identidade visual do projeto",
-  "spotify": "Capa quadrada para plataformas de streaming",
-  "tiktok": "Capa vertical para TikTok com estilo jovem",
+  "instagram_post": "Post de divulgação para Instagram com nome do artista",
+  "story": "Story vertical com 'Ouça agora' e nome do artista",
+  "youtube_cover": "Thumbnail chamativa com título do single/álbum",
+  "spotify_cover": "Capa quadrada para Spotify com identidade visual do projeto",
+  "spotify_canvas": "Arte vertical animável para Canvas do Spotify",
+  "spotify_banner": "Banner horizontal do perfil do artista no Spotify",
+  "deezer_cover": "Capa quadrada para Deezer com identidade visual do projeto",
+  "tidal_cover": "Capa quadrada para Tidal com identidade visual do projeto",
+  "twitter_post": "Post de divulgação com data de lançamento",
+  "custom": "Arte livre com identidade visual do projeto",
 };
 
 interface Props {
