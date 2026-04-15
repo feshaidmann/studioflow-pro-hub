@@ -160,6 +160,7 @@ export default function FinancialTracker() {
   const [formOpen, setFormOpen] = useState(false);
   const [editTx, setEditTx] = useState<Transaction | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [finAiOpen, setFinAiOpen] = useState(false);
 
   // Pending fees by collaborator
   interface PendingFee {
