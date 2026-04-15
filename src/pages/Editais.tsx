@@ -395,6 +395,10 @@ function PipelineTab({ applications, onUpdate, onDelete, onOpenChecklist, projec
                                 Mover → {APPLICATION_STATUS_LABELS[nextStatus(app.status)!]}
                               </DropdownMenuItem>
                             )}
+                            <DropdownMenuItem onClick={() => onOpenChecklist(app.id)}>
+                              <ClipboardList className="h-3.5 w-3.5 mr-2" />
+                              Checklist
+                            </DropdownMenuItem>
                             {app.edital?.link && (
                               <DropdownMenuItem asChild>
                                 <a href={app.edital.link} target="_blank" rel="noopener noreferrer">
