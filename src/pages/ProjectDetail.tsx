@@ -131,7 +131,7 @@ export default function ProjectDetail() {
       const projTxs = transactions.filter(t => t.projectId === project.id);
 
       lines.push(`\nEquipe (${team.length}):`);
-      team.forEach(p => lines.push(`- ${p.name} (${p.specialty}) — Fee: R$${p.fee}`));
+      team.forEach(p => lines.push(`- ${p.name} (${p.role}) — Fee: R$${p.fee}`));
 
       lines.push(`\nTarefas pendentes (${projTasks.length}):`);
       projTasks.slice(0, 10).forEach(t => {
