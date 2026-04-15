@@ -27,6 +27,9 @@ interface EditalRow {
   link: string;
   inferido: boolean;
   created_at: string;
+  valor: string;
+  resumo: string;
+  publico_alvo: string;
 }
 
 function scoreEdital(edital: EditalRow, perfil: PerfilCultural): number {
@@ -126,7 +129,7 @@ Deno.serve(async (req) => {
     // Fetch user's editais
     const { data: editais, error: edErr } = await supabase
       .from("editais")
-      .select("id, titulo, orgao, estado, area, status, abertura, prazo, link, inferido, created_at")
+      .select("id, titulo, orgao, estado, area, status, abertura, prazo, link, inferido, created_at, valor, resumo, publico_alvo")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
       .limit(200);

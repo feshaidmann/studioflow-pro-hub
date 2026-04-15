@@ -15,6 +15,9 @@ export interface MatchedEdital {
   link: string;
   inferido: boolean;
   score: number;
+  valor?: string;
+  resumo?: string;
+  publico_alvo?: string;
 }
 
 export function useMatchEditais() {
