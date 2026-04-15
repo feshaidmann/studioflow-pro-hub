@@ -817,10 +817,17 @@ export default function Editais() {
     });
   };
 
-  const selectedRecoProject = projects.find(p => p.id === recoProjectId);
-  const hasCulturalProfile = selectedRecoProject?.perfil_cultural &&
-    typeof selectedRecoProject.perfil_cultural === "object" &&
-    (Array.isArray((selectedRecoProject.perfil_cultural as any).areas) && (selectedRecoProject.perfil_cultural as any).areas.length > 0);
+  // Fetch cultural profile for selected project
+  const [recoProfile, setRecoProfile] = useState<any>(null);
+  useEffect(() => {
+    if (!recoProjectId) { setRecoProfile(null); return; }
+    supabase.from("projects").select("perfil_cultural").eq("id", recoProjectId).single()
+      .then(({ data }) => setRecoProfile(data?.perfil_cultural || null));
+  }, [recoProjectId]);
+
+  const hasCulturalProfile = recoProfile &&
+    typeof recoProfile === "object" &&
+    Array.isArray(recoProfile.areas) && recoProfile.areas.length > 0;
 
   useEffect(() => {
     if (recoProjectId && hasCulturalProfile) {
