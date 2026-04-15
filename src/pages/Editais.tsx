@@ -218,7 +218,7 @@ function StartApplicationDialog({
 }
 
 function EditalTable({
-  items, onDelete, onEdit, onStartApplication, onViewDetail, t,
+  items, onDelete, onEdit, onStartApplication, onViewDetail, t, compareIds, onToggleCompare,
 }: {
   items: Edital[];
   onDelete?: (id: string) => void;
@@ -226,6 +226,8 @@ function EditalTable({
   onStartApplication?: (e: Edital) => void;
   onViewDetail?: (e: Edital) => void;
   t: (k: string) => string;
+  compareIds?: Set<string>;
+  onToggleCompare?: (id: string) => void;
 }) {
   const isMobile = useIsMobile();
 
