@@ -306,11 +306,15 @@ export type Database = {
           data_resultado: string | null
           edital_id: string
           id: string
+          licoes_aprendidas: string | null
+          motivo_recusa: string | null
           notas: string
           project_id: string | null
+          resultado: string | null
           status: string
           updated_at: string
           user_id: string
+          valor_aprovado: number | null
         }
         Insert: {
           created_at?: string
@@ -318,11 +322,15 @@ export type Database = {
           data_resultado?: string | null
           edital_id: string
           id?: string
+          licoes_aprendidas?: string | null
+          motivo_recusa?: string | null
           notas?: string
           project_id?: string | null
+          resultado?: string | null
           status?: string
           updated_at?: string
           user_id: string
+          valor_aprovado?: number | null
         }
         Update: {
           created_at?: string
@@ -330,11 +338,15 @@ export type Database = {
           data_resultado?: string | null
           edital_id?: string
           id?: string
+          licoes_aprendidas?: string | null
+          motivo_recusa?: string | null
           notas?: string
           project_id?: string | null
+          resultado?: string | null
           status?: string
           updated_at?: string
           user_id?: string
+          valor_aprovado?: number | null
         }
         Relationships: [
           {

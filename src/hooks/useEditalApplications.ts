@@ -19,6 +19,22 @@ export const APPLICATION_STATUS_COLORS: Record<ApplicationStatus, string> = {
   resultado: "bg-purple-500/15 text-purple-700 border-purple-200",
 };
 
+export type ResultadoType = "aprovado" | "reprovado" | "lista_espera" | "desistencia";
+
+export const RESULTADO_LABELS: Record<ResultadoType, string> = {
+  aprovado: "Aprovado",
+  reprovado: "Reprovado",
+  lista_espera: "Lista de espera",
+  desistencia: "Desistência",
+};
+
+export const RESULTADO_COLORS: Record<ResultadoType, string> = {
+  aprovado: "bg-green-500/15 text-green-700 border-green-200",
+  reprovado: "bg-red-500/15 text-red-700 border-red-200",
+  lista_espera: "bg-amber-500/15 text-amber-700 border-amber-200",
+  desistencia: "bg-muted text-muted-foreground border-border",
+};
+
 export interface EditalApplication {
   id: string;
   user_id: string;
@@ -28,9 +44,12 @@ export interface EditalApplication {
   notas: string;
   data_inscricao: string | null;
   data_resultado: string | null;
+  resultado: ResultadoType | null;
+  valor_aprovado: number | null;
+  motivo_recusa: string | null;
+  licoes_aprendidas: string | null;
   created_at: string;
   updated_at: string;
-  // joined
   edital?: {
     id: string;
     titulo: string;
@@ -101,7 +120,7 @@ export function useUpdateApplication() {
   const qc = useQueryClient();
 
   return useMutation({
-    mutationFn: async (params: { id: string; status?: ApplicationStatus; notas?: string; project_id?: string | null; data_inscricao?: string | null; data_resultado?: string | null }) => {
+    mutationFn: async (params: { id: string; status?: ApplicationStatus; notas?: string; project_id?: string | null; data_inscricao?: string | null; data_resultado?: string | null; resultado?: ResultadoType | null; valor_aprovado?: number | null; motivo_recusa?: string; licoes_aprendidas?: string }) => {
       const { id, ...fields } = params;
       const { error } = await supabase
         .from("edital_applications")

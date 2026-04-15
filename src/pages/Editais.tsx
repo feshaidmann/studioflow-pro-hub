@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, Download, Save, Trash2, ExternalLink, FileText, Pencil, Info, BarChart3, ClipboardList, Sparkles, ChevronDown, ArrowRight, Plus, MoreHorizontal, KanbanSquare, FolderOpen, Bot } from "lucide-react";
+import { Search, Download, Save, Trash2, ExternalLink, FileText, Pencil, Info, BarChart3, ClipboardList, Sparkles, ChevronDown, ArrowRight, Plus, MoreHorizontal, KanbanSquare, FolderOpen, Bot, Trophy } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,6 +24,8 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import EditalDocumentsBank from "@/components/editais/EditalDocumentsBank";
 import ApplicationChecklist from "@/components/editais/ApplicationChecklist";
 import EditalAIAssistant from "@/components/editais/EditalAIAssistant";
+import EditalResultModal from "@/components/editais/EditalResultModal";
+import EditalMetricsDashboard from "@/components/editais/EditalMetricsDashboard";
 
 const AREA_OPTIONS = ["Música", "Audiovisual", "Ambos", "Outra"];
 const ITEMS_PER_PAGE = 20;
@@ -339,11 +341,12 @@ const SEARCH_EXAMPLES = [
 ];
 
 /* ── Pipeline de candidaturas ── */
-function PipelineTab({ applications, onUpdate, onDelete, onOpenChecklist, projects, t }: {
+function PipelineTab({ applications, onUpdate, onDelete, onOpenChecklist, onOpenResult, projects, t }: {
   applications: EditalApplication[];
   onUpdate: (params: { id: string; status?: ApplicationStatus; notas?: string; project_id?: string | null }) => void;
   onDelete: (id: string) => void;
   onOpenChecklist: (appId: string) => void;
+  onOpenResult: (appId: string) => void;
   projects: { id: string; name: string }[];
   t: (k: string) => string;
 }) {
@@ -399,6 +402,10 @@ function PipelineTab({ applications, onUpdate, onDelete, onOpenChecklist, projec
                             <DropdownMenuItem onClick={() => onOpenChecklist(app.id)}>
                               <ClipboardList className="h-3.5 w-3.5 mr-2" />
                               Checklist
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => onOpenResult(app.id)}>
+                              <Trophy className="h-3.5 w-3.5 mr-2" />
+                              Registrar resultado
                             </DropdownMenuItem>
                             {app.edital?.link && (
                               <DropdownMenuItem asChild>
@@ -470,6 +477,10 @@ function PipelineTab({ applications, onUpdate, onDelete, onOpenChecklist, projec
                             <ClipboardList className="h-3.5 w-3.5 mr-2" />
                             Checklist
                           </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => onOpenResult(app.id)}>
+                            <Trophy className="h-3.5 w-3.5 mr-2" />
+                            Registrar resultado
+                          </DropdownMenuItem>
                           {app.edital?.link && (
                             <DropdownMenuItem asChild>
                               <a href={app.edital.link} target="_blank" rel="noopener noreferrer">
@@ -512,6 +523,7 @@ export default function Editais() {
   const [savedPage, setSavedPage] = useState(1);
   const [savedFilterStatus, setSavedFilterStatus] = useState("Todos");
   const [selectedAppId, setSelectedAppId] = useState<string | null>(null);
+  const [resultAppId, setResultAppId] = useState<string | null>(null);
 
   const { editais, loading, searching, searchResult, search, saveResults, deleteEdital, updateEdital, exportCSV } = useEditais();
   const { data: applications = [], isLoading: loadingApps } = useEditalApplications();
@@ -576,6 +588,10 @@ export default function Editais() {
           <TabsTrigger value="ia">
             <Bot className="h-3.5 w-3.5 mr-1.5" />
             IA
+          </TabsTrigger>
+          <TabsTrigger value="metricas">
+            <BarChart3 className="h-3.5 w-3.5 mr-1.5" />
+            Métricas
           </TabsTrigger>
         </TabsList>
 
@@ -804,6 +820,7 @@ export default function Editais() {
               onUpdate={(p) => updateApplication.mutate(p)}
               onDelete={(id) => deleteApplication.mutate(id)}
               onOpenChecklist={(id) => setSelectedAppId(id)}
+              onOpenResult={(id) => setResultAppId(id)}
               projects={projects.map(p => ({ id: p.id, name: p.name }))}
               t={t}
             />
@@ -819,6 +836,11 @@ export default function Editais() {
         <TabsContent value="ia" className="space-y-6 mt-4">
           <EditalAIAssistant projects={projects.map(p => ({ id: p.id, name: p.name }))} />
         </TabsContent>
+
+        {/* ── Tab: Métricas ── */}
+        <TabsContent value="metricas" className="space-y-6 mt-4">
+          <EditalMetricsDashboard applications={applications} />
+        </TabsContent>
       </Tabs>
 
       <EditEditalDialog
@@ -829,7 +851,7 @@ export default function Editais() {
         t={t}
       />
 
-      {/* Checklist dialog for selected application */}
+      {/* Checklist dialog */}
       <Dialog open={!!selectedAppId} onOpenChange={(o) => { if (!o) setSelectedAppId(null); }}>
         <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
           <DialogHeader>
@@ -840,6 +862,19 @@ export default function Editais() {
           {selectedAppId && <ApplicationChecklist applicationId={selectedAppId} />}
         </DialogContent>
       </Dialog>
+
+      {/* Result modal */}
+      {resultAppId && (() => {
+        const app = applications.find(a => a.id === resultAppId);
+        if (!app) return null;
+        return (
+          <EditalResultModal
+            application={app}
+            open={!!resultAppId}
+            onOpenChange={(o) => { if (!o) setResultAppId(null); }}
+          />
+        );
+      })()}
     </div>
   );
 }
