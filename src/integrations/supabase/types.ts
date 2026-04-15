@@ -239,6 +239,60 @@ export type Database = {
           },
         ]
       }
+      edital_applications: {
+        Row: {
+          created_at: string
+          data_inscricao: string | null
+          data_resultado: string | null
+          edital_id: string
+          id: string
+          notas: string
+          project_id: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          data_inscricao?: string | null
+          data_resultado?: string | null
+          edital_id: string
+          id?: string
+          notas?: string
+          project_id?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          data_inscricao?: string | null
+          data_resultado?: string | null
+          edital_id?: string
+          id?: string
+          notas?: string
+          project_id?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "edital_applications_edital_id_fkey"
+            columns: ["edital_id"]
+            isOneToOne: false
+            referencedRelation: "editais"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "edital_applications_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       events: {
         Row: {
           all_day: boolean
