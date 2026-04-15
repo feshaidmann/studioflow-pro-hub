@@ -1031,6 +1031,66 @@ export default function Editais() {
 
         {/* ── Tab: Meus Editais (salvos + pipeline consolidated) ── */}
         <TabsContent value="meus" className="space-y-4 mt-4">
+          {/* Onboarding walkthrough for first-time users */}
+          {showOnboarding && (
+            <Card className="border-primary/30 bg-primary/5 relative">
+              <button onClick={dismissOnboarding} className="absolute top-3 right-3 text-muted-foreground hover:text-foreground">
+                <X className="h-4 w-4" />
+              </button>
+              <CardContent className="py-6 px-5">
+                <h3 className="font-medium text-base mb-3 flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-primary" />
+                  Como usar Editais
+                </h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {[
+                    { step: 1, label: "Buscar", desc: "Pesquise editais abertos com IA", icon: <Search className="h-5 w-5" /> },
+                    { step: 2, label: "Salvar", desc: "Guarde os que interessam na sua lista", icon: <Save className="h-5 w-5" /> },
+                    { step: 3, label: "Candidatar", desc: "Inicie o acompanhamento da inscrição", icon: <ClipboardList className="h-5 w-5" /> },
+                    { step: 4, label: "Inscrever", desc: "Preencha formulários com ajuda da IA", icon: <FileText className="h-5 w-5" /> },
+                  ].map((s) => (
+                    <div key={s.step} className="flex flex-col items-center text-center p-2">
+                      <div className="h-10 w-10 rounded-full bg-primary/10 text-primary flex items-center justify-center mb-2">
+                        {s.icon}
+                      </div>
+                      <span className="text-[10px] text-muted-foreground">Passo {s.step}</span>
+                      <span className="text-xs font-medium">{s.label}</span>
+                      <span className="text-[10px] text-muted-foreground mt-0.5">{s.desc}</span>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Deadline alerts banner */}
+          {deadlineAlerts.length > 0 && (
+            <div className={`rounded-lg border px-3 py-2.5 flex items-start gap-2.5 animate-fade-in ${
+              deadlineAlerts[0].daysLeft <= 3
+                ? "border-destructive/40 bg-destructive/5"
+                : "border-warning/40 bg-warning/5"
+            }`}>
+              <AlertTriangle className={`h-4 w-4 mt-0.5 shrink-0 ${
+                deadlineAlerts[0].daysLeft <= 3 ? "text-destructive" : "text-warning"
+              }`} />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium">
+                  {deadlineAlerts.length === 1
+                    ? `1 edital vence em ${deadlineAlerts[0].daysLeft === 0 ? "hoje" : deadlineAlerts[0].daysLeft === 1 ? "amanhã" : `${deadlineAlerts[0].daysLeft} dias`}`
+                    : `${deadlineAlerts.length} editais vencem nos próximos 7 dias`}
+                </p>
+                <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1">
+                  {deadlineAlerts.slice(0, 3).map((a) => (
+                    <span key={a.id} className="text-[11px] text-muted-foreground">
+                      <Clock className="inline h-3 w-3 mr-0.5" />
+                      {a.daysLeft}d · {a.titulo.slice(0, 40)}{a.titulo.length > 40 ? "…" : ""}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Sub-view toggle */}
           <div className="flex gap-1.5">
             <button
