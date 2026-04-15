@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Palette, Sparkles, Trash2, ImageIcon, Upload } from "lucide-react";
+import { Palette, Sparkles, Trash2, ImageIcon, Upload, Layers } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -11,6 +11,7 @@ import FormatSelector, { FORMAT_OPTIONS, type FormatOption } from "@/components/
 import StyleChips from "@/components/creative/StyleChips";
 import ImagePreview from "@/components/creative/ImagePreview";
 import ReferenceImageUpload from "@/components/creative/ReferenceImageUpload";
+import DeriveBatchDialog from "@/components/creative/DeriveBatchDialog";
 import { useCreativeAssets } from "@/hooks/useCreativeAssets";
 import { useProjects } from "@/contexts/ProjectContext";
 import { toast } from "@/hooks/use-toast";
@@ -31,8 +32,10 @@ export default function Creative() {
   const [editingLoading, setEditingLoading] = useState(false);
   const [referenceImage, setReferenceImage] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("create");
+  const [deriveDialogOpen, setDeriveDialogOpen] = useState(false);
+  const [deriveImageUrl, setDeriveImageUrl] = useState<string>("");
 
-  const { assets, isLoading: assetsLoading, generating, generate, deleteAsset } = useCreativeAssets();
+  const { assets, isLoading: assetsLoading, generating, generate, generateBatch, deleteAsset } = useCreativeAssets();
 
   // Pre-fill project context
   const linkedProject = projectIdParam
@@ -92,6 +95,11 @@ export default function Creative() {
   const handleUseAsReference = (url: string) => {
     setReferenceImage(url);
     setActiveTab("create");
+  };
+
+  const handleDerive = (imageUrl: string) => {
+    setDeriveImageUrl(imageUrl);
+    setDeriveDialogOpen(true);
   };
 
   const handleEdit = () => {
@@ -211,6 +219,7 @@ export default function Creative() {
                 onEdit={handleEdit}
                 onDownload={handleDownload}
                 onSave={() => {}}
+                onDerive={generatedImage ? () => handleDerive(generatedImage) : undefined}
               />
             </div>
           </div>
@@ -265,6 +274,15 @@ export default function Creative() {
                         <Button
                           variant="ghost"
                           size="icon"
+                          className="h-6 w-6 text-white/80 hover:text-primary"
+                          title="Desdobrar para canais"
+                          onClick={() => handleDerive(a.public_url || "")}
+                        >
+                          <Layers className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           className="h-6 w-6 text-white/80 hover:text-destructive"
                           onClick={() => deleteAsset(a.id, a.storage_path)}
                         >
@@ -299,6 +317,17 @@ export default function Creative() {
           </Button>
         </DialogContent>
       </Dialog>
+
+      {/* Derive Batch Dialog */}
+      <DeriveBatchDialog
+        open={deriveDialogOpen}
+        onOpenChange={setDeriveDialogOpen}
+        baseImageUrl={deriveImageUrl}
+        basePrompt={prompt}
+        style={style}
+        projectId={projectIdParam || undefined}
+        onGenerateBatch={generateBatch}
+      />
     </div>
   );
 }
