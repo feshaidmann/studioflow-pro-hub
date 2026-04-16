@@ -11,6 +11,7 @@ import {
   LayoutDashboard, Users, ListChecks, DollarSign, Rocket, FolderOpen, Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { scrollToAnchor } from "@/lib/scrollToAnchor";
 import ProjectAISheet from "@/components/project-hub/ProjectAISheet";
 import { useTasks } from "@/hooks/useTasks";
 
