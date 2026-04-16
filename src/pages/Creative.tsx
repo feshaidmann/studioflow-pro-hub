@@ -167,8 +167,19 @@ export default function Creative() {
     if (result) {
       setGeneratedImage(result.imageUrl);
       setGeneratedBase64(result.imageBase64);
+
+      // Auto-generate social media copy if DNA source is active
+      if (dnaSource) {
+        setDnaCopyLoading(true);
+        const dnaContext = `Gênero: ${dnaSource.genero_classificado || ""}. Mood: ${dnaSource.identidade?.mood_principal || ""}. Território: ${dnaSource.identidade?.territorio_sonoro || ""}. Tags: ${(dnaSource.identidade?.tags || []).join(", ")}`;
+        const textResult = await generateText({ prompt: contextPrompt, dnaContext });
+        if (textResult?.text) {
+          setDnaCopyText(textResult.text);
+        }
+        setDnaCopyLoading(false);
+      }
     }
-  }, [prompt, style, selectedFormat, linkedProject, selectedProjectId, generate, referenceImage]);
+  }, [prompt, style, selectedFormat, linkedProject, selectedProjectId, generate, referenceImage, dnaSource, generateText]);
 
   // Semantic variation: pass current image as reference with variation instruction
   const handleVariation = useCallback(async () => {
