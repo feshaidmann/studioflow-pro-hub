@@ -7,30 +7,27 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/contexts/ProfileContext";
 import { toast } from "sonner";
 import {
-  FolderKanban, DollarSign, ArrowRight, Users, LogIn, Mic2,
-  CalendarDays, Sparkles, AlertTriangle, CheckCircle2, XCircle,
-  Rocket, Clock, FileCheck, Shield, FileText,
+  ArrowRight, LogIn, Mic2,
+  Sparkles, AlertTriangle, CheckCircle2, XCircle,
+  Rocket, Clock, FileText, Palette,
+  DollarSign, Users,
 } from "lucide-react";
 
-/* ── Features reposicionadas para gestão operacional ── */
 const features = [
-  { text: "Organize seu lançamento do rascunho à distribuição.", icon: Rocket, accent: "from-primary/15 to-primary/5", iconColor: "text-primary", highlight: true },
-  { text: "Nunca mais perca um prazo de entrega ou gravação.", icon: Clock, accent: "from-primary/15 to-primary/5", iconColor: "text-primary", highlight: true },
-  { text: "Controle equipe, cachês e custos por projeto.", icon: Users, accent: "from-[hsl(var(--warning)/0.15)] to-[hsl(var(--warning)/0.05)]", iconColor: "text-[hsl(var(--warning))]", highlight: false },
-  { text: "Finanças claras: quanto gastou e o que falta.", icon: DollarSign, accent: "from-[hsl(var(--success)/0.15)] to-[hsl(var(--success)/0.05)]", iconColor: "text-[hsl(var(--success))]", highlight: false },
-  { text: "Encontre editais de fomento cultural com IA.", icon: FileText, accent: "from-violet-500/15 to-violet-500/5", iconColor: "text-violet-500", highlight: true },
-  { text: "Arquivos organizados: stems, mixes, capas e contratos.", icon: FileCheck, accent: "from-primary/15 to-primary/5", iconColor: "text-primary", highlight: false },
-  { text: "Agenda integrada com shows, ensaios e deadlines.", icon: CalendarDays, accent: "from-sky-500/15 to-sky-500/5", iconColor: "text-sky-500", highlight: false },
-  { text: "IA que avisa o que está travando seu projeto.", icon: Sparkles, accent: "from-primary/15 to-primary/5", iconColor: "text-primary", highlight: false },
+  { text: "Organize seu lançamento do rascunho à distribuição.", icon: Rocket, iconColor: "text-primary" },
+  { text: "Nunca mais perca um prazo de entrega ou gravação.", icon: Clock, iconColor: "text-primary" },
+  { text: "Controle equipe, cachês e custos por projeto.", icon: Users, iconColor: "text-[hsl(var(--warning))]" },
+  { text: "Finanças claras: quanto gastou e o que falta.", icon: DollarSign, iconColor: "text-[hsl(var(--success))]" },
+  { text: "Encontre editais de fomento cultural com IA.", icon: FileText, iconColor: "text-violet-500" },
+  { text: "Crie artes, capas e legendas com IA generativa.", icon: Palette, iconColor: "text-sky-500" },
 ];
 
-/* ── Antes vs Depois ── */
 const comparison = [
-  { before: "Conversas soltas no WhatsApp", after: "Chat do projeto com tarefas vinculadas" },
+  { before: "Conversas soltas no WhatsApp", after: "Chat do projeto + compartilhar via WhatsApp" },
   { before: "Planilha de custos genérica", after: "Financeiro por projeto e por faixa" },
   { before: "Prazos esquecidos", after: "Alertas automáticos de risco" },
-  { before: "Buscar editais manualmente em dezenas de sites", after: "IA encontra editais abertos pra você" },
-  { before: "Arquivos espalhados em pastas", after: "Central de arquivos por etapa" },
+  { before: "Buscar editais manualmente", after: "IA encontra editais abertos pra você" },
+  { before: "Sem material visual pronto", after: "Artes e legendas geradas com IA" },
   { before: "Sem saber se está pronto pra lançar", after: "Checklist de lançamento completo" },
 ];
 
@@ -78,18 +75,18 @@ export default function Welcome() {
         </section>
 
         {/* ── FEATURES ── */}
-        <section className="mt-8 w-full max-w-2xl animate-fade-in" style={{ animationDelay: "100ms" }}>
-          <p className="text-center text-xs text-muted-foreground font-medium mb-5 uppercase tracking-wider">
+        <section className="mt-8 w-full max-w-lg animate-fade-in" style={{ animationDelay: "100ms" }}>
+          <p className="text-center text-xs text-muted-foreground font-medium mb-4 uppercase tracking-wider">
             {t("welcome.featuresLabel")}
           </p>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {features.map((item, i) => (
               <div
                 key={i}
-                className={`glass-card rounded-xl p-3 flex flex-col items-center gap-2 text-center animate-fade-in ${item.highlight ? "border border-primary/20 shadow-sm" : ""}`}
+                className="glass-card rounded-xl px-3 py-2.5 flex items-center gap-3 animate-fade-in"
                 style={{ animationDelay: `${100 + i * 50}ms` }}
               >
-                <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br ${item.accent}`}>
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-secondary/60">
                   <item.icon className={`h-4 w-4 ${item.iconColor}`} />
                 </div>
                 <p className="text-xs text-foreground leading-snug">{item.text}</p>
@@ -98,29 +95,28 @@ export default function Welcome() {
           </div>
         </section>
 
-        {/* ── SEÇÃO "FEITO PARA QUEM USA WHATSAPP E PLANILHA" ── */}
-        <section className="mt-10 w-full max-w-xl animate-fade-in" style={{ animationDelay: "300ms" }}>
-          <div className="glass-card rounded-2xl p-6 border border-border/40">
+        {/* ── ANTES vs DEPOIS ── */}
+        <section className="mt-8 w-full max-w-lg animate-fade-in" style={{ animationDelay: "300ms" }}>
+          <div className="glass-card rounded-2xl p-5 border border-border/40">
             <div className="flex items-center gap-2 mb-4">
-              <Shield className="h-4 w-4 text-primary" />
+              <Sparkles className="h-4 w-4 text-primary" />
               <p className="text-sm font-semibold text-foreground">
                 Feito para quem hoje usa WhatsApp e planilha
               </p>
             </div>
-            <p className="text-xs text-muted-foreground mb-5 leading-relaxed">
+            <p className="text-xs text-muted-foreground mb-4 leading-relaxed">
               Você não precisa aprender uma ferramenta complexa. Comece com o básico e ative mais quando precisar.
             </p>
 
-            {/* Antes vs Depois */}
-            <div className="space-y-2">
+            <div className="space-y-2.5">
               {comparison.map((item, i) => (
-                <div key={i} className="flex items-start gap-3 text-xs">
-                  <div className="flex items-center gap-1.5 w-[45%] shrink-0">
+                <div key={i} className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-xs">
+                  <div className="flex items-center gap-1.5">
                     <XCircle className="h-3.5 w-3.5 text-destructive/60 shrink-0" />
                     <span className="text-muted-foreground line-through">{item.before}</span>
                   </div>
-                  <ArrowRight className="h-3 w-3 text-muted-foreground/40 shrink-0 mt-0.5" />
-                  <div className="flex items-center gap-1.5">
+                  <ArrowRight className="h-3 w-3 text-muted-foreground/40 shrink-0 hidden sm:block" />
+                  <div className="flex items-center gap-1.5 pl-5 sm:pl-0">
                     <CheckCircle2 className="h-3.5 w-3.5 text-[hsl(var(--success))] shrink-0" />
                     <span className="text-foreground font-medium">{item.after}</span>
                   </div>
@@ -130,7 +126,7 @@ export default function Welcome() {
           </div>
         </section>
 
-        {/* ── CTA DUPLA ── */}
+        {/* ── CTA ── */}
         <section className="mt-8 w-full max-w-sm animate-fade-in" style={{ animationDelay: "500ms" }}>
           <div className="glass-card rounded-2xl px-6 py-7 flex flex-col items-center gap-4 text-center">
             <div>

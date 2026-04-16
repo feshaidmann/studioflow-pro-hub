@@ -15,6 +15,9 @@ import {
   ChevronRight,
   AlertTriangle,
   Dna,
+  FileText,
+  Palette,
+  Share2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -82,6 +85,8 @@ const tabs = [
   { id: "getting-started", icon: HelpCircle, label: "Primeiros passos", short: "Início" },
   { id: "projects", icon: FolderKanban, label: "Projetos", short: "Proj" },
   { id: "music-dna", icon: Dna, label: "DNA Musical", short: "DNA" },
+  { id: "editais", icon: FileText, label: "Editais", short: "Editais" },
+  { id: "creative", icon: Palette, label: "Criativo", short: "Arte" },
   { id: "finance", icon: DollarSign, label: "Finanças", short: "Fin" },
   { id: "agenda", icon: CalendarDays, label: "Agenda", short: "Agenda" },
   { id: "ai", icon: Bot, label: "Assistente IA", short: "IA" },
@@ -157,12 +162,21 @@ const tabContent: Record<TabId, React.ReactNode> = {
           { title: "Equipe", desc: "Membros com papel, cachê e contato. Use \"Gerenciar equipe\" para adicionar pessoas." },
           { title: "Financeiro", desc: "Receitas, despesas e saldo exclusivos do projeto. Funciona como um mini-balanço." },
           { title: "Chat", desc: "Comunicação em tempo real entre os membros do projeto." },
+          { title: "Lançamento", desc: "Checklist completo com 7 seções: Distribuição, Metadados, Jurídico, Conteúdo, Plataformas, Divulgação e Status Final." },
         ].map(({ title, desc }) => (
           <div key={title} className="flex items-start gap-2">
             <CheckCircle2 className="h-3.5 w-3.5 text-primary mt-0.5 shrink-0" />
             <p className="text-sm text-muted-foreground"><strong className="text-foreground">{title}</strong> — {desc}</p>
           </div>
         ))}
+      </div>
+
+      <SectionTitle>Compartilhar via WhatsApp</SectionTitle>
+      <div className="flex items-start gap-2 rounded-lg bg-[hsl(var(--success))]/10 border border-[hsl(var(--success))]/20 p-3">
+        <Share2 className="h-4 w-4 text-[hsl(var(--success))] mt-0.5 shrink-0" />
+        <p className="text-sm text-muted-foreground">
+          Use o botão <strong className="text-foreground">"Compartilhar via WhatsApp"</strong> na visão geral e no checklist de lançamento para enviar atualizações do projeto diretamente aos seus contatos.
+        </p>
       </div>
 
       <SectionTitle>Convites para profissionais</SectionTitle>
@@ -227,12 +241,112 @@ const tabContent: Record<TabId, React.ReactNode> = {
         ))}
       </div>
 
+      <SectionTitle>Integração com o Módulo Criativo</SectionTitle>
+      <div className="flex items-start gap-2 rounded-lg bg-primary/10 border border-primary/20 p-3">
+        <Palette className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+        <p className="text-sm text-muted-foreground">
+          Após a análise, use o botão <strong className="text-foreground">"Criar arte com este DNA"</strong> para gerar automaticamente uma arte visual baseada no mood, gênero e identidade da faixa.
+        </p>
+      </div>
+
       <SectionTitle>Feedback e calibração</SectionTitle>
       <Step n={1}>Após o resultado, clique em <strong>"Dar Feedback"</strong> para corrigir gênero ou atributos.</Step>
       <Step n={2}>Sua correção retroalimenta o modelo para diagnósticos mais precisos.</Step>
 
       <Tip>Envie de preferência .wav sem compressão para o diagnóstico mais preciso.</Tip>
       <Warn>Arquivos com menos de 30 segundos podem não ter seções suficientes para segmentação completa.</Warn>
+    </div>
+  ),
+
+  editais: (
+    <div className="space-y-2">
+      <SectionTitle>O que são Editais?</SectionTitle>
+      <p className="text-sm text-muted-foreground leading-relaxed">
+        O módulo de Editais ajuda você a encontrar e se inscrever em editais de fomento cultural — festivais, prêmios, bolsas e patrocínios públicos que financiam projetos artísticos.
+      </p>
+
+      <SectionTitle>Busca inteligente com IA</SectionTitle>
+      <Step n={1}>Acesse <strong>Editais</strong> no menu lateral.</Step>
+      <Step n={2}>A IA busca editais abertos compatíveis com seu perfil (área, estado, porte).</Step>
+      <Step n={3}>Cada edital mostra órgão, prazo, área, valor e status.</Step>
+
+      <SectionTitle>Match de Editais</SectionTitle>
+      <div className="flex items-start gap-2 rounded-lg bg-primary/10 border border-primary/20 p-3">
+        <Sparkles className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+        <p className="text-sm text-muted-foreground">
+          O <strong className="text-foreground">Match IA</strong> cruza os dados do seu perfil cultural (áreas, estados, palavras-chave) com os editais disponíveis e ranqueia os mais relevantes para você.
+        </p>
+      </div>
+
+      <SectionTitle>Inscrição com auto-preenchimento</SectionTitle>
+      <Step n={1}>Selecione um edital e clique em <strong>"Iniciar Inscrição"</strong>.</Step>
+      <Step n={2}>Use o botão <strong>"Preencher com meu perfil"</strong> para auto-preencher campos como biografia, cidade, especialidades e portfólio.</Step>
+      <Step n={3}>A IA extrai automaticamente os campos do formulário do edital.</Step>
+      <Step n={4}>Revise, complete os campos restantes e salve o rascunho.</Step>
+
+      <SectionTitle>Assistente IA para Editais</SectionTitle>
+      <div className="space-y-1.5">
+        {[
+          "Tire dúvidas sobre requisitos do edital",
+          "Peça ajuda para redigir justificativas e objetivos",
+          "Consulte documentos necessários para inscrição",
+          "Compare dois editais lado a lado",
+        ].map((item, i) => (
+          <div key={i} className="flex items-start gap-2">
+            <CheckCircle2 className="h-3.5 w-3.5 text-primary mt-0.5 shrink-0" />
+            <p className="text-sm text-muted-foreground">{item}</p>
+          </div>
+        ))}
+      </div>
+
+      <SectionTitle>Banco de Documentos</SectionTitle>
+      <p className="text-sm text-muted-foreground leading-relaxed">
+        Salve documentos reutilizáveis (bio artística, currículo, portfólio, carta de intenção) no <strong className="text-foreground">Banco de Documentos</strong> para agilizar futuras inscrições.
+      </p>
+
+      <Tip>Quanto mais completo seu perfil (bio, especialidades, cidade), mais preciso será o match e o auto-preenchimento.</Tip>
+    </div>
+  ),
+
+  creative: (
+    <div className="space-y-2">
+      <SectionTitle>Módulo Criativo</SectionTitle>
+      <p className="text-sm text-muted-foreground leading-relaxed">
+        O Módulo Criativo permite gerar artes visuais, capas, banners e legendas para redes sociais usando IA generativa — tudo integrado aos seus projetos.
+      </p>
+
+      <SectionTitle>Como gerar uma arte</SectionTitle>
+      <Step n={1}>Acesse <strong>Criativo</strong> no menu lateral.</Step>
+      <Step n={2}>Escreva um <strong>prompt</strong> descrevendo a arte que deseja (ex: "capa de single de trap com tons escuros e tipografia bold").</Step>
+      <Step n={3}>Escolha o <strong>formato</strong>: Capa (1:1), Stories (9:16), Banner (16:9), Post (4:5) ou YouTube.</Step>
+      <Step n={4}>Opcionalmente, selecione um <strong>estilo visual</strong> (Minimalista, Neon, Vintage, Aquarela, etc.).</Step>
+      <Step n={5}>Clique em <strong>"Gerar"</strong> e aguarde a IA criar sua arte.</Step>
+
+      <SectionTitle>Recursos avançados</SectionTitle>
+      <div className="space-y-1.5">
+        {[
+          "Geração em lote (múltiplos formatos de uma vez)",
+          "Imagem de referência para guiar o estilo",
+          "Templates rápidos (Capa de Single, Post de Lançamento, Stories, etc.)",
+          "Galeria com todas as artes geradas, organizadas por projeto",
+          "Download direto para uso em distribuidoras e redes sociais",
+        ].map((item, i) => (
+          <div key={i} className="flex items-start gap-2">
+            <CheckCircle2 className="h-3.5 w-3.5 text-primary mt-0.5 shrink-0" />
+            <p className="text-sm text-muted-foreground">{item}</p>
+          </div>
+        ))}
+      </div>
+
+      <SectionTitle>Integração com DNA Musical</SectionTitle>
+      <div className="flex items-start gap-2 rounded-lg bg-primary/10 border border-primary/20 p-3">
+        <Dna className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+        <p className="text-sm text-muted-foreground">
+          Ao analisar uma faixa no <strong className="text-foreground">DNA Musical</strong>, você pode gerar automaticamente uma arte visual baseada no gênero, mood e identidade sonora da música.
+        </p>
+      </div>
+
+      <Tip>Use os templates rápidos para gerar material de divulgação completo em poucos cliques: capa + stories + post.</Tip>
     </div>
   ),
 
@@ -328,7 +442,13 @@ const tabContent: Record<TabId, React.ReactNode> = {
         <ExampleQuery key={q} icon={DollarSign} text={q} />
       ))}
 
-      <SectionTitle>Pergunte sobre técnica e produção</SectionTitle>
+      <SectionTitle>Dúvida técnica (produção e áudio)</SectionTitle>
+      <div className="flex items-start gap-2 rounded-lg bg-violet-500/10 border border-violet-500/20 p-3 mb-2">
+        <Wand2 className="h-4 w-4 text-violet-500 mt-0.5 shrink-0" />
+        <p className="text-sm text-muted-foreground">
+          No Dashboard, clique no chip <strong className="text-foreground">"🎛️ Dúvida técnica"</strong> para abrir o assistente no modo engenheiro de áudio — ideal para perguntas sobre mix, master, EQ e produção.
+        </p>
+      </div>
       {["Como ajusto o ganho de uma faixa vocal?", "Qual a diferença entre compressão paralela e serial?", "O que é LUFS e qual o alvo para streaming?"].map((q) => (
         <ExampleQuery key={q} icon={GraduationCap} text={q} color="text-amber-400" />
       ))}
@@ -338,11 +458,18 @@ const tabContent: Record<TabId, React.ReactNode> = {
         <ExampleQuery key={q} icon={GraduationCap} text={q} color="text-[hsl(var(--success))]" />
       ))}
 
-      <div className="flex items-start gap-2 rounded-lg bg-amber-500/10 p-3 border border-amber-500/20 mt-3">
-        <Wand2 className="h-4 w-4 text-amber-400 mt-0.5 shrink-0" />
-        <p className="text-sm text-muted-foreground">
-          Ao final de cada resposta, a IA pode sugerir <strong className="text-foreground">tarefas acionáveis</strong>. Clique no <strong className="text-foreground">botão "+"</strong> para adicioná-la ao seu Checklist do Dia.
-        </p>
+      <SectionTitle>IA contextual em cada módulo</SectionTitle>
+      <div className="space-y-1.5">
+        {[
+          "Dentro de um projeto: IA analisa estágio, tarefas, equipe e finanças daquele projeto",
+          "Em Editais: IA ajuda a redigir justificativas e entender requisitos do edital",
+          "No DNA Musical: IA gera diagnóstico técnico e artístico da faixa",
+        ].map((item, i) => (
+          <div key={i} className="flex items-start gap-2">
+            <Bot className="h-3.5 w-3.5 text-primary mt-0.5 shrink-0" />
+            <p className="text-sm text-muted-foreground">{item}</p>
+          </div>
+        ))}
       </div>
 
       <SectionTitle>Histórico de conversas</SectionTitle>
