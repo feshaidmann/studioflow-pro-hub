@@ -89,6 +89,10 @@ export default function Creative() {
   const [filterProject, setFilterProject] = useState<string>("all");
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; path: string } | null>(null);
   const [detailAsset, setDetailAsset] = useState<any>(null);
+  const [dnaCopyText, setDnaCopyText] = useState<string>("");
+  const [dnaCopyLoading, setDnaCopyLoading] = useState(false);
+  const [dnaSource, setDnaSource] = useState<DiagnosisResult | null>(null);
+  const [detailAsset, setDetailAsset] = useState<any>(null);
 
   const { assets, isLoading: assetsLoading, generating, generate, generateBatch, deleteAsset } = useCreativeAssets();
 
