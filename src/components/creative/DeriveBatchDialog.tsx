@@ -172,6 +172,38 @@ export default function DeriveBatchDialog({
     });
   };
 
+  const handleSaveOne = async (idx: number) => {
+    const r = results[idx];
+    if (!r || r.saved || r.saving || !onSaveAsset) return;
+    setResults((prev) => prev.map((x, i) => (i === idx && x ? { ...x, saving: true } : x)));
+    const saved = await onSaveAsset({
+      imageBase64: r.imageUrl,
+      prompt: r.prompt,
+      style,
+      format: r.formatId,
+      width: r.width,
+      height: r.height,
+      projectId,
+    });
+    setResults((prev) =>
+      prev.map((x, i) => (i === idx && x ? { ...x, saving: false, saved: !!saved } : x))
+    );
+  };
+
+  const handleSaveAll = async () => {
+    if (!onSaveAsset) return;
+    setSavingAll(true);
+    for (let i = 0; i < results.length; i++) {
+      const r = results[i];
+      if (r && !r.saved && !r.saving) {
+        await handleSaveOne(i);
+      }
+    }
+    setSavingAll(false);
+  };
+
+  const unsavedCount = results.filter((r) => r && !r.saved).length;
+
   const handleClose = (val: boolean) => {
     if (!generating) {
       onOpenChange(val);
