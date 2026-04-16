@@ -1,92 +1,100 @@
 
 
-# Diagnóstico CX — Menu "Mais" (mobile)
+# Diagnóstico CX — DNA Musical (`/music-dna`)
 
-## O que existe hoje
-Bottom nav fixa com 5 slots: Home, Projetos, Finanças, Agenda, **Mais**. O botão "Mais" abre um `Sheet` inferior com grid 3-colunas contendo 6 itens em ordem de declaração:
-
+## Jornada atual (mapa)
 ```text
-[ DNA Musical ]  [ Editais ]   [ Criativo ]
-[ Profissionais] [ Tutorial ]  [ Configurações ]
+Entrar → Form (upload + nome + notas) → "Analisar" → Loading (logs) → Result (15+ seções) → [Salvar | Criar arte | Ajustar | Nova]
+                                                                          ↑
+                                                            cache de sessão restaura aqui
 ```
 
-Abaixo, botão "Sair" no rodapé do drawer.
+## Incoerências e fricções identificadas
 
-## Problemas identificados
+### 🔴 Críticas (bugs/contradições)
 
-### 1. Hierarquia plana — todos os 6 itens com mesmo peso visual
-Tutorial e Configurações (utilitários, baixa frequência) recebem o mesmo card com borda/altura de DNA Musical, Editais, Criativo (features core, alta frequência). Para o usuário, "Mais" parece um catálogo desorganizado.
+**1. Campo "references" do schema está órfão**
+`formSchema` valida `references[]`, `toggleRef` existe e `REFERENCE_ARTISTS` é importado — mas **não há UI no FormView** para selecionar referências. O usuário nunca consegue informar artistas-base, e o radar/diagnóstico usa só o gênero detectado. Código morto que polui o componente e quebra promessa do "Compare com referências".
 
-### 2. Ordem não reflete uso nem importância
-Sequência atual segue ordem do array `gestaoItems`, não frequência ou jornada:
-- **DNA Musical** e **Criativo** são features pesadas de IA, usadas pontualmente
-- **Editais** e **Profissionais** têm uso recorrente para artistas ativos
-- **Tutorial** deveria estar visualmente separado (raramente revisitado após onboarding)
-- **Configurações** está enterrada no canto inferior direito (péssimo para mão direita em telas grandes — 414×817)
+**2. Badge "Pro" inconsistente com o subtítulo**
+Header diz "Pro" sem qualificar; logo abaixo o disclaimer diz "Análise espectral disponível para todos · IA avançada é Pro". Mostra duas verdades ao mesmo tempo. Usuário free clica "Analisar" e não sabe se vai ou não funcionar.
 
-### 3. Mistura de "features" com "utilitários" sem separador
-Tutorial e Configurações deveriam ficar em uma seção secundária visualmente distinta (ex.: lista compacta abaixo do grid, igual ao "Sair"), liberando o grid para apenas as 4 features de produto.
+**3. "Salvar" não devolve o ID da análise salva**
+Comentário no código: `// We don't have the ID directly from the mutation`. Resultado: depois de salvar, "Criar arte com este DNA" passa `dna=session` em vez do `savedAnalysisId`. O link contextual entre DNA e Criativo quebra silenciosamente.
 
-### 4. Sem rótulo/contexto sobre o que cada feature faz
-"DNA Musical", "Editais", "Criativo" são nomes internos. Usuário novo abre "Mais" e não sabe que Criativo gera arte com IA ou que Editais monitora chamadas públicas. Falta legenda de 2-3 palavras (sub-label).
+**4. Cache de sessão sem indicação visual**
+Ao voltar para `/music-dna` o último resultado ressurge automaticamente — sem banner "Você está vendo a última análise · ↻ Nova". Usuário pensa que ficou preso ou que análise nova já rodou.
 
-### 5. Botão "Sair" destoa do padrão
-É um `Button ghost` de largura total enquanto tudo acima é grid de cards. Quebra leitura.
+### 🟠 Hierárquicas (densidade e leitura)
 
-### 6. Falta de "recentes" / atalho contextual
-Em apps maduros (Notion, Linear), o "Mais" lembra os 1-2 itens mais usados ou último acessado no topo. Aqui, sempre o mesmo grid estático.
+**5. Tela de resultado com 9 cards verticais sem âncora**
+Sequência: Header → 6 métricas → Resumo → Diag.Técnico → Seções → Timeline → Radar → Identidade → Refs+Fortes+Gargalos → Arranjo → Próximos passos → Footer. Em mobile (414px) são ~3500px de scroll sem TOC nem agrupamento. Usuário se perde e raramente chega no "Próximos passos" — que é justamente o conteúdo acionável.
 
-### 7. Densidade desperdiçada
-Grid 3×2 com cards de `min-h-[72px]` ocupa ~250px verticais para 6 itens. Em telas pequenas (375px), isso empurra "Sair" e força scroll do drawer.
+**6. Tipografia técnica excessiva**
+Uso de `font-mono uppercase tracking-widest text-[8-10px]` em quase todos os labels. Reforça o tom "estúdio", mas a 8-10px em mobile fica ilegível e cria fadiga. Conflita com a memória "macOS minimalista" do projeto que prefere SF/Inter.
 
-### 8. Indicador "Pro" inconsistente
-Lógica `locked` existe mas hoje todos os itens têm `proOnly: false` — código morto que polui o componente.
+**7. Métricas de áudio sem interpretação inline**
+"-9.2 LUFS" sozinho não diz nada para o artista independente. O diagnóstico técnico explica depois, mas separa o número da leitura. Falta micro-tag tipo `🟢 ok | 🟡 alto | 🔴 fora` embaixo de cada card métrico, com tooltip explicando.
 
-## Recomendações (priorizadas)
+**8. Timeline de seções sem player/tempo**
+Mostra blocos coloridos com `intro/verse/chorus`, mas sem player de áudio sincronizado e sem timestamps visíveis nos blocos curtos (`width > 8 ? label : ""` esconde texto). Usuário não consegue clicar em "chorus" para ouvir o trecho — seção decorativa.
 
-### P0 — Reorganizar em duas seções semânticas
-```text
-FERRAMENTAS                          ← seção 1 (grid)
-[ Editais ]  [ Criativo ]  [ DNA ]
-[ Profissionais ]
+### 🟡 Jornada (continuidade)
 
-CONTA                                ← seção 2 (lista compacta)
-⚙  Configurações
-?  Tutorial
-↗  Sair                              ← já em destaque
-```
-Reduz ruído, separa "o que faço" de "como ajusto".
+**9. Após "Salvar" não há próximo passo claro**
+Footer mostra 5 botões em linha: Salvar, Criar arte, Ajustar análise, Nova análise + "Compartilhe com o produtor" (texto solto sem botão). Falta CTA primário "→ Próximos passos" que rolaria para a seção acionável e já permitiria adicionar tudo às tarefas em batch.
 
-### P1 — Reordenar grid por frequência de uso real
-Sugestão baseada na jornada do artista independente:
-1. **Editais** (recorrente — buscar editais semanalmente)
-2. **Profissionais** (recorrente — gerenciar contatos)
-3. **Criativo** (sob demanda — arte para releases)
-4. **DNA Musical** (pontual — análises de master)
+**10. "Adicionar à lista de tarefas" sem confirmação visual de destino**
+Toast "Adicionado à lista de tarefas" não diz onde nem oferece "Ver no Dashboard". Usuário adiciona 5 sugestões e não sabe que viraram cards `[DNA]` no checklist diário.
 
-Validar com analytics (`pageviews` por rota dos últimos 30 dias) — posso consultar via `analytics--read_project_analytics` se quiser dados antes de implementar.
+**11. "Análises salvas" só aparece no estado inicial**
+Lista some quando há resultado ativo. Para comparar duas faixas, usuário tem que clicar "Nova análise" → perde resultado atual → escolhe salva → perde a nova. Sem comparativo lado-a-lado.
 
-### P2 — Adicionar sub-label de 1 linha
-```text
-┌──────────────┐
-│  📄 Editais  │
-│  Chamadas e  │
-│  inscrições  │
-└──────────────┘
-```
-2 palavras-chave em `text-[10px] text-muted-foreground`. Resolve o "o que é isso?" do usuário novo.
+**12. "Ajustar análise" (feedback) é genérico**
+Botão chama modal de feedback amplo sem indicar que serve para corrigir gênero/métricas (caso de uso descrito na memória `/integracao-e-tarefas`). Parece "feedback do produto" e ninguém clica.
 
-### P3 — Promover "Configurações" do drawer para o header mobile
-Adicionar ícone ⚙ ao lado do sino de notificações no header (já tem espaço). Configurações é acesso de "manutenção" que não compete com features — não precisa de slot no drawer principal.
+### 🔵 Visuais menores
 
-### P4 — Limpeza de código
-Remover lógica `proOnly`/`locked` do menu (não usada hoje) para reduzir ruído visual no JSX e simplificar manutenção.
+**13. Emojis decorativos misturados com Lucide icons**
+Header de cards usa 🔬📊🎬📡🎭🔗✅⚠️🎛🚀, mas footer/botões usam ícones Lucide. Falta consistência — escolher um sistema (Lucide é o padrão do app).
 
-### P5 (opcional) — Atalho contextual
-Mostrar chip "Visto recentemente" acima do grid quando aplicável, com último item acessado fora dos primários. Baixo ROI no MVP, postergar.
+**14. Badge de gênero duplicada**
+Aparece no header do resultado **e** dentro do `CompatibilityBadge` ao lado. Mesma informação duas vezes em 200px de distância.
+
+**15. Cores fora do design system**
+`green-500/10`, `orange-500/10`, `purple-400/50`, `blue-400/60` hardcoded no Tailwind. Memória diz "macOS minimalist, neutral gray". Sugestões deveriam usar tokens semânticos (`success`, `warning`, `accent`).
+
+## Recomendações priorizadas
+
+### P0 — Corrigir bugs e contradições
+- **Implementar UI de seleção de referências** (chips multi-select com `REFERENCE_ARTISTS`) ou **remover** completamente do schema/imports se decidirmos postergar
+- Fazer `saveAnalysis` retornar o ID e propagar para `setSavedAnalysisId` → "Criar arte com este DNA" passa o ID correto
+- Consolidar mensagem Pro: uma frase só, no card de resultado avançado, não no header
+- Banner "Restaurada da sessão" com ação `↻ Nova análise`
+
+### P1 — Hierarquia e legibilidade
+- **Sticky TOC lateral/topo** com 4 âncoras: `Resumo · Métricas · Identidade · Próximos passos`
+- Reduzir uso de `font-mono uppercase 8-10px` para labels essenciais; texto de leitura em `text-xs/sm` regular
+- Tag de status em cada card métrico (`🟢 ok / 🟡 alerta / 🔴 fora`) com tooltip
+- Padronizar ícones para Lucide; remover emojis decorativos dos títulos de seção
+- Substituir cores hardcoded por tokens semânticos
+
+### P2 — Jornada acionável
+- CTA primário no footer: **"Adicionar todos os próximos passos como tarefas"** (batch)
+- Toast com action `Ver no Dashboard →`
+- Permitir manter `SavedAnalysesList` visível em painel lateral/colapsável durante visualização (para comparar)
+- Renomear "Ajustar análise" → **"Corrigir gênero ou métricas"** (microcopy honesta)
+
+### P3 — Player na timeline (nice-to-have)
+- Adicionar player HTML5 escondido + clicar em bloco da timeline → seek + play do trecho da seção
+- Dependente de manter o blob de áudio em memória pós-análise (ajuste no `useMusicDNA`)
 
 ## Resumo executivo
-O menu "Mais" funciona, mas trata 6 itens heterogêneos como iguais. As três mudanças de maior impacto (P0 + P1 + P2) levam o usuário de "lista de coisas" para "ferramentas claras + conta", alinhado ao padrão macOS minimalista do projeto.
+DNA Musical entrega muito conteúdo técnico de qualidade, mas: **(a)** tem um campo morto (references), **(b)** quebra o link com Criativo após salvar, **(c)** sobrecarrega o usuário com 3500px de scroll sem TOC e tipografia fatigante. As três mudanças de maior impacto são **P0 (bugs) + P1 TOC/legibilidade + P2 batch-to-tasks** — levam a tela de "diagnóstico denso" a "diagnóstico navegável e acionável".
 
-**Quer que eu implemente?** Sugiro começar por **P0 + P1 + P4** (agrupamento + reordenação + limpeza) como primeira PR, e P2 (sub-labels) numa segunda iteração após validar copy.
+**Sugestão de PRs**:
+1. P0 completo (bugs/contradições)
+2. P1 TOC + tags de status nas métricas + cleanup tipográfico
+3. P2 jornada acionável (batch + toast com link)
+4. P3 player sincronizado (após validar uso real)
 
