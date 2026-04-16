@@ -56,7 +56,7 @@ serve(async (req) => {
       });
     }
 
-    const { prompt, style, format, width, height, editImageUrl, projectId, channelContext, mode, dnaContext } = await req.json();
+    const { prompt, style, format, width, height, editImageUrl, projectId, channelContext, mode, dnaContext, trackName, artistName, releaseDate } = await req.json();
 
     // TEXT MODE — generate social media copy
     if (mode === "text") {
@@ -141,6 +141,16 @@ serve(async (req) => {
 
     if (channelContext) {
       systemParts.push(`Adapt for this distribution channel: ${channelContext}.`);
+    }
+
+    if (trackName) {
+      systemParts.push(`Song title: "${trackName}". Display this title prominently in the artwork.`);
+    }
+    if (artistName) {
+      systemParts.push(`Artist name: "${artistName}". Include the artist name in the artwork.`);
+    }
+    if (releaseDate) {
+      systemParts.push(`Release date: ${releaseDate}. Include this date in the artwork if appropriate.`);
     }
 
     if (editImageUrl) {

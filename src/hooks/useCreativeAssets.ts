@@ -46,6 +46,9 @@ export function useCreativeAssets() {
     editImageUrl?: string;
     projectId?: string;
     channelContext?: string;
+    trackName?: string;
+    artistName?: string;
+    releaseDate?: string;
   }) => {
     if (!user) return null;
     setGenerating(true);
@@ -60,6 +63,9 @@ export function useCreativeAssets() {
           editImageUrl: params.editImageUrl,
           projectId: params.projectId,
           channelContext: params.channelContext,
+          trackName: params.trackName,
+          artistName: params.artistName,
+          releaseDate: params.releaseDate,
         },
       });
 

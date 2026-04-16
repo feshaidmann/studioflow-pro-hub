@@ -1,8 +1,10 @@
 import { useState, useCallback, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Palette, Sparkles, Trash2, ImageIcon, Download, Settings2, Copy, FileText } from "lucide-react";
+import { Palette, Sparkles, Trash2, ImageIcon, Download, Settings2, Copy, FileText, Dna, X, Music, User, CalendarDays } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { DatePickerField } from "@/components/ui/date-picker-field";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -115,6 +117,12 @@ export default function Creative() {
   const [dnaCopyLoading, setDnaCopyLoading] = useState(false);
   const [dnaSource, setDnaSource] = useState<DiagnosisResult | null>(null);
   const [dnaTrackName, setDnaTrackName] = useState("");
+  const [trackName, setTrackName] = useState("");
+  const [artistName, setArtistName] = useState("");
+  const [releaseDate, setReleaseDate] = useState("");
+
+  const RELEASE_FORMATS = ["spotify_cover", "deezer_cover", "tidal_cover"];
+  const isReleaseFormat = RELEASE_FORMATS.includes(selectedFormat.id);
 
   const { assets, isLoading: assetsLoading, generating, generate, generateBatch, generateText, deleteAsset } = useCreativeAssets();
 
@@ -151,10 +159,12 @@ export default function Creative() {
       if (diagnosis) {
         setDnaSource(diagnosis);
         setDnaTrackName(trackName);
+        setTrackName(trackName);
         const spotifyFmt = FORMAT_OPTIONS.find((f) => f.id === "spotify_cover");
         const fmt = spotifyFmt || FORMAT_OPTIONS[0];
         if (spotifyFmt) setSelectedFormat(fmt);
         setPrompt(buildDNAPrompt(diagnosis, trackName, fmt.id));
+        setActiveTab("create");
       }
 
       // Clean the dna param from URL to avoid re-triggering
@@ -186,14 +196,29 @@ export default function Creative() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedFormat.id]);
 
+  // Auto-fill artistName when project changes
+  useEffect(() => {
+    if (linkedProject?.artist && !artistName) {
+      setArtistName(linkedProject.artist);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [linkedProject?.artist]);
+
   const handleGenerate = useCallback(async () => {
     if (!prompt.trim()) {
       toast({ title: "Descreva sua ideia", description: "O campo de prompt não pode estar vazio.", variant: "destructive" });
       return;
     }
+    // Build metadata prefix
+    const metaParts: string[] = [];
+    if (trackName.trim()) metaParts.push(`Nome da música: "${trackName.trim()}"`);
+    if (artistName.trim()) metaParts.push(`Artista: "${artistName.trim()}"`);
+    if (releaseDate) metaParts.push(`Data de lançamento: ${releaseDate}`);
+    const metaPrefix = metaParts.length > 0 ? metaParts.join(". ") + ". " : "";
+
     const contextPrompt = linkedProject
-      ? `Para o projeto "${linkedProject.name}" do artista "${linkedProject.artist}". ${prompt}`
-      : prompt;
+      ? `${metaPrefix}Para o projeto "${linkedProject.name}" do artista "${linkedProject.artist}". ${prompt}`
+      : `${metaPrefix}${prompt}`;
 
     const result = await generate({
       prompt: contextPrompt,
@@ -203,6 +228,9 @@ export default function Creative() {
       height: selectedFormat.height,
       editImageUrl: referenceImage || undefined,
       projectId: selectedProjectId && selectedProjectId !== "none" ? selectedProjectId : undefined,
+      trackName: trackName.trim() || undefined,
+      artistName: artistName.trim() || undefined,
+      releaseDate: releaseDate || undefined,
     });
 
     if (result) {
@@ -220,7 +248,7 @@ export default function Creative() {
         setDnaCopyLoading(false);
       }
     }
-  }, [prompt, style, selectedFormat, linkedProject, selectedProjectId, generate, referenceImage, dnaSource, generateText]);
+  }, [prompt, style, selectedFormat, linkedProject, selectedProjectId, generate, referenceImage, dnaSource, generateText, trackName, artistName, releaseDate]);
 
   // Semantic variation: pass current image as reference with variation instruction
   const handleVariation = useCallback(async () => {
@@ -338,6 +366,70 @@ export default function Creative() {
               {/* Quick templates when no prompt yet */}
               {!prompt.trim() && !generatedImage && (
                 <QuickTemplates onSelect={handleTemplateSelect} />
+              )}
+
+              {/* DNA context banner */}
+              {dnaSource && (
+                <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 flex justify-between items-center animate-fade-in">
+                  <div className="flex items-center gap-3">
+                    <Dna className="h-5 w-5 text-primary shrink-0" />
+                    <div>
+                      <p className="text-sm font-medium">Criando arte para: <span className="text-primary">{dnaTrackName || "faixa"}</span></p>
+                      <p className="text-xs text-muted-foreground">
+                        {dnaSource.genero_classificado || "Gênero"} • Mood: {dnaSource.identidade?.mood_principal || "—"}
+                      </p>
+                    </div>
+                  </div>
+                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => {
+                    setDnaSource(null);
+                    setDnaTrackName("");
+                    setPrompt("");
+                  }}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+
+              {/* Track name & Artist */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1.5 flex items-center gap-1">
+                    <Music className="h-3 w-3" /> Nome da música
+                  </label>
+                  <Input
+                    value={trackName}
+                    onChange={(e) => setTrackName(e.target.value)}
+                    placeholder="Ex: Noite Clara"
+                    className="h-9 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1.5 flex items-center gap-1">
+                    <User className="h-3 w-3" /> Artista
+                  </label>
+                  <Input
+                    value={artistName}
+                    onChange={(e) => setArtistName(e.target.value)}
+                    placeholder="Ex: Maria Silva"
+                    className="h-9 text-sm"
+                  />
+                </div>
+              </div>
+
+              {/* Release date — only for cover formats */}
+              {isReleaseFormat && (
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1.5 flex items-center gap-1">
+                    <CalendarDays className="h-3 w-3" /> Data de lançamento (opcional)
+                  </label>
+                  <DatePickerField
+                    value={releaseDate}
+                    onChange={setReleaseDate}
+                    disablePast
+                    placeholder="Selecionar data"
+                    className="h-9 text-sm"
+                  />
+                </div>
               )}
 
               {/* PROMPT — protagonist */}
