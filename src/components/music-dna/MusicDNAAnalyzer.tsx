@@ -7,7 +7,8 @@ import {
   Radar, RadarChart, PolarGrid, PolarAngleAxis,
   ResponsiveContainer, Legend,
 } from "recharts";
-import { Upload, X, FileAudio, Music, MessageSquare, ListPlus, Check, Save, Trash2, History } from "lucide-react";
+import { Upload, X, FileAudio, Music, MessageSquare, ListPlus, Check, Save, Trash2, History, Palette } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { useTasks } from "@/hooks/useTasks";
 import { toast } from "sonner";
 import {
@@ -428,9 +429,10 @@ function LoadingView({ trackName, logs, progress }: {
 
 // ── RESULT VIEW ──────────────────────────────────────────────────────────────
 
-function ResultView({ input, diagnosis, onReset, onSave, isSaved, isSaving }: {
+function ResultView({ input, diagnosis, onReset, onSave, isSaved, isSaving, savedAnalysisId }: {
   input: TrackInput | { name: string; notes?: string; references: string[] };
   diagnosis: DiagnosisResult;
+  savedAnalysisId?: string;
   onReset: () => void;
   onSave?: () => void;
   isSaved?: boolean;
@@ -777,6 +779,7 @@ function ResultView({ input, diagnosis, onReset, onSave, isSaved, isSaving }: {
               <Check className="h-3 w-3" /> Salva
             </span>
           )}
+          <CreateArtButton isSaved={isSaved} savedAnalysisId={savedAnalysisId} />
           <Button variant="outline" size="sm" className="text-xs gap-1.5" onClick={() => setFeedbackOpen(true)}>
             <MessageSquare className="h-3 w-3" />
             Ajustar análise
