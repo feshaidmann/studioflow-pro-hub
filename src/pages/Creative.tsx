@@ -320,8 +320,25 @@ export default function Creative() {
   };
 
   const handleDownload = () => {
-    if (!generatedImage) return;
-    downloadFile(generatedImage, `criativo_${selectedFormat.id}_${Date.now()}.png`);
+    if (!generatedBase64) return;
+    const a = document.createElement("a");
+    a.href = generatedBase64;
+    a.download = `criativo_${selectedFormat.id}_${Date.now()}.png`;
+    a.click();
+  };
+
+  const handleSaveToGallery = async () => {
+    if (!generatedBase64 || savedToGallery) return;
+    const result = await saveAsset({
+      imageBase64: generatedBase64,
+      prompt,
+      style,
+      format: selectedFormat.id,
+      width: selectedFormat.width,
+      height: selectedFormat.height,
+      projectId: selectedProjectId && selectedProjectId !== "none" ? selectedProjectId : undefined,
+    });
+    if (result) setSavedToGallery(true);
   };
 
   const handleConfirmDelete = async () => {
