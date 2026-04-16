@@ -667,7 +667,8 @@ export default function Creative() {
               )}
 
               {/* 6. Generate button — desktop */}
-              <div className="hidden md:block">
+              <div className="hidden md:block space-y-2">
+                <QuotaIndicator />
                 <Button
                   className="w-full"
                   onClick={handleGenerate}
