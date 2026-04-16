@@ -390,6 +390,36 @@ export default function Creative() {
                 formatLabel={selectedFormat.label}
                 aspectRatio={selectedFormat.width / selectedFormat.height}
               />
+
+              {/* DNA Copy Text Card */}
+              {(dnaCopyText || dnaCopyLoading) && (
+                <Card className="mt-4">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <FileText className="h-4 w-4 text-primary" />
+                      <span className="text-xs font-medium">Legenda sugerida para redes sociais</span>
+                    </div>
+                    {dnaCopyLoading ? (
+                      <p className="text-xs text-muted-foreground animate-pulse">Gerando legenda…</p>
+                    ) : (
+                      <>
+                        <p className="text-sm leading-relaxed whitespace-pre-wrap">{dnaCopyText}</p>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="mt-3 text-xs gap-1.5"
+                          onClick={() => {
+                            navigator.clipboard.writeText(dnaCopyText);
+                            toast({ title: "Copiado!", description: "Legenda copiada para a área de transferência." });
+                          }}
+                        >
+                          <Copy className="h-3 w-3" /> Copiar legenda
+                        </Button>
+                      </>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
             </div>
           </div>
         </TabsContent>
