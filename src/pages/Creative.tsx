@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Switch } from "@/components/ui/switch";
 import FormatSelector, { FORMAT_OPTIONS, type FormatOption } from "@/components/creative/FormatSelector";
 import FormatChips from "@/components/creative/FormatChips";
 import StyleChips from "@/components/creative/StyleChips";
@@ -555,6 +556,31 @@ export default function Creative() {
                       />
                     </div>
                   )}
+
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground mb-1.5 flex items-center gap-1">
+                      <FileText className="h-3 w-3" /> Texto adicional na arte (opcional)
+                    </label>
+                    <Input
+                      value={additionalText}
+                      onChange={(e) => setAdditionalText(e.target.value.slice(0, 60))}
+                      placeholder='Ex: "feat. Maria", "EP Vol. 2", "Edição limitada"'
+                      maxLength={60}
+                      disabled={noText}
+                      className="h-9 text-sm"
+                    />
+                    <p className="text-[10px] text-muted-foreground mt-1">
+                      {additionalText.length}/60 — texto extra que aparecerá na arte. A descrição acima nunca vira texto na imagem.
+                    </p>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-3 rounded-md border border-border/60 bg-background/40 p-2.5">
+                    <div className="min-w-0">
+                      <label htmlFor="noText" className="text-xs font-medium block">Arte sem nenhum texto</label>
+                      <p className="text-[10px] text-muted-foreground">Suprime título, artista, data e texto extra. Pura composição visual.</p>
+                    </div>
+                    <Switch id="noText" checked={noText} onCheckedChange={setNoText} />
+                  </div>
 
                   {projects.length > 0 && (
                     <div>
