@@ -38,10 +38,32 @@ async function downloadFile(url: string, filename: string) {
   }
 }
 
-function buildDNAPrompt(diagnosis: DiagnosisResult, trackName: string): string {
+const FORMAT_PROMPT_PREFIX: Record<string, string> = {
+  instagram_post: "Post artístico para Instagram",
+  story: "Story vertical impactante",
+  youtube_cover: "Capa cinematográfica para YouTube",
+  spotify_cover: "Capa artística para single/álbum",
+  spotify_canvas: "Canvas animado vertical para Spotify",
+  spotify_banner: "Banner horizontal para perfil Spotify",
+  deezer_cover: "Capa artística para single/álbum",
+  tidal_cover: "Capa artística para single/álbum",
+  twitter_post: "Post visual para Twitter/X",
+  custom: "Arte visual personalizada",
+};
+
+function getFormatPrefix(formatId: string): string {
+  return FORMAT_PROMPT_PREFIX[formatId] || "Arte visual";
+}
+
+function buildDNAPrompt(diagnosis: DiagnosisResult, trackName: string, formatId = "spotify_cover"): string {
   const parts: string[] = [];
+  const prefix = getFormatPrefix(formatId);
   const genre = diagnosis.genero_classificado;
-  if (genre) parts.push(`Capa artística para single de ${genre}.`);
+  if (genre) {
+    parts.push(`${prefix} de ${genre}.`);
+  } else {
+    parts.push(`${prefix} para single musical.`);
+  }
 
   const mood = diagnosis.identidade?.mood_principal;
   if (mood) parts.push(`Atmosfera: ${mood}.`);
@@ -59,7 +81,7 @@ function buildDNAPrompt(diagnosis: DiagnosisResult, trackName: string): string {
 
   if (trackName) parts.push(`Título da faixa: '${trackName}'.`);
 
-  return parts.join(" ") || "Capa artística para single musical.";
+  return parts.join(" ") || `${prefix} para single musical.`;
 }
 
 export default function Creative() {
