@@ -209,45 +209,6 @@ serve(async (req) => {
     const imageData = aiData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
     if (!imageData) throw new Error("No image returned from AI");
 
-    // Extract base64 data
-    const base64 = imageData.replace(/^data:image\/\w+;base64,/, "");
-    const imageBytes = decode(base64);
-
-    // Upload to storage
-    const timestamp = Date.now();
-    const storagePath = `${user.id}/${timestamp}_${format}.png`;
-
-    const { error: uploadErr } = await supabase.storage
-      .from("creative-assets")
-      .upload(storagePath, imageBytes, { contentType: "image/png", upsert: false });
-
-    if (uploadErr) {
-      console.error("Upload error:", uploadErr);
-      throw new Error("Failed to upload image");
-    }
-
-    const { data: urlData } = supabase.storage.from("creative-assets").getPublicUrl(storagePath);
-    const publicUrl = urlData.publicUrl;
-
-    // Save metadata
-    const { data: asset, error: insertErr } = await supabase
-      .from("creative_assets")
-      .insert({
-        user_id: user.id,
-        project_id: projectId || null,
-        prompt,
-        style: style || null,
-        format,
-        width,
-        height,
-        storage_path: storagePath,
-        public_url: publicUrl,
-      })
-      .select()
-      .single();
-
-    if (insertErr) console.error("Insert error:", insertErr);
-
     // Log AI usage
     await supabase.from("ai_invocations").insert({
       user_id: user.id,
@@ -256,10 +217,9 @@ serve(async (req) => {
       status: "success",
     });
 
+    // Return base64 only — user saves explicitly
     return new Response(JSON.stringify({
-      imageUrl: publicUrl,
       imageBase64: imageData,
-      asset,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

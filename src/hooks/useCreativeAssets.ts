@@ -79,8 +79,7 @@ export function useCreativeAssets() {
         return null;
       }
 
-      queryClient.invalidateQueries({ queryKey: ["creative-assets"] });
-      return data as { imageUrl: string; imageBase64: string; asset: CreativeAsset };
+      return data as { imageBase64: string };
     } catch (e: any) {
       toast({ title: "Erro inesperado", description: e.message, variant: "destructive" });
       return null;
