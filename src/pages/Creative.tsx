@@ -93,7 +93,7 @@ export default function Creative() {
   const [dnaCopyLoading, setDnaCopyLoading] = useState(false);
   const [dnaSource, setDnaSource] = useState<DiagnosisResult | null>(null);
 
-  const { assets, isLoading: assetsLoading, generating, generate, generateBatch, deleteAsset } = useCreativeAssets();
+  const { assets, isLoading: assetsLoading, generating, generate, generateBatch, generateText, deleteAsset } = useCreativeAssets();
 
   const linkedProject = selectedProjectId
     ? projects.find((p) => p.id === selectedProjectId)
