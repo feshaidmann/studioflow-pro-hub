@@ -55,7 +55,7 @@ interface Props {
       channelContext?: string;
     }>,
     onProgress?: (current: number, total: number) => void
-  ) => Promise<Array<{ imageUrl: string; imageBase64: string; asset: CreativeAsset } | null>>;
+  ) => Promise<Array<{ imageBase64: string } | null>>;
 }
 
 export default function DeriveBatchDialog({
