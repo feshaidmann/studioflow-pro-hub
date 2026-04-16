@@ -27,6 +27,35 @@ serve(async (req) => {
     const { data: { user }, error: authErr } = await anonClient.auth.getUser(authHeader.replace("Bearer ", ""));
     if (authErr || !user) throw new Error("Unauthorized");
 
+    // Check AI usage quota (20 daily, 80 weekly)
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+    const weekStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay()).toISOString();
+
+    const { count: dailyCount } = await supabase
+      .from("ai_invocations")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .gte("created_at", todayStart);
+
+    if ((dailyCount ?? 0) >= 20) {
+      return new Response(JSON.stringify({ error: "Limite diário de 20 gerações atingido. Tente novamente amanhã." }), {
+        status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const { count: weeklyCount } = await supabase
+      .from("ai_invocations")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .gte("created_at", weekStart);
+
+    if ((weeklyCount ?? 0) >= 80) {
+      return new Response(JSON.stringify({ error: "Limite semanal de 80 gerações atingido. Tente novamente na próxima semana." }), {
+        status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const { prompt, style, format, width, height, editImageUrl, projectId, channelContext } = await req.json();
     if (!prompt || !format || !width || !height) {
       return new Response(JSON.stringify({ error: "Missing required fields" }), {
