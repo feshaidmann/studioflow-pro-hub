@@ -129,7 +129,8 @@ export default function Creative() {
 
   // Video loop state
   const [loopDuration, setLoopDuration] = useState<3 | 4 | 5>(4);
-  const [loopMotion, setLoopMotion] = useState<LoopMotion>("zoom");
+  const [videoPreset, setVideoPreset] = useState<VideoPreset>("cinematic");
+  const [videoIntensity, setVideoIntensity] = useState<Intensity>("medium");
   const [generatedVideoUrl, setGeneratedVideoUrl] = useState<string | null>(null);
   const [generatedVideoBlob, setGeneratedVideoBlob] = useState<Blob | null>(null);
   const [videoStatus, setVideoStatus] = useState<string | null>(null);
