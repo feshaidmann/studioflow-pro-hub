@@ -1,16 +1,33 @@
 
 
-# Already Implemented — No Changes Needed
+# Fechar modal de edição imediatamente ao submeter
 
-After reviewing the codebase, **all three items from this plan are already in production**:
+## Problema
+Atualmente, ao clicar "Aplicar Edição", o modal permanece aberto durante todo o processamento da IA (que pode demorar vários segundos). O usuário fica preso no modal aguardando.
 
-| Feature | Location | Status |
-|---------|----------|--------|
-| DNA context banner (🧬 + track name + genre/mood + ✕) | `Creative.tsx` line 372–389 | ✅ Done |
-| Force "create" tab on DNA load | `Creative.tsx` line 167 | ✅ Done |
-| `cacheLastAnalysis` before navigate | `MusicDNAAnalyzer.tsx` lines 883, 931 | ✅ Done |
+## Solução
+Fechar o dialog imediatamente ao submeter e mostrar o loading no preview principal (ImagePreview já suporta `isLoading`).
 
-These were implemented in a previous iteration. There is nothing to change.
+## Mudança em `src/pages/Creative.tsx`
 
-If there's a specific behavior that isn't working as expected, please describe what you're seeing and I'll investigate.
+Na função `handleEditSubmit` (linha ~290), mover `setEditDialogOpen(false)` para antes da chamada `generate`:
+
+```typescript
+const handleEditSubmit = async () => {
+  if (!editPrompt.trim() || !generatedBase64) return;
+  setEditDialogOpen(false);        // fecha modal imediatamente
+  setEditingLoading(true);
+  const result = await generate({...});
+  if (result) {
+    setGeneratedImage(result.imageUrl);
+    setGeneratedBase64(result.imageBase64);
+  }
+  setEditingLoading(false);
+};
+```
+
+Verificar que o `ImagePreview` recebe `isLoading={generating || editingLoading}` para exibir o skeleton enquanto a edição processa.
+
+## Arquivo modificado
+- `src/pages/Creative.tsx`
 
