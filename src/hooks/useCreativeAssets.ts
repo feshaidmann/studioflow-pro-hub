@@ -16,6 +16,7 @@ export interface CreativeAsset {
   public_url: string | null;
   project_id: string | null;
   created_at: string;
+  media_type?: "image" | "video";
 }
 
 export function useCreativeAssets() {
@@ -161,16 +162,27 @@ export function useCreativeAssets() {
     width: number;
     height: number;
     projectId?: string;
+    videoBlob?: Blob;
   }) => {
     if (!user) return null;
     try {
-      const raw = params.imageBase64.replace(/^data:image\/\w+;base64,/, "");
+      const isVideo = !!params.videoBlob;
       const timestamp = Date.now();
-      const storagePath = `${user.id}/${timestamp}_${params.format}.png`;
+      const ext = isVideo ? "webm" : "png";
+      const contentType = isVideo ? "video/webm" : "image/png";
+      const storagePath = `${user.id}/${timestamp}_${params.format}.${ext}`;
+
+      let body: ArrayBuffer | Blob;
+      if (isVideo) {
+        body = params.videoBlob!;
+      } else {
+        const raw = params.imageBase64.replace(/^data:image\/\w+;base64,/, "");
+        body = decode(raw);
+      }
 
       const { error: uploadErr } = await supabase.storage
         .from("creative-assets")
-        .upload(storagePath, decode(raw), { contentType: "image/png", upsert: false });
+        .upload(storagePath, body, { contentType, upsert: false });
 
       if (uploadErr) {
         toast({ title: "Erro ao salvar", description: uploadErr.message, variant: "destructive" });
@@ -192,7 +204,8 @@ export function useCreativeAssets() {
           height: params.height,
           storage_path: storagePath,
           public_url: publicUrl,
-        })
+          media_type: isVideo ? "video" : "image",
+        } as any)
         .select()
         .single();
 
@@ -202,7 +215,7 @@ export function useCreativeAssets() {
       }
 
       queryClient.invalidateQueries({ queryKey: ["creative-assets"] });
-      toast({ title: "Arte salva na galeria!" });
+      toast({ title: isVideo ? "Vídeo salvo na galeria!" : "Arte salva na galeria!" });
       return asset as CreativeAsset;
     } catch (e: any) {
       toast({ title: "Erro inesperado", description: e.message, variant: "destructive" });
