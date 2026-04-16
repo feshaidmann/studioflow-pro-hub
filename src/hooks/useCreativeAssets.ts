@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { decode } from "base64-arraybuffer";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
 
@@ -102,7 +103,7 @@ export function useCreativeAssets() {
     onProgress?: (current: number, total: number) => void
   ) => {
     if (!user) return [];
-    const results: Array<{ imageUrl: string; imageBase64: string; asset: CreativeAsset } | null> = [];
+    const results: Array<{ imageBase64: string } | null> = [];
     for (let i = 0; i < paramsList.length; i++) {
       onProgress?.(i + 1, paramsList.length);
       const result = await generate(paramsList[i]);
