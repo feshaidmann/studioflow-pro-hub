@@ -1,91 +1,74 @@
 
-# Análise da Pesquisa Unicamp/INCAMP 2026 — Melhorias para o StudioFlow
 
-## Dados da Pesquisa (17 respondentes)
+# Refatorar Welcome, Tutorial e Documentação + Testes das Novas Funcionalidades
 
-### Perfil dos Respondentes
-- Compositores, produtores, multi-instrumentistas, cantores
-- Projetos variados: singles, EPs, álbuns, shows ao vivo
-- Orçamentos de R$500 a R$100.000+
+## Contexto
 
-### Insights Quantitativos
+A plataforma recebeu várias funcionalidades novas que **não estão refletidas** no Tutorial nem na Documentação:
+- **Módulo Criativo** (`/criativo`) — geração de artes e legendas com IA
+- **Módulo Editais** (`/editais`) — busca, match, inscrição com IA
+- **DNA Musical → Criativo** — integração para gerar arte a partir de análise
+- **WhatsApp sharing** — botões de compartilhamento nos projetos
+- **Release Checklist expandido** — seção Divulgação (MusixMatch, pré-save, newsletter, press release)
+- **Chip "Dúvida técnica"** no assistente IA
+- **Auto-preenchimento de editais** com dados do perfil
+- **AIMarkdownContent** — formatação padronizada de IA (já implementada)
 
-**Disposição a pagar:**
-- 65% (11/17) — "Só usaria se fosse grátis"
-- 18% (3/17) — Até R$19/mês
-- 12% (2/17) — R$20-49/mês
-- 6% (1/17) — R$50-99/mês
+A Welcome page tem **problemas de legibilidade mobile** (grid 4 colunas não escala bem em 434px), textos hardcoded sem `t()`, e a seção "Antes vs Depois" quebra em telas estreitas.
 
-**Controle sobre projetos (1-10):** Média ~6.8 (range 2-9)
+A Documentação (`docs/DOCUMENTACAO.md`) referencia URLs antigas (`jsp-flux.lovable.app`) e IDs de projeto antigos, além de não incluir os novos módulos (Editais, Criativo, EditalInscricao).
 
-**Ferramentas atuais:** WhatsApp (universal), planilhas, caderno, Google Drive/Agenda
+## Plano
 
-**Por que abandonaram ferramentas:** Complexidade, falta de tempo para aprender, preferência por papel/post-it, não específicas para música
+### 1. Welcome.tsx — Refatorar para mobile-first
 
----
+**Problemas atuais:**
+- Grid de features usa `grid-cols-2 sm:grid-cols-3 lg:grid-cols-4` — em 434px fica apertado com textos cortados
+- Seção "Antes vs Depois" com `w-[45%]` — texto trunca em mobile
+- `glass-card` sem definição clara (pode não existir no CSS)
+- Comparações hardcoded em PT sem `t()`
 
-## Dores Mapeadas vs. Estado Atual do StudioFlow
+**Mudanças:**
+- Simplificar grid de features para `grid-cols-1 sm:grid-cols-2` com ícone + texto em linha horizontal
+- Refatorar "Antes vs Depois" para layout empilhado em mobile (antes em cima, depois embaixo) com `flex-col` em telas pequenas
+- Atualizar features para incluir Editais e Criativo como destaques
+- Reduzir de 8 features para 6 mais impactantes (remover redundância)
 
-### 1. MICRO-TAREFAS DO LANÇAMENTO (Dor #1 — citada extensivamente)
-**Problema:** Respondentes listaram dezenas de micro-tarefas: ISRC, UBC, MusixMatch, pitch Spotify, pitch distribuidora, créditos, capa, thumbnail, tags, newsletter, WhatsApp, redes sociais...
-**Hoje:** O `ProjectReleaseTab` já tem checklist com 6 seções (Distribuição, Metadados, Jurídico, Conteúdo, Plataformas, Status Final) — mas faltam itens citados na pesquisa.
-**Melhoria:** Adicionar itens ao checklist: MusixMatch (letra), Newsletter, Pré-save link, Assessoria de imprensa, e um botão "IA: Gerar release/bio" integrado.
+### 2. Tutorial.tsx — Adicionar abas para Editais e Criativo
 
-### 2. COMUNICAÇÃO / WHATSAPP (Dor #2 — quase universal)
-**Problema:** Todos usam WhatsApp como ferramenta principal de coordenação.
-**Hoje:** O app tem Project Chat com Realtime, mas não tem integração com WhatsApp.
-**Melhoria:** Adicionar botão "Compartilhar via WhatsApp" nos pontos-chave: convites, atualizações de estágio, lembretes de tarefa. Usa `wa.me` deeplink — zero backend.
+**Adicionar 2 novas abas:**
+- `editais` (icon: FileText, label: "Editais") — explicar busca, match IA, inscrição, auto-preenchimento, documentos
+- `creative` (icon: Palette, label: "Criativo") — explicar geração de arte, integração DNA Musical, legendas, galeria
 
-### 3. GESTÃO FINANCEIRA SIMPLES (Dor #3)
-**Problema:** Maioria não controla gastos. Quem controla usa "cabeça" ou planilha básica.
-**Hoje:** O módulo financeiro existe mas exige entrada manual detalhada.
-**Melhoria:** Adicionar "Registro Rápido" — um input flutuante no Dashboard tipo "R$ 500 estúdio" que parseia valor + categoria automaticamente via regex simples.
+**Atualizar abas existentes:**
+- Na aba "Projetos": mencionar WhatsApp sharing, Release Checklist expandido (seção Divulgação)
+- Na aba "DNA Musical": mencionar botão "Criar arte com este DNA" e integração com Criativo
+- Na aba "IA": adicionar exemplos de "Dúvida técnica" e mencionar chip no Dashboard
 
-### 4. EDITAIS E BUROCRACIA (Dor #4)
-**Problema:** Respondentes citam editais como fonte principal de recurso e "inscrição automática" como feature que pagaria para ter.
-**Hoje:** Módulo de Editais existe com IA assistente, checklist, e match.
-**Melhoria:** Adicionar "Auto-preenchimento de campos" mais agressivo usando dados do perfil do artista (bio, currículo, portfólio) — já parcialmente implementado no `useEditalAI` mas pode ser mais proativo.
+### 3. docs/DOCUMENTACAO.md — Atualizar para v3.1
 
-### 5. ONBOARDING SIMPLES (Dor #5 — abandono)
-**Problema:** "Nunca usei, não tenho familiaridade", "Abandonei porque não conseguia usar em plenitude".
-**Hoje:** Existe fluxo de onboarding + tutorial.
-**Melhoria:** Reduzir onboarding para 2 passos (nome + primeiro projeto) e mostrar valor imediato com projeto demo pré-criado.
+**Correções:**
+- URL publicada: `studioflow-pro-hub.lovable.app` (não `jsp-flux.lovable.app`)
+- Preview URL: atualizar para o ID correto do projeto
+- Adicionar módulos 10.8 (Editais) e 10.9 (Criativo) na seção de Módulos Funcionais
+- Adicionar `EditalInscricao` nas rotas protegidas
+- Atualizar Edge Functions: adicionar `edital-ai-assistant`, `edital-monitor`, `edital-search`, `extract-edital-fields`, `generate-creative`, `match-editais`, `project-ai-assistant`
+- Atualizar contagem de Edge Functions (de 11 para 18)
+- Adicionar tabelas de editais no modelo de dados se existirem
+- Atualizar changelog com v3.1 (novos módulos, AIMarkdownContent, WhatsApp, pesquisa Unicamp)
 
-### 6. DÚVIDAS TÉCNICAS / YOUTUBE (Dor #6)
-**Problema:** Todos recorrem ao YouTube para dúvidas de DAW, EQ, mix.
-**Hoje:** IA JamSession existe mas não é descoberta facilmente.
-**Melhoria:** Adicionar chip "Dúvida técnica?" no AITaskAssistant do Dashboard — direciona para o assistente com contexto de produção.
+### 4. Testes das novas funcionalidades
 
----
+Usar o browser para testar:
+- Navegação Welcome → Auth (botões funcionam)
+- Tutorial: abas navegam corretamente
+- Verificar se `AIMarkdownContent` renderiza corretamente nos 3 locais (AITaskAssistant, ProjectAISheet, EditalAIAssistant)
 
-## Plano de Implementação (Priorizado por Impacto)
+## Arquivos modificados
+- `src/pages/Welcome.tsx` — layout mobile-first, features atualizadas
+- `src/pages/Tutorial.tsx` — 2 novas abas + atualizações nas existentes
+- `docs/DOCUMENTACAO.md` — URLs, módulos, edge functions, changelog v3.1
 
-### Mudança 1: Expandir Release Checklist
-**Arquivo:** `src/hooks/useReleaseChecklist.ts`
-- Adicionar seção "Divulgação" com: MusixMatch (letra), Pré-save link, Newsletter/mailing, Assessoria de imprensa (release), Compartilhar com contatos
-- Adicionar item "Letra cadastrada (MusixMatch)" na seção Plataformas
-
-### Mudança 2: Botões "Compartilhar via WhatsApp"
-**Arquivos:** `src/components/project-hub/ProjectOverviewTab.tsx`, `src/components/project-hub/ProjectReleaseTab.tsx`
-- Botão com ícone WhatsApp que gera deeplink `https://wa.me/?text=...` com resumo do projeto/atualização
-- Sem backend, usa `window.open()`
-
-### Mudança 3: Registro Financeiro Rápido no Dashboard
-**Arquivo:** `src/pages/Dashboard.tsx`
-- Input inline "R$ 200 estúdio gravação" que parseia valor e tenta inferir categoria
-- Dispara criação de transação com 1 clique
-- Reduz fricção de "eu não controlo gastos" para "digito uma frase"
-
-### Mudança 4: Chip "Dúvida técnica?" no Assistente IA
-**Arquivo:** `src/pages/Dashboard.tsx` (AITaskAssistant chips)
-- Adicionar chip "🎛️ Dúvida técnica" que abre o assistente com system prompt de engenheiro de áudio
-- Conecta diretamente ao fluxo JamSession existente
-
-### Mudança 5: Auto-preenchimento proativo em Editais
-**Arquivo:** `src/pages/EditalInscricao.tsx`
-- Ao abrir inscrição, pré-preencher campos com dados do perfil (bio, cidade, gênero do DNA Musical)
-- Botão "Preencher com meu perfil" visível no topo
-
-### Sem migrações de banco
-Todas as mudanças usam estruturas existentes (release_checklist_data JSONB, transactions, profiles).
+## Sem migrações de banco
+Todas as mudanças são frontend e documentação.
 
