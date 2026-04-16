@@ -150,11 +150,11 @@ export default function Creative() {
 
       if (diagnosis) {
         setDnaSource(diagnosis);
-        const builtPrompt = buildDNAPrompt(diagnosis, trackName);
-        setPrompt(builtPrompt);
-        // Default to spotify_cover format
+        setDnaTrackName(trackName);
         const spotifyFmt = FORMAT_OPTIONS.find((f) => f.id === "spotify_cover");
-        if (spotifyFmt) setSelectedFormat(spotifyFmt);
+        const fmt = spotifyFmt || FORMAT_OPTIONS[0];
+        if (spotifyFmt) setSelectedFormat(fmt);
+        setPrompt(buildDNAPrompt(diagnosis, trackName, fmt.id));
       }
 
       // Clean the dna param from URL to avoid re-triggering
