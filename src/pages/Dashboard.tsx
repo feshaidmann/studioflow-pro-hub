@@ -222,21 +222,21 @@ export default function Dashboard() {
       onOpenChange={(open) => localStorage.setItem("sfp_ai_collapsed", open ? "false" : "true")}
       className={cn(isFirstRun && "hidden")}
     >
-      <Card data-ai-assistant className="glass-card animate-fade-in border-primary/20 shadow-sm" style={{ animationDelay: "50ms" }}>
+      <Card data-ai-assistant className="glass-card animate-fade-in" style={{ animationDelay: "50ms" }}>
         <CollapsibleTrigger asChild>
-          <CardHeader className="pb-1 pt-3 px-4 cursor-pointer select-none hover:bg-muted/40 rounded-t-lg transition-colors">
-            <CardTitle className="text-xs flex items-center gap-1.5 font-medium">
-              <Bot className="h-3.5 w-3.5 text-primary" />
-              <span className="text-primary">Assistente IA</span>
-              {!isMobile && <span className="text-muted-foreground ml-1">— pergunte qualquer coisa sobre seus projetos</span>}
-              <span className="ml-auto text-muted-foreground">
-                <ChevronDown className="h-4 w-4 transition-transform duration-200 [[data-state=open]>&]:rotate-180" />
-              </span>
+          <CardHeader className="pb-3 cursor-pointer select-none hover:bg-muted/40 rounded-t-lg transition-colors">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Bot className="h-4 w-4 text-primary" />
+              <span>Assistente IA</span>
+              <ChevronDown className="ml-auto h-4 w-4 text-muted-foreground transition-transform duration-200 [[data-state=open]>&]:rotate-180" />
             </CardTitle>
+            {!isMobile && (
+              <p className="text-xs text-muted-foreground">Pergunte qualquer coisa sobre seus projetos</p>
+            )}
           </CardHeader>
         </CollapsibleTrigger>
         <CollapsibleContent>
-          <CardContent className="pt-0 px-4 pb-3">
+          <CardContent className="pt-0">
             <AITaskAssistant
               ref={aiRef}
               alwaysOpen
@@ -295,34 +295,35 @@ export default function Dashboard() {
 
       {/* Next recommended action — click sends to AI */}
       {nextAction && (
-        <button
+        <Card
           onClick={() => {
             aiRef.current?.sendMessage(`Preciso de ajuda com: ${nextAction.label}. ${nextAction.detail ? `Contexto: ${nextAction.detail}` : ""} O que devo fazer?`);
-            // Ensure AI card is open
             localStorage.setItem("sfp_ai_collapsed", "false");
             const aiEl = document.querySelector("[data-ai-assistant]");
             aiEl?.scrollIntoView({ behavior: "smooth", block: "center" });
           }}
           className={cn(
-            "w-full rounded-lg border px-3 py-2.5 md:px-4 md:py-3 flex items-center gap-2.5 animate-fade-in text-left transition-colors hover:bg-muted/30",
-            nextAction.severity === "critical" ? "border-destructive/40 bg-destructive/5" :
-            nextAction.severity === "warning" ? "border-warning/40 bg-warning/5" :
-            "border-primary/30 bg-primary/5"
+            "glass-card animate-fade-in cursor-pointer transition-colors hover:bg-muted/30 border-l-4",
+            nextAction.severity === "critical" ? "border-l-destructive" :
+            nextAction.severity === "warning" ? "border-l-warning" :
+            "border-l-primary"
           )}
         >
-          <div className={cn(
-            "h-7 w-7 md:h-8 md:w-8 rounded-full flex items-center justify-center shrink-0",
-            nextAction.severity === "critical" ? "bg-destructive/15" :
-            nextAction.severity === "warning" ? "bg-warning/15" : "bg-primary/15"
-          )}>
-            <Bot className={cn("h-3.5 w-3.5 md:h-4 md:w-4", nextAction.severity === "critical" ? "text-destructive" : nextAction.severity === "warning" ? "text-warning" : "text-primary")} />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium leading-tight">Próxima ação · clique para resolver com IA</p>
-            <p className="text-sm font-medium truncate">{nextAction.label}</p>
-            {!isMobile && <p className="text-[11px] text-muted-foreground">{nextAction.detail}</p>}
-          </div>
-        </button>
+          <CardContent className="p-3 md:p-4 flex items-center gap-3">
+            <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center shrink-0">
+              <Bot className={cn(
+                "h-4 w-4",
+                nextAction.severity === "critical" ? "text-destructive" :
+                nextAction.severity === "warning" ? "text-warning" : "text-primary"
+              )} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs text-muted-foreground">Próxima ação · clique para resolver com IA</p>
+              <p className="text-sm font-medium truncate">{nextAction.label}</p>
+              {!isMobile && nextAction.detail && <p className="text-xs text-muted-foreground">{nextAction.detail}</p>}
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* AI Assistant — desktop: prominent; mobile: after checklist */}
