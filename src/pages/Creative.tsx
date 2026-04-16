@@ -17,7 +17,7 @@ import StyleChips from "@/components/creative/StyleChips";
 import ImagePreview from "@/components/creative/ImagePreview";
 import ReferenceImageUpload from "@/components/creative/ReferenceImageUpload";
 import DeriveBatchDialog from "@/components/creative/DeriveBatchDialog";
-import GalleryDetailSheet from "@/components/creative/GalleryDetailSheet";
+import GalleryLightbox from "@/components/creative/GalleryLightbox";
 import QuickTemplates, { type QuickTemplate } from "@/components/creative/QuickTemplates";
 import { useCreativeAssets } from "@/hooks/useCreativeAssets";
 import { useProjects } from "@/contexts/ProjectContext";
@@ -116,6 +116,7 @@ export default function Creative() {
   const [filterProject, setFilterProject] = useState<string>("all");
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; path: string } | null>(null);
   const [detailAsset, setDetailAsset] = useState<any>(null);
+  const [lightboxIndex, setLightboxIndex] = useState<number>(-1);
   const [dnaCopyText, setDnaCopyText] = useState<string>("");
   const [dnaCopyLoading, setDnaCopyLoading] = useState(false);
   const [dnaSource, setDnaSource] = useState<DiagnosisResult | null>(null);
@@ -772,7 +773,7 @@ export default function Creative() {
                   <Card
                     key={a.id}
                     className="overflow-hidden cursor-pointer group relative"
-                    onClick={() => setDetailAsset(a)}
+                    onClick={() => setLightboxIndex(filteredAssets.indexOf(a))}
                   >
                     <CardContent className="p-0 relative">
                       {isVideoAsset ? (
@@ -831,16 +832,18 @@ export default function Creative() {
         </div>
       )}
 
-      {/* Gallery Detail Sheet */}
-      <GalleryDetailSheet
-        asset={detailAsset}
-        open={!!detailAsset}
-        onOpenChange={(open) => !open && setDetailAsset(null)}
+      {/* Gallery Lightbox */}
+      <GalleryLightbox
+        assets={filteredAssets}
+        index={lightboxIndex}
+        open={lightboxIndex >= 0 && lightboxIndex < filteredAssets.length}
+        onOpenChange={(open) => { if (!open) setLightboxIndex(-1); }}
+        onIndexChange={setLightboxIndex}
         onDownload={downloadFile}
         onUseAsReference={handleUseAsReference}
         onDerive={handleDerive}
-        onDelete={(id, path) => { setDetailAsset(null); setDeleteTarget({ id, path }); }}
-        projectName={detailAsset?.project_id ? projects.find((p) => p.id === detailAsset.project_id)?.name : undefined}
+        onDelete={(id, path) => { setLightboxIndex(-1); setDeleteTarget({ id, path }); }}
+        getProjectName={(pid) => pid ? projects.find((p) => p.id === pid)?.name : undefined}
       />
 
       {/* Edit Dialog */}
