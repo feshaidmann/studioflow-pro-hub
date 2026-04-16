@@ -332,7 +332,7 @@ export default function Creative() {
                           <SelectValue placeholder="Sem projeto vinculado" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Nenhum</SelectItem>
+                          <SelectItem value="none">Nenhum</SelectItem>
                           {projects.map((p) => (
                             <SelectItem key={p.id} value={p.id}>
                               {p.name} — {p.artist}
