@@ -906,6 +906,7 @@ export function MusicDNAAnalyzer() {
       if (cached) {
         setLastInput(cached.input);
         setViewingDiagnosis(cached.diagnosis);
+        setRestoredFromCache(true);
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -917,6 +918,7 @@ export function MusicDNAAnalyzer() {
       cacheLastAnalysis(lastInput, result);
       setViewingDiagnosis(result);
       setIsSaved(false);
+      setRestoredFromCache(false);
     }
   }, [result, lastInput]);
 
@@ -929,6 +931,7 @@ export function MusicDNAAnalyzer() {
     };
     setLastInput(input);
     setViewingDiagnosis(null);
+    setRestoredFromCache(false);
     analyze(input);
   };
 
@@ -937,19 +940,22 @@ export function MusicDNAAnalyzer() {
     setViewingDiagnosis(null);
     setLastInput(null);
     setIsSaved(false);
+    setSavedAnalysisId(undefined);
+    setRestoredFromCache(false);
     reset();
   };
 
   const [savedAnalysisId, setSavedAnalysisId] = useState<string | undefined>(undefined);
+  const [restoredFromCache, setRestoredFromCache] = useState(false);
 
   const handleSave = () => {
     if (lastInput && (viewingDiagnosis || result)) {
       saveAnalysis(
         { input: lastInput, diagnosis: (viewingDiagnosis || result)! },
         {
-          onSuccess: () => {
+          onSuccess: ({ id }) => {
             setIsSaved(true);
-            // We don't have the ID directly from the mutation, but we can get latest from savedAnalyses
+            setSavedAnalysisId(id);
           },
         }
       );
@@ -962,6 +968,7 @@ export function MusicDNAAnalyzer() {
     setViewingDiagnosis(saved.diagnosis);
     setIsSaved(true);
     setSavedAnalysisId(saved.id);
+    setRestoredFromCache(false);
     cacheLastAnalysis(input, saved.diagnosis);
   };
 
