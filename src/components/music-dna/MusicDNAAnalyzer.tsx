@@ -795,6 +795,22 @@ function ResultView({ input, diagnosis, onReset, onSave, isSaved, isSaving, save
   );
 }
 
+// ── CREATE ART BUTTON ────────────────────────────────────────────────────────
+
+function CreateArtButton({ isSaved, savedAnalysisId }: { isSaved: boolean; savedAnalysisId?: string }) {
+  const navigate = useNavigate();
+  const handleClick = () => {
+    const dnaParam = isSaved && savedAnalysisId ? savedAnalysisId : "session";
+    navigate(`/creative?dna=${dnaParam}`);
+  };
+  return (
+    <Button variant="outline" size="sm" className="text-xs gap-1.5" onClick={handleClick}>
+      <Palette className="h-3 w-3" />
+      🎨 Criar arte com este DNA
+    </Button>
+  );
+}
+
 // ── SAVED ANALYSES LIST ──────────────────────────────────────────────────────
 
 function SavedAnalysesList({ onLoad }: {
@@ -890,11 +906,18 @@ export function MusicDNAAnalyzer() {
     reset();
   };
 
+  const [savedAnalysisId, setSavedAnalysisId] = useState<string | undefined>(undefined);
+
   const handleSave = () => {
     if (lastInput && (viewingDiagnosis || result)) {
       saveAnalysis(
         { input: lastInput, diagnosis: (viewingDiagnosis || result)! },
-        { onSuccess: () => setIsSaved(true) }
+        {
+          onSuccess: () => {
+            setIsSaved(true);
+            // We don't have the ID directly from the mutation, but we can get latest from savedAnalyses
+          },
+        }
       );
     }
   };
@@ -904,6 +927,7 @@ export function MusicDNAAnalyzer() {
     setLastInput(input);
     setViewingDiagnosis(saved.diagnosis);
     setIsSaved(true);
+    setSavedAnalysisId(saved.id);
     cacheLastAnalysis(input, saved.diagnosis);
   };
 
@@ -950,6 +974,7 @@ export function MusicDNAAnalyzer() {
           onSave={handleSave}
           isSaved={isSaved}
           isSaving={isSaving}
+          savedAnalysisId={savedAnalysisId}
         />
       ) : isPending ? (
         <LoadingView
