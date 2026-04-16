@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { decode } from "base64-arraybuffer";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
+import { useRateLimitDialog, extractRateLimitInfo } from "@/hooks/useRateLimitDialog";
 
 export interface CreativeAsset {
   id: string;
@@ -22,6 +23,7 @@ export interface CreativeAsset {
 export function useCreativeAssets() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { open: openRateLimit, setQuota } = useRateLimitDialog();
   const [generating, setGenerating] = useState(false);
 
   const { data: assets = [], isLoading } = useQuery({
