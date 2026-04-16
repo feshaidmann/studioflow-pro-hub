@@ -56,16 +56,37 @@ interface Props {
     }>,
     onProgress?: (current: number, total: number) => void
   ) => Promise<Array<{ imageBase64: string } | null>>;
+  onSaveAsset?: (params: {
+    imageBase64: string;
+    prompt: string;
+    style: string | null;
+    format: string;
+    width: number;
+    height: number;
+    projectId?: string;
+  }) => Promise<CreativeAsset | null>;
+}
+
+interface BatchResult {
+  imageUrl: string;
+  format: string;
+  formatId: string;
+  width: number;
+  height: number;
+  prompt: string;
+  saved: boolean;
+  saving: boolean;
 }
 
 export default function DeriveBatchDialog({
-  open, onOpenChange, baseImageUrl, basePrompt, style, projectId, onGenerateBatch,
+  open, onOpenChange, baseImageUrl, basePrompt, style, projectId, onGenerateBatch, onSaveAsset,
 }: Props) {
   const [channels, setChannels] = useState<ChannelConfig[]>(buildInitialChannels);
   const [generating, setGenerating] = useState(false);
   const [progress, setProgress] = useState({ current: 0, total: 0 });
-  const [results, setResults] = useState<Array<{ imageUrl: string; format: string } | null>>([]);
+  const [results, setResults] = useState<Array<BatchResult | null>>([]);
   const [done, setDone] = useState(false);
+  const [savingAll, setSavingAll] = useState(false);
 
   // Reset channels every time dialog opens
   useEffect(() => {
