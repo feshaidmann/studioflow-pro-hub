@@ -113,7 +113,7 @@ export default function DeriveBatchDialog({
 
     setResults(
       batchResults.map((r, i) =>
-        r ? { imageUrl: r.imageUrl, format: selected[i].format.label } : null
+        r ? { imageUrl: r.imageBase64, format: selected[i].format.label } : null
       )
     );
     setGenerating(false);
