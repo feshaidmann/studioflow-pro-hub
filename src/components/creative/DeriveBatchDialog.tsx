@@ -291,16 +291,41 @@ export default function DeriveBatchDialog({
                   <Card key={i} className="overflow-hidden">
                     <CardContent className="p-0 relative group">
                       <img src={r.imageUrl} alt={r.format} className="w-full aspect-square object-cover" />
+                      {r.saved && (
+                        <div className="absolute top-1 right-1 bg-primary/90 text-primary-foreground rounded-full p-0.5">
+                          <Check className="h-3 w-3" />
+                        </div>
+                      )}
                       <div className="absolute bottom-0 inset-x-0 bg-black/60 p-1.5 flex items-center justify-between">
-                        <span className="text-[10px] text-white">{r.format}</span>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-5 w-5 text-white"
-                          onClick={() => downloadImage(r.imageUrl, `desdobramento_${r.format.replace(/\s/g, "_")}.png`)}
-                        >
-                          <Download className="h-3 w-3" />
-                        </Button>
+                        <span className="text-[10px] text-white truncate">{r.format}</span>
+                        <div className="flex items-center gap-0.5">
+                          {onSaveAsset && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-5 w-5 text-white"
+                              onClick={() => handleSaveOne(i)}
+                              disabled={r.saved || r.saving}
+                              title={r.saved ? "Salvo" : "Salvar na galeria"}
+                            >
+                              {r.saving ? (
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                              ) : r.saved ? (
+                                <Check className="h-3 w-3" />
+                              ) : (
+                                <Save className="h-3 w-3" />
+                              )}
+                            </Button>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-5 w-5 text-white"
+                            onClick={() => downloadImage(r.imageUrl, `desdobramento_${r.format.replace(/\s/g, "_")}.png`)}
+                          >
+                            <Download className="h-3 w-3" />
+                          </Button>
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
