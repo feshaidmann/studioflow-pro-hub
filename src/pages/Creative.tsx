@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Palette, Sparkles, Trash2, ImageIcon, Download, Settings2, Copy, FileText, Dna, X, Music, User, CalendarDays } from "lucide-react";
+import { Palette, Sparkles, Trash2, ImageIcon, Download, Copy, FileText, Dna, X, Music, User, CalendarDays, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,6 +12,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import FormatSelector, { FORMAT_OPTIONS, type FormatOption } from "@/components/creative/FormatSelector";
+import FormatChips from "@/components/creative/FormatChips";
 import StyleChips from "@/components/creative/StyleChips";
 import ImagePreview from "@/components/creative/ImagePreview";
 import ReferenceImageUpload from "@/components/creative/ReferenceImageUpload";
@@ -20,6 +21,7 @@ import GalleryDetailSheet from "@/components/creative/GalleryDetailSheet";
 import QuickTemplates, { type QuickTemplate } from "@/components/creative/QuickTemplates";
 import { useCreativeAssets } from "@/hooks/useCreativeAssets";
 import { useProjects } from "@/contexts/ProjectContext";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { getCachedAnalysis } from "@/hooks/useSavedAnalyses";
@@ -91,6 +93,7 @@ export default function Creative() {
   const projectIdParam = searchParams.get("project");
   const dnaParam = searchParams.get("dna");
   const { projects } = useProjects();
+  const isMobile = useIsMobile();
 
   const [selectedFormat, setSelectedFormat] = useState<FormatOption>(FORMAT_OPTIONS[0]);
   const [style, setStyle] = useState<string | null>(null);
@@ -104,7 +107,9 @@ export default function Creative() {
   const [activeTab, setActiveTab] = useState("create");
   const [deriveDialogOpen, setDeriveDialogOpen] = useState(false);
   const [deriveImageUrl, setDeriveImageUrl] = useState<string>("");
-  const [settingsOpen, setSettingsOpen] = useState(true);
+  const [showAllFormats, setShowAllFormats] = useState(false);
+  const [trackDetailsOpen, setTrackDetailsOpen] = useState(false);
+  const [styleOpen, setStyleOpen] = useState(false);
 
   const [selectedProjectId, setSelectedProjectId] = useState<string>(projectIdParam || "none");
 
@@ -144,7 +149,6 @@ export default function Creative() {
           trackName = cached.input?.name || "";
         }
       } else {
-        // UUID — fetch from database
         const { data, error } = await supabase
           .from("music_dna_analyses")
           .select("*")
@@ -160,6 +164,7 @@ export default function Creative() {
         setDnaSource(diagnosis);
         setDnaTrackName(trackName);
         setTrackName(trackName);
+        setTrackDetailsOpen(true); // Auto-open track details for DNA flow
         const spotifyFmt = FORMAT_OPTIONS.find((f) => f.id === "spotify_cover");
         const fmt = spotifyFmt || FORMAT_OPTIONS[0];
         if (spotifyFmt) setSelectedFormat(fmt);
@@ -167,7 +172,6 @@ export default function Creative() {
         setActiveTab("create");
       }
 
-      // Clean the dna param from URL to avoid re-triggering
       setSearchParams((prev) => {
         const next = new URLSearchParams(prev);
         next.delete("dna");
@@ -204,12 +208,18 @@ export default function Creative() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [linkedProject?.artist]);
 
+  // Auto-open track details if trackName has value
+  useEffect(() => {
+    if (trackName.trim() || artistName.trim()) {
+      setTrackDetailsOpen(true);
+    }
+  }, []); // Only on mount
+
   const handleGenerate = useCallback(async () => {
     if (!prompt.trim()) {
       toast({ title: "Descreva sua ideia", description: "O campo de prompt não pode estar vazio.", variant: "destructive" });
       return;
     }
-    // Build metadata prefix
     const metaParts: string[] = [];
     if (trackName.trim()) metaParts.push(`Nome da música: "${trackName.trim()}"`);
     if (artistName.trim()) metaParts.push(`Artista: "${artistName.trim()}"`);
@@ -237,7 +247,6 @@ export default function Creative() {
       setGeneratedImage(result.imageUrl);
       setGeneratedBase64(result.imageBase64);
 
-      // Auto-generate social media copy if DNA source is active
       if (dnaSource) {
         setDnaCopyLoading(true);
         const dnaContext = `Gênero: ${dnaSource.genero_classificado || ""}. Mood: ${dnaSource.identidade?.mood_principal || ""}. Território: ${dnaSource.identidade?.territorio_sonoro || ""}. Tags: ${(dnaSource.identidade?.tags || []).join(", ")}`;
@@ -250,7 +259,6 @@ export default function Creative() {
     }
   }, [prompt, style, selectedFormat, linkedProject, selectedProjectId, generate, referenceImage, dnaSource, generateText, trackName, artistName, releaseDate]);
 
-  // Semantic variation: pass current image as reference with variation instruction
   const handleVariation = useCallback(async () => {
     if (!generatedBase64 || !prompt.trim()) {
       handleGenerate();
@@ -323,7 +331,6 @@ export default function Creative() {
     setStyle(template.style);
     const fmt = FORMAT_OPTIONS.find((f) => f.id === template.formatId);
     if (fmt) setSelectedFormat(fmt);
-    setSettingsOpen(true);
   };
 
   // Filtered gallery
@@ -336,8 +343,11 @@ export default function Creative() {
   const assetFormats = [...new Set(assets.map((a) => a.format))];
   const assetProjectIds = [...new Set(assets.filter((a) => a.project_id).map((a) => a.project_id!))];
 
+  const canGenerate = prompt.trim().length > 0;
+  const showStickyButton = isMobile && canGenerate && activeTab === "create";
+
   return (
-    <div className="p-4 md:p-6 max-w-5xl mx-auto space-y-6">
+    <div className="p-4 md:p-6 max-w-5xl mx-auto space-y-4 pb-20 md:pb-6">
       {/* Header */}
       <div className="flex items-center gap-2">
         <Palette className="h-5 w-5 text-primary" />
@@ -359,107 +369,127 @@ export default function Creative() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="create" className="space-y-5 mt-4">
-          <div className="grid md:grid-cols-2 gap-6">
-            {/* Left: Controls — Prompt first! */}
-            <div className="space-y-4">
-              {/* Quick templates when no prompt yet */}
-              {!prompt.trim() && !generatedImage && (
-                <QuickTemplates onSelect={handleTemplateSelect} />
-              )}
+        <TabsContent value="create" className="space-y-4 mt-4">
+          {/* 1. Format chips — first decision */}
+          <div>
+            <FormatChips
+              selected={selectedFormat.id}
+              onSelect={(f) => { setSelectedFormat(f); setShowAllFormats(false); }}
+              onShowAll={() => setShowAllFormats(!showAllFormats)}
+            />
+            {showAllFormats && (
+              <div className="mt-2 p-3 border border-border/60 rounded-xl bg-background">
+                <FormatSelector selected={selectedFormat.id} onSelect={(f) => { setSelectedFormat(f); setShowAllFormats(false); }} />
+              </div>
+            )}
+          </div>
 
-              {/* DNA context banner */}
-              {dnaSource && (
-                <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 flex justify-between items-center animate-fade-in">
-                  <div className="flex items-center gap-3">
-                    <Dna className="h-5 w-5 text-primary shrink-0" />
-                    <div>
-                      <p className="text-sm font-medium">Criando arte para: <span className="text-primary">{dnaTrackName || "faixa"}</span></p>
-                      <p className="text-xs text-muted-foreground">
-                        {dnaSource.genero_classificado || "Gênero"} • Mood: {dnaSource.identidade?.mood_principal || "—"}
-                      </p>
-                    </div>
-                  </div>
-                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => {
-                    setDnaSource(null);
-                    setDnaTrackName("");
-                    setPrompt("");
-                  }}>
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              )}
-
-              {/* Track name & Artist */}
-              <div className="grid grid-cols-2 gap-3">
+          {/* 2. DNA banner */}
+          {dnaSource && (
+            <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 flex justify-between items-center animate-fade-in">
+              <div className="flex items-center gap-3">
+                <Dna className="h-5 w-5 text-primary shrink-0" />
                 <div>
-                  <label className="text-xs font-medium text-muted-foreground mb-1.5 flex items-center gap-1">
-                    <Music className="h-3 w-3" /> Nome da música
-                  </label>
-                  <Input
-                    value={trackName}
-                    onChange={(e) => setTrackName(e.target.value)}
-                    placeholder="Ex: Noite Clara"
-                    className="h-9 text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-muted-foreground mb-1.5 flex items-center gap-1">
-                    <User className="h-3 w-3" /> Artista
-                  </label>
-                  <Input
-                    value={artistName}
-                    onChange={(e) => setArtistName(e.target.value)}
-                    placeholder="Ex: Maria Silva"
-                    className="h-9 text-sm"
-                  />
+                  <p className="text-sm font-medium">Criando arte para: <span className="text-primary">{dnaTrackName || "faixa"}</span></p>
+                  <p className="text-xs text-muted-foreground">
+                    {dnaSource.genero_classificado || "Gênero"} • Mood: {dnaSource.identidade?.mood_principal || "—"}
+                  </p>
                 </div>
               </div>
+              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => {
+                setDnaSource(null);
+                setDnaTrackName("");
+                setPrompt("");
+              }}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
 
-              {/* Release date — only for cover formats */}
-              {isReleaseFormat && (
-                <div>
-                  <label className="text-xs font-medium text-muted-foreground mb-1.5 flex items-center gap-1">
-                    <CalendarDays className="h-3 w-3" /> Data de lançamento (opcional)
-                  </label>
-                  <DatePickerField
-                    value={releaseDate}
-                    onChange={setReleaseDate}
-                    disablePast
-                    placeholder="Selecionar data"
-                    className="h-9 text-sm"
-                  />
-                </div>
-              )}
-
-              {/* PROMPT — protagonist */}
-              <div>
+          <div className="grid md:grid-cols-2 gap-6">
+            {/* Left: Controls */}
+            <div className="space-y-4">
+              {/* 3. Prompt — protagonist */}
+              <div className="relative">
                 <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
                   Descreva sua ideia
                 </label>
-                <Textarea
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
-                  placeholder="Ex: Capa minimalista com violão acústico e tons terrosos para single de MPB"
-                  rows={3}
-                  className="text-sm resize-none"
-                />
+                {!prompt.trim() && !generatedImage ? (
+                  <div className="space-y-3">
+                    <Textarea
+                      value={prompt}
+                      onChange={(e) => setPrompt(e.target.value)}
+                      placeholder="Ex: Capa minimalista com violão acústico e tons terrosos para single de MPB"
+                      rows={3}
+                      className="text-sm resize-none"
+                    />
+                    <QuickTemplates onSelect={handleTemplateSelect} />
+                  </div>
+                ) : (
+                  <Textarea
+                    value={prompt}
+                    onChange={(e) => setPrompt(e.target.value)}
+                    placeholder="Ex: Capa minimalista com violão acústico e tons terrosos para single de MPB"
+                    rows={3}
+                    className="text-sm resize-none"
+                  />
+                )}
               </div>
 
-              {/* Settings collapsible */}
-              <Collapsible open={settingsOpen} onOpenChange={setSettingsOpen}>
+              {/* 4. Collapsible: Detalhes da faixa */}
+              <Collapsible open={trackDetailsOpen} onOpenChange={setTrackDetailsOpen}>
                 <CollapsibleTrigger className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors w-full">
-                  <Settings2 className="h-3.5 w-3.5" />
-                  Configurações
-                  <span className="text-[10px] ml-auto">
-                    {selectedFormat.label} {style ? `· ${style}` : ""}
-                  </span>
+                  <ChevronDown className={`h-3.5 w-3.5 transition-transform ${!trackDetailsOpen ? "-rotate-90" : ""}`} />
+                  <Music className="h-3.5 w-3.5" />
+                  Detalhes da faixa
+                  {!trackDetailsOpen && trackName && (
+                    <span className="text-[10px] text-primary ml-auto truncate max-w-[150px]">{trackName}</span>
+                  )}
                 </CollapsibleTrigger>
-                <CollapsibleContent className="space-y-4 mt-3">
-                  {/* Project selector */}
+                <CollapsibleContent className="space-y-3 mt-3 ml-1">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs font-medium text-muted-foreground mb-1.5 flex items-center gap-1">
+                        <Music className="h-3 w-3" /> Nome da música
+                      </label>
+                      <Input
+                        value={trackName}
+                        onChange={(e) => setTrackName(e.target.value)}
+                        placeholder="Ex: Noite Clara"
+                        className="h-9 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-muted-foreground mb-1.5 flex items-center gap-1">
+                        <User className="h-3 w-3" /> Artista
+                      </label>
+                      <Input
+                        value={artistName}
+                        onChange={(e) => setArtistName(e.target.value)}
+                        placeholder="Ex: Maria Silva"
+                        className="h-9 text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  {isReleaseFormat && (
+                    <div>
+                      <label className="text-xs font-medium text-muted-foreground mb-1.5 flex items-center gap-1">
+                        <CalendarDays className="h-3 w-3" /> Data de lançamento (opcional)
+                      </label>
+                      <DatePickerField
+                        value={releaseDate}
+                        onChange={setReleaseDate}
+                        disablePast
+                        placeholder="Selecionar data"
+                        className="h-9 text-sm"
+                      />
+                    </div>
+                  )}
+
                   {projects.length > 0 && (
                     <div>
-                      <label className="text-xs font-medium text-muted-foreground mb-2 block">Projeto (opcional)</label>
+                      <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Projeto (opcional)</label>
                       <Select value={selectedProjectId} onValueChange={setSelectedProjectId}>
                         <SelectTrigger className="h-9 text-sm">
                           <SelectValue placeholder="Sem projeto vinculado" />
@@ -475,12 +505,21 @@ export default function Creative() {
                       </Select>
                     </div>
                   )}
+                </CollapsibleContent>
+              </Collapsible>
 
-                  <div>
-                    <label className="text-xs font-medium text-muted-foreground mb-2 block">Formato</label>
-                    <FormatSelector selected={selectedFormat.id} onSelect={setSelectedFormat} />
-                  </div>
-
+              {/* 5. Collapsible: Estilo e referência */}
+              <Collapsible open={styleOpen} onOpenChange={setStyleOpen}>
+                <CollapsibleTrigger className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors w-full">
+                  <ChevronDown className={`h-3.5 w-3.5 transition-transform ${!styleOpen ? "-rotate-90" : ""}`} />
+                  Estilo e referência
+                  {!styleOpen && (style || referenceImage) && (
+                    <span className="text-[10px] text-primary ml-auto">
+                      {[style, referenceImage ? "Ref. ✓" : ""].filter(Boolean).join(" · ")}
+                    </span>
+                  )}
+                </CollapsibleTrigger>
+                <CollapsibleContent className="space-y-4 mt-3 ml-1">
                   <div>
                     <label className="text-xs font-medium text-muted-foreground mb-2 block">Estilo (opcional)</label>
                     <StyleChips selected={style} onSelect={setStyle} />
@@ -500,14 +539,17 @@ export default function Creative() {
                 </CollapsibleContent>
               </Collapsible>
 
-              <Button
-                className="w-full"
-                onClick={handleGenerate}
-                disabled={generating || !prompt.trim()}
-              >
-                <Sparkles className="h-4 w-4 mr-1.5" />
-                {generating ? "Gerando…" : referenceImage ? "Gerar a partir da referência" : "Gerar Imagem"}
-              </Button>
+              {/* 6. Generate button — desktop */}
+              <div className="hidden md:block">
+                <Button
+                  className="w-full"
+                  onClick={handleGenerate}
+                  disabled={generating || !canGenerate}
+                >
+                  <Sparkles className="h-4 w-4 mr-1.5" />
+                  {generating ? "Gerando…" : referenceImage ? "Gerar a partir da referência" : "Gerar Imagem"}
+                </Button>
+              </div>
             </div>
 
             {/* Right: Preview */}
@@ -624,7 +666,6 @@ export default function Creative() {
                         className={`w-full ${aspectClass} object-cover`}
                         loading="lazy"
                       />
-                      {/* Desktop hover overlay — minimal info */}
                       <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-2 pointer-events-none">
                         <p className="text-[10px] text-white/90 line-clamp-2">{a.prompt}</p>
                       </div>
@@ -637,7 +678,21 @@ export default function Creative() {
         </TabsContent>
       </Tabs>
 
-      {/* Gallery Detail Sheet (mobile-friendly) */}
+      {/* Sticky generate button — mobile only */}
+      {showStickyButton && (
+        <div className="fixed bottom-16 left-0 right-0 p-3 bg-background/95 backdrop-blur-sm border-t border-border/50 z-40 md:hidden">
+          <Button
+            className="w-full"
+            onClick={handleGenerate}
+            disabled={generating || !canGenerate}
+          >
+            <Sparkles className="h-4 w-4 mr-1.5" />
+            {generating ? "Gerando…" : referenceImage ? "Gerar a partir da referência" : "Gerar Imagem"}
+          </Button>
+        </div>
+      )}
+
+      {/* Gallery Detail Sheet */}
       <GalleryDetailSheet
         asset={detailAsset}
         open={!!detailAsset}
@@ -649,7 +704,7 @@ export default function Creative() {
         projectName={detailAsset?.project_id ? projects.find((p) => p.id === detailAsset.project_id)?.name : undefined}
       />
 
-      {/* Edit Dialog — Textarea instead of Input */}
+      {/* Edit Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
         <DialogContent>
           <DialogHeader>
