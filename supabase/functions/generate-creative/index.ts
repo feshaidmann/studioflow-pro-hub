@@ -27,19 +27,39 @@ serve(async (req) => {
     const { data: { user }, error: authErr } = await anonClient.auth.getUser(authHeader.replace("Bearer ", ""));
     if (authErr || !user) throw new Error("Unauthorized");
 
-    // Check AI usage quota (20 daily, 80 weekly)
+    // Check AI usage quota (20 daily, 80 weekly) — counted in BRT (UTC-3)
+    const DAILY_LIMIT = 20;
+    const WEEKLY_LIMIT = 80;
+    const BRT_OFFSET_MS = -3 * 60 * 60 * 1000; // BRT = UTC-3
+
     const now = new Date();
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
-    const weekStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay()).toISOString();
+    // Convert "now" to BRT, then take start of day, then convert back to UTC instant
+    const nowBRT = new Date(now.getTime() + BRT_OFFSET_MS);
+    const todayStartBRT = new Date(Date.UTC(nowBRT.getUTCFullYear(), nowBRT.getUTCMonth(), nowBRT.getUTCDate()));
+    const todayStartUTC = new Date(todayStartBRT.getTime() - BRT_OFFSET_MS);
+    // Week starts on Sunday (BRT)
+    const dayOfWeek = nowBRT.getUTCDay();
+    const weekStartBRT = new Date(Date.UTC(nowBRT.getUTCFullYear(), nowBRT.getUTCMonth(), nowBRT.getUTCDate() - dayOfWeek));
+    const weekStartUTC = new Date(weekStartBRT.getTime() - BRT_OFFSET_MS);
+    // Reset times: tomorrow 00:00 BRT and next Sunday 00:00 BRT
+    const tomorrowResetUTC = new Date(todayStartUTC.getTime() + 24 * 60 * 60 * 1000);
+    const nextWeekResetUTC = new Date(weekStartUTC.getTime() + 7 * 24 * 60 * 60 * 1000);
 
     const { count: dailyCount } = await supabase
       .from("ai_invocations")
       .select("*", { count: "exact", head: true })
       .eq("user_id", user.id)
-      .gte("created_at", todayStart);
+      .gte("created_at", todayStartUTC.toISOString());
 
-    if ((dailyCount ?? 0) >= 20) {
-      return new Response(JSON.stringify({ error: "Limite diário de 20 gerações atingido. Tente novamente amanhã." }), {
+    if ((dailyCount ?? 0) >= DAILY_LIMIT) {
+      return new Response(JSON.stringify({
+        error: "rate_limit",
+        limit_type: "daily",
+        limit: DAILY_LIMIT,
+        used: dailyCount ?? DAILY_LIMIT,
+        resets_at: tomorrowResetUTC.toISOString(),
+        message: `Você usou todas as ${DAILY_LIMIT} gerações de hoje.`,
+      }), {
         status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -48,13 +68,29 @@ serve(async (req) => {
       .from("ai_invocations")
       .select("*", { count: "exact", head: true })
       .eq("user_id", user.id)
-      .gte("created_at", weekStart);
+      .gte("created_at", weekStartUTC.toISOString());
 
-    if ((weeklyCount ?? 0) >= 80) {
-      return new Response(JSON.stringify({ error: "Limite semanal de 80 gerações atingido. Tente novamente na próxima semana." }), {
+    if ((weeklyCount ?? 0) >= WEEKLY_LIMIT) {
+      return new Response(JSON.stringify({
+        error: "rate_limit",
+        limit_type: "weekly",
+        limit: WEEKLY_LIMIT,
+        used: weeklyCount ?? WEEKLY_LIMIT,
+        resets_at: nextWeekResetUTC.toISOString(),
+        message: `Você usou todas as ${WEEKLY_LIMIT} gerações desta semana.`,
+      }), {
         status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    // Quota headers (so frontend can show "X restantes" without an extra call)
+    const quotaHeaders = {
+      "X-Quota-Daily-Limit": String(DAILY_LIMIT),
+      "X-Quota-Daily-Used": String((dailyCount ?? 0) + 1), // +1 because this call will count
+      "X-Quota-Weekly-Limit": String(WEEKLY_LIMIT),
+      "X-Quota-Weekly-Used": String((weeklyCount ?? 0) + 1),
+      "X-Quota-Daily-Resets-At": tomorrowResetUTC.toISOString(),
+    };
 
     const { prompt, style, format, width, height, editImageUrl, projectId, channelContext, mode, dnaContext, trackName, artistName, releaseDate, additionalText, noText } = await req.json();
 
