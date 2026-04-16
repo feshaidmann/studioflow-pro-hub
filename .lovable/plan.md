@@ -1,53 +1,91 @@
 
+# Análise da Pesquisa Unicamp/INCAMP 2026 — Melhorias para o StudioFlow
 
-# Padronizar Formatação de Markdown em Todos os Componentes de IA
+## Dados da Pesquisa (17 respondentes)
 
-## Problema
-Três componentes de IA usam formatações diferentes para renderizar respostas:
-- **AITaskAssistant**: usa `renderMarkdown()` manual (só bold, code, listas simples — sem suporte a headers, links, tabelas)
-- **ProjectAISheet**: usa `ReactMarkdown` com classes `prose` básicas
-- **EditalAIAssistant**: usa `ReactMarkdown` com classes `prose` + overrides de spacing
+### Perfil dos Respondentes
+- Compositores, produtores, multi-instrumentistas, cantores
+- Projetos variados: singles, EPs, álbuns, shows ao vivo
+- Orçamentos de R$500 a R$100.000+
 
-Resultado: experiência visual inconsistente entre os módulos.
+### Insights Quantitativos
 
-## Solução
-Criar um componente compartilhado `AIMarkdownContent` e usá-lo em todos os 3 locais.
+**Disposição a pagar:**
+- 65% (11/17) — "Só usaria se fosse grátis"
+- 18% (3/17) — Até R$19/mês
+- 12% (2/17) — R$20-49/mês
+- 6% (1/17) — R$50-99/mês
 
-## Mudanças
+**Controle sobre projetos (1-10):** Média ~6.8 (range 2-9)
 
-### 1. Novo componente `src/components/ui/ai-markdown-content.tsx`
-- Wrapper de `ReactMarkdown` com classes Tailwind padronizadas
-- Classes: `prose prose-sm max-w-none` + overrides consistentes para `p`, `ul`, `ol`, `li`, `h1-h4`, `code`, `pre`, `strong`, `a`, `blockquote`, `table`
-- Espaçamento compacto adequado para chat (sem margens excessivas)
-- Props: `content: string`, `className?: string`
+**Ferramentas atuais:** WhatsApp (universal), planilhas, caderno, Google Drive/Agenda
 
-### 2. `src/components/AITaskAssistant.tsx`
-- Remover a função `renderMarkdown()` (linhas 114-135)
-- Importar `AIMarkdownContent`
-- Na linha 510, trocar `<div>{renderMarkdown(msg.content)}</div>` por `<AIMarkdownContent content={msg.content} />`
+**Por que abandonaram ferramentas:** Complexidade, falta de tempo para aprender, preferência por papel/post-it, não específicas para música
 
-### 3. `src/components/project-hub/ProjectAISheet.tsx`
-- Remover import de `ReactMarkdown`
-- Importar `AIMarkdownContent`
-- Na linha 192-194, trocar o bloco `<div className="prose..."><ReactMarkdown>` por `<AIMarkdownContent content={msg.content || "..."} />`
+---
 
-### 4. `src/components/editais/EditalAIAssistant.tsx`
-- Remover import de `ReactMarkdown`
-- Importar `AIMarkdownContent`
-- Na linha 289-291, trocar o bloco `<div className="bg-muted/30..."><ReactMarkdown>` por `<AIMarkdownContent content={lastResult} className="bg-muted/30 rounded-lg p-3 max-h-80 overflow-y-auto" />`
+## Dores Mapeadas vs. Estado Atual do StudioFlow
 
-## Estilo unificado do `AIMarkdownContent`
-```text
-- Parágrafos: mb-2, last:mb-0
-- Listas: mb-2, pl-4, list-disc/decimal
-- Items: mb-0.5
-- Headers: font-semibold, mb-1.5, text sizes escalonados
-- Code inline: bg-secondary/60, px-1, rounded, font-mono, text-[11px]
-- Code block: bg-secondary/40, p-2, rounded-md, overflow-x-auto
-- Links: text-primary, underline
-- Strong: font-semibold, text-foreground
-- Blockquote: border-l-2 border-primary/30, pl-3, italic
-```
+### 1. MICRO-TAREFAS DO LANÇAMENTO (Dor #1 — citada extensivamente)
+**Problema:** Respondentes listaram dezenas de micro-tarefas: ISRC, UBC, MusixMatch, pitch Spotify, pitch distribuidora, créditos, capa, thumbnail, tags, newsletter, WhatsApp, redes sociais...
+**Hoje:** O `ProjectReleaseTab` já tem checklist com 6 seções (Distribuição, Metadados, Jurídico, Conteúdo, Plataformas, Status Final) — mas faltam itens citados na pesquisa.
+**Melhoria:** Adicionar itens ao checklist: MusixMatch (letra), Newsletter, Pré-save link, Assessoria de imprensa, e um botão "IA: Gerar release/bio" integrado.
 
-Nenhuma alteração de backend.
+### 2. COMUNICAÇÃO / WHATSAPP (Dor #2 — quase universal)
+**Problema:** Todos usam WhatsApp como ferramenta principal de coordenação.
+**Hoje:** O app tem Project Chat com Realtime, mas não tem integração com WhatsApp.
+**Melhoria:** Adicionar botão "Compartilhar via WhatsApp" nos pontos-chave: convites, atualizações de estágio, lembretes de tarefa. Usa `wa.me` deeplink — zero backend.
+
+### 3. GESTÃO FINANCEIRA SIMPLES (Dor #3)
+**Problema:** Maioria não controla gastos. Quem controla usa "cabeça" ou planilha básica.
+**Hoje:** O módulo financeiro existe mas exige entrada manual detalhada.
+**Melhoria:** Adicionar "Registro Rápido" — um input flutuante no Dashboard tipo "R$ 500 estúdio" que parseia valor + categoria automaticamente via regex simples.
+
+### 4. EDITAIS E BUROCRACIA (Dor #4)
+**Problema:** Respondentes citam editais como fonte principal de recurso e "inscrição automática" como feature que pagaria para ter.
+**Hoje:** Módulo de Editais existe com IA assistente, checklist, e match.
+**Melhoria:** Adicionar "Auto-preenchimento de campos" mais agressivo usando dados do perfil do artista (bio, currículo, portfólio) — já parcialmente implementado no `useEditalAI` mas pode ser mais proativo.
+
+### 5. ONBOARDING SIMPLES (Dor #5 — abandono)
+**Problema:** "Nunca usei, não tenho familiaridade", "Abandonei porque não conseguia usar em plenitude".
+**Hoje:** Existe fluxo de onboarding + tutorial.
+**Melhoria:** Reduzir onboarding para 2 passos (nome + primeiro projeto) e mostrar valor imediato com projeto demo pré-criado.
+
+### 6. DÚVIDAS TÉCNICAS / YOUTUBE (Dor #6)
+**Problema:** Todos recorrem ao YouTube para dúvidas de DAW, EQ, mix.
+**Hoje:** IA JamSession existe mas não é descoberta facilmente.
+**Melhoria:** Adicionar chip "Dúvida técnica?" no AITaskAssistant do Dashboard — direciona para o assistente com contexto de produção.
+
+---
+
+## Plano de Implementação (Priorizado por Impacto)
+
+### Mudança 1: Expandir Release Checklist
+**Arquivo:** `src/hooks/useReleaseChecklist.ts`
+- Adicionar seção "Divulgação" com: MusixMatch (letra), Pré-save link, Newsletter/mailing, Assessoria de imprensa (release), Compartilhar com contatos
+- Adicionar item "Letra cadastrada (MusixMatch)" na seção Plataformas
+
+### Mudança 2: Botões "Compartilhar via WhatsApp"
+**Arquivos:** `src/components/project-hub/ProjectOverviewTab.tsx`, `src/components/project-hub/ProjectReleaseTab.tsx`
+- Botão com ícone WhatsApp que gera deeplink `https://wa.me/?text=...` com resumo do projeto/atualização
+- Sem backend, usa `window.open()`
+
+### Mudança 3: Registro Financeiro Rápido no Dashboard
+**Arquivo:** `src/pages/Dashboard.tsx`
+- Input inline "R$ 200 estúdio gravação" que parseia valor e tenta inferir categoria
+- Dispara criação de transação com 1 clique
+- Reduz fricção de "eu não controlo gastos" para "digito uma frase"
+
+### Mudança 4: Chip "Dúvida técnica?" no Assistente IA
+**Arquivo:** `src/pages/Dashboard.tsx` (AITaskAssistant chips)
+- Adicionar chip "🎛️ Dúvida técnica" que abre o assistente com system prompt de engenheiro de áudio
+- Conecta diretamente ao fluxo JamSession existente
+
+### Mudança 5: Auto-preenchimento proativo em Editais
+**Arquivo:** `src/pages/EditalInscricao.tsx`
+- Ao abrir inscrição, pré-preencher campos com dados do perfil (bio, cidade, gênero do DNA Musical)
+- Botão "Preencher com meu perfil" visível no topo
+
+### Sem migrações de banco
+Todas as mudanças usam estruturas existentes (release_checklist_data JSONB, transactions, profiles).
 
