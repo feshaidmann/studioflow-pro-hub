@@ -1,52 +1,43 @@
 
 
-Faz total sentido. Hoje a galeria abre um `Sheet` por arte, o que força o usuário a fechar e reabrir para ver a próxima — quebra o fluxo visual de quem está revisando lote de criativos. Um lightbox/carrossel é o padrão esperado (Instagram, Drive, Apple Photos).
+Investigando: as ações de IA no Dashboard hoje só fazem `scrollIntoView` na seção do AI Assistant, mas não garantem que ela fique alinhada ao topo da viewport — em mobile o header/nav podem cobrir parte da seção, e em desktop o scroll cai no meio.
 
-# Lightbox de galeria com navegação fluida
+# Foco no topo da seção de IA ao clicar em ações
 
-## Comportamento
-- Clicar em qualquer arte abre **modal fullscreen** com a mídia centralizada e grande (~85vh)
-- **Navegação**: setas laterais (desktop), swipe (mobile), teclas ← → e Esc
-- **Contador** "3 / 12" no topo
-- **Metadados e ações** em barra inferior translúcida (formato, dimensões, projeto, data, prompt expansível)
-- **Ações** mantidas: baixar, usar como referência, desdobrar, excluir, copiar prompt
-- **Vídeos** (Reels/Canvas .webm) tocam autoplay loop muted, com controles
-- **Pré-carrega** próxima e anterior para transição instantânea
-- Animação de slide horizontal sutil entre artes (`translateX` + fade)
-
-## Layout
-```text
-┌─────────────────────────────────────┐
-│  [3/12]                       [X]   │
-│                                     │
-│  ‹      [   MÍDIA CENTRAL   ]    ›  │
-│                                     │
-│ ┌─────────────────────────────────┐ │
-│ │ Story • 1080×1920 • Projeto X   │ │
-│ │ "prompt completo aqui…"  [copy] │ │
-│ │ [Baixar] [Ref.] [Desdobrar] [🗑]│ │
-│ └─────────────────────────────────┘ │
-└─────────────────────────────────────┘
-```
+## Comportamento esperado
+Ao clicar em qualquer gatilho que dispare a IA do Dashboard (card "Próxima ação", chips de sugestão, ou qualquer atalho que envie mensagem para o Assistente), a página deve rolar de forma que o **topo do card "Assistente IA" fique alinhado ao topo visível da tela** (com pequeno offset para respirar e evitar sobreposição com header sticky/nav mobile).
 
 ## Implementação
-1. **Criar** `src/components/creative/GalleryLightbox.tsx`
-   - Recebe `assets[]`, `currentIndex`, `open`, callbacks de ação
-   - Usa `Dialog` fullscreen (não `Sheet`)
-   - Estado interno de `index`, handlers de teclado/swipe (touch events)
-   - Pré-carrega `assets[index±1]` via `<link rel="preload">` ou `new Image()`
 
-2. **Modificar** `src/pages/Creative.tsx`
-   - Substituir abertura do `GalleryDetailSheet` pela `GalleryLightbox`, passando lista completa filtrada e índice clicado
-   - Manter `GalleryDetailSheet` apenas se quiser fallback mobile (sugiro **remover**, lightbox funciona em ambos)
+### 1. Helper de scroll com offset
+No `Dashboard.tsx`, criar utilitário local:
+```ts
+const scrollToAI = () => {
+  const el = document.getElementById("ai-assistant-section");
+  if (!el) return;
+  const offset = 12; // respiro do topo
+  const top = el.getBoundingClientRect().top + window.scrollY - offset;
+  window.scrollTo({ top, behavior: "smooth" });
+};
+```
+Usar `getBoundingClientRect` em vez de `scrollIntoView({block:"start"})` porque o segundo não permite offset e fica colado em headers sticky.
 
-3. **Reaproveitar** lógica de ações já existente (download, derive, delete, useAsReference) — sem duplicação
+### 2. Garantir id no container correto
+Conferir que o wrapper do `aiAssistantCard` tem `id="ai-assistant-section"` envolvendo o **Card inteiro** (não só o conteúdo interno), para que o topo da rolagem coincida com a borda superior do card.
 
-## Arquivos
-- **Criar**: `src/components/creative/GalleryLightbox.tsx`
-- **Modificar**: `src/pages/Creative.tsx`
-- **Remover** (opcional): `src/components/creative/GalleryDetailSheet.tsx`
+### 3. Pontos de chamada
+Substituir todos os `scrollIntoView` atuais por `scrollToAI()`:
+- Click no card "Próxima ação" (já existe scroll, trocar implementação)
+- Qualquer chip/botão dentro do `AITaskAssistant` que parta de fora e injete mensagem
+- Auto-expandir o card de IA se estiver colapsado antes de rolar (caso aplicável)
+
+### 4. Foco acessível (bônus leve)
+Após o scroll, mover foco para o textarea do chat (`document.querySelector<HTMLTextAreaElement>("#ai-assistant-section textarea")?.focus({ preventScroll: true })`) para que o usuário já comece a digitar — sem reescrever o scroll.
+
+## Arquivos modificados
+- `src/pages/Dashboard.tsx` — adicionar helper `scrollToAI`, garantir `id` no wrapper do card de IA, substituir chamadas existentes de scroll
+- `src/components/AITaskAssistant.tsx` — se houver chips internos que disparam mensagem e precisem rolar quando renderizados em outros lugares, expor callback `onBeforeSend` opcional (apenas se necessário; provavelmente não)
 
 ## Sem migrações
-Mudança puramente de UI/UX.
+Mudança puramente de UX/navegação no cliente.
 
