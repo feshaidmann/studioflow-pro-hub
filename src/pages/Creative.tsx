@@ -767,19 +767,36 @@ export default function Creative() {
                   : a.width > a.height
                     ? "aspect-video"
                     : "aspect-square";
+                const isVideoAsset = (a as any).media_type === "video";
                 return (
                   <Card
                     key={a.id}
                     className="overflow-hidden cursor-pointer group relative"
                     onClick={() => setDetailAsset(a)}
                   >
-                    <CardContent className="p-0">
-                      <img
-                        src={a.public_url || ""}
-                        alt={a.prompt.slice(0, 60)}
-                        className={`w-full ${aspectClass} object-cover`}
-                        loading="lazy"
-                      />
+                    <CardContent className="p-0 relative">
+                      {isVideoAsset ? (
+                        <video
+                          src={a.public_url || ""}
+                          className={`w-full ${aspectClass} object-cover`}
+                          muted
+                          loop
+                          playsInline
+                          preload="metadata"
+                        />
+                      ) : (
+                        <img
+                          src={a.public_url || ""}
+                          alt={a.prompt.slice(0, 60)}
+                          className={`w-full ${aspectClass} object-cover`}
+                          loading="lazy"
+                        />
+                      )}
+                      {isVideoAsset && (
+                        <div className="absolute top-1.5 right-1.5 bg-black/60 text-white rounded-full p-1 pointer-events-none">
+                          <PlayCircle className="h-3.5 w-3.5" />
+                        </div>
+                      )}
                       <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-2 pointer-events-none">
                         <p className="text-[10px] text-white/90 line-clamp-2">{a.prompt}</p>
                       </div>
