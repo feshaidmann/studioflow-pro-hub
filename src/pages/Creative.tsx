@@ -101,6 +101,7 @@ export default function Creative() {
   const [editPrompt, setEditPrompt] = useState("");
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [generatedBase64, setGeneratedBase64] = useState<string | null>(null);
+  const [savedToGallery, setSavedToGallery] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingLoading, setEditingLoading] = useState(false);
   const [referenceImage, setReferenceImage] = useState<string | null>(null);
@@ -129,7 +130,7 @@ export default function Creative() {
   const RELEASE_FORMATS = ["spotify_cover", "deezer_cover", "tidal_cover"];
   const isReleaseFormat = RELEASE_FORMATS.includes(selectedFormat.id);
 
-  const { assets, isLoading: assetsLoading, generating, generate, generateBatch, generateText, deleteAsset } = useCreativeAssets();
+  const { assets, isLoading: assetsLoading, generating, generate, generateBatch, generateText, saveAsset, deleteAsset } = useCreativeAssets();
 
   const linkedProject = selectedProjectId && selectedProjectId !== "none"
     ? projects.find((p) => p.id === selectedProjectId)
@@ -244,8 +245,9 @@ export default function Creative() {
     });
 
     if (result) {
-      setGeneratedImage(result.imageUrl);
+      setGeneratedImage(result.imageBase64);
       setGeneratedBase64(result.imageBase64);
+      setSavedToGallery(false);
 
       if (dnaSource) {
         setDnaCopyLoading(true);
@@ -275,8 +277,9 @@ export default function Creative() {
       projectId: selectedProjectId && selectedProjectId !== "none" ? selectedProjectId : undefined,
     });
     if (result) {
-      setGeneratedImage(result.imageUrl);
+      setGeneratedImage(result.imageBase64);
       setGeneratedBase64(result.imageBase64);
+      setSavedToGallery(false);
     }
   }, [generatedBase64, prompt, style, selectedFormat, selectedProjectId, generate, handleGenerate]);
 
@@ -309,8 +312,9 @@ export default function Creative() {
       projectId: selectedProjectId && selectedProjectId !== "none" ? selectedProjectId : undefined,
     });
     if (result) {
-      setGeneratedImage(result.imageUrl);
+      setGeneratedImage(result.imageBase64);
       setGeneratedBase64(result.imageBase64);
+      setSavedToGallery(false);
     }
     setEditingLoading(false);
   };
