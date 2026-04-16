@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { decode } from "base64-arraybuffer";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
-import { useRateLimitDialog, extractRateLimitInfo } from "@/hooks/useRateLimitDialog";
+import { useRateLimitDialog } from "@/hooks/useRateLimitDialog";
 
 export interface CreativeAsset {
   id: string;
