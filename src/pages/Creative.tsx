@@ -126,6 +126,8 @@ export default function Creative() {
   const [trackName, setTrackName] = useState("");
   const [artistName, setArtistName] = useState("");
   const [releaseDate, setReleaseDate] = useState("");
+  const [additionalText, setAdditionalText] = useState("");
+  const [noText, setNoText] = useState(false);
 
   // Video loop state
   const [loopDuration, setLoopDuration] = useState<3 | 4 | 5>(4);
@@ -251,6 +253,8 @@ export default function Creative() {
       trackName: trackName.trim() || undefined,
       artistName: artistName.trim() || undefined,
       releaseDate: releaseDate || undefined,
+      additionalText: additionalText.trim() || undefined,
+      noText: noText || undefined,
     });
 
     if (result) {
@@ -294,7 +298,7 @@ export default function Creative() {
         setDnaCopyLoading(false);
       }
     }
-  }, [prompt, style, selectedFormat, linkedProject, selectedProjectId, generate, referenceImage, dnaSource, generateText, trackName, artistName, releaseDate, loopDuration, videoPreset, videoIntensity]);
+  }, [prompt, style, selectedFormat, linkedProject, selectedProjectId, generate, referenceImage, dnaSource, generateText, trackName, artistName, releaseDate, additionalText, noText, loopDuration, videoPreset, videoIntensity]);
 
   const handleVariation = useCallback(async () => {
     if (!generatedBase64 || !prompt.trim()) {
