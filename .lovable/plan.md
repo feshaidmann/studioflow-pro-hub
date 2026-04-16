@@ -1,61 +1,65 @@
 
 
-# Desdobramentos de Arte — Geração em Lote por Canal
+# Diagnóstico do Módulo Criativo — Inconsistências, Erros e Melhorias
 
-## Resumo
-Adicionar um fluxo "Desdobrar" que, a partir de uma arte-base (ex: capa de álbum), gera automaticamente versões adaptadas para múltiplos canais (Instagram Post, Story, YouTube, etc.) com conteúdo contextual por canal. O prompt da edge function incluirá instrução explícita de preservação facial.
+## Problemas Encontrados
 
----
+### 1. Botão "Salvar" fantasma (BUG)
+O `ImagePreview` exibe um botão "Salvar" que chama `onSave={() => {}}` — uma função vazia. A imagem já é salva automaticamente pela edge function. Isso confunde o artista: o botão existe, mas não faz nada de útil. Deve ser removido.
 
-## Mudanças
+### 2. Sem validação de cota de IA antes de gerar (INCONSISTENCIA)
+O sistema tem cotas de fair-use (`ai_usage`: 20 diárias, 80 semanais), mas a edge function `generate-creative` não verifica essas cotas antes de chamar a IA. O artista só descobre que excedeu o limite quando recebe erro 429 do gateway, sem feedback claro. A verificação deveria acontecer no backend.
 
-### 1. Instrução de preservação facial na Edge Function
-**Arquivo:** `supabase/functions/generate-creative/index.ts`
-- Quando `editImageUrl` estiver presente, injetar no prompt do sistema: *"IMPORTANT: If there are human faces in the reference image, preserve them exactly — do not alter, distort or replace any facial features."*
-- Novo campo opcional no body: `channelContext` (string) — texto descritivo do canal (ex: "Story vertical do Instagram com texto de divulgação do single")
+### 3. Download cross-origin falha silenciosamente (BUG)
+O download usa `<a href="URL_PUBLICA" download="...">`. Para URLs de domínio diferente (Supabase Storage), o atributo `download` é ignorado pelo navegador — abre em nova aba em vez de baixar. Precisa de fetch + blob para funcionar.
 
-### 2. Novo componente `DeriveBatchDialog`
-**Novo:** `src/components/creative/DeriveBatchDialog.tsx`
-- Dialog que recebe a imagem-base (URL ou base64)
-- Mostra checkboxes dos formatos disponíveis (Post Instagram, Story, YouTube, etc.)
-- Campo de prompt contextual por canal com sugestões pré-preenchidas:
-  - Story: "Adicionar 'Ouça agora' e nome do artista"
-  - YouTube: "Banner com título do álbum centralizado"
-  - Twitter: "Post de divulgação com data de lançamento"
-- Botão "Gerar todos" que dispara N chamadas em sequência (uma por formato selecionado)
-- Progress bar mostrando "Gerando 2/5..."
-- Ao finalizar, exibe grid com todas as variações geradas
-- Botão "Baixar todos" (zip via client-side) e download individual
+### 4. Galeria mostra todas as artes sem filtro (MELHORIA UX)
+Não há filtro por projeto, formato ou estilo. Conforme o artista acumula artes, encontrar uma específica se torna difícil. Adicionar filtros básicos agrega valor.
 
-### 3. Integrar na página Creative
-**Arquivo:** `src/pages/Creative.tsx`
-- No `ImagePreview`, adicionar botão "Desdobrar para canais" (ícone `Layers`) ao lado de "Editar com IA"
-- Na galeria, adicionar mesmo botão no hover de cada asset
-- Ao clicar, abre o `DeriveBatchDialog` com a imagem selecionada
+### 5. Exclusão sem confirmação (BUG UX)
+O botão de deletar na galeria apaga imediatamente sem nenhum diálogo de confirmação. Um clique acidental perde a arte permanentemente (storage + banco).
 
-### 4. Integrar no hook
-**Arquivo:** `src/hooks/useCreativeAssets.ts`
-- Nova função `generateBatch(params[])` que chama `generate()` sequencialmente com delay de 2s entre chamadas para evitar rate limit
-- Retorna array de resultados
+### 6. `handleGenerate` e `handleRegenerate` são duplicados (TECH DEBT)
+Os dois callbacks são quase idênticos — código duplicado que pode divergir com o tempo.
+
+### 7. Galeria usa `aspect-square` para todos os formatos (INCONSISTENCIA VISUAL)
+Todas as thumbnails são quadradas, mas os assets podem ser Story (9:16), YouTube (16:9), etc. O artista não consegue distinguir visualmente os formatos na galeria.
+
+### 8. Formato "Livre" não permite dimensões customizadas (FEATURE INCOMPLETA)
+O formato "Livre/Custom" está fixo em 1024x1024. Não há campos para o artista inserir largura/altura personalizadas, contradizendo o propósito do formato.
+
+### 9. Seletor de projeto ausente na tela (MELHORIA)
+O contexto de projeto só funciona via URL param (`?project=ID`). O artista não tem como vincular/trocar projeto dentro da própria tela Criativo.
+
+### 10. DeriveBatchDialog não reseta canais ao reabrir (BUG)
+O estado `channels` é inicializado uma vez com `useState`. Quando o dialog é reaberto, as seleções anteriores persistem de forma inconsistente.
 
 ---
 
-## Fluxo do usuário
+## Plano de Correções
 
-```text
-1. Artista faz upload da capa do álbum como referência (ou seleciona da galeria)
-2. Clica em "Desdobrar para canais"
-3. Seleciona: Story, Post Instagram, Banner YouTube
-4. Cada formato já vem com sugestão de texto contextual
-5. Clica "Gerar todos"
-6. IA gera cada variação preservando rostos e adaptando composição
-7. Artista visualiza grid com os 3 resultados
-8. Baixa individualmente ou todos de uma vez
-```
+### Arquivo: `src/components/creative/ImagePreview.tsx`
+- Remover o botão "Salvar" e a prop `onSave`/`isSaving`/`isSaved`
+- Adicionar badge textual "Salvo automaticamente" discreto
 
-## Proteção facial
-A instrução de preservação é injetada automaticamente no backend sempre que houver imagem de referência — o artista não precisa lembrar de pedir isso manualmente.
+### Arquivo: `src/pages/Creative.tsx`
+- Unificar `handleGenerate` e `handleRegenerate` em uma única função
+- Remover props `onSave`/`isSaving`/`isSaved` da chamada ao ImagePreview
+- Adicionar `AlertDialog` de confirmação no delete da galeria
+- Adicionar seletor de projeto (dropdown dos projetos do artista)
+- Adicionar filtros básicos na galeria (por formato/projeto)
+- Corrigir download cross-origin com fetch+blob
+- Mostrar thumbnails com aspect ratio real do asset
 
-## Sem migrações de banco
-Usa a mesma tabela `creative_assets` e bucket `creative-assets`.
+### Arquivo: `src/components/creative/FormatSelector.tsx`
+- Quando "Livre" selecionado, exibir inputs de largura/altura customizáveis
+
+### Arquivo: `src/components/creative/DeriveBatchDialog.tsx`
+- Resetar seleção de canais ao abrir o dialog
+
+### Arquivo: `supabase/functions/generate-creative/index.ts`
+- Consultar `ai_usage` antes de invocar a IA e retornar erro amigável se cota excedida
+
+### Sem migrações de banco
+Toda a infraestrutura já existe.
 
