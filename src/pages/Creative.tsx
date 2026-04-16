@@ -29,14 +29,10 @@ import type { DiagnosisResult } from "@/hooks/useMusicDNA";
 
 async function downloadFile(url: string, filename: string) {
   try {
-    const resp = await fetch(url);
-    const blob = await resp.blob();
-    const blobUrl = URL.createObjectURL(blob);
     const a = document.createElement("a");
-    a.href = blobUrl;
+    a.href = url;
     a.download = filename;
     a.click();
-    URL.revokeObjectURL(blobUrl);
   } catch {
     window.open(url, "_blank");
   }
