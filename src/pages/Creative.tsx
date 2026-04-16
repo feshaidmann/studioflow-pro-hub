@@ -114,6 +114,7 @@ export default function Creative() {
   const [dnaCopyText, setDnaCopyText] = useState<string>("");
   const [dnaCopyLoading, setDnaCopyLoading] = useState(false);
   const [dnaSource, setDnaSource] = useState<DiagnosisResult | null>(null);
+  const [dnaTrackName, setDnaTrackName] = useState("");
 
   const { assets, isLoading: assetsLoading, generating, generate, generateBatch, generateText, deleteAsset } = useCreativeAssets();
 
