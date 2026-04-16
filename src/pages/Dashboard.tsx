@@ -9,6 +9,7 @@ import { useTasks } from "@/hooks/useTasks";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
+import { scrollToAnchor } from "@/lib/scrollToAnchor";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { toast } from "sonner";
 import { AITaskAssistant, type AITaskAssistantHandle } from "@/components/AITaskAssistant";
@@ -140,15 +141,9 @@ export default function Dashboard() {
   const scrollToAI = () => {
     localStorage.setItem("sfp_ai_collapsed", "false");
     requestAnimationFrame(() => {
-      const el = document.getElementById("ai-assistant-section");
-      if (!el) return;
-      const offset = 12;
-      const top = el.getBoundingClientRect().top + window.scrollY - offset;
-      window.scrollTo({ top, behavior: "smooth" });
-      setTimeout(() => {
-        const ta = document.querySelector<HTMLTextAreaElement>("#ai-assistant-section textarea");
-        ta?.focus({ preventScroll: true });
-      }, 400);
+      scrollToAnchor("ai-assistant-section", {
+        focusSelector: "#ai-assistant-section textarea",
+      });
     });
   };
 

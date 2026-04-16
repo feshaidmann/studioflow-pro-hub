@@ -11,6 +11,7 @@ import {
   LayoutDashboard, Users, ListChecks, DollarSign, Rocket, FolderOpen, Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { scrollToAnchor } from "@/lib/scrollToAnchor";
 import ProjectAISheet from "@/components/project-hub/ProjectAISheet";
 import { useTasks } from "@/hooks/useTasks";
 
@@ -259,10 +260,7 @@ export default function ProjectDetail() {
         <div className="rounded-xl border border-border bg-card/40 overflow-hidden">
           <button
             className="w-full flex items-center gap-2 px-4 py-3 text-sm font-semibold hover:bg-muted/30 transition-colors"
-            onClick={() => {
-              const el = document.getElementById("project-chat-section");
-              el?.scrollIntoView({ behavior: "smooth" });
-            }}
+            onClick={() => scrollToAnchor("project-chat-section")}
           >
             <MessageSquare className="h-4 w-4 text-primary" />
             Chat da Equipe

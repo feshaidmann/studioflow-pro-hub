@@ -66,6 +66,12 @@
     font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', system-ui, sans-serif;
     min-height: 100vh;
   }
+
+  /* Defensive: ensure any anchor scroll respects the mobile fixed header (48px) */
+  [id] { scroll-margin-top: 60px; }
+  @media (min-width: 768px) {
+    [id] { scroll-margin-top: 12px; }
+  }
 }
 
 @layer utilities {
