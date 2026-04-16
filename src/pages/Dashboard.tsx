@@ -237,7 +237,7 @@ export default function Dashboard() {
       onOpenChange={(open) => localStorage.setItem("sfp_ai_collapsed", open ? "false" : "true")}
       className={cn(isFirstRun && "hidden")}
     >
-      <Card data-ai-assistant className="glass-card animate-fade-in" style={{ animationDelay: "50ms" }}>
+      <Card id="ai-assistant-section" data-ai-assistant className="glass-card animate-fade-in scroll-mt-4" style={{ animationDelay: "50ms" }}>
         <CollapsibleTrigger asChild>
           <CardHeader className="pb-3 cursor-pointer select-none hover:bg-muted/40 rounded-t-lg transition-colors">
             <CardTitle className="text-base flex items-center gap-2">
@@ -313,9 +313,7 @@ export default function Dashboard() {
         <Card
           onClick={() => {
             aiRef.current?.sendMessage(`Preciso de ajuda com: ${nextAction.label}. ${nextAction.detail ? `Contexto: ${nextAction.detail}` : ""} O que devo fazer?`);
-            localStorage.setItem("sfp_ai_collapsed", "false");
-            const aiEl = document.querySelector("[data-ai-assistant]");
-            aiEl?.scrollIntoView({ behavior: "smooth", block: "center" });
+            scrollToAI();
           }}
           className={cn(
             "glass-card animate-fade-in cursor-pointer transition-colors hover:bg-muted/30 border-l-4",
