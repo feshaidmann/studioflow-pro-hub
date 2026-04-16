@@ -59,8 +59,19 @@ export function useCreativeAssets() {
     if (!user) return null;
     setGenerating(true);
     try {
-      const { data, error } = await supabase.functions.invoke("generate-creative", {
-        body: {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+      const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/generate-creative`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+          apikey: SUPABASE_KEY,
+        },
+        body: JSON.stringify({
           prompt: params.prompt,
           style: params.style,
           format: params.format,
@@ -74,32 +85,43 @@ export function useCreativeAssets() {
           releaseDate: params.releaseDate,
           additionalText: params.additionalText,
           noText: params.noText,
-        },
+        }),
       });
 
-      // supabase.functions.invoke returns FunctionsHttpError on non-2xx; try to read body
-      if (error) {
-        let serverMsg = error.message;
-        try {
-          const ctx: any = (error as any).context;
-          if (ctx && typeof ctx.json === "function") {
-            const body = await ctx.json();
-            if (body?.error) serverMsg = body.error;
-          } else if (ctx && typeof ctx.text === "function") {
-            const txt = await ctx.text();
-            try { const j = JSON.parse(txt); if (j?.error) serverMsg = j.error; } catch { if (txt) serverMsg = txt; }
-          }
-        } catch { /* ignore */ }
-        toast({ title: "Erro ao gerar imagem", description: serverMsg, variant: "destructive" });
+      // Capture quota headers (sent on 200 only)
+      const dailyLimit = response.headers.get("x-quota-daily-limit");
+      const dailyUsed = response.headers.get("x-quota-daily-used");
+      const weeklyLimit = response.headers.get("x-quota-weekly-limit");
+      const weeklyUsed = response.headers.get("x-quota-weekly-used");
+      const dailyResetsAt = response.headers.get("x-quota-daily-resets-at");
+      if (dailyLimit && dailyUsed && weeklyLimit && weeklyUsed && dailyResetsAt) {
+        setQuota({
+          daily_limit: Number(dailyLimit),
+          daily_used: Number(dailyUsed),
+          weekly_limit: Number(weeklyLimit),
+          weekly_used: Number(weeklyUsed),
+          daily_resets_at: dailyResetsAt,
+        });
+      }
+
+      const body = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        // Structured rate-limit payload → open dialog
+        if (body?.error === "rate_limit" && body?.limit_type && body?.resets_at) {
+          openRateLimit(body);
+          return null;
+        }
+        toast({ title: "Erro ao gerar imagem", description: body?.error || `HTTP ${response.status}`, variant: "destructive" });
         return null;
       }
 
-      if (data?.error) {
-        toast({ title: "Erro", description: data.error, variant: "destructive" });
+      if (body?.error) {
+        toast({ title: "Erro", description: body.error, variant: "destructive" });
         return null;
       }
 
-      return data as { imageBase64: string };
+      return body as { imageBase64: string };
     } catch (e: any) {
       toast({ title: "Erro inesperado", description: e.message, variant: "destructive" });
       return null;
