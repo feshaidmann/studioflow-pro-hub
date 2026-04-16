@@ -63,15 +63,20 @@ export function useSavedAnalyses() {
     }: {
       input: { name: string; notes?: string; references: string[] };
       diagnosis: DiagnosisResult;
-    }) => {
-      const { error } = await supabase.from("music_dna_analyses").insert({
-        user_id: user!.id,
-        track_name: input.name,
-        genre: diagnosis.genero_classificado || "",
-        input_metadata: input as any,
-        diagnosis: diagnosis as any,
-      });
+    }): Promise<{ id: string }> => {
+      const { data, error } = await supabase
+        .from("music_dna_analyses")
+        .insert({
+          user_id: user!.id,
+          track_name: input.name,
+          genre: diagnosis.genero_classificado || "",
+          input_metadata: input as any,
+          diagnosis: diagnosis as any,
+        })
+        .select("id")
+        .single();
       if (error) throw error;
+      return { id: data.id as string };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["music-dna-analyses"] });

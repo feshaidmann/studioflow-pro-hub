@@ -355,6 +355,40 @@ function FormView({ onSubmit, isPending }: {
 
             <Collapsible>
               <CollapsibleTrigger className="text-[10px] uppercase tracking-widest font-mono text-muted-foreground hover:text-foreground transition-colors">
+                + Artistas de referência ({refs.length}/5)
+              </CollapsibleTrigger>
+              <CollapsibleContent className="mt-2 space-y-2">
+                <p className="text-[11px] text-muted-foreground leading-relaxed">
+                  Selecione até 5 artistas que inspiram esta faixa. A IA usará para comparar identidade sonora.
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {REFERENCE_ARTISTS.map((artist) => {
+                    const selected = refs.includes(artist);
+                    const disabled = !selected && refs.length >= 5;
+                    return (
+                      <button
+                        key={artist}
+                        type="button"
+                        onClick={() => toggleRef(artist)}
+                        disabled={disabled}
+                        className={cn(
+                          "text-[10px] px-2.5 py-1 rounded-full border transition-all",
+                          selected
+                            ? "bg-primary text-primary-foreground border-primary"
+                            : "bg-muted/30 text-muted-foreground border-border hover:border-primary/40 hover:text-foreground",
+                          disabled && "opacity-40 cursor-not-allowed"
+                        )}
+                      >
+                        {artist}
+                      </button>
+                    );
+                  })}
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+
+            <Collapsible>
+              <CollapsibleTrigger className="text-[10px] uppercase tracking-widest font-mono text-muted-foreground hover:text-foreground transition-colors">
                 + Notas adicionais (opcional)
               </CollapsibleTrigger>
               <CollapsibleContent className="mt-2">
@@ -872,6 +906,7 @@ export function MusicDNAAnalyzer() {
       if (cached) {
         setLastInput(cached.input);
         setViewingDiagnosis(cached.diagnosis);
+        setRestoredFromCache(true);
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -883,6 +918,7 @@ export function MusicDNAAnalyzer() {
       cacheLastAnalysis(lastInput, result);
       setViewingDiagnosis(result);
       setIsSaved(false);
+      setRestoredFromCache(false);
     }
   }, [result, lastInput]);
 
@@ -895,6 +931,7 @@ export function MusicDNAAnalyzer() {
     };
     setLastInput(input);
     setViewingDiagnosis(null);
+    setRestoredFromCache(false);
     analyze(input);
   };
 
@@ -903,19 +940,22 @@ export function MusicDNAAnalyzer() {
     setViewingDiagnosis(null);
     setLastInput(null);
     setIsSaved(false);
+    setSavedAnalysisId(undefined);
+    setRestoredFromCache(false);
     reset();
   };
 
   const [savedAnalysisId, setSavedAnalysisId] = useState<string | undefined>(undefined);
+  const [restoredFromCache, setRestoredFromCache] = useState(false);
 
   const handleSave = () => {
     if (lastInput && (viewingDiagnosis || result)) {
       saveAnalysis(
         { input: lastInput, diagnosis: (viewingDiagnosis || result)! },
         {
-          onSuccess: () => {
+          onSuccess: ({ id }) => {
             setIsSaved(true);
-            // We don't have the ID directly from the mutation, but we can get latest from savedAnalyses
+            setSavedAnalysisId(id);
           },
         }
       );
@@ -928,6 +968,7 @@ export function MusicDNAAnalyzer() {
     setViewingDiagnosis(saved.diagnosis);
     setIsSaved(true);
     setSavedAnalysisId(saved.id);
+    setRestoredFromCache(false);
     cacheLastAnalysis(input, saved.diagnosis);
   };
 
@@ -952,30 +993,37 @@ export function MusicDNAAnalyzer() {
           <div className="flex items-center gap-2 mb-1">
             <Music className="h-5 w-5 text-primary" />
             <h1 className="text-xl font-bold">Analisador de DNA Musical</h1>
-            <Badge variant="secondary" className="text-[9px] px-1.5 py-0 h-4 bg-primary/10 text-primary border-primary/20">
-              Pro
-            </Badge>
           </div>
           <p className="text-sm text-muted-foreground leading-relaxed">
             Faça upload da sua demo para receber um diagnóstico técnico avançado com análise espectral,
             detecção de BPM e tom, segmentação por seções e sugestões de produção.
           </p>
-          <p className="text-[11px] text-muted-foreground/60 mt-1">
-            ✦ Análise espectral e detecção de seções estão disponíveis para todos · Diagnóstico IA avançado é recurso Pro
-          </p>
         </div>
       )}
 
       {activeDiagnosis && lastInput ? (
-        <ResultView
-          input={lastInput}
-          diagnosis={activeDiagnosis}
-          onReset={handleReset}
-          onSave={handleSave}
-          isSaved={isSaved}
-          isSaving={isSaving}
-          savedAnalysisId={savedAnalysisId}
-        />
+        <>
+          {restoredFromCache && (
+            <div className="mb-4 flex items-center justify-between gap-3 p-3 rounded-lg bg-muted/40 border border-border animate-fade-in">
+              <p className="text-xs text-muted-foreground">
+                <History className="inline h-3 w-3 mr-1.5 -mt-0.5" />
+                Você está vendo a última análise restaurada da sessão.
+              </p>
+              <Button variant="outline" size="sm" className="text-xs gap-1.5 shrink-0" onClick={handleReset}>
+                ↻ Nova análise
+              </Button>
+            </div>
+          )}
+          <ResultView
+            input={lastInput}
+            diagnosis={activeDiagnosis}
+            onReset={handleReset}
+            onSave={handleSave}
+            isSaved={isSaved}
+            isSaving={isSaving}
+            savedAnalysisId={savedAnalysisId}
+          />
+        </>
       ) : isPending ? (
         <LoadingView
           trackName={lastInput?.name ?? ""}
