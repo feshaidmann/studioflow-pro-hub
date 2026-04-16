@@ -75,12 +75,13 @@ interface DailyChecklistProps {
   lastRefreshed: Date | null;
   hidden?: boolean;
   aiRef?: React.RefObject<AITaskAssistantHandle | null>;
+  onInvokeAI?: () => void;
   projects?: Array<{ id: string; name: string }>;
 }
 
 export default function DailyChecklist({
   activeTasks, completedTasks, loading, onAddTask, onToggleTask, onDeleteTask, onUpdateTask,
-  onRefresh, refreshing, lastRefreshed, hidden, aiRef, projects = [],
+  onRefresh, refreshing, lastRefreshed, hidden, aiRef, onInvokeAI, projects = [],
 }: DailyChecklistProps) {
   const { t } = useLanguage();
   const [newTaskDesc, setNewTaskDesc] = useState("");
@@ -280,6 +281,7 @@ export default function DailyChecklist({
                               <Button variant="ghost" size="icon" className="h-5 w-5 text-primary hover:text-primary/80" onClick={() => {
                                 const desc = task.description.replace(/^\[DNA\]\s*/, "");
                                 aiRef.current?.sendMessage(`Me explique de forma prática como aplicar esta técnica: ${desc}`);
+                                onInvokeAI?.();
                               }}>
                                 <Bot className="h-3 w-3" />
                               </Button>

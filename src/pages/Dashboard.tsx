@@ -359,6 +359,7 @@ export default function Dashboard() {
           lastRefreshed={lastRefreshed}
           hidden={isFirstRun}
           aiRef={aiRef}
+          onInvokeAI={scrollToAI}
           projects={projects.map((p) => ({ id: p.id, name: p.name }))}
         />
 
