@@ -168,6 +168,24 @@ export default function Creative() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dnaParam]);
 
+  // Update prompt when format changes
+  useEffect(() => {
+    if (dnaSource) {
+      setPrompt(buildDNAPrompt(dnaSource, dnaTrackName, selectedFormat.id));
+    } else if (prompt.trim()) {
+      const allPrefixes = Object.values(FORMAT_PROMPT_PREFIX);
+      let updated = prompt;
+      for (const prefix of allPrefixes) {
+        if (updated.startsWith(prefix)) {
+          updated = getFormatPrefix(selectedFormat.id) + updated.slice(prefix.length);
+          break;
+        }
+      }
+      if (updated !== prompt) setPrompt(updated);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedFormat.id]);
+
   const handleGenerate = useCallback(async () => {
     if (!prompt.trim()) {
       toast({ title: "Descreva sua ideia", description: "O campo de prompt não pode estar vazio.", variant: "destructive" });
