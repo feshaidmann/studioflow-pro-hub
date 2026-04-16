@@ -7,7 +7,7 @@ import { Bot, Send, Loader2, User, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import ReactMarkdown from "react-markdown";
+import { AIMarkdownContent } from "@/components/ui/ai-markdown-content";
 
 interface Message {
   role: "user" | "assistant";
@@ -189,9 +189,7 @@ export default function ProjectAISheet({
                   : "bg-muted/60"
               )}>
                 {msg.role === "assistant" ? (
-                  <div className="prose prose-sm max-w-none dark:prose-invert">
-                    <ReactMarkdown>{msg.content || "..."}</ReactMarkdown>
-                  </div>
+                  <AIMarkdownContent content={msg.content || "..."} />
                 ) : msg.content}
                 {msg.isStreaming && <span className="inline-block w-1.5 h-4 bg-primary/60 animate-pulse ml-0.5" />}
               </div>

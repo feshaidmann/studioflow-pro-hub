@@ -111,28 +111,6 @@ const WELCOME_QUICK_ACTIONS: QuickAction[] = [
   { label: "🔊 LUFS para streaming", message: "Quais são os alvos de LUFS, True Peak e loudness range para Spotify, YouTube e Apple Music?" },
 ];
 
-function renderMarkdown(text: string) {
-  const parts = text.split(/(\*\*[^*]+\*\*|`[^`]+`)/g);
-  return parts.map((part, i) => {
-    if (part.startsWith("**") && part.endsWith("**")) {
-      return <strong key={i} className="font-semibold text-foreground">{part.slice(2, -2)}</strong>;
-    }
-    if (part.startsWith("`") && part.endsWith("`")) {
-      return <code key={i} className="bg-secondary/60 px-1 rounded text-[11px] font-mono">{part.slice(1, -1)}</code>;
-    }
-    return part.split("\n").map((line, j) => {
-      const isListItem = line.startsWith("- ") || line.startsWith("• ");
-      if (isListItem) {
-        return (
-          <span key={`${i}-${j}`} className="block pl-3 relative before:content-['•'] before:absolute before:left-0 before:text-primary">
-            {line.replace(/^[-•]\s/, "")}
-          </span>
-        );
-      }
-      return j === 0 ? line : <span key={`${i}-${j}`}><br />{line}</span>;
-    });
-  });
-}
 
 function formatRelativeDate(dateStr: string) {
   try {
@@ -507,7 +485,7 @@ export const AITaskAssistant = forwardRef<AITaskAssistantHandle, AITaskAssistant
                     <Loader2 className="h-3 w-3 animate-spin" /> Pensando…
                   </span>
                 ) : (
-                  <div>{renderMarkdown(msg.content)}</div>
+                  <AIMarkdownContent content={msg.content} />
                 )}
 
                 {/* Quick action chips */}
