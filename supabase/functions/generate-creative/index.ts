@@ -56,7 +56,71 @@ serve(async (req) => {
       });
     }
 
-    const { prompt, style, format, width, height, editImageUrl, projectId, channelContext } = await req.json();
+    const { prompt, style, format, width, height, editImageUrl, projectId, channelContext, mode, dnaContext } = await req.json();
+
+    // TEXT MODE — generate social media copy
+    if (mode === "text") {
+      if (!prompt) {
+        return new Response(JSON.stringify({ error: "Missing prompt for text mode" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const textSystemPrompt = [
+        "Você é um copywriter especializado em música e redes sociais no Brasil.",
+        "Gere uma legenda criativa e engajante para Instagram/Spotify baseada na descrição do DNA musical abaixo.",
+        "A legenda deve ter no máximo 280 caracteres, incluir 3-5 hashtags relevantes, e ter tom autêntico e artístico.",
+        "Responda APENAS com a legenda, sem explicações adicionais.",
+        dnaContext ? `Contexto do DNA Musical: ${dnaContext}` : "",
+      ].filter(Boolean).join("\n");
+
+      const textResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${lovableKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-3-flash-preview",
+          messages: [
+            { role: "system", content: textSystemPrompt },
+            { role: "user", content: prompt },
+          ],
+        }),
+      });
+
+      if (!textResp.ok) {
+        const status = textResp.status;
+        if (status === 429) {
+          return new Response(JSON.stringify({ error: "Limite de requisições excedido. Tente novamente em alguns minutos." }), {
+            status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        if (status === 402) {
+          return new Response(JSON.stringify({ error: "Créditos de IA insuficientes." }), {
+            status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        throw new Error("AI text generation failed");
+      }
+
+      const textData = await textResp.json();
+      const text = textData.choices?.[0]?.message?.content || "";
+
+      // Log AI usage
+      await supabase.from("ai_invocations").insert({
+        user_id: user.id,
+        function_name: "generate-creative-text",
+        model: "google/gemini-3-flash-preview",
+        status: "success",
+      });
+
+      return new Response(JSON.stringify({ text }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // IMAGE MODE (default)
     if (!prompt || !format || !width || !height) {
       return new Response(JSON.stringify({ error: "Missing required fields" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },

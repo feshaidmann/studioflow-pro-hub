@@ -1,6 +1,6 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Palette, Sparkles, Trash2, ImageIcon, Download, Settings2 } from "lucide-react";
+import { Palette, Sparkles, Trash2, ImageIcon, Download, Settings2, Copy, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
@@ -19,6 +19,9 @@ import QuickTemplates, { type QuickTemplate } from "@/components/creative/QuickT
 import { useCreativeAssets } from "@/hooks/useCreativeAssets";
 import { useProjects } from "@/contexts/ProjectContext";
 import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { getCachedAnalysis } from "@/hooks/useSavedAnalyses";
+import type { DiagnosisResult } from "@/hooks/useMusicDNA";
 
 async function downloadFile(url: string, filename: string) {
   try {

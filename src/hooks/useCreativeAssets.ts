@@ -110,11 +110,36 @@ export function useCreativeAssets() {
     return results;
   };
 
+  const generateText = async (params: { prompt: string; dnaContext?: string }) => {
+    if (!user) return null;
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-creative", {
+        body: {
+          mode: "text",
+          prompt: params.prompt,
+          dnaContext: params.dnaContext,
+        },
+      });
+      if (error) {
+        toast({ title: "Erro ao gerar texto", description: error.message, variant: "destructive" });
+        return null;
+      }
+      if (data?.error) {
+        toast({ title: "Erro", description: data.error, variant: "destructive" });
+        return null;
+      }
+      return data as { text: string };
+    } catch (e: any) {
+      toast({ title: "Erro inesperado", description: e.message, variant: "destructive" });
+      return null;
+    }
+  };
+
   const deleteAsset = async (id: string, storagePath: string) => {
     await supabase.storage.from("creative-assets").remove([storagePath]);
     await supabase.from("creative_assets").delete().eq("id", id);
     queryClient.invalidateQueries({ queryKey: ["creative-assets"] });
   };
 
-  return { assets, isLoading, generating, generate, generateBatch, deleteAsset };
+  return { assets, isLoading, generating, generate, generateBatch, generateText, deleteAsset };
 }
