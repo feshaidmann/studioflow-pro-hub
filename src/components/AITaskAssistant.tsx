@@ -453,7 +453,7 @@ export const AITaskAssistant = forwardRef<AITaskAssistantHandle, AITaskAssistant
   ) : null;
 
   const chatBody = (
-    <div className={cn("rounded-lg border border-border/40 bg-card/40 overflow-hidden flex flex-col", alwaysOpen ? "mt-0" : "mt-2")} style={{ minHeight: alwaysOpen ? "360px" : undefined, maxHeight: alwaysOpen ? "460px" : "380px" }}>
+    <div className={cn("overflow-hidden flex flex-col", alwaysOpen ? "mt-0" : "mt-2 rounded-lg border border-border/40 bg-card/40")} style={{ minHeight: alwaysOpen ? "360px" : undefined, maxHeight: alwaysOpen ? "460px" : "380px" }}>
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-3 space-y-3 min-h-0">
         {loadingMessages ? (
