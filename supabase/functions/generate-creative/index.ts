@@ -56,7 +56,7 @@ serve(async (req) => {
       });
     }
 
-    const { prompt, style, format, width, height, editImageUrl, projectId, channelContext, mode, dnaContext, trackName, artistName, releaseDate } = await req.json();
+    const { prompt, style, format, width, height, editImageUrl, projectId, channelContext, mode, dnaContext, trackName, artistName, releaseDate, additionalText, noText } = await req.json();
 
     // TEXT MODE — generate social media copy
     if (mode === "text") {
@@ -130,9 +130,10 @@ serve(async (req) => {
     // Build system instructions (separate from user content)
     const systemParts: string[] = [
       "You are a visual art generator for musicians and artists.",
-      "Generate images based on the user's creative description below.",
+      "CRITICAL TEXT RULE: The user's creative description (user message) is COMPOSITION GUIDANCE ONLY — it describes mood, style, scenery, colors, elements. You MUST NOT render any of its words, phrases or sentences as visible text, captions, labels or typography in the image. Treat the description purely as visual direction.",
+      "The ONLY text allowed in the image comes from the dedicated text fields listed below in this system prompt (track title, artist name, release date, additional text). If no such fields are provided, render NO text at all.",
       `Target format: ${format}. Aspect ratio suitable for ${width}x${height}.`,
-      "All supporting text, labels, captions, and descriptions rendered in the image MUST be in Brazilian Portuguese (pt-BR). However, preserve proper names exactly as given — song titles, album titles, artist names, and band names must appear in their ORIGINAL language, never translated.",
+      "Any allowed text rendered in the image MUST be in Brazilian Portuguese (pt-BR) for generic words. Proper names (song titles, album titles, artist names, band names) must appear in their ORIGINAL language exactly as given — never translated.",
     ];
 
     if (style) {
@@ -143,14 +144,21 @@ serve(async (req) => {
       systemParts.push(`Adapt for this distribution channel: ${channelContext}.`);
     }
 
-    if (trackName) {
-      systemParts.push(`Song title: "${trackName}". Display this title prominently in the artwork.`);
-    }
-    if (artistName) {
-      systemParts.push(`Artist name: "${artistName}". Include the artist name in the artwork.`);
-    }
-    if (releaseDate) {
-      systemParts.push(`Release date: ${releaseDate}. Include this date in the artwork if appropriate.`);
+    if (noText) {
+      systemParts.push("ABSOLUTE TEXT BAN: Do NOT render ANY text, letters, numbers, words, logos, watermarks or typography in the image. Pure visual composition only. Ignore any track title, artist name, release date or additional text fields — render none of them.");
+    } else {
+      if (trackName) {
+        systemParts.push(`Song title: "${trackName}". If appropriate for this format and composition, you may include it as readable typography. A minimalist composition may omit it.`);
+      }
+      if (artistName) {
+        systemParts.push(`Artist name: "${artistName}". If appropriate, include it as readable text.`);
+      }
+      if (releaseDate) {
+        systemParts.push(`Release date: ${releaseDate}. Include only if it fits the composition.`);
+      }
+      if (additionalText) {
+        systemParts.push(`Additional text to render in the artwork (if appropriate): "${additionalText}". This is short supporting copy such as a tagline, edition number, or featured artist mention. Render it as legible typography only when it suits the composition.`);
+      }
     }
 
     if (editImageUrl) {
