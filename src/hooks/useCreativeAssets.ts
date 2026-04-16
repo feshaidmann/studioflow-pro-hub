@@ -51,6 +51,8 @@ export function useCreativeAssets() {
     trackName?: string;
     artistName?: string;
     releaseDate?: string;
+    additionalText?: string;
+    noText?: boolean;
   }) => {
     if (!user) return null;
     setGenerating(true);
@@ -68,6 +70,8 @@ export function useCreativeAssets() {
           trackName: params.trackName,
           artistName: params.artistName,
           releaseDate: params.releaseDate,
+          additionalText: params.additionalText,
+          noText: params.noText,
         },
       });
 
