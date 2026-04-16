@@ -82,7 +82,7 @@ export default function Creative() {
   const [deriveImageUrl, setDeriveImageUrl] = useState<string>("");
   const [settingsOpen, setSettingsOpen] = useState(true);
 
-  const [selectedProjectId, setSelectedProjectId] = useState<string>(projectIdParam || "");
+  const [selectedProjectId, setSelectedProjectId] = useState<string>(projectIdParam || "none");
 
   // Gallery
   const [filterFormat, setFilterFormat] = useState<string>("all");
@@ -95,7 +95,7 @@ export default function Creative() {
 
   const { assets, isLoading: assetsLoading, generating, generate, generateBatch, generateText, deleteAsset } = useCreativeAssets();
 
-  const linkedProject = selectedProjectId
+  const linkedProject = selectedProjectId && selectedProjectId !== "none"
     ? projects.find((p) => p.id === selectedProjectId)
     : null;
 
