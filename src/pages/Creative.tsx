@@ -29,14 +29,10 @@ import type { DiagnosisResult } from "@/hooks/useMusicDNA";
 
 async function downloadFile(url: string, filename: string) {
   try {
-    const resp = await fetch(url);
-    const blob = await resp.blob();
-    const blobUrl = URL.createObjectURL(blob);
     const a = document.createElement("a");
-    a.href = blobUrl;
+    a.href = url;
     a.download = filename;
     a.click();
-    URL.revokeObjectURL(blobUrl);
   } catch {
     window.open(url, "_blank");
   }
@@ -101,6 +97,7 @@ export default function Creative() {
   const [editPrompt, setEditPrompt] = useState("");
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [generatedBase64, setGeneratedBase64] = useState<string | null>(null);
+  const [savedToGallery, setSavedToGallery] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingLoading, setEditingLoading] = useState(false);
   const [referenceImage, setReferenceImage] = useState<string | null>(null);
@@ -129,7 +126,7 @@ export default function Creative() {
   const RELEASE_FORMATS = ["spotify_cover", "deezer_cover", "tidal_cover"];
   const isReleaseFormat = RELEASE_FORMATS.includes(selectedFormat.id);
 
-  const { assets, isLoading: assetsLoading, generating, generate, generateBatch, generateText, deleteAsset } = useCreativeAssets();
+  const { assets, isLoading: assetsLoading, generating, generate, generateBatch, generateText, saveAsset, deleteAsset } = useCreativeAssets();
 
   const linkedProject = selectedProjectId && selectedProjectId !== "none"
     ? projects.find((p) => p.id === selectedProjectId)
@@ -244,8 +241,9 @@ export default function Creative() {
     });
 
     if (result) {
-      setGeneratedImage(result.imageUrl);
+      setGeneratedImage(result.imageBase64);
       setGeneratedBase64(result.imageBase64);
+      setSavedToGallery(false);
 
       if (dnaSource) {
         setDnaCopyLoading(true);
@@ -275,8 +273,9 @@ export default function Creative() {
       projectId: selectedProjectId && selectedProjectId !== "none" ? selectedProjectId : undefined,
     });
     if (result) {
-      setGeneratedImage(result.imageUrl);
+      setGeneratedImage(result.imageBase64);
       setGeneratedBase64(result.imageBase64);
+      setSavedToGallery(false);
     }
   }, [generatedBase64, prompt, style, selectedFormat, selectedProjectId, generate, handleGenerate]);
 
@@ -309,15 +308,33 @@ export default function Creative() {
       projectId: selectedProjectId && selectedProjectId !== "none" ? selectedProjectId : undefined,
     });
     if (result) {
-      setGeneratedImage(result.imageUrl);
+      setGeneratedImage(result.imageBase64);
       setGeneratedBase64(result.imageBase64);
+      setSavedToGallery(false);
     }
     setEditingLoading(false);
   };
 
   const handleDownload = () => {
-    if (!generatedImage) return;
-    downloadFile(generatedImage, `criativo_${selectedFormat.id}_${Date.now()}.png`);
+    if (!generatedBase64) return;
+    const a = document.createElement("a");
+    a.href = generatedBase64;
+    a.download = `criativo_${selectedFormat.id}_${Date.now()}.png`;
+    a.click();
+  };
+
+  const handleSaveToGallery = async () => {
+    if (!generatedBase64 || savedToGallery) return;
+    const result = await saveAsset({
+      imageBase64: generatedBase64,
+      prompt,
+      style,
+      format: selectedFormat.id,
+      width: selectedFormat.width,
+      height: selectedFormat.height,
+      projectId: selectedProjectId && selectedProjectId !== "none" ? selectedProjectId : undefined,
+    });
+    if (result) setSavedToGallery(true);
   };
 
   const handleConfirmDelete = async () => {
@@ -561,6 +578,8 @@ export default function Creative() {
                 onRegenerate={handleVariation}
                 onEdit={handleEdit}
                 onDownload={handleDownload}
+                onSave={handleSaveToGallery}
+                isSaved={savedToGallery}
                 onDerive={generatedImage ? () => handleDerive(generatedImage) : undefined}
                 formatLabel={selectedFormat.label}
                 aspectRatio={selectedFormat.width / selectedFormat.height}

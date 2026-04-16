@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Download, RefreshCw, Pencil, Layers, CheckCircle2 } from "lucide-react";
+import { Download, RefreshCw, Pencil, Layers, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
@@ -16,15 +16,17 @@ interface Props {
   onRegenerate: () => void;
   onEdit: () => void;
   onDownload: () => void;
+  onSave?: () => void;
+  isSaved?: boolean;
   onDerive?: () => void;
   formatLabel?: string;
-  aspectRatio?: number; // width/height
+  aspectRatio?: number;
 }
 
 export default function ImagePreview({
   imageUrl, isLoading,
-  onRegenerate, onEdit, onDownload, onDerive,
-  formatLabel, aspectRatio = 1,
+  onRegenerate, onEdit, onDownload, onSave, isSaved,
+  onDerive, formatLabel, aspectRatio = 1,
 }: Props) {
   const [loadingPhase, setLoadingPhase] = useState(0);
 
@@ -36,7 +38,6 @@ export default function ImagePreview({
     return () => clearInterval(interval);
   }, [isLoading]);
 
-  // Compute aspect class from ratio
   const aspectClass = aspectRatio >= 1.5
     ? "aspect-video"
     : aspectRatio <= 0.65
@@ -70,20 +71,19 @@ export default function ImagePreview({
         <img src={imageUrl} alt="Imagem gerada" className={cn("w-full h-auto")} />
       </div>
 
-      {/* Format label + auto-saved */}
-      <div className="flex items-center gap-3 text-xs text-muted-foreground">
-        {formatLabel && (
+      {formatLabel && (
+        <div className="flex items-center gap-3 text-xs text-muted-foreground">
           <span className="bg-muted px-2 py-0.5 rounded-full">{formatLabel}</span>
-        )}
-        <span className="flex items-center gap-1">
-          <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
-          Salvo automaticamente
-        </span>
-      </div>
+        </div>
+      )}
 
-      {/* Hierarchical actions: Download primary, Variation/Edit secondary, Derive ghost */}
       <div className="flex flex-wrap gap-2 justify-center">
-        <Button size="sm" onClick={onDownload}>
+        {onSave && (
+          <Button size="sm" onClick={onSave} disabled={isSaved} variant={isSaved ? "outline" : "default"}>
+            <Save className="h-3.5 w-3.5 mr-1.5" /> {isSaved ? "Salvo" : "Salvar"}
+          </Button>
+        )}
+        <Button size="sm" variant={onSave ? "outline" : "default"} onClick={onDownload}>
           <Download className="h-3.5 w-3.5 mr-1.5" /> Baixar
         </Button>
         <Button variant="outline" size="sm" onClick={onRegenerate}>

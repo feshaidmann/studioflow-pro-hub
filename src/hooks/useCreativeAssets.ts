@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { decode } from "base64-arraybuffer";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
 
@@ -79,8 +80,7 @@ export function useCreativeAssets() {
         return null;
       }
 
-      queryClient.invalidateQueries({ queryKey: ["creative-assets"] });
-      return data as { imageUrl: string; imageBase64: string; asset: CreativeAsset };
+      return data as { imageBase64: string };
     } catch (e: any) {
       toast({ title: "Erro inesperado", description: e.message, variant: "destructive" });
       return null;
@@ -103,7 +103,7 @@ export function useCreativeAssets() {
     onProgress?: (current: number, total: number) => void
   ) => {
     if (!user) return [];
-    const results: Array<{ imageUrl: string; imageBase64: string; asset: CreativeAsset } | null> = [];
+    const results: Array<{ imageBase64: string } | null> = [];
     for (let i = 0; i < paramsList.length; i++) {
       onProgress?.(i + 1, paramsList.length);
       const result = await generate(paramsList[i]);
@@ -141,11 +141,68 @@ export function useCreativeAssets() {
     }
   };
 
+  const saveAsset = async (params: {
+    imageBase64: string;
+    prompt: string;
+    style: string | null;
+    format: string;
+    width: number;
+    height: number;
+    projectId?: string;
+  }) => {
+    if (!user) return null;
+    try {
+      const raw = params.imageBase64.replace(/^data:image\/\w+;base64,/, "");
+      const timestamp = Date.now();
+      const storagePath = `${user.id}/${timestamp}_${params.format}.png`;
+
+      const { error: uploadErr } = await supabase.storage
+        .from("creative-assets")
+        .upload(storagePath, decode(raw), { contentType: "image/png", upsert: false });
+
+      if (uploadErr) {
+        toast({ title: "Erro ao salvar", description: uploadErr.message, variant: "destructive" });
+        return null;
+      }
+
+      const { data: urlData } = supabase.storage.from("creative-assets").getPublicUrl(storagePath);
+      const publicUrl = urlData.publicUrl;
+
+      const { data: asset, error: insertErr } = await supabase
+        .from("creative_assets")
+        .insert({
+          user_id: user.id,
+          project_id: params.projectId || null,
+          prompt: params.prompt,
+          style: params.style || null,
+          format: params.format,
+          width: params.width,
+          height: params.height,
+          storage_path: storagePath,
+          public_url: publicUrl,
+        })
+        .select()
+        .single();
+
+      if (insertErr) {
+        toast({ title: "Erro ao salvar metadados", description: insertErr.message, variant: "destructive" });
+        return null;
+      }
+
+      queryClient.invalidateQueries({ queryKey: ["creative-assets"] });
+      toast({ title: "Arte salva na galeria!" });
+      return asset as CreativeAsset;
+    } catch (e: any) {
+      toast({ title: "Erro inesperado", description: e.message, variant: "destructive" });
+      return null;
+    }
+  };
+
   const deleteAsset = async (id: string, storagePath: string) => {
     await supabase.storage.from("creative-assets").remove([storagePath]);
     await supabase.from("creative_assets").delete().eq("id", id);
     queryClient.invalidateQueries({ queryKey: ["creative-assets"] });
   };
 
-  return { assets, isLoading, generating, generate, generateBatch, generateText, deleteAsset };
+  return { assets, isLoading, generating, generate, generateBatch, generateText, saveAsset, deleteAsset };
 }
