@@ -180,6 +180,7 @@ export type Database = {
           format: string
           height: number
           id: string
+          media_type: string
           project_id: string | null
           prompt: string
           public_url: string | null
@@ -193,6 +194,7 @@ export type Database = {
           format: string
           height: number
           id?: string
+          media_type?: string
           project_id?: string | null
           prompt: string
           public_url?: string | null
@@ -206,6 +208,7 @@ export type Database = {
           format?: string
           height?: number
           id?: string
+          media_type?: string
           project_id?: string | null
           prompt?: string
           public_url?: string | null

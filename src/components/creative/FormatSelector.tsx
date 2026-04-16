@@ -11,14 +11,15 @@ export interface FormatOption {
   height: number;
   icon: React.ElementType;
   description: string;
+  isVideo?: boolean;
 }
 
 export const FORMAT_OPTIONS: FormatOption[] = [
   { id: "instagram_post", label: "Post Instagram", width: 1080, height: 1080, icon: Instagram, description: "1080×1080" },
-  { id: "story", label: "Story / Reels", width: 1080, height: 1920, icon: Instagram, description: "1080×1920" },
+  { id: "story", label: "Story / Reels", width: 1080, height: 1920, icon: Instagram, description: "1080×1920 · loop animado", isVideo: true },
   { id: "youtube_cover", label: "Capa YouTube", width: 1280, height: 720, icon: Youtube, description: "1280×720" },
   { id: "spotify_cover", label: "Capa Spotify", width: 1920, height: 1920, icon: Music, description: "3000×3000" },
-  { id: "spotify_canvas", label: "Canvas Spotify", width: 1080, height: 1920, icon: Music, description: "1080×1920 (vídeo/loop)" },
+  { id: "spotify_canvas", label: "Canvas Spotify", width: 1080, height: 1920, icon: Music, description: "1080×1920 · loop animado", isVideo: true },
   { id: "spotify_banner", label: "Banner Spotify", width: 1280, height: 720, icon: Music, description: "1280×720" },
   { id: "deezer_cover", label: "Capa Deezer", width: 1920, height: 1920, icon: Image, description: "3000×3000" },
   { id: "tidal_cover", label: "Capa Tidal", width: 1920, height: 1920, icon: Image, description: "3000×3000" },
