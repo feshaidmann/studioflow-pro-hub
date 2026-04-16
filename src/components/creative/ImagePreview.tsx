@@ -1,22 +1,19 @@
-import { Download, RefreshCw, Pencil, Save, Layers } from "lucide-react";
+import { Download, RefreshCw, Pencil, Layers, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface Props {
   imageUrl: string | null;
   isLoading: boolean;
-  isSaving: boolean;
-  isSaved: boolean;
   onRegenerate: () => void;
   onEdit: () => void;
   onDownload: () => void;
-  onSave: () => void;
   onDerive?: () => void;
 }
 
 export default function ImagePreview({
-  imageUrl, isLoading, isSaving, isSaved,
-  onRegenerate, onEdit, onDownload, onSave, onDerive,
+  imageUrl, isLoading,
+  onRegenerate, onEdit, onDownload, onDerive,
 }: Props) {
   if (isLoading) {
     return (
@@ -42,6 +39,10 @@ export default function ImagePreview({
       <div className="relative rounded-xl overflow-hidden border border-border/40 shadow-sm max-w-md w-full">
         <img src={imageUrl} alt="Imagem gerada" className="w-full h-auto" />
       </div>
+      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+        <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
+        Salvo automaticamente
+      </div>
       <div className="flex flex-wrap gap-2 justify-center">
         <Button variant="outline" size="sm" onClick={onRegenerate}>
           <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Variação
@@ -56,10 +57,6 @@ export default function ImagePreview({
         )}
         <Button variant="outline" size="sm" onClick={onDownload}>
           <Download className="h-3.5 w-3.5 mr-1.5" /> Baixar
-        </Button>
-        <Button size="sm" onClick={onSave} disabled={isSaving || isSaved}>
-          <Save className="h-3.5 w-3.5 mr-1.5" />
-          {isSaved ? "Salvo ✓" : isSaving ? "Salvando…" : "Salvar"}
         </Button>
       </div>
     </div>

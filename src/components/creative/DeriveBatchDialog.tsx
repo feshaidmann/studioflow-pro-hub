@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Layers, Download, X } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -28,6 +28,14 @@ const DEFAULT_CONTEXTS: Record<string, string> = {
   "custom": "Arte livre com identidade visual do projeto",
 };
 
+function buildInitialChannels(): ChannelConfig[] {
+  return FORMAT_OPTIONS.map((f) => ({
+    format: f,
+    enabled: false,
+    contextPrompt: DEFAULT_CONTEXTS[f.id] || "",
+  }));
+}
+
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -53,17 +61,21 @@ interface Props {
 export default function DeriveBatchDialog({
   open, onOpenChange, baseImageUrl, basePrompt, style, projectId, onGenerateBatch,
 }: Props) {
-  const [channels, setChannels] = useState<ChannelConfig[]>(() =>
-    FORMAT_OPTIONS.map((f) => ({
-      format: f,
-      enabled: false,
-      contextPrompt: DEFAULT_CONTEXTS[f.id] || "",
-    }))
-  );
+  const [channels, setChannels] = useState<ChannelConfig[]>(buildInitialChannels);
   const [generating, setGenerating] = useState(false);
   const [progress, setProgress] = useState({ current: 0, total: 0 });
   const [results, setResults] = useState<Array<{ imageUrl: string; format: string } | null>>([]);
   const [done, setDone] = useState(false);
+
+  // Reset channels every time dialog opens
+  useEffect(() => {
+    if (open) {
+      setChannels(buildInitialChannels());
+      setDone(false);
+      setResults([]);
+      setProgress({ current: 0, total: 0 });
+    }
+  }, [open]);
 
   const selectedCount = channels.filter((c) => c.enabled).length;
 
@@ -108,21 +120,30 @@ export default function DeriveBatchDialog({
     setDone(true);
   }, [channels, baseImageUrl, basePrompt, style, projectId, onGenerateBatch]);
 
+  const downloadImage = async (url: string, filename: string) => {
+    try {
+      const resp = await fetch(url);
+      const blob = await resp.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = blobUrl;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(blobUrl);
+    } catch {
+      window.open(url, "_blank");
+    }
+  };
+
   const handleDownloadAll = () => {
     results.forEach((r) => {
       if (!r) return;
-      const a = document.createElement("a");
-      a.href = r.imageUrl;
-      a.download = `desdobramento_${r.format.replace(/\s/g, "_")}.png`;
-      a.target = "_blank";
-      a.click();
+      downloadImage(r.imageUrl, `desdobramento_${r.format.replace(/\s/g, "_")}.png`);
     });
   };
 
   const handleClose = (val: boolean) => {
     if (!generating) {
-      setDone(false);
-      setResults([]);
       onOpenChange(val);
     }
   };
@@ -214,13 +235,7 @@ export default function DeriveBatchDialog({
                           variant="ghost"
                           size="icon"
                           className="h-5 w-5 text-white"
-                          onClick={() => {
-                            const a = document.createElement("a");
-                            a.href = r.imageUrl;
-                            a.download = `desdobramento_${r.format.replace(/\s/g, "_")}.png`;
-                            a.target = "_blank";
-                            a.click();
-                          }}
+                          onClick={() => downloadImage(r.imageUrl, `desdobramento_${r.format.replace(/\s/g, "_")}.png`)}
                         >
                           <Download className="h-3 w-3" />
                         </Button>
@@ -239,7 +254,7 @@ export default function DeriveBatchDialog({
             </div>
 
             <div className="flex gap-2">
-              <Button variant="outline" className="flex-1" onClick={() => { setDone(false); setResults([]); }}>
+              <Button variant="outline" className="flex-1" onClick={() => { setDone(false); setResults([]); setChannels(buildInitialChannels()); }}>
                 Gerar mais
               </Button>
               <Button className="flex-1" onClick={handleDownloadAll}>

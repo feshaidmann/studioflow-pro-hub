@@ -1,5 +1,7 @@
+import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { Instagram, Youtube, Music, Twitter, Monitor, Maximize, Image } from "lucide-react";
+import { Input } from "@/components/ui/input";
 
 export interface FormatOption {
   id: string;
@@ -29,27 +31,72 @@ interface Props {
 }
 
 export default function FormatSelector({ selected, onSelect }: Props) {
+  const [customWidth, setCustomWidth] = useState(1024);
+  const [customHeight, setCustomHeight] = useState(1024);
+
+  const isCustom = selected === "custom";
+
+  useEffect(() => {
+    if (isCustom) {
+      const w = Math.max(512, Math.min(1920, customWidth));
+      const h = Math.max(512, Math.min(1920, customHeight));
+      const customFormat = FORMAT_OPTIONS.find(f => f.id === "custom")!;
+      onSelect({ ...customFormat, width: w, height: h, description: `${w}×${h}` });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [customWidth, customHeight]);
+
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-      {FORMAT_OPTIONS.map((f) => {
-        const active = selected === f.id;
-        return (
-          <button
-            key={f.id}
-            onClick={() => onSelect(f)}
-            className={cn(
-              "flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-all text-center min-h-[80px] justify-center",
-              active
-                ? "border-primary/40 bg-primary/5 text-primary ring-1 ring-primary/20"
-                : "border-border/60 text-muted-foreground hover:bg-muted/50 hover:text-foreground"
-            )}
-          >
-            <f.icon className="h-5 w-5" />
-            <span className="text-xs font-medium leading-tight">{f.label}</span>
-            <span className="text-[10px] text-muted-foreground">{f.description}</span>
-          </button>
-        );
-      })}
+    <div className="space-y-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+        {FORMAT_OPTIONS.map((f) => {
+          const active = selected === f.id;
+          return (
+            <button
+              key={f.id}
+              onClick={() => onSelect(f)}
+              className={cn(
+                "flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-all text-center min-h-[80px] justify-center",
+                active
+                  ? "border-primary/40 bg-primary/5 text-primary ring-1 ring-primary/20"
+                  : "border-border/60 text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+              )}
+            >
+              <f.icon className="h-5 w-5" />
+              <span className="text-xs font-medium leading-tight">{f.label}</span>
+              <span className="text-[10px] text-muted-foreground">{f.description}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {isCustom && (
+        <div className="flex items-center gap-2">
+          <div className="flex-1">
+            <label className="text-[10px] text-muted-foreground mb-0.5 block">Largura (512–1920)</label>
+            <Input
+              type="number"
+              min={512}
+              max={1920}
+              value={customWidth}
+              onChange={(e) => setCustomWidth(Number(e.target.value))}
+              className="h-8 text-xs"
+            />
+          </div>
+          <span className="text-muted-foreground mt-4">×</span>
+          <div className="flex-1">
+            <label className="text-[10px] text-muted-foreground mb-0.5 block">Altura (512–1920)</label>
+            <Input
+              type="number"
+              min={512}
+              max={1920}
+              value={customHeight}
+              onChange={(e) => setCustomHeight(Number(e.target.value))}
+              className="h-8 text-xs"
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
