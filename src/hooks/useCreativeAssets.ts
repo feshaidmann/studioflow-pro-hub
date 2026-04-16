@@ -70,8 +70,20 @@ export function useCreativeAssets() {
         },
       });
 
+      // supabase.functions.invoke returns FunctionsHttpError on non-2xx; try to read body
       if (error) {
-        toast({ title: "Erro ao gerar imagem", description: error.message, variant: "destructive" });
+        let serverMsg = error.message;
+        try {
+          const ctx: any = (error as any).context;
+          if (ctx && typeof ctx.json === "function") {
+            const body = await ctx.json();
+            if (body?.error) serverMsg = body.error;
+          } else if (ctx && typeof ctx.text === "function") {
+            const txt = await ctx.text();
+            try { const j = JSON.parse(txt); if (j?.error) serverMsg = j.error; } catch { if (txt) serverMsg = txt; }
+          }
+        } catch { /* ignore */ }
+        toast({ title: "Erro ao gerar imagem", description: serverMsg, variant: "destructive" });
         return null;
       }
 
