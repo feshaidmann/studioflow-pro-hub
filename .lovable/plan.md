@@ -1,47 +1,52 @@
 
 
-# Padronização visual da seção de IA no Dashboard
+Faz total sentido. Hoje a galeria abre um `Sheet` por arte, o que força o usuário a fechar e reabrir para ver a próxima — quebra o fluxo visual de quem está revisando lote de criativos. Um lightbox/carrossel é o padrão esperado (Instagram, Drive, Apple Photos).
 
-## Diagnóstico
+# Lightbox de galeria com navegação fluida
 
-Comparando com `DailyChecklist`, `ProjectAlertsCard`, `FinancialSummary` (padrão visual do dashboard), a seção de IA destoa em três pontos:
+## Comportamento
+- Clicar em qualquer arte abre **modal fullscreen** com a mídia centralizada e grande (~85vh)
+- **Navegação**: setas laterais (desktop), swipe (mobile), teclas ← → e Esc
+- **Contador** "3 / 12" no topo
+- **Metadados e ações** em barra inferior translúcida (formato, dimensões, projeto, data, prompt expansível)
+- **Ações** mantidas: baixar, usar como referência, desdobrar, excluir, copiar prompt
+- **Vídeos** (Reels/Canvas .webm) tocam autoplay loop muted, com controles
+- **Pré-carrega** próxima e anterior para transição instantânea
+- Animação de slide horizontal sutil entre artes (`translateX` + fade)
 
-1. **Card "Assistente IA"** (`Dashboard.tsx` linhas 219–285)
-   - Usa `border-primary/20` + `text-xs` + `text-primary` no título → todos os outros cards usam `glass-card` puro com `text-base` neutro e ícone `text-primary` (só o ícone, não o texto).
-   - Padding inconsistente: `pb-1 pt-3 px-4` no header e `pt-0 px-4 pb-3` no content → padrão é `pb-3` no header e `p-6 pt-0` (ou equivalente) no content.
-   - Tagline inline ("— pergunte qualquer coisa…") quebra a hierarquia visual.
+## Layout
+```text
+┌─────────────────────────────────────┐
+│  [3/12]                       [X]   │
+│                                     │
+│  ‹      [   MÍDIA CENTRAL   ]    ›  │
+│                                     │
+│ ┌─────────────────────────────────┐ │
+│ │ Story • 1080×1920 • Projeto X   │ │
+│ │ "prompt completo aqui…"  [copy] │ │
+│ │ [Baixar] [Ref.] [Desdobrar] [🗑]│ │
+│ └─────────────────────────────────┘ │
+└─────────────────────────────────────┘
+```
 
-2. **Botão "Próxima ação"** (linhas 297–326)
-   - Usa três variantes de borda/bg coloridas customizadas, label uppercase pequeno, ícone em círculo colorido → não combina com nenhum outro elemento. Deve virar um **Card** padrão com mesmo `glass-card` e indicador de severidade discreto (faixa lateral de 3px ou ícone colorido apenas).
+## Implementação
+1. **Criar** `src/components/creative/GalleryLightbox.tsx`
+   - Recebe `assets[]`, `currentIndex`, `open`, callbacks de ação
+   - Usa `Dialog` fullscreen (não `Sheet`)
+   - Estado interno de `index`, handlers de teclado/swipe (touch events)
+   - Pré-carrega `assets[index±1]` via `<link rel="preload">` ou `new Image()`
 
-3. **Hierarquia interna do chat (`AITaskAssistant.tsx`)**: o container interno (`rounded-lg border border-border/40 bg-card/40`) duplica visualmente o card pai, criando "card dentro de card". Trocar para fundo transparente sem borda quando `alwaysOpen`.
+2. **Modificar** `src/pages/Creative.tsx`
+   - Substituir abertura do `GalleryDetailSheet` pela `GalleryLightbox`, passando lista completa filtrada e índice clicado
+   - Manter `GalleryDetailSheet` apenas se quiser fallback mobile (sugiro **remover**, lightbox funciona em ambos)
 
-## Mudanças propostas
+3. **Reaproveitar** lógica de ações já existente (download, derive, delete, useAsReference) — sem duplicação
 
-### A) Card "Assistente IA" → padrão `glass-card`
-- Remover `border-primary/20 shadow-sm` (já vem do `glass-card`).
-- Header: `pb-3` (padrão), título `text-base flex items-center gap-2`, ícone `Bot h-4 w-4 text-primary`, texto `Assistente IA` em cor neutra (`foreground`).
-- Mover a tagline ("pergunte qualquer coisa…") para `CardDescription` abaixo do título, só em desktop, no mesmo tom `text-muted-foreground text-xs`.
-- Chevron de collapse alinhado à direita com `ml-auto` mantendo padrão.
-- Content: `px-6 pb-6 pt-0` (alinhado aos demais cards) ou `p-4 pt-0` se for para manter compactação mobile — usar mesma escala do `DailyChecklist`.
+## Arquivos
+- **Criar**: `src/components/creative/GalleryLightbox.tsx`
+- **Modificar**: `src/pages/Creative.tsx`
+- **Remover** (opcional): `src/components/creative/GalleryDetailSheet.tsx`
 
-### B) Card "Próxima ação" → componente harmonizado
-Transformar o `<button>` solto em um `Card glass-card` clicável compacto:
-- Mesma borda/raio dos outros cards (`rounded-xl border-border/60`).
-- Faixa lateral colorida de 3px (`border-l-4`) indicando severidade (`border-l-destructive` / `border-l-warning` / `border-l-primary`) — substitui as três variantes de bg/border atuais.
-- Ícone Bot dentro de círculo `bg-muted` neutro (sem três variantes coloridas) + cor apenas no ícone conforme severidade.
-- Tipografia: label "Próxima ação" como `text-xs text-muted-foreground` (sem uppercase exagerado), título em `text-sm font-medium`.
-- Hover sutil padrão (`hover:bg-muted/30` já está ok).
-
-### C) Container interno do chat (`AITaskAssistant.tsx`)
-- Quando `alwaysOpen`: remover `border border-border/40 bg-card/40` do wrapper das mensagens — fica fundo transparente, sem "card duplo".
-- Manter borda/bg só no popover (modo não-`alwaysOpen`).
-
-## Arquivos modificados
-
-- `src/pages/Dashboard.tsx` — refatorar `aiAssistantCard` (header padrão) e botão `nextAction` (virar Card com faixa lateral).
-- `src/components/AITaskAssistant.tsx` — `chatBody` sem moldura quando `alwaysOpen`; ajustar paddings internos.
-
-## Sem migrações de banco
-Mudanças puramente visuais.
+## Sem migrações
+Mudança puramente de UI/UX.
 
