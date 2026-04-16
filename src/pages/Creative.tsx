@@ -582,6 +582,8 @@ export default function Creative() {
                 onRegenerate={handleVariation}
                 onEdit={handleEdit}
                 onDownload={handleDownload}
+                onSave={handleSaveToGallery}
+                isSaved={savedToGallery}
                 onDerive={generatedImage ? () => handleDerive(generatedImage) : undefined}
                 formatLabel={selectedFormat.label}
                 aspectRatio={selectedFormat.width / selectedFormat.height}
