@@ -48,6 +48,14 @@ const gestaoItems = [
   { labelKey: "nav.professionals", path: "/professionals", icon: Users,        proOnly: false, mobileLabel: "" },
 ];
 
+// Sub-labels descritivos curtos (P2) — apenas para itens do drawer "Mais"
+const drawerSubLabels: Record<string, string> = {
+  "/editais":       "Chamadas e inscrições",
+  "/professionals": "Equipe e parceiros",
+  "/criativo":      "Arte com IA",
+  "/music-dna":     "Análise de master",
+};
+
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   usePageTracking();
   const isMobile = useIsMobile();
