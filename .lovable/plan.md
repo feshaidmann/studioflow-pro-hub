@@ -1,65 +1,93 @@
 
 
-# Diagnóstico do Módulo Criativo — Inconsistências, Erros e Melhorias
+# Diagnóstico UX/CX — Jornada do Criativo
 
-## Problemas Encontrados
+## Mapa de Fricção da Jornada
 
-### 1. Botão "Salvar" fantasma (BUG)
-O `ImagePreview` exibe um botão "Salvar" que chama `onSave={() => {}}` — uma função vazia. A imagem já é salva automaticamente pela edge function. Isso confunde o artista: o botão existe, mas não faz nada de útil. Deve ser removido.
+```text
+ENTRADA → CONFIGURAÇÃO → CRIAÇÃO → RESULTADO → ITERAÇÃO → GALERIA
+  [1]        [2][3]        [4]       [5][6]      [7][8]     [9][10]
+```
 
-### 2. Sem validação de cota de IA antes de gerar (INCONSISTENCIA)
-O sistema tem cotas de fair-use (`ai_usage`: 20 diárias, 80 semanais), mas a edge function `generate-creative` não verifica essas cotas antes de chamar a IA. O artista só descobre que excedeu o limite quando recebe erro 429 do gateway, sem feedback claro. A verificação deveria acontecer no backend.
-
-### 3. Download cross-origin falha silenciosamente (BUG)
-O download usa `<a href="URL_PUBLICA" download="...">`. Para URLs de domínio diferente (Supabase Storage), o atributo `download` é ignorado pelo navegador — abre em nova aba em vez de baixar. Precisa de fetch + blob para funcionar.
-
-### 4. Galeria mostra todas as artes sem filtro (MELHORIA UX)
-Não há filtro por projeto, formato ou estilo. Conforme o artista acumula artes, encontrar uma específica se torna difícil. Adicionar filtros básicos agrega valor.
-
-### 5. Exclusão sem confirmação (BUG UX)
-O botão de deletar na galeria apaga imediatamente sem nenhum diálogo de confirmação. Um clique acidental perde a arte permanentemente (storage + banco).
-
-### 6. `handleGenerate` e `handleRegenerate` são duplicados (TECH DEBT)
-Os dois callbacks são quase idênticos — código duplicado que pode divergir com o tempo.
-
-### 7. Galeria usa `aspect-square` para todos os formatos (INCONSISTENCIA VISUAL)
-Todas as thumbnails são quadradas, mas os assets podem ser Story (9:16), YouTube (16:9), etc. O artista não consegue distinguir visualmente os formatos na galeria.
-
-### 8. Formato "Livre" não permite dimensões customizadas (FEATURE INCOMPLETA)
-O formato "Livre/Custom" está fixo em 1024x1024. Não há campos para o artista inserir largura/altura personalizadas, contradizendo o propósito do formato.
-
-### 9. Seletor de projeto ausente na tela (MELHORIA)
-O contexto de projeto só funciona via URL param (`?project=ID`). O artista não tem como vincular/trocar projeto dentro da própria tela Criativo.
-
-### 10. DeriveBatchDialog não reseta canais ao reabrir (BUG)
-O estado `channels` é inicializado uma vez com `useState`. Quando o dialog é reaberto, as seleções anteriores persistem de forma inconsistente.
+Cada número corresponde a um ponto de fricção identificado abaixo.
 
 ---
 
-## Plano de Correções
+## Fricções Identificadas
 
-### Arquivo: `src/components/creative/ImagePreview.tsx`
-- Remover o botão "Salvar" e a prop `onSave`/`isSaving`/`isSaved`
-- Adicionar badge textual "Salvo automaticamente" discreto
+### [1] Entrada fria — sem onboarding contextual
+O artista chega na tela e vê 5 campos empilhados (Projeto, Formato, Estilo, Referência, Prompt) sem hierarquia de importância. Não há indicação de por onde começar. O empty state do preview ("Escolha um formato, descreva sua ideia e clique em Gerar") é genérico demais.
+
+**Melhoria:** Adicionar um estado inicial guiado com 2-3 templates rápidos ("Capa de single", "Post de lançamento", "Story de bastidores") que pré-preenchem formato + estilo + prompt-modelo. O artista clica e já tem um ponto de partida editável. Reduz a "folha em branco" que paralisa.
+
+### [2] Seletor de formato — sobrecarga visual
+10 formatos em grid de 3 colunas com cards de 80px mínimos. No mobile (434px), isso gera 4 linhas de scroll antes de chegar ao prompt. Formatos semelhantes (Spotify Cover, Deezer Cover, Tidal Cover — todos 1920x1920) não são agrupados.
+
+**Melhoria:** Agrupar formatos em categorias colapsáveis ("Redes Sociais", "Streaming", "Personalizado"). Mostrar apenas os mais usados por padrão, com "Ver mais" para o restante. Reduz a carga cognitiva de 10 para 3-4 opções visíveis.
+
+### [3] Ordem dos campos inverte a lógica mental
+O artista precisa primeiro escolher formato e estilo para só depois descrever a ideia. Mas mentalmente, o processo criativo é inverso: primeiro a ideia, depois as especificações técnicas. O prompt fica enterrado abaixo de 3 seções de configuração.
+
+**Melhoria:** Reorganizar: Prompt primeiro (a ideia), depois Formato, Estilo e Referência como "Configurações" em um accordion/collapsible que abre expandido mas pode ser colapsado. O prompt é o protagonista.
+
+### [4] Sem feedback de progresso real durante geração
+O loading mostra apenas um skeleton quadrado fixo e "Gerando imagem com IA…". A geração leva 10-30 segundos. Sem indicação de etapa, o artista não sabe se travou.
+
+**Melhoria:** Adicionar micro-etapas animadas: "Interpretando sua ideia…" → "Compondo a arte…" → "Finalizando…" (ciclo temporizado a cada 5s). Não é progresso real, mas dá sensação de atividade e reduz ansiedade de espera.
+
+### [5] Preview não mostra o formato escolhido
+A imagem gerada é exibida em `max-w-md w-full` sem indicar que é uma capa Spotify 1:1 vs. um Story 9:16. O artista não tem referência de como a arte ficará na plataforma real.
+
+**Melhoria:** Exibir a imagem no aspect ratio real do formato selecionado com label de dimensões (ex: "Capa Spotify — 3000×3000"). Adicionar uma moldura sutil simulando onde a arte apareceria (player do Spotify, feed do Instagram).
+
+### [6] Ações pós-geração não têm hierarquia
+Quatro botões iguais (Variação, Editar, Desdobrar, Baixar) em linha, todos `variant="outline"`. O artista não sabe qual é a próxima ação mais provável. Na prática, "Baixar" e "Variação" são os mais usados, mas recebem o mesmo peso visual de "Desdobrar".
+
+**Melhoria:** "Baixar" como botão primário (filled), "Variação" e "Editar" como secondary, "Desdobrar" como link/texto. Agrupa por frequência de uso.
+
+### [7] Edição com IA é um Input, deveria ser Textarea
+O dialog de edição usa `<Input>` de uma linha. Instruções de edição costumam ser mais elaboradas ("Remover o fundo, adicionar gradiente azul, e colocar o título 'Novo Single' em letras brancas no topo"). Uma linha não acomoda isso.
+
+**Melhoria:** Trocar Input por Textarea de 3 linhas, consistente com o prompt principal.
+
+### [8] Variação reutiliza exatamente o mesmo prompt
+Clicar "Variação" chama `handleGenerate` que usa o mesmo prompt. O artista não tem como pedir "igual mas com cores diferentes" sem editar manualmente o prompt e regerar. A variação deveria ser semântica, não idêntica.
+
+**Melhoria:** Ao clicar "Variação", enviar o prompt original + a imagem gerada como referência automaticamente, com instrução interna "Crie uma variação desta arte mantendo o conceito mas alterando composição e paleta". Isso dá resultados realmente diferentes.
+
+### [9] Galeria — ações invisíveis no mobile
+As ações da galeria (Baixar, Referência, Desdobrar, Excluir) aparecem em hover overlay (`group-hover:opacity-100`). No mobile/touch, hover não existe — essas ações ficam completamente inacessíveis.
+
+**Melhoria:** No mobile, mostrar as ações via long-press/tap que abre um bottom sheet com as opções. Ou sempre visíveis em um footer discreto abaixo de cada card.
+
+### [10] Sem histórico de prompt na galeria
+Ao ver uma arte na galeria, o prompt aparece truncado em 2 linhas no overlay. O artista não consegue reutilizar o prompt que gerou um bom resultado sem adivinhá-lo.
+
+**Melhoria:** Ao clicar/tap na arte, abrir um detail sheet mostrando: imagem em tamanho real, prompt completo, formato, estilo, data, e ações. Isso também resolve o problema [9] de acessibilidade no mobile.
+
+---
+
+## Plano de Implementação
 
 ### Arquivo: `src/pages/Creative.tsx`
-- Unificar `handleGenerate` e `handleRegenerate` em uma única função
-- Remover props `onSave`/`isSaving`/`isSaved` da chamada ao ImagePreview
-- Adicionar `AlertDialog` de confirmação no delete da galeria
-- Adicionar seletor de projeto (dropdown dos projetos do artista)
-- Adicionar filtros básicos na galeria (por formato/projeto)
-- Corrigir download cross-origin com fetch+blob
-- Mostrar thumbnails com aspect ratio real do asset
+- Reorganizar layout: prompt primeiro, configurações em collapsible abaixo
+- Adicionar 3 templates rápidos no empty state ("Capa de single", "Post de lançamento", "Story de bastidores")
+- Variação: passar imagem atual como referência automaticamente com instrução de variação
+- Galeria: adicionar detail dialog ao clicar na arte (prompt completo, ações, metadata)
+- Galeria mobile: substituir hover overlay por tap-to-detail
+
+### Arquivo: `src/components/creative/ImagePreview.tsx`
+- Aceitar `formatLabel` e `aspectRatio` como props para exibir a moldura contextual
+- Hierarquizar botões: "Baixar" primário, "Variação"/"Editar" secondary, "Desdobrar" ghost
+- Adicionar micro-etapas animadas no loading ("Interpretando…", "Compondo…", "Finalizando…")
 
 ### Arquivo: `src/components/creative/FormatSelector.tsx`
-- Quando "Livre" selecionado, exibir inputs de largura/altura customizáveis
+- Agrupar formatos em categorias colapsáveis (Redes Sociais, Streaming, Custom)
+- Mostrar 3-4 mais comuns expandidos, restante sob "Ver mais"
 
-### Arquivo: `src/components/creative/DeriveBatchDialog.tsx`
-- Resetar seleção de canais ao abrir o dialog
+### Arquivo: `src/pages/Creative.tsx` (Edit Dialog)
+- Trocar `<Input>` por `<Textarea rows={3}>` no dialog de edição
 
-### Arquivo: `supabase/functions/generate-creative/index.ts`
-- Consultar `ai_usage` antes de invocar a IA e retornar erro amigável se cota excedida
-
-### Sem migrações de banco
-Toda a infraestrutura já existe.
+### Sem alterações de backend
+Toda a lógica permanece na edge function existente. As melhorias são puramente de frontend/UX.
 
