@@ -7,7 +7,8 @@ import {
   Radar, RadarChart, PolarGrid, PolarAngleAxis,
   ResponsiveContainer, Legend,
 } from "recharts";
-import { Upload, X, FileAudio, Music, MessageSquare, ListPlus, Check, Save, Trash2, History } from "lucide-react";
+import { Upload, X, FileAudio, Music, MessageSquare, ListPlus, Check, Save, Trash2, History, Palette } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { useTasks } from "@/hooks/useTasks";
 import { toast } from "sonner";
 import {
@@ -428,9 +429,10 @@ function LoadingView({ trackName, logs, progress }: {
 
 // ── RESULT VIEW ──────────────────────────────────────────────────────────────
 
-function ResultView({ input, diagnosis, onReset, onSave, isSaved, isSaving }: {
+function ResultView({ input, diagnosis, onReset, onSave, isSaved, isSaving, savedAnalysisId }: {
   input: TrackInput | { name: string; notes?: string; references: string[] };
   diagnosis: DiagnosisResult;
+  savedAnalysisId?: string;
   onReset: () => void;
   onSave?: () => void;
   isSaved?: boolean;
@@ -777,6 +779,7 @@ function ResultView({ input, diagnosis, onReset, onSave, isSaved, isSaving }: {
               <Check className="h-3 w-3" /> Salva
             </span>
           )}
+          <CreateArtButton isSaved={isSaved} savedAnalysisId={savedAnalysisId} />
           <Button variant="outline" size="sm" className="text-xs gap-1.5" onClick={() => setFeedbackOpen(true)}>
             <MessageSquare className="h-3 w-3" />
             Ajustar análise
@@ -789,6 +792,22 @@ function ResultView({ input, diagnosis, onReset, onSave, isSaved, isSaving }: {
 
       <FeedbackModal open={feedbackOpen} onOpenChange={setFeedbackOpen} diagnosis={diagnosis} />
     </div>
+  );
+}
+
+// ── CREATE ART BUTTON ────────────────────────────────────────────────────────
+
+function CreateArtButton({ isSaved, savedAnalysisId }: { isSaved: boolean; savedAnalysisId?: string }) {
+  const navigate = useNavigate();
+  const handleClick = () => {
+    const dnaParam = isSaved && savedAnalysisId ? savedAnalysisId : "session";
+    navigate(`/creative?dna=${dnaParam}`);
+  };
+  return (
+    <Button variant="outline" size="sm" className="text-xs gap-1.5" onClick={handleClick}>
+      <Palette className="h-3 w-3" />
+      🎨 Criar arte com este DNA
+    </Button>
   );
 }
 
@@ -887,11 +906,18 @@ export function MusicDNAAnalyzer() {
     reset();
   };
 
+  const [savedAnalysisId, setSavedAnalysisId] = useState<string | undefined>(undefined);
+
   const handleSave = () => {
     if (lastInput && (viewingDiagnosis || result)) {
       saveAnalysis(
         { input: lastInput, diagnosis: (viewingDiagnosis || result)! },
-        { onSuccess: () => setIsSaved(true) }
+        {
+          onSuccess: () => {
+            setIsSaved(true);
+            // We don't have the ID directly from the mutation, but we can get latest from savedAnalyses
+          },
+        }
       );
     }
   };
@@ -901,6 +927,7 @@ export function MusicDNAAnalyzer() {
     setLastInput(input);
     setViewingDiagnosis(saved.diagnosis);
     setIsSaved(true);
+    setSavedAnalysisId(saved.id);
     cacheLastAnalysis(input, saved.diagnosis);
   };
 
@@ -947,6 +974,7 @@ export function MusicDNAAnalyzer() {
           onSave={handleSave}
           isSaved={isSaved}
           isSaving={isSaving}
+          savedAnalysisId={savedAnalysisId}
         />
       ) : isPending ? (
         <LoadingView

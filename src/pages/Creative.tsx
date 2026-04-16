@@ -1,6 +1,6 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Palette, Sparkles, Trash2, ImageIcon, Download, Settings2 } from "lucide-react";
+import { Palette, Sparkles, Trash2, ImageIcon, Download, Settings2, Copy, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
@@ -19,6 +19,9 @@ import QuickTemplates, { type QuickTemplate } from "@/components/creative/QuickT
 import { useCreativeAssets } from "@/hooks/useCreativeAssets";
 import { useProjects } from "@/contexts/ProjectContext";
 import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { getCachedAnalysis } from "@/hooks/useSavedAnalyses";
+import type { DiagnosisResult } from "@/hooks/useMusicDNA";
 
 async function downloadFile(url: string, filename: string) {
   try {
@@ -35,9 +38,34 @@ async function downloadFile(url: string, filename: string) {
   }
 }
 
+function buildDNAPrompt(diagnosis: DiagnosisResult, trackName: string): string {
+  const parts: string[] = [];
+  const genre = diagnosis.genero_classificado;
+  if (genre) parts.push(`Capa artística para single de ${genre}.`);
+
+  const mood = diagnosis.identidade?.mood_principal;
+  if (mood) parts.push(`Atmosfera: ${mood}.`);
+
+  const territory = diagnosis.identidade?.territorio_sonoro;
+  if (territory) parts.push(`Cenário: ${territory}.`);
+
+  const tags = diagnosis.identidade?.tags;
+  if (tags && tags.length > 0) parts.push(`Elementos visuais: ${tags.join(", ")}.`);
+
+  const instruments = diagnosis.detectedInstruments;
+  if (instruments && instruments.length > 0) {
+    parts.push(`Inclua ${instruments.join(" e ")} na composição.`);
+  }
+
+  if (trackName) parts.push(`Título da faixa: '${trackName}'.`);
+
+  return parts.join(" ") || "Capa artística para single musical.";
+}
+
 export default function Creative() {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const projectIdParam = searchParams.get("project");
+  const dnaParam = searchParams.get("dna");
   const { projects } = useProjects();
 
   const [selectedFormat, setSelectedFormat] = useState<FormatOption>(FORMAT_OPTIONS[0]);
@@ -61,14 +89,62 @@ export default function Creative() {
   const [filterProject, setFilterProject] = useState<string>("all");
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; path: string } | null>(null);
   const [detailAsset, setDetailAsset] = useState<any>(null);
+  const [dnaCopyText, setDnaCopyText] = useState<string>("");
+  const [dnaCopyLoading, setDnaCopyLoading] = useState(false);
+  const [dnaSource, setDnaSource] = useState<DiagnosisResult | null>(null);
 
-  const { assets, isLoading: assetsLoading, generating, generate, generateBatch, deleteAsset } = useCreativeAssets();
+  const { assets, isLoading: assetsLoading, generating, generate, generateBatch, generateText, deleteAsset } = useCreativeAssets();
 
   const linkedProject = selectedProjectId
     ? projects.find((p) => p.id === selectedProjectId)
     : null;
 
-  // Unified generate handler
+  // DNA param: load analysis and pre-fill prompt
+  useEffect(() => {
+    if (!dnaParam) return;
+    const loadDNA = async () => {
+      let diagnosis: DiagnosisResult | null = null;
+      let trackName = "";
+
+      if (dnaParam === "session") {
+        const cached = getCachedAnalysis();
+        if (cached) {
+          diagnosis = cached.diagnosis;
+          trackName = cached.input?.name || "";
+        }
+      } else {
+        // UUID — fetch from database
+        const { data, error } = await supabase
+          .from("music_dna_analyses")
+          .select("*")
+          .eq("id", dnaParam)
+          .single();
+        if (!error && data) {
+          diagnosis = data.diagnosis as unknown as DiagnosisResult;
+          trackName = data.track_name || "";
+        }
+      }
+
+      if (diagnosis) {
+        setDnaSource(diagnosis);
+        const builtPrompt = buildDNAPrompt(diagnosis, trackName);
+        setPrompt(builtPrompt);
+        // Default to spotify_cover format
+        const spotifyFmt = FORMAT_OPTIONS.find((f) => f.id === "spotify_cover");
+        if (spotifyFmt) setSelectedFormat(spotifyFmt);
+      }
+
+      // Clean the dna param from URL to avoid re-triggering
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete("dna");
+        return next;
+      }, { replace: true });
+    };
+    loadDNA();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dnaParam]);
+
   const handleGenerate = useCallback(async () => {
     if (!prompt.trim()) {
       toast({ title: "Descreva sua ideia", description: "O campo de prompt não pode estar vazio.", variant: "destructive" });
@@ -91,8 +167,19 @@ export default function Creative() {
     if (result) {
       setGeneratedImage(result.imageUrl);
       setGeneratedBase64(result.imageBase64);
+
+      // Auto-generate social media copy if DNA source is active
+      if (dnaSource) {
+        setDnaCopyLoading(true);
+        const dnaContext = `Gênero: ${dnaSource.genero_classificado || ""}. Mood: ${dnaSource.identidade?.mood_principal || ""}. Território: ${dnaSource.identidade?.territorio_sonoro || ""}. Tags: ${(dnaSource.identidade?.tags || []).join(", ")}`;
+        const textResult = await generateText({ prompt: contextPrompt, dnaContext });
+        if (textResult?.text) {
+          setDnaCopyText(textResult.text);
+        }
+        setDnaCopyLoading(false);
+      }
     }
-  }, [prompt, style, selectedFormat, linkedProject, selectedProjectId, generate, referenceImage]);
+  }, [prompt, style, selectedFormat, linkedProject, selectedProjectId, generate, referenceImage, dnaSource, generateText]);
 
   // Semantic variation: pass current image as reference with variation instruction
   const handleVariation = useCallback(async () => {
@@ -303,6 +390,36 @@ export default function Creative() {
                 formatLabel={selectedFormat.label}
                 aspectRatio={selectedFormat.width / selectedFormat.height}
               />
+
+              {/* DNA Copy Text Card */}
+              {(dnaCopyText || dnaCopyLoading) && (
+                <Card className="mt-4">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <FileText className="h-4 w-4 text-primary" />
+                      <span className="text-xs font-medium">Legenda sugerida para redes sociais</span>
+                    </div>
+                    {dnaCopyLoading ? (
+                      <p className="text-xs text-muted-foreground animate-pulse">Gerando legenda…</p>
+                    ) : (
+                      <>
+                        <p className="text-sm leading-relaxed whitespace-pre-wrap">{dnaCopyText}</p>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="mt-3 text-xs gap-1.5"
+                          onClick={() => {
+                            navigator.clipboard.writeText(dnaCopyText);
+                            toast({ title: "Copiado!", description: "Legenda copiada para a área de transferência." });
+                          }}
+                        >
+                          <Copy className="h-3 w-3" /> Copiar legenda
+                        </Button>
+                      </>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
             </div>
           </div>
         </TabsContent>
