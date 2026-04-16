@@ -801,7 +801,7 @@ function CreateArtButton({ isSaved, savedAnalysisId }: { isSaved: boolean; saved
   const navigate = useNavigate();
   const handleClick = () => {
     const dnaParam = isSaved && savedAnalysisId ? savedAnalysisId : "session";
-    navigate(`/creative?dna=${dnaParam}`);
+    navigate(`/criativo?dna=${dnaParam}`);
   };
   return (
     <Button variant="outline" size="sm" className="text-xs gap-1.5" onClick={handleClick}>
