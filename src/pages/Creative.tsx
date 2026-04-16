@@ -1,19 +1,21 @@
 import { useState, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Palette, Sparkles, Trash2, ImageIcon, Upload, Layers, Download } from "lucide-react";
+import { Palette, Sparkles, Trash2, ImageIcon, Download, Settings2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import FormatSelector, { FORMAT_OPTIONS, type FormatOption } from "@/components/creative/FormatSelector";
 import StyleChips from "@/components/creative/StyleChips";
 import ImagePreview from "@/components/creative/ImagePreview";
 import ReferenceImageUpload from "@/components/creative/ReferenceImageUpload";
 import DeriveBatchDialog from "@/components/creative/DeriveBatchDialog";
+import GalleryDetailSheet from "@/components/creative/GalleryDetailSheet";
+import QuickTemplates, { type QuickTemplate } from "@/components/creative/QuickTemplates";
 import { useCreativeAssets } from "@/hooks/useCreativeAssets";
 import { useProjects } from "@/contexts/ProjectContext";
 import { toast } from "@/hooks/use-toast";
@@ -50,16 +52,15 @@ export default function Creative() {
   const [activeTab, setActiveTab] = useState("create");
   const [deriveDialogOpen, setDeriveDialogOpen] = useState(false);
   const [deriveImageUrl, setDeriveImageUrl] = useState<string>("");
+  const [settingsOpen, setSettingsOpen] = useState(true);
 
-  // Project selector
   const [selectedProjectId, setSelectedProjectId] = useState<string>(projectIdParam || "");
 
-  // Gallery filters
+  // Gallery
   const [filterFormat, setFilterFormat] = useState<string>("all");
   const [filterProject, setFilterProject] = useState<string>("all");
-
-  // Delete confirmation
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; path: string } | null>(null);
+  const [detailAsset, setDetailAsset] = useState<any>(null);
 
   const { assets, isLoading: assetsLoading, generating, generate, generateBatch, deleteAsset } = useCreativeAssets();
 
@@ -92,6 +93,28 @@ export default function Creative() {
       setGeneratedBase64(result.imageBase64);
     }
   }, [prompt, style, selectedFormat, linkedProject, selectedProjectId, generate, referenceImage]);
+
+  // Semantic variation: pass current image as reference with variation instruction
+  const handleVariation = useCallback(async () => {
+    if (!generatedBase64 || !prompt.trim()) {
+      handleGenerate();
+      return;
+    }
+    const variationPrompt = `Crie uma variação desta arte mantendo o conceito mas alterando composição e paleta. Conceito original: ${prompt}`;
+    const result = await generate({
+      prompt: variationPrompt,
+      style,
+      format: selectedFormat.id,
+      width: selectedFormat.width,
+      height: selectedFormat.height,
+      editImageUrl: generatedBase64,
+      projectId: selectedProjectId || undefined,
+    });
+    if (result) {
+      setGeneratedImage(result.imageUrl);
+      setGeneratedBase64(result.imageBase64);
+    }
+  }, [generatedBase64, prompt, style, selectedFormat, selectedProjectId, generate, handleGenerate]);
 
   const handleUseAsReference = (url: string) => {
     setReferenceImage(url);
@@ -139,6 +162,14 @@ export default function Creative() {
     setDeleteTarget(null);
   };
 
+  const handleTemplateSelect = (template: QuickTemplate) => {
+    setPrompt(template.prompt);
+    setStyle(template.style);
+    const fmt = FORMAT_OPTIONS.find((f) => f.id === template.formatId);
+    if (fmt) setSelectedFormat(fmt);
+    setSettingsOpen(true);
+  };
+
   // Filtered gallery
   const filteredAssets = assets.filter((a) => {
     if (filterFormat !== "all" && a.format !== filterFormat) return false;
@@ -146,7 +177,6 @@ export default function Creative() {
     return true;
   });
 
-  // Unique formats/projects in assets for filter options
   const assetFormats = [...new Set(assets.map((a) => a.format))];
   const assetProjectIds = [...new Set(assets.filter((a) => a.project_id).map((a) => a.project_id!))];
 
@@ -175,52 +205,18 @@ export default function Creative() {
 
         <TabsContent value="create" className="space-y-5 mt-4">
           <div className="grid md:grid-cols-2 gap-6">
-            {/* Left: Controls */}
+            {/* Left: Controls — Prompt first! */}
             <div className="space-y-4">
-              {/* Project selector */}
-              {projects.length > 0 && (
-                <div>
-                  <label className="text-xs font-medium text-muted-foreground mb-2 block">Projeto (opcional)</label>
-                  <Select value={selectedProjectId} onValueChange={setSelectedProjectId}>
-                    <SelectTrigger className="h-9 text-sm">
-                      <SelectValue placeholder="Sem projeto vinculado" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">Nenhum</SelectItem>
-                      {projects.map((p) => (
-                        <SelectItem key={p.id} value={p.id}>
-                          {p.name} — {p.artist}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+              {/* Quick templates when no prompt yet */}
+              {!prompt.trim() && !generatedImage && (
+                <QuickTemplates onSelect={handleTemplateSelect} />
               )}
 
+              {/* PROMPT — protagonist */}
               <div>
-                <label className="text-xs font-medium text-muted-foreground mb-2 block">Formato</label>
-                <FormatSelector selected={selectedFormat.id} onSelect={setSelectedFormat} />
-              </div>
-
-              <div>
-                <label className="text-xs font-medium text-muted-foreground mb-2 block">Estilo (opcional)</label>
-                <StyleChips selected={style} onSelect={setStyle} />
-              </div>
-
-              <div>
-                <label className="text-xs font-medium text-muted-foreground mb-2 block">
-                  Imagem de referência (opcional)
+                <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                  Descreva sua ideia
                 </label>
-                <ReferenceImageUpload image={referenceImage} onImageChange={setReferenceImage} />
-                {referenceImage && (
-                  <p className="text-[10px] text-muted-foreground mt-1">
-                    A IA usará esta imagem como base para criar sua peça.
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Descreva sua ideia</label>
                 <Textarea
                   value={prompt}
                   onChange={(e) => setPrompt(e.target.value)}
@@ -229,6 +225,60 @@ export default function Creative() {
                   className="text-sm resize-none"
                 />
               </div>
+
+              {/* Settings collapsible */}
+              <Collapsible open={settingsOpen} onOpenChange={setSettingsOpen}>
+                <CollapsibleTrigger className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors w-full">
+                  <Settings2 className="h-3.5 w-3.5" />
+                  Configurações
+                  <span className="text-[10px] ml-auto">
+                    {selectedFormat.label} {style ? `· ${style}` : ""}
+                  </span>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="space-y-4 mt-3">
+                  {/* Project selector */}
+                  {projects.length > 0 && (
+                    <div>
+                      <label className="text-xs font-medium text-muted-foreground mb-2 block">Projeto (opcional)</label>
+                      <Select value={selectedProjectId} onValueChange={setSelectedProjectId}>
+                        <SelectTrigger className="h-9 text-sm">
+                          <SelectValue placeholder="Sem projeto vinculado" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">Nenhum</SelectItem>
+                          {projects.map((p) => (
+                            <SelectItem key={p.id} value={p.id}>
+                              {p.name} — {p.artist}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground mb-2 block">Formato</label>
+                    <FormatSelector selected={selectedFormat.id} onSelect={setSelectedFormat} />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground mb-2 block">Estilo (opcional)</label>
+                    <StyleChips selected={style} onSelect={setStyle} />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground mb-2 block">
+                      Imagem de referência (opcional)
+                    </label>
+                    <ReferenceImageUpload image={referenceImage} onImageChange={setReferenceImage} />
+                    {referenceImage && (
+                      <p className="text-[10px] text-muted-foreground mt-1">
+                        A IA usará esta imagem como base para criar sua peça.
+                      </p>
+                    )}
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
 
               <Button
                 className="w-full"
@@ -246,10 +296,12 @@ export default function Creative() {
               <ImagePreview
                 imageUrl={generatedImage}
                 isLoading={generating}
-                onRegenerate={handleGenerate}
+                onRegenerate={handleVariation}
                 onEdit={handleEdit}
                 onDownload={handleDownload}
                 onDerive={generatedImage ? () => handleDerive(generatedImage) : undefined}
+                formatLabel={selectedFormat.label}
+                aspectRatio={selectedFormat.width / selectedFormat.height}
               />
             </div>
           </div>
@@ -310,7 +362,11 @@ export default function Creative() {
                     ? "aspect-video"
                     : "aspect-square";
                 return (
-                  <Card key={a.id} className="overflow-hidden group relative">
+                  <Card
+                    key={a.id}
+                    className="overflow-hidden cursor-pointer group relative"
+                    onClick={() => setDetailAsset(a)}
+                  >
                     <CardContent className="p-0">
                       <img
                         src={a.public_url || ""}
@@ -318,46 +374,9 @@ export default function Creative() {
                         className={`w-full ${aspectClass} object-cover`}
                         loading="lazy"
                       />
-                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-2">
-                        <p className="text-[10px] text-white/80 line-clamp-2">{a.prompt}</p>
-                        <div className="flex gap-1 mt-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6 text-white/80 hover:text-white"
-                            title="Baixar"
-                            onClick={() => downloadFile(a.public_url || "", `criativo_${a.format}.png`)}
-                          >
-                            <Download className="h-3 w-3" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6 text-white/80 hover:text-primary"
-                            title="Usar como referência"
-                            onClick={() => handleUseAsReference(a.public_url || "")}
-                          >
-                            <Upload className="h-3 w-3" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6 text-white/80 hover:text-primary"
-                            title="Desdobrar para canais"
-                            onClick={() => handleDerive(a.public_url || "")}
-                          >
-                            <Layers className="h-3 w-3" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6 text-white/80 hover:text-destructive"
-                            title="Excluir"
-                            onClick={() => setDeleteTarget({ id: a.id, path: a.storage_path })}
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        </div>
+                      {/* Desktop hover overlay — minimal info */}
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-2 pointer-events-none">
+                        <p className="text-[10px] text-white/90 line-clamp-2">{a.prompt}</p>
                       </div>
                     </CardContent>
                   </Card>
@@ -368,7 +387,19 @@ export default function Creative() {
         </TabsContent>
       </Tabs>
 
-      {/* Edit Dialog */}
+      {/* Gallery Detail Sheet (mobile-friendly) */}
+      <GalleryDetailSheet
+        asset={detailAsset}
+        open={!!detailAsset}
+        onOpenChange={(open) => !open && setDetailAsset(null)}
+        onDownload={downloadFile}
+        onUseAsReference={handleUseAsReference}
+        onDerive={handleDerive}
+        onDelete={(id, path) => { setDetailAsset(null); setDeleteTarget({ id, path }); }}
+        projectName={detailAsset?.project_id ? projects.find((p) => p.id === detailAsset.project_id)?.name : undefined}
+      />
+
+      {/* Edit Dialog — Textarea instead of Input */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -377,10 +408,12 @@ export default function Creative() {
           <p className="text-sm text-muted-foreground">
             Descreva as alterações que deseja na imagem.
           </p>
-          <Input
+          <Textarea
             value={editPrompt}
             onChange={(e) => setEditPrompt(e.target.value)}
-            placeholder="Ex: Adicionar texto 'Novo Single' no centro"
+            placeholder="Ex: Remover o fundo, adicionar gradiente azul, e colocar o título 'Novo Single' em letras brancas no topo"
+            rows={3}
+            className="text-sm resize-none"
           />
           <Button onClick={handleEditSubmit} disabled={editingLoading || !editPrompt.trim()}>
             {editingLoading ? "Aplicando…" : "Aplicar Edição"}
