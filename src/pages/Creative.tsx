@@ -26,7 +26,9 @@ import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { getCachedAnalysis } from "@/hooks/useSavedAnalyses";
 import type { DiagnosisResult } from "@/hooks/useMusicDNA";
-import { generateVideoLoop, type LoopMotion } from "@/components/creative/VideoLoopGenerator";
+import { generateVideoLoop, type VideoPreset } from "@/components/creative/VideoLoopGenerator";
+import { VideoEffectPicker } from "@/components/creative/VideoEffectPicker";
+import type { Intensity } from "@/components/creative/videoLayers";
 
 async function downloadFile(url: string, filename: string) {
   try {
@@ -127,7 +129,8 @@ export default function Creative() {
 
   // Video loop state
   const [loopDuration, setLoopDuration] = useState<3 | 4 | 5>(4);
-  const [loopMotion, setLoopMotion] = useState<LoopMotion>("zoom");
+  const [videoPreset, setVideoPreset] = useState<VideoPreset>("cinematic");
+  const [videoIntensity, setVideoIntensity] = useState<Intensity>("medium");
   const [generatedVideoUrl, setGeneratedVideoUrl] = useState<string | null>(null);
   const [generatedVideoBlob, setGeneratedVideoBlob] = useState<Blob | null>(null);
   const [videoStatus, setVideoStatus] = useState<string | null>(null);
@@ -267,7 +270,8 @@ export default function Creative() {
             width: selectedFormat.width,
             height: selectedFormat.height,
             durationSec: loopDuration,
-            motion: loopMotion,
+            preset: videoPreset,
+            intensity: videoIntensity,
           });
           const url = URL.createObjectURL(blob);
           setGeneratedVideoBlob(blob);
@@ -290,7 +294,7 @@ export default function Creative() {
         setDnaCopyLoading(false);
       }
     }
-  }, [prompt, style, selectedFormat, linkedProject, selectedProjectId, generate, referenceImage, dnaSource, generateText, trackName, artistName, releaseDate, loopDuration, loopMotion]);
+  }, [prompt, style, selectedFormat, linkedProject, selectedProjectId, generate, referenceImage, dnaSource, generateText, trackName, artistName, releaseDate, loopDuration, videoPreset, videoIntensity]);
 
   const handleVariation = useCallback(async () => {
     if (!generatedBase64 || !prompt.trim()) {
@@ -607,36 +611,27 @@ export default function Creative() {
                     <Video className="h-3.5 w-3.5" />
                     Configurações do loop animado
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="text-[10px] text-muted-foreground mb-1 block">Duração</label>
-                      <Select value={String(loopDuration)} onValueChange={(v) => setLoopDuration(Number(v) as 3 | 4 | 5)}>
-                        <SelectTrigger className="h-8 text-xs">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="3">3 segundos</SelectItem>
-                          <SelectItem value="4">4 segundos</SelectItem>
-                          <SelectItem value="5">5 segundos</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <label className="text-[10px] text-muted-foreground mb-1 block">Movimento</label>
-                      <Select value={loopMotion} onValueChange={(v) => setLoopMotion(v as LoopMotion)}>
-                        <SelectTrigger className="h-8 text-xs">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="zoom">Zoom-in (Ken Burns)</SelectItem>
-                          <SelectItem value="pan">Pan horizontal</SelectItem>
-                          <SelectItem value="parallax">Parallax diagonal</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
+                  <div>
+                    <label className="text-[10px] text-muted-foreground mb-1 block">Duração</label>
+                    <Select value={String(loopDuration)} onValueChange={(v) => setLoopDuration(Number(v) as 3 | 4 | 5)}>
+                      <SelectTrigger className="h-8 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="3">3 segundos</SelectItem>
+                        <SelectItem value="4">4 segundos</SelectItem>
+                        <SelectItem value="5">5 segundos</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
+                  <VideoEffectPicker
+                    preset={videoPreset}
+                    onPresetChange={setVideoPreset}
+                    intensity={videoIntensity}
+                    onIntensityChange={setVideoIntensity}
+                  />
                   <p className="text-[10px] text-muted-foreground">
-                    A IA gera a imagem e o navegador anima como vídeo loop perfeito (.webm).
+                    A IA gera a imagem e o navegador anima como vídeo loop perfeito (.webm) com camadas de efeito.
                   </p>
                 </div>
               )}
