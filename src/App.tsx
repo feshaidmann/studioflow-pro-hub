@@ -12,6 +12,8 @@ import { ProjectProvider } from "@/contexts/ProjectContext";
 
 import AppLayout from "@/components/AppLayout";
 import FeedbackButton from "@/components/FeedbackButton";
+import RateLimitDialog from "@/components/ai/RateLimitDialog";
+import { RateLimitDialogProvider } from "@/hooks/useRateLimitDialog";
 
 // Eager-load the landing & auth pages (critical path)
 import Welcome from "@/pages/Welcome";
@@ -101,19 +103,22 @@ const App = () => (
               <Toaster />
               <Sonner />
               <BrowserRouter>
-                <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><div className="animate-pulse text-muted-foreground">Carregando…</div></div>}>
-                  <Routes>
-                    <Route path="/" element={<Welcome />} />
-                    <Route path="/auth" element={<Auth />} />
-                    <Route path="/auth/reset-password" element={<ResetPassword />} />
-                    <Route path="/onboarding" element={<Onboarding />} />
-                    <Route path="/u/:username" element={<PublicProfile />} />
-                    <Route path="/invite/:token" element={<InviteResponse />} />
-                    
-                    <Route path="/legal" element={<Legal />} />
-                    <Route path="/*" element={<AppRoutes />} />
-                  </Routes>
-                </Suspense>
+                <RateLimitDialogProvider>
+                  <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><div className="animate-pulse text-muted-foreground">Carregando…</div></div>}>
+                    <Routes>
+                      <Route path="/" element={<Welcome />} />
+                      <Route path="/auth" element={<Auth />} />
+                      <Route path="/auth/reset-password" element={<ResetPassword />} />
+                      <Route path="/onboarding" element={<Onboarding />} />
+                      <Route path="/u/:username" element={<PublicProfile />} />
+                      <Route path="/invite/:token" element={<InviteResponse />} />
+                      
+                      <Route path="/legal" element={<Legal />} />
+                      <Route path="/*" element={<AppRoutes />} />
+                    </Routes>
+                  </Suspense>
+                  <RateLimitDialog />
+                </RateLimitDialogProvider>
               </BrowserRouter>
             </TooltipProvider>
           </ProjectProvider>

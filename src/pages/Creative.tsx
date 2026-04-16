@@ -30,6 +30,22 @@ import type { DiagnosisResult } from "@/hooks/useMusicDNA";
 import { generateVideoLoop, type VideoPreset } from "@/components/creative/VideoLoopGenerator";
 import { VideoEffectPicker } from "@/components/creative/VideoEffectPicker";
 import type { Intensity } from "@/components/creative/videoLayers";
+import { useRateLimitDialog } from "@/hooks/useRateLimitDialog";
+
+function QuotaIndicator() {
+  const { quota } = useRateLimitDialog();
+  if (!quota) return null;
+  const dailyRemaining = Math.max(0, quota.daily_limit - quota.daily_used);
+  // Only show when 5 or fewer remaining
+  if (dailyRemaining > 5) return null;
+  return (
+    <div className="text-[11px] text-muted-foreground text-center">
+      {dailyRemaining === 0
+        ? "Limite diário atingido"
+        : `${dailyRemaining} ${dailyRemaining === 1 ? "geração restante" : "gerações restantes"} hoje`}
+    </div>
+  );
+}
 
 async function downloadFile(url: string, filename: string) {
   try {
@@ -667,7 +683,8 @@ export default function Creative() {
               )}
 
               {/* 6. Generate button — desktop */}
-              <div className="hidden md:block">
+              <div className="hidden md:block space-y-2">
+                <QuotaIndicator />
                 <Button
                   className="w-full"
                   onClick={handleGenerate}
@@ -837,7 +854,8 @@ export default function Creative() {
 
       {/* Sticky generate button — mobile only */}
       {showStickyButton && (
-        <div className="fixed bottom-16 left-0 right-0 p-3 bg-background/95 backdrop-blur-sm border-t border-border/50 z-40 md:hidden">
+        <div className="fixed bottom-16 left-0 right-0 p-3 bg-background/95 backdrop-blur-sm border-t border-border/50 z-40 md:hidden space-y-2">
+          <QuotaIndicator />
           <Button
             className="w-full"
             onClick={handleGenerate}
