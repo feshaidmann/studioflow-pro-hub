@@ -815,10 +815,18 @@ export default function Creative() {
           <Button
             className="w-full"
             onClick={handleGenerate}
-            disabled={generating || !canGenerate}
+            disabled={generating || videoRendering || !canGenerate}
           >
-            <Sparkles className="h-4 w-4 mr-1.5" />
-            {generating ? "Gerando…" : referenceImage ? "Gerar a partir da referência" : "Gerar Imagem"}
+            {selectedFormat.isVideo ? <Video className="h-4 w-4 mr-1.5" /> : <Sparkles className="h-4 w-4 mr-1.5" />}
+            {generating
+              ? "Gerando…"
+              : videoRendering
+                ? "Renderizando vídeo…"
+                : selectedFormat.isVideo
+                  ? "Gerar Vídeo Loop"
+                  : referenceImage
+                    ? "Gerar a partir da referência"
+                    : "Gerar Imagem"}
           </Button>
         </div>
       )}
