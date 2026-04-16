@@ -1,83 +1,77 @@
 
 
-# Redesign UX do Módulo Criativo — Eliminar Fricção
+# Vídeo loop para Reels e Spotify Canvas
 
-## Diagnóstico de Problemas
+## Visão
+Story/Reels e Spotify Canvas (formatos verticais 1080×1920) passam a gerar **vídeo loop de 3-5 segundos** automaticamente: a IA gera uma imagem estática de alta qualidade, e o navegador anima essa imagem (Ken Burns + parallax sutil + leves variações de luz) gravando o resultado como WebM via MediaRecorder. Zero custo extra de IA, zero dependências externas.
 
-Analisando o fluxo atual com olhar de UI-CX:
+## Fluxo do usuário
+1. Seleciona **Story/Reels** ou **Spotify Canvas** nos chips de formato
+2. Aparece um seletor de **duração do loop** (3s / 4s / 5s) e estilo de movimento (zoom-in / pan-horizontal / parallax)
+3. Clica "Gerar Vídeo"
+4. IA gera imagem 1080×1920 (mesmo pipeline atual)
+5. Cliente renderiza a animação em `<canvas>` por N segundos a 30fps, captura via `MediaRecorder` → blob WebM
+6. Preview mostra `<video autoplay loop muted>` com download (.webm) e botão "Salvar na galeria"
+7. Galeria reconhece vídeos e renderiza `<video>` em vez de `<img>`
 
-1. **Sobrecarga cognitiva no primeiro contato**: 6+ campos visíveis simultaneamente (track name, artist, prompt, format, style, reference) antes de qualquer ação. No viewport mobile (434px), o botão "Gerar" fica abaixo do fold.
+## Arquitetura técnica
 
-2. **Hierarquia invertida**: O **formato** (decisão primária que define o canvas) está escondido dentro de "Configurações" colapsáveis. O usuário precisa de 2 cliques para chegar nele.
+### 1. Detecção de formato de vídeo
+Adicionar flag `isVideo` em `FORMAT_OPTIONS` para `story` e `spotify_canvas`.
 
-3. **Campos sempre visíveis sem necessidade**: "Nome da música" e "Artista" aparecem mesmo quando o usuário quer criar arte genérica sem vínculo musical. Poluição visual.
+### 2. Novo componente `VideoLoopGenerator.tsx`
+- Recebe a imagem base64 + duração + estilo de movimento + dimensões
+- Cria `<canvas>` offscreen 1080×1920
+- Loop de animação com `requestAnimationFrame`:
+  - **Ken Burns**: `scale` de 1.0 → 1.12 e translate sutil (volta ao início no fim do loop = loop perfeito)
+  - **Parallax**: aplicar leve gradient overlay animado (vignette deslizando) por cima
+  - **Brilho pulsante**: filter `brightness(0.95 → 1.05 → 0.95)` em senoide
+- Usa `canvas.captureStream(30)` + `MediaRecorder` (`video/webm;codecs=vp9` com fallback `vp8`)
+- Garante loop perfeito: keyframes do início = keyframes do fim
+- Retorna `Blob` WebM
 
-4. **Fluxo DNA→Criativo desconectado**: O banner DNA é informativo mas não guia o próximo passo. O usuário chega com tudo pré-preenchido mas ainda precisa scrollar até "Gerar".
+### 3. Estado e UI em `Creative.tsx`
+- Novo estado: `loopDuration` (3|4|5), `loopMotion` ('zoom'|'pan'|'parallax')
+- Quando `selectedFormat.isVideo`: 
+  - mostrar painel "Configurações do loop" com 2 selects compactos
+  - botão muda de "Gerar Imagem" → "Gerar Vídeo Loop"
+  - após `generate()` retornar imagem, chamar `VideoLoopGenerator` para produzir blob
+  - armazenar em `generatedVideoBlob` + URL via `URL.createObjectURL`
+- Preview condicional: se vídeo, renderiza `<video src loop autoplay muted playsInline>`; senão `<img>`
 
-5. **QuickTemplates desaparece cedo demais**: Só aparece se prompt vazio E sem imagem gerada. Após gerar uma vez, nunca mais volta.
+### 4. Salvar na galeria
+- `useCreativeAssets.saveAsset` ganha parâmetro opcional `videoBlob`
+- Quando presente, faz upload do `.webm` (mime `video/webm`) ao bucket `creative-assets` em vez do PNG
+- `creative_assets` precisa de coluna nova `media_type` ('image' | 'video') — **migração SQL**
+- `public_url` aponta para o webm; `storage_path` termina em `.webm`
 
-6. **Preview e controles em colunas separadas no mobile**: No viewport 434px, o grid `md:grid-cols-2` colapsa para 1 coluna, criando scroll infinito.
+### 5. Renderização na galeria
+- `GalleryDetailSheet` e cards da galeria detectam `media_type === 'video'` e renderizam `<video controls loop>`
+- Ícone de play overlay nas miniaturas para vídeos
 
-## Solução: Layout de Fluxo Linear com Revelação Progressiva
+### 6. ImagePreview
+- Renomear conceitualmente; aceitar prop `videoUrl?: string` que sobrescreve a renderização para `<video>`
+- Botões "Baixar" passam a usar extensão `.webm` quando vídeo
 
-### Princípio
-Mostrar apenas o que importa no momento. Cada decisão revela a próxima.
-
-### Estrutura nova
-
-```text
-┌─────────────────────────────────────┐
-│ [Format chips]  Spotify · Insta · + │  ← Formato como PRIMEIRA escolha
-├─────────────────────────────────────┤
-│ 🧬 DNA: "Noite Clara" — MPB    ✕   │  ← Banner DNA (se ativo)
-├─────────────────────────────────────┤
-│ [Prompt textarea]                   │  ← Prompt como área principal
-│ "Capa artística para single..."     │
-├─────────────────────────────────────┤
-│ ▸ Detalhes da faixa (opcionais)     │  ← Collapsible: track/artist/date
-│ ▸ Estilo e referência               │  ← Collapsible: style/ref image
-├─────────────────────────────────────┤
-│        [ ✨ Gerar Imagem ]          │  ← Botão sempre visível
-├─────────────────────────────────────┤
-│          [PREVIEW]                  │  ← Preview logo abaixo
-│     Baixar · Variação · Editar      │
-└─────────────────────────────────────┘
+## Migração SQL necessária
+```sql
+ALTER TABLE creative_assets 
+ADD COLUMN media_type text NOT NULL DEFAULT 'image' 
+CHECK (media_type IN ('image', 'video'));
 ```
 
-### Mudanças Concretas
+## Limitações conhecidas (transparentes ao usuário)
+- Saída em **WebM** (suportado por Chrome/Firefox/Edge nativamente; Safari recente também). Instagram aceita WebM convertendo automaticamente; para upload manual, usuário pode converter, mas a maioria das plataformas aceita direto.
+- Movimento é "animação de imagem", não geração de vídeo verdadeira — comunicar isso na UI com label sutil "loop animado"
+- Tamanho do arquivo: ~1-3 MB para 5s a 1080×1920 (aceitável)
 
-**1. Formato como chips horizontais scrolláveis no topo (não dentro de Settings)**
-- Remover o FormatSelector colapsável de dentro de "Configurações"
-- Adicionar uma fila horizontal de chips scrolláveis com os formatos mais usados (Spotify, Instagram Post, Story, YouTube) + botão "Mais" que abre o seletor completo
-- Seleção de formato é o ato #1 do usuário
-
-**2. Colapsar "Detalhes da faixa" por padrão (abrir automaticamente se DNA ativo)**
-- Track name, artist name, release date vão para dentro de um Collapsible "Detalhes da faixa"
-- Se `dnaSource` está ativo OU se `trackName` já tem valor → abrir automaticamente
-- Caso contrário, colapsado — zero ruído para quem só quer arte genérica
-
-**3. Colapsar "Estilo e referência" (manter como está, renomear)**
-- O Collapsible existente "Configurações" perde o formato (que subiu) e o projeto
-- Renomear para "Estilo e referência"
-- Projeto selector vai para dentro de "Detalhes da faixa"
-
-**4. Layout single-column em mobile, side-by-side em desktop**
-- Mover preview para ABAIXO do botão gerar em mobile (já é assim, mas garantir que o botão fica acima do fold)
-- Em desktop (md+), manter grid 2 colunas
-
-**5. Botão "Gerar" sticky no mobile**
-- Quando o prompt tem conteúdo, fixar o botão de gerar no bottom do viewport em mobile para que nunca fique fora do alcance
-
-**6. Quick templates como estado vazio do prompt**
-- Mostrar templates como placeholders clicáveis DENTRO da área de prompt quando vazio
-- Não como componente separado que desaparece
-
-## Arquivos modificados
-
-- `src/pages/Creative.tsx` — reestruturar layout, chips de formato no topo, collapsibles reorganizados, botão sticky mobile
-- `src/components/creative/FormatSelector.tsx` — adicionar modo `chips` (horizontal scrollável) além do modo expandido
-- `src/components/creative/QuickTemplates.tsx` — adaptar para inline no textarea
-
-## Sem migrações de banco
-Mudanças puramente de UI/UX.
+## Arquivos modificados/criados
+- **Criar** `src/components/creative/VideoLoopGenerator.ts` (lógica pura: imagem + params → Blob)
+- **Modificar** `src/components/creative/FormatSelector.tsx` (flag `isVideo` em story e spotify_canvas)
+- **Modificar** `src/components/creative/FormatChips.tsx` (badge "vídeo" nos formatos com loop)
+- **Modificar** `src/components/creative/ImagePreview.tsx` (suporte a `videoUrl`)
+- **Modificar** `src/components/creative/GalleryDetailSheet.tsx` (renderização condicional)
+- **Modificar** `src/pages/Creative.tsx` (estados, painel de configuração, fluxo de geração de vídeo, preview condicional)
+- **Modificar** `src/hooks/useCreativeAssets.ts` (saveAsset aceita videoBlob, upload .webm)
+- **Migração** adicionar coluna `media_type` em `creative_assets`
 
