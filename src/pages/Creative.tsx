@@ -82,7 +82,7 @@ export default function Creative() {
   const [deriveImageUrl, setDeriveImageUrl] = useState<string>("");
   const [settingsOpen, setSettingsOpen] = useState(true);
 
-  const [selectedProjectId, setSelectedProjectId] = useState<string>(projectIdParam || "");
+  const [selectedProjectId, setSelectedProjectId] = useState<string>(projectIdParam || "none");
 
   // Gallery
   const [filterFormat, setFilterFormat] = useState<string>("all");
@@ -95,7 +95,7 @@ export default function Creative() {
 
   const { assets, isLoading: assetsLoading, generating, generate, generateBatch, generateText, deleteAsset } = useCreativeAssets();
 
-  const linkedProject = selectedProjectId
+  const linkedProject = selectedProjectId && selectedProjectId !== "none"
     ? projects.find((p) => p.id === selectedProjectId)
     : null;
 
@@ -161,7 +161,7 @@ export default function Creative() {
       width: selectedFormat.width,
       height: selectedFormat.height,
       editImageUrl: referenceImage || undefined,
-      projectId: selectedProjectId || undefined,
+      projectId: selectedProjectId && selectedProjectId !== "none" ? selectedProjectId : undefined,
     });
 
     if (result) {
@@ -195,7 +195,7 @@ export default function Creative() {
       width: selectedFormat.width,
       height: selectedFormat.height,
       editImageUrl: generatedBase64,
-      projectId: selectedProjectId || undefined,
+      projectId: selectedProjectId && selectedProjectId !== "none" ? selectedProjectId : undefined,
     });
     if (result) {
       setGeneratedImage(result.imageUrl);
@@ -228,7 +228,7 @@ export default function Creative() {
       width: selectedFormat.width,
       height: selectedFormat.height,
       editImageUrl: generatedBase64,
-      projectId: selectedProjectId || undefined,
+      projectId: selectedProjectId && selectedProjectId !== "none" ? selectedProjectId : undefined,
     });
     if (result) {
       setGeneratedImage(result.imageUrl);
@@ -332,7 +332,7 @@ export default function Creative() {
                           <SelectValue placeholder="Sem projeto vinculado" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Nenhum</SelectItem>
+                          <SelectItem value="none">Nenhum</SelectItem>
                           {projects.map((p) => (
                             <SelectItem key={p.id} value={p.id}>
                               {p.name} — {p.artist}
