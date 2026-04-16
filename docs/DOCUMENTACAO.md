@@ -1,10 +1,10 @@
 # StudioFlow Pro — Documentação Técnica para Auditoria Externa
 
-> **Versão:** 3.0  
+> **Versão:** 3.1  
 > **Data:** Abril 2026  
 > **Classificação:** Documento técnico para auditoria  
 > **Mantido por:** Fernando Shaidmann (admin)  
-> **URL publicada:** `https://jsp-flux.lovable.app`
+> **URL publicada:** `https://studioflow-pro-hub.lovable.app`
 
 ---
 
@@ -30,6 +30,7 @@
 18. [Inventário de Secrets e Variáveis](#18-inventário-de-secrets-e-variáveis)
 19. [Matriz de Riscos Conhecidos](#19-matriz-de-riscos-conhecidos)
 20. [Changelog de Correções (v3.0)](#20-changelog-de-correções-v30)
+21. [Changelog v3.1](#21-changelog-v31)
 
 ---
 
@@ -44,6 +45,8 @@ O **StudioFlow Pro** é uma plataforma SaaS de gestão para **artistas independe
 - Análise técnica de masters (LUFS, compatibilidade com plataformas de streaming)
 - Análise de DNA Musical via IA (características sonoras de faixas)
 - Checklist inteligente com tarefas geradas automaticamente por IA e regras configuráveis
+- **Módulo de Editais** — busca, match e inscrição em editais de fomento cultural com assistência de IA
+- **Módulo Criativo** — geração de artes visuais, capas e legendas com IA generativa
 - Convites digitais para colaboração em projetos e na plataforma
 - Perfil público com portfólio e avaliações
 - Chat em tempo real dentro de projetos
@@ -78,14 +81,18 @@ O **StudioFlow Pro** é uma plataforma SaaS de gestão para **artistas independe
 
 ```
 src/
-├── pages/              # 22 telas (rotas)
+├── pages/              # 25 telas (rotas)
 ├── components/         # Componentes reutilizáveis
 │   ├── ui/             # 50+ primitivos shadcn/ui
 │   ├── finance/        # Cards e formulários financeiros
 │   ├── agenda/         # Componentes de agenda
-│   └── music-dna/      # Analisador de DNA Musical
+│   ├── editais/        # Assistente IA, checklist, métricas de editais
+│   ├── creative/       # Gerador de artes, galeria, templates
+│   ├── music-dna/      # Analisador de DNA Musical
+│   ├── dashboard/      # Componentes do dashboard
+│   └── project-hub/    # Abas e componentes de detalhe do projeto
 ├── contexts/           # 4 contextos (Auth, Profile, Project, Language)
-├── hooks/              # 14 hooks customizados
+├── hooks/              # 25+ hooks customizados
 ├── constants/          # Categorias de transações
 ├── lib/                # Utilitários (análise de áudio, analytics, detecção de instrumentos)
 ├── integrations/
@@ -94,7 +101,7 @@ src/
 └── data/               # Dados mock para demonstração
 
 supabase/
-├── functions/          # 11 Edge Functions
+├── functions/          # 18 Edge Functions
 ├── migrations/         # Migrações SQL
 └── config.toml         # Configuração de funções
 ```
@@ -114,12 +121,24 @@ supabase/
 |------|-----------------|
 | `useAIConversations` | CRUD de conversas e mensagens do assistente IA |
 | `useAdminRole` | Verificação de role admin via `has_role()` RPC |
+| `useApplicationDocs` | Documentos de inscrição de editais |
+| `useCreativeAssets` | CRUD de artes geradas pelo módulo criativo |
+| `useEditais` | CRUD de editais encontrados |
+| `useEditalAI` | Assistente IA contextual para editais |
+| `useEditalApplications` | Inscrições em editais |
+| `useEditalDocuments` | Banco de documentos reutilizáveis para editais |
 | `useEvents` | CRUD de eventos de agenda |
+| `useFontesEditais` | Fontes de busca de editais |
+| `useMatchEditais` | Match de editais com perfil cultural |
 | `useMusicDNA` | Análise de DNA Musical (upload + edge function) |
 | `useNotifications` | Leitura e marcação de notificações |
 | `useProfessionals` | CRUD de profissionais na agenda pessoal |
+| `useProjectAlerts` | Alertas de risco em projetos |
 | `useProjectChat` | Mensagens em tempo real de projetos |
+| `useProjectFiles` | Arquivos do projeto |
 | `usePushNotifications` | Gerenciamento de subscriptions Web Push |
+| `useRascunhoEdital` | Rascunhos de inscrição em editais |
+| `useReleaseChecklist` | Checklist de lançamento com 7 seções |
 | `useSavedAnalyses` | Histórico de análises de DNA Musical |
 | `useTaskRules` | CRUD de regras configuráveis de tarefas |
 | `useTasks` | Tarefas manuais e automáticas com deduplicação via `upsert` |
@@ -154,12 +173,15 @@ Todas as rotas abaixo exigem autenticação + perfil configurado (`onboarding_co
 | `/finance` | Controle financeiro |
 | `/agenda` | Agenda de eventos |
 | `/professionals` | Rede de profissionais |
+| `/editais` | Busca e gestão de editais de fomento |
+| `/editais/inscricao` | Inscrição assistida por IA em editais |
+| `/criativo` | Geração de artes e legendas com IA |
+| `/music-dna` | Análise de DNA Musical |
 | `/settings` | Configurações do perfil |
 | `/perfil` | Perfil do freelancer |
 | `/tutorial` | Guia de uso |
 | `/admin` | Painel administrativo (apenas admin) |
 | `/upgrade` | Tela de planos |
-| `/music-dna` | Análise de DNA Musical |
 
 ---
 
@@ -167,14 +189,14 @@ Todas as rotas abaixo exigem autenticação + perfil configurado (`onboarding_co
 
 ### 4.1 Diagrama de Tabelas
 
-O banco PostgreSQL possui **25 tabelas** com RLS ativado em todas. Segue o inventário:
+O banco PostgreSQL possui **31 tabelas** com RLS ativado em todas. Segue o inventário:
 
 #### Tabelas de Domínio Principal
 
 | Tabela | Registros-chave | FK | Descrição |
 |--------|----------------|-----|-----------|
 | `profiles` | `id` (= auth.users.id) | — | Perfil do usuário (nome, tipo, plano, cidade, especialidades, avatar) |
-| `projects` | `id`, `user_id` | — | Projetos musicais com metadados, estágio, financeiro |
+| `projects` | `id`, `user_id` | — | Projetos musicais com metadados, estágio, financeiro, `perfil_cultural` |
 | `mix_tracks` | `id`, `project_id`, `user_id` | `projects.id` | Tracks de mixing (gain, EQ, compressor, músico, cachê) |
 | `transactions` | `id`, `user_id`, `project_id` | `projects.id` | Transações financeiras (receitas/despesas) |
 | `events` | `id`, `user_id`, `project_id` | `projects.id` | Eventos de agenda |
@@ -183,6 +205,24 @@ O banco PostgreSQL possui **25 tabelas** com RLS ativado em todas. Segue o inven
 | `professionals` | `id`, `user_id` | — | Agenda pessoal de profissionais |
 | `professional_ratings` | `id`, `user_id`, `project_id` | `projects.id` | Avaliações de profissionais |
 
+#### Tabelas de Editais e Fomento
+
+| Tabela | Descrição |
+|--------|-----------|
+| `editais` | Editais de fomento cultural encontrados (título, órgão, prazo, área, status, link) |
+| `edital_applications` | Inscrições em editais (status, projeto vinculado, valor aprovado, resultado) |
+| `edital_application_docs` | Documentos individuais de cada inscrição |
+| `edital_documents` | Banco de documentos reutilizáveis (bio, currículo, portfólio) |
+| `rascunhos_editais` | Rascunhos de inscrição com campos JSON e progresso |
+| `alertas_editais` | Alertas de novos editais compatíveis |
+| `fontes_editais` | Fontes configuráveis de busca de editais |
+
+#### Tabelas de Criativo
+
+| Tabela | Descrição |
+|--------|-----------|
+| `creative_assets` | Artes geradas (prompt, estilo, formato, dimensões, URL pública) |
+
 #### Tabelas de Colaboração
 
 | Tabela | Descrição |
@@ -190,6 +230,7 @@ O banco PostgreSQL possui **25 tabelas** com RLS ativado em todas. Segue o inven
 | `project_invitations` | Convites a profissionais para projetos (token único, validade 7 dias) |
 | `project_members` | Membros confirmados em projetos |
 | `project_messages` | Chat em tempo real dentro de projetos |
+| `project_files` | Arquivos do projeto (stems, mixes, capas, contratos) |
 | `platform_invitations` | Convites para a plataforma StudioFlow |
 
 #### Tabelas de IA e Análise
@@ -213,6 +254,8 @@ O banco PostgreSQL possui **25 tabelas** com RLS ativado em todas. Segue o inven
 | `push_subscriptions` | Assinaturas Web Push (endpoint, p256dh, auth) |
 | `beta_feedback` | Feedback dos usuários durante o beta |
 | `function_logs` | Logs de execução de Edge Functions |
+| `page_views` | Rastreamento de visualização de páginas |
+| `release_checklists` | Checklist de lançamento por projeto (itens JSON) |
 
 ### 4.2 Constraints e Índices Notáveis
 
@@ -258,12 +301,15 @@ $$;
 | `get_professional_project_count(p_email, p_name)` | RPC | Conta projetos de um profissional |
 | `get_public_profile(p_username)` | RPC | Retorna perfil público por username |
 | `get_public_profile_ratings(p_profile_id)` | RPC | Retorna média de avaliações de um perfil |
+| `get_public_profile_history(p_email)` | RPC | Retorna histórico de projetos de um profissional |
+| `get_auth_email()` | RPC | Retorna e-mail do usuário autenticado |
+| `get_file_download_url(p_file_id)` | RPC | Retorna URL de download de um arquivo |
 
 ---
 
 ## 5. Políticas de Segurança (RLS)
 
-**Total de políticas:** 48 políticas RLS + 4 políticas de Storage.
+**Total de políticas:** 48+ políticas RLS + 4 políticas de Storage.
 
 ### 5.1 Padrão Base
 
@@ -289,6 +335,15 @@ WITH CHECK (auth.uid() = user_id)
 | `music_dna_feedback` | ALL |
 | `professional_ratings` | ALL |
 | `track_templates` | ALL |
+| `editais` | ALL |
+| `edital_applications` | ALL |
+| `edital_application_docs` | ALL |
+| `edital_documents` | ALL |
+| `rascunhos_editais` | ALL |
+| `alertas_editais` | ALL |
+| `fontes_editais` | ALL |
+| `creative_assets` | ALL |
+| `release_checklists` | ALL |
 | `events` | SELECT, INSERT, UPDATE, DELETE (separados) |
 | `transactions` | SELECT, INSERT, UPDATE, DELETE (separados) |
 | `mix_tracks` | SELECT, INSERT, UPDATE, DELETE (separados) |
@@ -323,6 +378,7 @@ WITH CHECK (auth.uid() = user_id)
 |--------|--------|----------|
 | `avatars` | Público (leitura) | Qualquer usuário pode ler |
 | `avatars` | Upload/Update/Delete | Restrito à pasta `{auth.uid()}/` via `storage.foldername()` |
+| `project-files` | Leitura/Upload | Restrito a membros e donos do projeto |
 
 ---
 
@@ -398,8 +454,15 @@ const { data: roleData } = await adminClient
 | `admin-stats` | JWT + role admin | Agrega métricas da plataforma (usuários, projetos, custos de IA) | — |
 | `ai-task-assistant` | JWT | Chat de IA contextual com dados do usuário | Gemini 3 Flash Preview |
 | `audio-analyze` | JWT | Análise técnica de áudio (LUFS, peak, streaming compatibility) | — |
+| `edital-ai-assistant` | JWT | Assistente IA contextual para editais (dúvidas, redação) | Gemini 3 Flash Preview |
+| `edital-monitor` | JWT | Monitoramento de novas publicações de editais | — |
+| `edital-search` | JWT | Busca de editais em fontes configuradas | Gemini (via Lovable AI) |
+| `extract-edital-fields` | JWT | Extração automática de campos de formulário de editais | Gemini (via Lovable AI) |
+| `generate-creative` | JWT | Geração de artes visuais com IA generativa | Gemini Image Preview |
 | `generate-daily-tasks` | JWT | Geração automática de tarefas para o usuário autenticado | Gemini 3 Flash Preview |
+| `match-editais` | JWT | Match de editais com perfil cultural do projeto | — |
 | `music-dna-analyze` | JWT | Análise de DNA Musical de faixas | Gemini (via Lovable AI) |
+| `project-ai-assistant` | JWT | Assistente IA contextual dentro de projetos | Gemini 3 Flash Preview |
 | `respond-to-invite` | Público (token) | Processa resposta a convite de projeto (aceite/recusa) | — |
 | `respond-to-platform-invite` | Público (token) | Processa resposta a convite de plataforma | — |
 | `search-platform-professionals` | Público | Busca global de profissionais com `allow_global_listing = true` | — |
@@ -429,8 +492,9 @@ Cada chamada à API de IA é registrada na tabela `ai_invocations` com:
 
 | Modelo | Uso Principal | Gateway |
 |--------|--------------|---------|
-| `google/gemini-3-flash-preview` | Assistente IA, geração de tarefas | Lovable AI |
+| `google/gemini-3-flash-preview` | Assistente IA, geração de tarefas, assistente de editais | Lovable AI |
 | `google/gemini-2.5-pro` | Análises complexas (quando necessário) | Lovable AI |
+| `google/gemini-3-pro-image-preview` | Geração de artes visuais no módulo Criativo | Lovable AI |
 
 **Autenticação:** Chave `LOVABLE_API_KEY` gerenciada automaticamente pelo Lovable Cloud. Não requer API key do usuário.
 
@@ -439,6 +503,7 @@ Cada chamada à API de IA é registrada na tabela `ai_invocations` com:
 - Chat contextual com histórico persistente (`ai_conversations` + `ai_messages`)
 - Contexto injetado: projetos ativos, tarefas pendentes, finanças do usuário
 - Sugestões de ações baseadas no contexto
+- Chip "Dúvida técnica" para modo engenheiro de áudio
 - Isolamento por `user_id` em todas as tabelas de conversa
 
 ### 8.3 Análise de DNA Musical
@@ -450,6 +515,20 @@ Cada chamada à API de IA é registrada na tabela `ai_invocations` com:
   - Métricas derivadas: spectral flux, zero-crossing rate, transient density
 - Gera diagnóstico por IA com recomendações
 - Feedback do usuário armazenado para refinamento
+- Integração com módulo Criativo ("Criar arte com este DNA")
+
+### 8.4 Assistente IA para Editais
+
+- Chat contextual com dados do edital selecionado
+- Ajuda a redigir justificativas, objetivos e descrições para inscrições
+- Extração automática de campos de formulário de editais via IA
+
+### 8.5 IA Contextual por Módulo
+
+- **Projeto:** `project-ai-assistant` analisa estágio, tarefas, equipe e finanças do projeto
+- **Editais:** `edital-ai-assistant` auxilia na redação e análise de editais
+- **Dashboard:** `ai-task-assistant` faz análise global dos dados do artista
+- Todos usam `AIMarkdownContent` para formatação padronizada das respostas
 
 ---
 
@@ -506,7 +585,7 @@ Tarefas removidas pelo usuário são marcadas com `dismissed = true`. Tarefas di
 - KPIs financeiros (Receita, Investimento, Resultado, Margem)
 - Checklist do Dia (tarefas manuais + automáticas via IA)
 - Projetos Ativos com barra de progresso e badges de estágio
-- Assistente IA (chat contextual)
+- Assistente IA (chat contextual) com chip "Dúvida técnica"
 - Próximos Lançamentos
 
 ### 10.2 Projetos (`/projects`, `/projects/:id`)
@@ -527,6 +606,8 @@ Tarefas removidas pelo usuário são marcadas com `dismissed = true`. Tarefas di
 - Seção de equipe/colaboradores com sistema de convites
 - Chat em tempo real (via Supabase Realtime)
 - Avaliação de parceiros ao concluir projeto
+- **Compartilhar via WhatsApp** — botão que gera deeplink `wa.me` com resumo do projeto
+- **Checklist de Lançamento** expandido com 7 seções (incluindo Divulgação: MusixMatch, pré-save, newsletter, press release)
 
 ### 10.3 Financeiro (`/finance`)
 
@@ -563,6 +644,27 @@ Tarefas removidas pelo usuário são marcadas com `dismissed = true`. Tarefas di
 - Informações: nome, bio, cidade, especialidades, contato
 - Média de avaliações por estrelas
 - Link compartilhável
+
+### 10.8 Editais (`/editais`, `/editais/inscricao`)
+
+- **Busca de editais** com IA a partir de fontes configuráveis (URLs de portais governamentais e culturais)
+- **Match de editais** com perfil cultural do projeto (área, estado, palavras-chave, porte)
+- **Assistente IA** contextual para dúvidas sobre requisitos e redação de projetos culturais
+- **Inscrição assistida** com extração automática de campos e auto-preenchimento com dados do perfil
+- **Banco de documentos** reutilizáveis (bio artística, currículo, portfólio, carta de intenção)
+- **Comparação** lado a lado de dois editais
+- **Métricas** de taxa de sucesso, valor aprovado e histórico de inscrições
+
+### 10.9 Criativo (`/criativo`)
+
+- **Geração de artes** visuais com IA generativa a partir de prompt + estilo + formato
+- **Formatos suportados:** Capa (1:1), Stories (9:16), Banner (16:9), Post (4:5), YouTube Thumbnail (16:9)
+- **Estilos visuais:** Minimalista, Neon, Vintage, Aquarela, Glitch, Futurista, etc.
+- **Templates rápidos:** Capa de Single, Post de Lançamento, Stories de Bastidores, etc.
+- **Geração em lote:** múltiplos formatos de uma vez (ex: capa + stories + post)
+- **Imagem de referência:** upload opcional para guiar o estilo da geração
+- **Galeria:** todas as artes geradas, organizadas por projeto, com download direto
+- **Integração com DNA Musical:** gerar arte a partir do mood e identidade sonora da faixa
 
 ---
 
@@ -606,6 +708,8 @@ Fluxo similar, mas para convidar novos usuários ao StudioFlow:
 | Bucket | Tipo | Uso |
 |--------|------|-----|
 | `avatars` | Público (leitura) | Fotos de perfil dos usuários |
+| `project-files` | Restrito | Arquivos de projetos (stems, mixes, capas, contratos) |
+| `creative-assets` | Público (leitura) | Artes geradas pelo módulo criativo |
 
 ### 12.2 Segurança de Storage
 
@@ -630,6 +734,12 @@ Fluxo similar, mas para convidar novos usuários ao StudioFlow:
 - Subscriptions armazenadas em `push_subscriptions`
 - Edge function `send-push-notification` envia via Web Push Protocol
 - Chaves VAPID gerenciadas via secrets
+
+### 13.3 WhatsApp Sharing
+
+- Botões de compartilhamento via deeplink `https://wa.me/?text=...`
+- Disponível em: visão geral do projeto e checklist de lançamento
+- Sem integração backend — usa `window.open()` com URL pré-formatada
 
 ---
 
@@ -689,6 +799,8 @@ const { t } = useLanguage();
 | Loading states | ✅ Completo | `t("misc.loading")` em todos os pontos |
 | Páginas Admin | ⚠️ Parcial | Maioria ainda em português hardcoded |
 | Settings | ⚠️ Parcial | Labels principais traduzidos |
+| Editais | ⚠️ Parcial | Módulo novo, tradução em progresso |
+| Criativo | ⚠️ Parcial | Módulo novo, tradução em progresso |
 
 ### 15.4 Persistência
 
@@ -744,14 +856,14 @@ Conforme Política de Privacidade:
 | Frontend | Build `vite build` → Deploy via Lovable Cloud | Automático |
 | Edge Functions | Deploy automático ao salvar | Via Lovable Cloud |
 | Migrations | Executadas automaticamente | Via migration tool |
-| URL publicada | `https://jsp-flux.lovable.app` | — |
+| URL publicada | `https://studioflow-pro-hub.lovable.app` | — |
 
 ### 17.2 Ambientes
 
 | Ambiente | URL |
 |----------|-----|
-| Preview (desenvolvimento) | `https://id-preview--f497a394-9c18-4b3e-b87d-90983358e905.lovable.app` |
-| Produção (publicado) | `https://jsp-flux.lovable.app` |
+| Preview (desenvolvimento) | `https://id-preview--13754490-93be-4386-ad4d-a7a95dda27bb.lovable.app` |
+| Produção (publicado) | `https://studioflow-pro-hub.lovable.app` |
 
 ---
 
@@ -771,9 +883,9 @@ Conforme Política de Privacidade:
 |--------|-----------|-----|
 | `SUPABASE_URL` | URL do Supabase | Todas as funções |
 | `SUPABASE_ANON_KEY` | Chave anon para contexto de usuário | Todas as funções |
-| `SUPABASE_SERVICE_ROLE_KEY` | Chave com acesso total (bypass RLS) | `admin-stats`, `respond-to-invite`, `respond-to-platform-invite` |
+| `SUPABASE_SERVICE_ROLE_KEY` | Chave com acesso total (bypass RLS) | `admin-stats`, `respond-to-invite`, `respond-to-platform-invite`, `match-editais` |
 | `SUPABASE_DB_URL` | String de conexão direta ao PostgreSQL | Migrações |
-| `LOVABLE_API_KEY` | Chave do gateway de IA Lovable | `ai-task-assistant`, `generate-daily-tasks`, `music-dna-analyze` |
+| `LOVABLE_API_KEY` | Chave do gateway de IA Lovable | `ai-task-assistant`, `generate-daily-tasks`, `music-dna-analyze`, `edital-ai-assistant`, `edital-search`, `extract-edital-fields`, `generate-creative`, `project-ai-assistant` |
 | `SUPABASE_PUBLISHABLE_KEY` | Chave pública | — |
 
 **Nota:** O `SUPABASE_SERVICE_ROLE_KEY` é usado exclusivamente em Edge Functions para operações administrativas. Nunca é exposto ao frontend.
@@ -790,7 +902,7 @@ Conforme Política de Privacidade:
 | Todos os usuários com acesso Pro na fase beta | Informativo | Temporário | `isPro = true` hardcoded em `ProfileContext`. Será removido quando a monetização for ativada. |
 | `verify_jwt = false` em todas as Edge Functions | Baixa | Aceito | Validação JWT manual no código. Permite funções públicas (convites) e autenticadas no mesmo deploy. |
 | Bucket `avatars` público para leitura | Baixa | Aceito | Necessário para exibir avatares em perfis públicos. Uploads restritos à pasta do usuário. |
-| Traduções incompletas em algumas páginas | Baixa | Em progresso | Páginas principais (Welcome, Dashboard, Agenda) traduzidas. Admin e Settings parcialmente. |
+| Traduções incompletas em algumas páginas | Baixa | Em progresso | Páginas principais traduzidas. Editais e Criativo parcialmente. |
 
 ---
 
@@ -812,6 +924,27 @@ Correções aplicadas em Abril 2026 para resolver inconsistências identificadas
 | 10 | **Edge function `generate-daily-tasks` refatorada** — processa apenas usuário autenticado, respeita `task_rules`, usa upsert | Performance + correção lógica |
 | 11 | **`ensureAutoTask` corrigido** — agora inclui `source_key` no payload e usa upsert | Bug fix (deduplicação) |
 | 12 | **Throttle de geração de tarefas** — máximo 1x/hora via localStorage | Performance |
+
+---
+
+## 21. Changelog v3.1
+
+Melhorias implementadas em Abril 2026 baseadas na pesquisa Unicamp/INCAMP 2026 (17 respondentes):
+
+| # | Mudança | Impacto |
+|---|---------|---------|
+| 1 | **Módulo de Editais** — busca, match IA, inscrição assistida, banco de documentos, métricas | Novo módulo completo |
+| 2 | **Módulo Criativo** — geração de artes com IA, galeria, templates, integração DNA Musical | Novo módulo completo |
+| 3 | **Release Checklist expandido** — seção "Divulgação" com MusixMatch, pré-save, newsletter, press release | Reduz micro-tarefas esquecidas |
+| 4 | **WhatsApp sharing** — botões de compartilhamento via deeplink em projetos | Reduz dependência do WhatsApp como hub |
+| 5 | **Chip "Dúvida técnica"** no Dashboard — atalho para modo engenheiro de áudio na IA | Descoberta de IA técnica |
+| 6 | **Auto-preenchimento de editais** — campos preenchidos automaticamente com dados do perfil | Reduz burocracia de inscrição |
+| 7 | **AIMarkdownContent** — componente unificado de formatação de respostas de IA | Consistência visual |
+| 8 | **IA contextual por módulo** — `ProjectAISheet` + `EditalAIAssistant` reutilizáveis | Arquitetura modular de IA |
+| 9 | **Welcome refatorada** — layout mobile-first, features atualizadas, antes/depois responsivo | UX mobile |
+| 10 | **Tutorial expandido** — 2 novas abas (Editais, Criativo) + atualizações nas existentes | Onboarding de novos módulos |
+| 11 | **18 Edge Functions** (antes 11) — 7 novas para editais, criativo e projeto | Backend expandido |
+| 12 | **Documentação v3.1** — URLs corrigidas, novos módulos documentados, tabelas atualizadas | Auditoria atualizada |
 
 ---
 
