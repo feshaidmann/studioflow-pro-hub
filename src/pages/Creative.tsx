@@ -832,16 +832,18 @@ export default function Creative() {
         </div>
       )}
 
-      {/* Gallery Detail Sheet */}
-      <GalleryDetailSheet
-        asset={detailAsset}
-        open={!!detailAsset}
-        onOpenChange={(open) => !open && setDetailAsset(null)}
+      {/* Gallery Lightbox */}
+      <GalleryLightbox
+        assets={filteredAssets}
+        index={lightboxIndex}
+        open={lightboxIndex >= 0 && lightboxIndex < filteredAssets.length}
+        onOpenChange={(open) => { if (!open) setLightboxIndex(-1); }}
+        onIndexChange={setLightboxIndex}
         onDownload={downloadFile}
         onUseAsReference={handleUseAsReference}
         onDerive={handleDerive}
-        onDelete={(id, path) => { setDetailAsset(null); setDeleteTarget({ id, path }); }}
-        projectName={detailAsset?.project_id ? projects.find((p) => p.id === detailAsset.project_id)?.name : undefined}
+        onDelete={(id, path) => { setLightboxIndex(-1); setDeleteTarget({ id, path }); }}
+        getProjectName={(pid) => pid ? projects.find((p) => p.id === pid)?.name : undefined}
       />
 
       {/* Edit Dialog */}
