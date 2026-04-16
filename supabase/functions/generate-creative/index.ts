@@ -152,7 +152,7 @@ serve(async (req) => {
       });
 
       return new Response(JSON.stringify({ text }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...corsHeaders, ...quotaHeaders, "Content-Type": "application/json" },
       });
     }
 
@@ -265,7 +265,7 @@ serve(async (req) => {
     return new Response(JSON.stringify({
       imageBase64: imageData,
     }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...corsHeaders, ...quotaHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
     console.error("generate-creative error:", e);
