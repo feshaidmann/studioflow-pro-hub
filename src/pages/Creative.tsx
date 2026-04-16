@@ -289,6 +289,7 @@ export default function Creative() {
 
   const handleEditSubmit = async () => {
     if (!editPrompt.trim() || !generatedBase64) return;
+    setEditDialogOpen(false);
     setEditingLoading(true);
     const result = await generate({
       prompt: editPrompt,
@@ -304,7 +305,6 @@ export default function Creative() {
       setGeneratedBase64(result.imageBase64);
     }
     setEditingLoading(false);
-    setEditDialogOpen(false);
   };
 
   const handleDownload = () => {
