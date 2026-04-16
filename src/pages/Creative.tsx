@@ -770,8 +770,9 @@ export default function Creative() {
         baseImageUrl={deriveImageUrl}
         basePrompt={prompt}
         style={style}
-        projectId={selectedProjectId || undefined}
+        projectId={selectedProjectId && selectedProjectId !== "none" ? selectedProjectId : undefined}
         onGenerateBatch={generateBatch}
+        onSaveAsset={saveAsset}
       />
     </div>
   );

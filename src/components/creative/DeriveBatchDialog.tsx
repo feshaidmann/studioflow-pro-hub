@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
-import { Layers, Download, X } from "lucide-react";
+import { Layers, Download, X, Save, Check, Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -56,16 +56,37 @@ interface Props {
     }>,
     onProgress?: (current: number, total: number) => void
   ) => Promise<Array<{ imageBase64: string } | null>>;
+  onSaveAsset?: (params: {
+    imageBase64: string;
+    prompt: string;
+    style: string | null;
+    format: string;
+    width: number;
+    height: number;
+    projectId?: string;
+  }) => Promise<CreativeAsset | null>;
+}
+
+interface BatchResult {
+  imageUrl: string;
+  format: string;
+  formatId: string;
+  width: number;
+  height: number;
+  prompt: string;
+  saved: boolean;
+  saving: boolean;
 }
 
 export default function DeriveBatchDialog({
-  open, onOpenChange, baseImageUrl, basePrompt, style, projectId, onGenerateBatch,
+  open, onOpenChange, baseImageUrl, basePrompt, style, projectId, onGenerateBatch, onSaveAsset,
 }: Props) {
   const [channels, setChannels] = useState<ChannelConfig[]>(buildInitialChannels);
   const [generating, setGenerating] = useState(false);
   const [progress, setProgress] = useState({ current: 0, total: 0 });
-  const [results, setResults] = useState<Array<{ imageUrl: string; format: string } | null>>([]);
+  const [results, setResults] = useState<Array<BatchResult | null>>([]);
   const [done, setDone] = useState(false);
+  const [savingAll, setSavingAll] = useState(false);
 
   // Reset channels every time dialog opens
   useEffect(() => {
@@ -113,7 +134,16 @@ export default function DeriveBatchDialog({
 
     setResults(
       batchResults.map((r, i) =>
-        r ? { imageUrl: r.imageBase64, format: selected[i].format.label } : null
+        r ? {
+          imageUrl: r.imageBase64,
+          format: selected[i].format.label,
+          formatId: selected[i].format.id,
+          width: selected[i].format.width,
+          height: selected[i].format.height,
+          prompt: paramsList[i].channelContext || paramsList[i].prompt,
+          saved: false,
+          saving: false,
+        } : null
       )
     );
     setGenerating(false);
@@ -141,6 +171,38 @@ export default function DeriveBatchDialog({
       downloadImage(r.imageUrl, `desdobramento_${r.format.replace(/\s/g, "_")}.png`);
     });
   };
+
+  const handleSaveOne = async (idx: number) => {
+    const r = results[idx];
+    if (!r || r.saved || r.saving || !onSaveAsset) return;
+    setResults((prev) => prev.map((x, i) => (i === idx && x ? { ...x, saving: true } : x)));
+    const saved = await onSaveAsset({
+      imageBase64: r.imageUrl,
+      prompt: r.prompt,
+      style,
+      format: r.formatId,
+      width: r.width,
+      height: r.height,
+      projectId,
+    });
+    setResults((prev) =>
+      prev.map((x, i) => (i === idx && x ? { ...x, saving: false, saved: !!saved } : x))
+    );
+  };
+
+  const handleSaveAll = async () => {
+    if (!onSaveAsset) return;
+    setSavingAll(true);
+    for (let i = 0; i < results.length; i++) {
+      const r = results[i];
+      if (r && !r.saved && !r.saving) {
+        await handleSaveOne(i);
+      }
+    }
+    setSavingAll(false);
+  };
+
+  const unsavedCount = results.filter((r) => r && !r.saved).length;
 
   const handleClose = (val: boolean) => {
     if (!generating) {
@@ -229,16 +291,41 @@ export default function DeriveBatchDialog({
                   <Card key={i} className="overflow-hidden">
                     <CardContent className="p-0 relative group">
                       <img src={r.imageUrl} alt={r.format} className="w-full aspect-square object-cover" />
+                      {r.saved && (
+                        <div className="absolute top-1 right-1 bg-primary/90 text-primary-foreground rounded-full p-0.5">
+                          <Check className="h-3 w-3" />
+                        </div>
+                      )}
                       <div className="absolute bottom-0 inset-x-0 bg-black/60 p-1.5 flex items-center justify-between">
-                        <span className="text-[10px] text-white">{r.format}</span>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-5 w-5 text-white"
-                          onClick={() => downloadImage(r.imageUrl, `desdobramento_${r.format.replace(/\s/g, "_")}.png`)}
-                        >
-                          <Download className="h-3 w-3" />
-                        </Button>
+                        <span className="text-[10px] text-white truncate">{r.format}</span>
+                        <div className="flex items-center gap-0.5">
+                          {onSaveAsset && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-5 w-5 text-white"
+                              onClick={() => handleSaveOne(i)}
+                              disabled={r.saved || r.saving}
+                              title={r.saved ? "Salvo" : "Salvar na galeria"}
+                            >
+                              {r.saving ? (
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                              ) : r.saved ? (
+                                <Check className="h-3 w-3" />
+                              ) : (
+                                <Save className="h-3 w-3" />
+                              )}
+                            </Button>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-5 w-5 text-white"
+                            onClick={() => downloadImage(r.imageUrl, `desdobramento_${r.format.replace(/\s/g, "_")}.png`)}
+                          >
+                            <Download className="h-3 w-3" />
+                          </Button>
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
@@ -253,13 +340,28 @@ export default function DeriveBatchDialog({
               )}
             </div>
 
-            <div className="flex gap-2">
-              <Button variant="outline" className="flex-1" onClick={() => { setDone(false); setResults([]); setChannels(buildInitialChannels()); }}>
-                Gerar mais
-              </Button>
-              <Button className="flex-1" onClick={handleDownloadAll}>
-                <Download className="h-4 w-4 mr-1.5" /> Baixar todos
-              </Button>
+            <div className="flex flex-col gap-2">
+              {onSaveAsset && unsavedCount > 0 && (
+                <Button
+                  className="w-full"
+                  onClick={handleSaveAll}
+                  disabled={savingAll}
+                >
+                  {savingAll ? (
+                    <><Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> Salvando…</>
+                  ) : (
+                    <><Save className="h-4 w-4 mr-1.5" /> Salvar {unsavedCount} na galeria{projectId ? " do projeto" : ""}</>
+                  )}
+                </Button>
+              )}
+              <div className="flex gap-2">
+                <Button variant="outline" className="flex-1" onClick={() => { setDone(false); setResults([]); setChannels(buildInitialChannels()); }}>
+                  Gerar mais
+                </Button>
+                <Button variant="outline" className="flex-1" onClick={handleDownloadAll}>
+                  <Download className="h-4 w-4 mr-1.5" /> Baixar todos
+                </Button>
+              </div>
             </div>
           </div>
         )}
