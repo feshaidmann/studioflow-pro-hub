@@ -340,13 +340,28 @@ export default function DeriveBatchDialog({
               )}
             </div>
 
-            <div className="flex gap-2">
-              <Button variant="outline" className="flex-1" onClick={() => { setDone(false); setResults([]); setChannels(buildInitialChannels()); }}>
-                Gerar mais
-              </Button>
-              <Button className="flex-1" onClick={handleDownloadAll}>
-                <Download className="h-4 w-4 mr-1.5" /> Baixar todos
-              </Button>
+            <div className="flex flex-col gap-2">
+              {onSaveAsset && unsavedCount > 0 && (
+                <Button
+                  className="w-full"
+                  onClick={handleSaveAll}
+                  disabled={savingAll}
+                >
+                  {savingAll ? (
+                    <><Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> Salvando…</>
+                  ) : (
+                    <><Save className="h-4 w-4 mr-1.5" /> Salvar {unsavedCount} na galeria{projectId ? " do projeto" : ""}</>
+                  )}
+                </Button>
+              )}
+              <div className="flex gap-2">
+                <Button variant="outline" className="flex-1" onClick={() => { setDone(false); setResults([]); setChannels(buildInitialChannels()); }}>
+                  Gerar mais
+                </Button>
+                <Button variant="outline" className="flex-1" onClick={handleDownloadAll}>
+                  <Download className="h-4 w-4 mr-1.5" /> Baixar todos
+                </Button>
+              </div>
             </div>
           </div>
         )}
