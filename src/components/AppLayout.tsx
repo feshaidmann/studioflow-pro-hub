@@ -96,33 +96,28 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     gestaoItems[1], // Agenda
   ];
 
-  const drawerItems = [
-    gestaoItems[2], // DNA Musical
+  // Drawer "Mais" — apenas FERRAMENTAS, reordenadas por frequência (P1)
+  const toolDrawerItems = [
     gestaoItems[3], // Editais
-    gestaoItems[4], // Criativo
     gestaoItems[5], // Profissionais
-    tutorialNavItem,
-    settingsNavItem,
+    gestaoItems[4], // Criativo
+    gestaoItems[2], // DNA Musical
   ];
 
-  const getNavTo = (item: { path: string; proOnly: boolean }) => {
-    if (item.proOnly && !isPro) {
-      const key = item.path.replace("/", "");
-      return `/upgrade?feature=${key}`;
-    }
-    return item.path;
-  };
+  // Seção "Conta" do drawer (lista compacta)
+  const accountDrawerItems = [
+    tutorialNavItem,
+  ];
 
-  const isItemActive = (item: { path: string; proOnly: boolean }) => {
-    if (item.proOnly && !isPro) return false;
-    return location.pathname === item.path;
-  };
+  const getNavTo = (item: { path: string }) => item.path;
+
+  const isItemActive = (item: { path: string }) => location.pathname === item.path;
 
   const ROOT_ROUTES = ["/dashboard", "/projects", "/finance", "/agenda", "/professionals", "/settings", "/admin", "/tutorial", "/music-dna", "/editais", "/criativo", "/"];
   const isRootRoute = ROOT_ROUTES.includes(location.pathname);
 
   // ── Mobile ─────────────────────────────────────────────────────────────────
-  const isMoreActive = drawerItems.some((item) => isItemActive(item));
+  const isMoreActive = [...toolDrawerItems, ...accountDrawerItems, settingsNavItem].some((item) => isItemActive(item));
 
   if (isMobile) {
     return (
@@ -137,6 +132,19 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <NavLink to="/" className="text-base font-semibold hover:opacity-80 transition-opacity">StudioFlow</NavLink>
           </div>
           <div className="flex items-center gap-0.5">
+            {/* P3: Configurações promovida ao header mobile */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn(
+                "h-8 w-8",
+                location.pathname === "/settings" ? "text-primary" : "text-muted-foreground hover:text-foreground"
+              )}
+              onClick={() => navigate("/settings")}
+              aria-label={t("nav.settings")}
+            >
+              <Settings className="h-4 w-4" />
+            </Button>
             <NotificationsBell compact align="end" />
           </div>
         </header>
@@ -146,20 +154,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <nav className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around px-2 border-t border-border/60 bg-background/70 backdrop-blur-xl" style={{ height: 'calc(3.5rem + env(safe-area-inset-bottom, 0px))', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
           {primaryMobileItems.map((item) => {
             const active = isItemActive(item);
-            const locked = item.proOnly && !isPro;
             return (
               <NavLink
                 key={item.path}
                 to={getNavTo(item)}
                 className={cn(
                   "flex flex-1 flex-col items-center gap-0.5 py-1.5 text-[11px] transition-colors min-h-[44px] justify-center rounded-lg",
-                  active ? "text-primary font-medium" : locked ? "text-muted-foreground/40" : "text-muted-foreground"
+                  active ? "text-primary font-medium" : "text-muted-foreground"
                 )}
               >
-                <div className="relative">
-                  <item.icon className="h-5 w-5" />
-                  {locked && <Lock className="absolute -top-1 -right-1 h-2.5 w-2.5 text-muted-foreground/50" />}
-                </div>
+                <item.icon className="h-5 w-5" />
                 {t(item.mobileLabel || item.labelKey)}
                 {active && <div className="h-1 w-1 rounded-full bg-primary mt-0.5" />}
               </NavLink>
@@ -179,49 +183,74 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </button>
         </nav>
 
-        {/* Drawer "Mais" */}
+        {/* Drawer "Mais" — P0: agrupado em Ferramentas + Conta */}
         <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
           <SheetContent side="bottom" className="rounded-t-2xl px-4 pb-8" style={{ paddingBottom: 'calc(2rem + env(safe-area-inset-bottom, 0px))' }}>
-            <SheetHeader className="pb-2">
+            <SheetHeader className="pb-3">
               <SheetTitle className="text-base">{t("nav.more")}</SheetTitle>
             </SheetHeader>
-            <div className="grid grid-cols-3 gap-3">
-              {drawerItems.map((item) => {
+
+            {/* Seção 1 — Ferramentas (grid com sub-labels) */}
+            <div className="mb-1 px-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground/70">
+              {t("nav.section.tools") !== "nav.section.tools" ? t("nav.section.tools") : "Ferramentas"}
+            </div>
+            <div className="grid grid-cols-2 gap-2.5">
+              {toolDrawerItems.map((item) => {
                 const active = isItemActive(item);
-                const locked = item.proOnly && !isPro;
+                const sub = drawerSubLabels[item.path];
                 return (
                   <NavLink
                     key={item.path}
                     to={getNavTo(item)}
                     onClick={() => setMoreOpen(false)}
                     className={cn(
-                      "flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-colors min-h-[72px] justify-center",
+                      "flex flex-col gap-1 p-3 rounded-xl border transition-colors min-h-[76px] justify-center",
                       active
                         ? "border-primary/30 bg-primary/5 text-primary font-medium"
-                        : locked
-                        ? "border-border/40 text-muted-foreground/40"
-                        : "border-border/60 text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                        : "border-border/60 text-foreground hover:bg-muted/50"
                     )}
                   >
-                    <div className="relative">
-                      <item.icon className="h-5 w-5" />
-                      {locked && <Lock className="absolute -top-1 -right-1 h-2.5 w-2.5 text-muted-foreground/50" />}
-                    </div>
-                    <span className="text-xs">{t(item.labelKey)}</span>
+                    <item.icon className={cn("h-5 w-5", active ? "text-primary" : "text-muted-foreground")} />
+                    <span className="text-[13px] leading-tight">{t(item.labelKey)}</span>
+                    {sub && (
+                      <span className="text-[10px] text-muted-foreground leading-tight truncate">{sub}</span>
+                    )}
                   </NavLink>
                 );
               })}
             </div>
-            <div className="mt-4 pt-3 border-t border-border/40">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="w-full justify-start gap-2.5 text-sm text-muted-foreground hover:text-destructive"
+
+            {/* Seção 2 — Conta (lista compacta) */}
+            <div className="mt-5 mb-1 px-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground/70">
+              {t("nav.section.account") !== "nav.section.account" ? t("nav.section.account") : "Conta"}
+            </div>
+            <div className="flex flex-col gap-0.5">
+              {accountDrawerItems.map((item) => {
+                const active = isItemActive(item);
+                return (
+                  <NavLink
+                    key={item.path}
+                    to={getNavTo(item)}
+                    onClick={() => setMoreOpen(false)}
+                    className={cn(
+                      "flex items-center gap-3 px-2 py-2.5 rounded-lg text-[13px] transition-colors",
+                      active
+                        ? "bg-primary/5 text-primary font-medium"
+                        : "text-foreground hover:bg-muted/50"
+                    )}
+                  >
+                    <item.icon className={cn("h-4 w-4", active ? "text-primary" : "text-muted-foreground")} />
+                    <span>{t(item.labelKey)}</span>
+                  </NavLink>
+                );
+              })}
+              <button
                 onClick={() => { setMoreOpen(false); handleSignOut(); }}
+                className="flex items-center gap-3 px-2 py-2.5 rounded-lg text-[13px] text-muted-foreground hover:bg-destructive/5 hover:text-destructive transition-colors text-left"
               >
                 <LogOut className="h-4 w-4" />
-                {t("nav.logout")}
-              </Button>
+                <span>{t("nav.logout")}</span>
+              </button>
             </div>
           </SheetContent>
         </Sheet>
