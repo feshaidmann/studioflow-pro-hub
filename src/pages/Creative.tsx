@@ -17,7 +17,7 @@ import StyleChips from "@/components/creative/StyleChips";
 import ImagePreview from "@/components/creative/ImagePreview";
 import ReferenceImageUpload from "@/components/creative/ReferenceImageUpload";
 import DeriveBatchDialog from "@/components/creative/DeriveBatchDialog";
-import GalleryDetailSheet from "@/components/creative/GalleryDetailSheet";
+import GalleryLightbox from "@/components/creative/GalleryLightbox";
 import QuickTemplates, { type QuickTemplate } from "@/components/creative/QuickTemplates";
 import { useCreativeAssets } from "@/hooks/useCreativeAssets";
 import { useProjects } from "@/contexts/ProjectContext";
