@@ -99,7 +99,52 @@ export default function Creative() {
     ? projects.find((p) => p.id === selectedProjectId)
     : null;
 
-  // Unified generate handler
+  // DNA param: load analysis and pre-fill prompt
+  useEffect(() => {
+    if (!dnaParam) return;
+    const loadDNA = async () => {
+      let diagnosis: DiagnosisResult | null = null;
+      let trackName = "";
+
+      if (dnaParam === "session") {
+        const cached = getCachedAnalysis();
+        if (cached) {
+          diagnosis = cached.diagnosis;
+          trackName = cached.input?.name || "";
+        }
+      } else {
+        // UUID — fetch from database
+        const { data, error } = await supabase
+          .from("music_dna_analyses")
+          .select("*")
+          .eq("id", dnaParam)
+          .single();
+        if (!error && data) {
+          diagnosis = data.diagnosis as unknown as DiagnosisResult;
+          trackName = data.track_name || "";
+        }
+      }
+
+      if (diagnosis) {
+        setDnaSource(diagnosis);
+        const builtPrompt = buildDNAPrompt(diagnosis, trackName);
+        setPrompt(builtPrompt);
+        // Default to spotify_cover format
+        const spotifyFmt = FORMAT_OPTIONS.find((f) => f.id === "spotify_cover");
+        if (spotifyFmt) setSelectedFormat(spotifyFmt);
+      }
+
+      // Clean the dna param from URL to avoid re-triggering
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete("dna");
+        return next;
+      }, { replace: true });
+    };
+    loadDNA();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dnaParam]);
+
   const handleGenerate = useCallback(async () => {
     if (!prompt.trim()) {
       toast({ title: "Descreva sua ideia", description: "O campo de prompt não pode estar vazio.", variant: "destructive" });
