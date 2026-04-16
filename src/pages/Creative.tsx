@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Palette, Sparkles, Trash2, ImageIcon, Download, Copy, FileText, Dna, X, Music, User, CalendarDays, ChevronDown } from "lucide-react";
+import { Palette, Sparkles, Trash2, ImageIcon, Download, Copy, FileText, Dna, X, Music, User, CalendarDays, ChevronDown, Video, PlayCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -26,6 +26,7 @@ import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { getCachedAnalysis } from "@/hooks/useSavedAnalyses";
 import type { DiagnosisResult } from "@/hooks/useMusicDNA";
+import { generateVideoLoop, type LoopMotion } from "@/components/creative/VideoLoopGenerator";
 
 async function downloadFile(url: string, filename: string) {
   try {
@@ -122,6 +123,14 @@ export default function Creative() {
   const [trackName, setTrackName] = useState("");
   const [artistName, setArtistName] = useState("");
   const [releaseDate, setReleaseDate] = useState("");
+
+  // Video loop state
+  const [loopDuration, setLoopDuration] = useState<3 | 4 | 5>(4);
+  const [loopMotion, setLoopMotion] = useState<LoopMotion>("zoom");
+  const [generatedVideoUrl, setGeneratedVideoUrl] = useState<string | null>(null);
+  const [generatedVideoBlob, setGeneratedVideoBlob] = useState<Blob | null>(null);
+  const [videoStatus, setVideoStatus] = useState<string | null>(null);
+  const [videoRendering, setVideoRendering] = useState(false);
 
   const RELEASE_FORMATS = ["spotify_cover", "deezer_cover", "tidal_cover"];
   const isReleaseFormat = RELEASE_FORMATS.includes(selectedFormat.id);
