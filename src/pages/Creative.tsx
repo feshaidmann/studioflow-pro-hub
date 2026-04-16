@@ -773,7 +773,7 @@ export default function Creative() {
                   <Card
                     key={a.id}
                     className="overflow-hidden cursor-pointer group relative"
-                    onClick={() => setDetailAsset(a)}
+                    onClick={() => setLightboxIndex(filteredAssets.indexOf(a))}
                   >
                     <CardContent className="p-0 relative">
                       {isVideoAsset ? (
