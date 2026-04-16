@@ -26,7 +26,9 @@ import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { getCachedAnalysis } from "@/hooks/useSavedAnalyses";
 import type { DiagnosisResult } from "@/hooks/useMusicDNA";
-import { generateVideoLoop, type LoopMotion } from "@/components/creative/VideoLoopGenerator";
+import { generateVideoLoop, type VideoPreset } from "@/components/creative/VideoLoopGenerator";
+import { VideoEffectPicker } from "@/components/creative/VideoEffectPicker";
+import type { Intensity } from "@/components/creative/videoLayers";
 
 async function downloadFile(url: string, filename: string) {
   try {
