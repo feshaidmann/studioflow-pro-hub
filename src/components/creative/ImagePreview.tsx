@@ -10,9 +10,19 @@ const LOADING_PHASES = [
   "Finalizando…",
 ];
 
+const VIDEO_LOADING_PHASES = [
+  "Interpretando sua ideia…",
+  "Compondo a arte…",
+  "Renderizando vídeo loop…",
+  "Finalizando…",
+];
+
 interface Props {
   imageUrl: string | null;
+  videoUrl?: string | null;
   isLoading: boolean;
+  isVideoMode?: boolean;
+  videoStatus?: string | null;
   onRegenerate: () => void;
   onEdit: () => void;
   onDownload: () => void;
@@ -24,7 +34,7 @@ interface Props {
 }
 
 export default function ImagePreview({
-  imageUrl, isLoading,
+  imageUrl, videoUrl, isLoading, isVideoMode, videoStatus,
   onRegenerate, onEdit, onDownload, onSave, isSaved,
   onDerive, formatLabel, aspectRatio = 1,
 }: Props) {
@@ -32,11 +42,12 @@ export default function ImagePreview({
 
   useEffect(() => {
     if (!isLoading) { setLoadingPhase(0); return; }
+    const phases = isVideoMode ? VIDEO_LOADING_PHASES : LOADING_PHASES;
     const interval = setInterval(() => {
-      setLoadingPhase((p) => (p + 1) % LOADING_PHASES.length);
-    }, 5000);
+      setLoadingPhase((p) => (p + 1) % phases.length);
+    }, 4000);
     return () => clearInterval(interval);
-  }, [isLoading]);
+  }, [isLoading, isVideoMode]);
 
   const aspectClass = aspectRatio >= 1.5
     ? "aspect-video"
@@ -45,35 +56,54 @@ export default function ImagePreview({
       : "aspect-square";
 
   if (isLoading) {
+    const phases = isVideoMode ? VIDEO_LOADING_PHASES : LOADING_PHASES;
     return (
       <div className="flex flex-col items-center gap-4">
         <Skeleton className={cn("w-full max-w-md rounded-xl", aspectClass)} />
         <p className="text-sm text-muted-foreground animate-pulse">
-          {LOADING_PHASES[loadingPhase]}
+          {videoStatus || phases[loadingPhase]}
         </p>
       </div>
     );
   }
 
-  if (!imageUrl) {
+  if (!imageUrl && !videoUrl) {
     return (
       <div className="flex items-center justify-center border border-dashed border-border/60 rounded-xl p-12 text-center">
         <p className="text-sm text-muted-foreground">
-          Descreva sua ideia acima e clique em <strong>Gerar</strong>.
+          Descreva sua ideia acima e clique em <strong>{isVideoMode ? "Gerar Vídeo Loop" : "Gerar"}</strong>.
         </p>
       </div>
     );
   }
 
+  const isShowingVideo = !!videoUrl;
+  const downloadLabel = isShowingVideo ? "Baixar .webm" : "Baixar";
+
   return (
     <div className="flex flex-col items-center gap-3">
-      <div className="relative rounded-xl overflow-hidden border border-border/40 shadow-sm max-w-md w-full">
-        <img src={imageUrl} alt="Imagem gerada" className={cn("w-full h-auto")} />
+      <div className="relative rounded-xl overflow-hidden border border-border/40 shadow-sm max-w-md w-full bg-muted/30">
+        {isShowingVideo ? (
+          <video
+            src={videoUrl!}
+            className="w-full h-auto"
+            autoPlay
+            loop
+            muted
+            playsInline
+            controls
+          />
+        ) : (
+          <img src={imageUrl!} alt="Imagem gerada" className={cn("w-full h-auto")} />
+        )}
       </div>
 
-      {formatLabel && (
-        <div className="flex items-center gap-3 text-xs text-muted-foreground">
-          <span className="bg-muted px-2 py-0.5 rounded-full">{formatLabel}</span>
+      {(formatLabel || isShowingVideo) && (
+        <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap justify-center">
+          {formatLabel && <span className="bg-muted px-2 py-0.5 rounded-full">{formatLabel}</span>}
+          {isShowingVideo && (
+            <span className="bg-primary/10 text-primary px-2 py-0.5 rounded-full">loop animado</span>
+          )}
         </div>
       )}
 
@@ -84,15 +114,17 @@ export default function ImagePreview({
           </Button>
         )}
         <Button size="sm" variant={onSave ? "outline" : "default"} onClick={onDownload}>
-          <Download className="h-3.5 w-3.5 mr-1.5" /> Baixar
+          <Download className="h-3.5 w-3.5 mr-1.5" /> {downloadLabel}
         </Button>
         <Button variant="outline" size="sm" onClick={onRegenerate}>
           <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Variação
         </Button>
-        <Button variant="outline" size="sm" onClick={onEdit}>
-          <Pencil className="h-3.5 w-3.5 mr-1.5" /> Editar
-        </Button>
-        {onDerive && (
+        {!isShowingVideo && (
+          <Button variant="outline" size="sm" onClick={onEdit}>
+            <Pencil className="h-3.5 w-3.5 mr-1.5" /> Editar
+          </Button>
+        )}
+        {onDerive && !isShowingVideo && (
           <Button variant="ghost" size="sm" onClick={onDerive}>
             <Layers className="h-3.5 w-3.5 mr-1.5" /> Desdobrar
           </Button>
