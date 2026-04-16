@@ -253,6 +253,31 @@ export default function Creative() {
       setGeneratedImage(result.imageBase64);
       setGeneratedBase64(result.imageBase64);
       setSavedToGallery(false);
+      setGeneratedVideoUrl(null);
+      setGeneratedVideoBlob(null);
+
+      // If selected format is a video, render the loop in the browser
+      if (selectedFormat.isVideo) {
+        try {
+          setVideoRendering(true);
+          setVideoStatus("Renderizando vídeo loop…");
+          const blob = await generateVideoLoop({
+            imageUrl: result.imageBase64,
+            width: selectedFormat.width,
+            height: selectedFormat.height,
+            durationSec: loopDuration,
+            motion: loopMotion,
+          });
+          const url = URL.createObjectURL(blob);
+          setGeneratedVideoBlob(blob);
+          setGeneratedVideoUrl(url);
+          setVideoStatus(null);
+        } catch (e: any) {
+          toast({ title: "Erro ao gerar vídeo", description: e?.message || "Falha na renderização", variant: "destructive" });
+        } finally {
+          setVideoRendering(false);
+        }
+      }
 
       if (dnaSource) {
         setDnaCopyLoading(true);
@@ -264,7 +289,7 @@ export default function Creative() {
         setDnaCopyLoading(false);
       }
     }
-  }, [prompt, style, selectedFormat, linkedProject, selectedProjectId, generate, referenceImage, dnaSource, generateText, trackName, artistName, releaseDate]);
+  }, [prompt, style, selectedFormat, linkedProject, selectedProjectId, generate, referenceImage, dnaSource, generateText, trackName, artistName, releaseDate, loopDuration, loopMotion]);
 
   const handleVariation = useCallback(async () => {
     if (!generatedBase64 || !prompt.trim()) {
@@ -325,6 +350,13 @@ export default function Creative() {
   };
 
   const handleDownload = () => {
+    if (generatedVideoUrl && generatedVideoBlob) {
+      const a = document.createElement("a");
+      a.href = generatedVideoUrl;
+      a.download = `criativo_${selectedFormat.id}_${Date.now()}.webm`;
+      a.click();
+      return;
+    }
     if (!generatedBase64) return;
     const a = document.createElement("a");
     a.href = generatedBase64;
@@ -333,15 +365,17 @@ export default function Creative() {
   };
 
   const handleSaveToGallery = async () => {
-    if (!generatedBase64 || savedToGallery) return;
+    if (savedToGallery) return;
+    if (!generatedBase64 && !generatedVideoBlob) return;
     const result = await saveAsset({
-      imageBase64: generatedBase64,
+      imageBase64: generatedBase64 || "",
       prompt,
       style,
       format: selectedFormat.id,
       width: selectedFormat.width,
       height: selectedFormat.height,
       projectId: selectedProjectId && selectedProjectId !== "none" ? selectedProjectId : undefined,
+      videoBlob: generatedVideoBlob || undefined,
     });
     if (result) setSavedToGallery(true);
   };
