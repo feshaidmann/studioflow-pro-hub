@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { useEditalAI, type AIAction, AI_ACTION_LABELS } from "@/hooks/useEditalAI";
 import { useUpsertEditalDocument } from "@/hooks/useEditalDocuments";
 import { toast } from "sonner";
-import ReactMarkdown from "react-markdown";
+import { AIMarkdownContent } from "@/components/ui/ai-markdown-content";
 
 interface Project {
   id: string;
@@ -286,9 +286,7 @@ export default function EditalAIAssistant({ projects, context, defaultAction, on
               </Badge>
             </div>
 
-            <div className="bg-muted/30 rounded-lg p-3 text-sm max-h-80 overflow-y-auto prose prose-sm prose-neutral max-w-none [&_p]:mb-2 [&_ul]:mb-2 [&_ol]:mb-2 [&_li]:mb-0.5">
-              <ReactMarkdown>{lastResult}</ReactMarkdown>
-            </div>
+            <AIMarkdownContent content={lastResult} className="bg-muted/30 rounded-lg p-3 max-h-80 overflow-y-auto" />
 
             {/* Action bar */}
             <div className="flex gap-2 flex-wrap pt-1">
