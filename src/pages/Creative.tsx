@@ -38,9 +38,34 @@ async function downloadFile(url: string, filename: string) {
   }
 }
 
+function buildDNAPrompt(diagnosis: DiagnosisResult, trackName: string): string {
+  const parts: string[] = [];
+  const genre = diagnosis.genero_classificado;
+  if (genre) parts.push(`Capa artística para single de ${genre}.`);
+
+  const mood = diagnosis.identidade?.mood_principal;
+  if (mood) parts.push(`Atmosfera: ${mood}.`);
+
+  const territory = diagnosis.identidade?.territorio_sonoro;
+  if (territory) parts.push(`Cenário: ${territory}.`);
+
+  const tags = diagnosis.identidade?.tags;
+  if (tags && tags.length > 0) parts.push(`Elementos visuais: ${tags.join(", ")}.`);
+
+  const instruments = diagnosis.detectedInstruments;
+  if (instruments && instruments.length > 0) {
+    parts.push(`Inclua ${instruments.join(" e ")} na composição.`);
+  }
+
+  if (trackName) parts.push(`Título da faixa: '${trackName}'.`);
+
+  return parts.join(" ") || "Capa artística para single musical.";
+}
+
 export default function Creative() {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const projectIdParam = searchParams.get("project");
+  const dnaParam = searchParams.get("dna");
   const { projects } = useProjects();
 
   const [selectedFormat, setSelectedFormat] = useState<FormatOption>(FORMAT_OPTIONS[0]);
