@@ -38,10 +38,32 @@ async function downloadFile(url: string, filename: string) {
   }
 }
 
-function buildDNAPrompt(diagnosis: DiagnosisResult, trackName: string): string {
+const FORMAT_PROMPT_PREFIX: Record<string, string> = {
+  instagram_post: "Post artístico para Instagram",
+  story: "Story vertical impactante",
+  youtube_cover: "Capa cinematográfica para YouTube",
+  spotify_cover: "Capa artística para single/álbum",
+  spotify_canvas: "Canvas animado vertical para Spotify",
+  spotify_banner: "Banner horizontal para perfil Spotify",
+  deezer_cover: "Capa artística para single/álbum",
+  tidal_cover: "Capa artística para single/álbum",
+  twitter_post: "Post visual para Twitter/X",
+  custom: "Arte visual personalizada",
+};
+
+function getFormatPrefix(formatId: string): string {
+  return FORMAT_PROMPT_PREFIX[formatId] || "Arte visual";
+}
+
+function buildDNAPrompt(diagnosis: DiagnosisResult, trackName: string, formatId = "spotify_cover"): string {
   const parts: string[] = [];
+  const prefix = getFormatPrefix(formatId);
   const genre = diagnosis.genero_classificado;
-  if (genre) parts.push(`Capa artística para single de ${genre}.`);
+  if (genre) {
+    parts.push(`${prefix} de ${genre}.`);
+  } else {
+    parts.push(`${prefix} para single musical.`);
+  }
 
   const mood = diagnosis.identidade?.mood_principal;
   if (mood) parts.push(`Atmosfera: ${mood}.`);
@@ -59,7 +81,7 @@ function buildDNAPrompt(diagnosis: DiagnosisResult, trackName: string): string {
 
   if (trackName) parts.push(`Título da faixa: '${trackName}'.`);
 
-  return parts.join(" ") || "Capa artística para single musical.";
+  return parts.join(" ") || `${prefix} para single musical.`;
 }
 
 export default function Creative() {
@@ -92,6 +114,7 @@ export default function Creative() {
   const [dnaCopyText, setDnaCopyText] = useState<string>("");
   const [dnaCopyLoading, setDnaCopyLoading] = useState(false);
   const [dnaSource, setDnaSource] = useState<DiagnosisResult | null>(null);
+  const [dnaTrackName, setDnaTrackName] = useState("");
 
   const { assets, isLoading: assetsLoading, generating, generate, generateBatch, generateText, deleteAsset } = useCreativeAssets();
 
@@ -127,11 +150,11 @@ export default function Creative() {
 
       if (diagnosis) {
         setDnaSource(diagnosis);
-        const builtPrompt = buildDNAPrompt(diagnosis, trackName);
-        setPrompt(builtPrompt);
-        // Default to spotify_cover format
+        setDnaTrackName(trackName);
         const spotifyFmt = FORMAT_OPTIONS.find((f) => f.id === "spotify_cover");
-        if (spotifyFmt) setSelectedFormat(spotifyFmt);
+        const fmt = spotifyFmt || FORMAT_OPTIONS[0];
+        if (spotifyFmt) setSelectedFormat(fmt);
+        setPrompt(buildDNAPrompt(diagnosis, trackName, fmt.id));
       }
 
       // Clean the dna param from URL to avoid re-triggering
@@ -144,6 +167,24 @@ export default function Creative() {
     loadDNA();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dnaParam]);
+
+  // Update prompt when format changes
+  useEffect(() => {
+    if (dnaSource) {
+      setPrompt(buildDNAPrompt(dnaSource, dnaTrackName, selectedFormat.id));
+    } else if (prompt.trim()) {
+      const allPrefixes = Object.values(FORMAT_PROMPT_PREFIX);
+      let updated = prompt;
+      for (const prefix of allPrefixes) {
+        if (updated.startsWith(prefix)) {
+          updated = getFormatPrefix(selectedFormat.id) + updated.slice(prefix.length);
+          break;
+        }
+      }
+      if (updated !== prompt) setPrompt(updated);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedFormat.id]);
 
   const handleGenerate = useCallback(async () => {
     if (!prompt.trim()) {
