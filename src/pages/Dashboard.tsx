@@ -191,6 +191,7 @@ export default function Dashboard() {
     } else {
       // Proactive chips
       chips.push({ label: "🔍 Revisão geral", msg: "Faça uma revisão geral de todos os meus projetos. O que está indo bem e o que precisa de atenção? Me dê um resumo executivo com ações." });
+      chips.push({ label: "🎛️ Dúvida técnica", msg: "Sou artista independente e tenho uma dúvida técnica sobre produção musical. Me ajude como se fosse um engenheiro de áudio experiente. Posso descrever minha dúvida a seguir." });
       const nearRelease = projects.find((p) => p.stage === "upload" || p.stage === "master");
       if (nearRelease) {
         chips.push({ label: `🚀 ${nearRelease.name} quase lá`, msg: `Meu projeto "${nearRelease.name}" está no estágio ${nearRelease.stage}. O que falta para lançar? Revise o checklist de lançamento.` });

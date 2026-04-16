@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Sparkles, Copy, Check, Save, Loader2, FileText, ClipboardList, RefreshCw, BookmarkPlus, ChevronRight } from "lucide-react";
+import { ArrowLeft, Sparkles, Copy, Check, Save, Loader2, FileText, ClipboardList, RefreshCw, BookmarkPlus, ChevronRight, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -85,20 +85,32 @@ export default function EditalInscricao() {
     extractFields(edital.link || undefined, edital.titulo);
   };
 
-  // Pre-fill simple fields from profile
+  // Pre-fill simple fields from profile — more aggressive matching
   const preFillProfile = useCallback(() => {
     if (!extractedFields?.campos || !profile) return;
     const vals = { ...formValues };
+    let filled = 0;
     for (const campo of extractedFields.campos) {
       const key = campo.nome;
       if (vals[key]) continue;
       const lower = key.toLowerCase();
-      if (lower.includes("nome") && lower.includes("proponente")) vals[key] = profile.display_name || "";
-      else if (lower.includes("email")) vals[key] = profile.public_email || "";
-      else if (lower.includes("telefone") || lower.includes("whatsapp")) vals[key] = profile.whatsapp || "";
-      else if (lower.includes("cidade") || lower.includes("município")) vals[key] = profile.city || "";
+      if ((lower.includes("nome") && (lower.includes("proponente") || lower.includes("artista") || lower.includes("responsável"))) || lower === "nome completo" || lower === "nome") {
+        vals[key] = profile.display_name || ""; filled++;
+      } else if (lower.includes("email")) {
+        vals[key] = profile.public_email || ""; filled++;
+      } else if (lower.includes("telefone") || lower.includes("whatsapp") || lower.includes("celular")) {
+        vals[key] = profile.whatsapp || ""; filled++;
+      } else if (lower.includes("cidade") || lower.includes("município") || lower.includes("localidade")) {
+        vals[key] = profile.city || ""; filled++;
+      } else if (lower.includes("biografia") || lower.includes("currículo") || lower.includes("trajetória") || lower.includes("histórico")) {
+        vals[key] = profile.bio || ""; filled++;
+      } else if (lower.includes("área") || lower.includes("linguagem") || lower.includes("segmento")) {
+        const specs = profile.specialties?.join(", ");
+        if (specs) { vals[key] = specs; filled++; }
+      }
     }
     setFormValues(vals);
+    if (filled > 0) toast.success(`${filled} campo${filled > 1 ? "s" : ""} preenchido${filled > 1 ? "s" : ""} com seu perfil`);
   }, [extractedFields, profile, formValues]);
 
   // Batch fill all textarea fields with AI
@@ -352,6 +364,10 @@ export default function EditalInscricao() {
 
           {/* Actions bar */}
           <div className="flex gap-2 flex-wrap">
+            <Button size="sm" variant="outline" onClick={preFillProfile}>
+              <User className="h-3.5 w-3.5 mr-1.5" />
+              Preencher com meu perfil
+            </Button>
             <Button size="sm" onClick={handleBatchFill} disabled={batchFilling}>
               <Sparkles className="h-3.5 w-3.5 mr-1.5" />
               {batchFilling

@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   Truck, FileText, Scale, Image, Globe, CheckCircle2,
-  ChevronDown, Loader2, AlertTriangle,
+  ChevronDown, Loader2, AlertTriangle, Megaphone, MessageCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -18,6 +18,7 @@ const SECTION_ICON: Record<string, React.ElementType> = {
   juridico: Scale,
   conteudo: Image,
   plataformas: Globe,
+  divulgacao: Megaphone,
   status_final: CheckCircle2,
 };
 

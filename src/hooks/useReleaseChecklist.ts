@@ -71,7 +71,18 @@ export const RELEASE_SECTIONS: SectionDef[] = [
       { key: "youtube", label: "YouTube (upload / premiere)", type: "check" },
       { key: "tiktok", label: "TikTok (pré-save / sound)", type: "check" },
       { key: "instagram", label: "Instagram (countdown / bio)", type: "check" },
+      { key: "musixmatch", label: "Letra cadastrada (MusixMatch)", type: "check" },
       { key: "outras", label: "Outras plataformas", type: "check" },
+    ],
+  },
+  {
+    key: "divulgacao",
+    label: "Divulgação",
+    items: [
+      { key: "presave_link", label: "Link de pré-save", type: "text" },
+      { key: "newsletter", label: "Newsletter / mailing", type: "check" },
+      { key: "press_release", label: "Assessoria de imprensa (release)", type: "check" },
+      { key: "whatsapp_contatos", label: "Compartilhar com contatos (WhatsApp)", type: "check" },
     ],
   },
   {

@@ -3,7 +3,7 @@ import ProjectCulturalProfile from "@/components/project-hub/ProjectCulturalProf
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import {
-  AlertTriangle, Calendar, CheckCircle2, Clock, DollarSign, ListChecks, Users, Rocket, ArrowRight,
+  AlertTriangle, Calendar, CheckCircle2, Clock, DollarSign, ListChecks, Users, Rocket, ArrowRight, MessageCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useProjects } from "@/contexts/ProjectContext";
@@ -198,6 +198,28 @@ export default function ProjectOverviewTab({ project, progress, isOwner, onSwitc
           </div>
         )}
       </div>
+
+      {/* WhatsApp share */}
+      {isOwner && (
+        <button
+          onClick={() => {
+            const text = encodeURIComponent(
+              `🎵 Atualização do projeto "${project.name}"${project.artist ? ` — ${project.artist}` : ""}\n` +
+              `📍 Estágio: ${STAGE_LABEL[project.stage] ?? project.stage}\n` +
+              `📊 Progresso do lançamento: ${releaseProgress}% (${checkedItems}/${totalItems} itens)\n\n` +
+              `Enviado via StudioFlow`
+            );
+            window.open(`https://wa.me/?text=${text}`, "_blank");
+          }}
+          className="w-full rounded-lg border border-border p-3 flex items-center gap-2.5 hover:bg-muted/30 transition-colors text-left"
+        >
+          <MessageCircle className="h-4 w-4 text-success shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium">Compartilhar via WhatsApp</p>
+            <p className="text-[10px] text-muted-foreground">Enviar resumo do projeto para contatos</p>
+          </div>
+        </button>
+      )}
 
       {/* Cultural Profile */}
       {isOwner && <ProjectCulturalProfile projectId={project.id} />}
