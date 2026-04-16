@@ -116,6 +116,7 @@ export default function Creative() {
   const [filterProject, setFilterProject] = useState<string>("all");
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; path: string } | null>(null);
   const [detailAsset, setDetailAsset] = useState<any>(null);
+  const [lightboxIndex, setLightboxIndex] = useState<number>(-1);
   const [dnaCopyText, setDnaCopyText] = useState<string>("");
   const [dnaCopyLoading, setDnaCopyLoading] = useState(false);
   const [dnaSource, setDnaSource] = useState<DiagnosisResult | null>(null);
