@@ -161,7 +161,7 @@ export default function Creative() {
       width: selectedFormat.width,
       height: selectedFormat.height,
       editImageUrl: referenceImage || undefined,
-      projectId: selectedProjectId || undefined,
+      projectId: selectedProjectId && selectedProjectId !== "none" ? selectedProjectId : undefined,
     });
 
     if (result) {
@@ -195,7 +195,7 @@ export default function Creative() {
       width: selectedFormat.width,
       height: selectedFormat.height,
       editImageUrl: generatedBase64,
-      projectId: selectedProjectId || undefined,
+      projectId: selectedProjectId && selectedProjectId !== "none" ? selectedProjectId : undefined,
     });
     if (result) {
       setGeneratedImage(result.imageUrl);
@@ -228,7 +228,7 @@ export default function Creative() {
       width: selectedFormat.width,
       height: selectedFormat.height,
       editImageUrl: generatedBase64,
-      projectId: selectedProjectId || undefined,
+      projectId: selectedProjectId && selectedProjectId !== "none" ? selectedProjectId : undefined,
     });
     if (result) {
       setGeneratedImage(result.imageUrl);
