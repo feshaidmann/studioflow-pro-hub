@@ -599,15 +599,64 @@ export default function Creative() {
                 </CollapsibleContent>
               </Collapsible>
 
+              {/* 5b. Video loop config — only when format is video */}
+              {selectedFormat.isVideo && (
+                <div className="border border-primary/30 bg-primary/5 rounded-lg p-3 space-y-3 animate-fade-in">
+                  <div className="flex items-center gap-1.5 text-xs font-medium text-primary">
+                    <Video className="h-3.5 w-3.5" />
+                    Configurações do loop animado
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-[10px] text-muted-foreground mb-1 block">Duração</label>
+                      <Select value={String(loopDuration)} onValueChange={(v) => setLoopDuration(Number(v) as 3 | 4 | 5)}>
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="3">3 segundos</SelectItem>
+                          <SelectItem value="4">4 segundos</SelectItem>
+                          <SelectItem value="5">5 segundos</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-muted-foreground mb-1 block">Movimento</label>
+                      <Select value={loopMotion} onValueChange={(v) => setLoopMotion(v as LoopMotion)}>
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="zoom">Zoom-in (Ken Burns)</SelectItem>
+                          <SelectItem value="pan">Pan horizontal</SelectItem>
+                          <SelectItem value="parallax">Parallax diagonal</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground">
+                    A IA gera a imagem e o navegador anima como vídeo loop perfeito (.webm).
+                  </p>
+                </div>
+              )}
+
               {/* 6. Generate button — desktop */}
               <div className="hidden md:block">
                 <Button
                   className="w-full"
                   onClick={handleGenerate}
-                  disabled={generating || !canGenerate}
+                  disabled={generating || videoRendering || !canGenerate}
                 >
-                  <Sparkles className="h-4 w-4 mr-1.5" />
-                  {generating ? "Gerando…" : referenceImage ? "Gerar a partir da referência" : "Gerar Imagem"}
+                  {selectedFormat.isVideo ? <Video className="h-4 w-4 mr-1.5" /> : <Sparkles className="h-4 w-4 mr-1.5" />}
+                  {generating
+                    ? "Gerando…"
+                    : videoRendering
+                      ? "Renderizando vídeo…"
+                      : selectedFormat.isVideo
+                        ? "Gerar Vídeo Loop"
+                        : referenceImage
+                          ? "Gerar a partir da referência"
+                          : "Gerar Imagem"}
                 </Button>
               </div>
             </div>
@@ -617,13 +666,16 @@ export default function Creative() {
               <label className="text-xs font-medium text-muted-foreground mb-2 block">Preview</label>
               <ImagePreview
                 imageUrl={generatedImage}
-                isLoading={generating || editingLoading}
+                videoUrl={generatedVideoUrl}
+                isLoading={generating || editingLoading || videoRendering}
+                isVideoMode={selectedFormat.isVideo}
+                videoStatus={videoStatus}
                 onRegenerate={handleVariation}
                 onEdit={handleEdit}
                 onDownload={handleDownload}
                 onSave={handleSaveToGallery}
                 isSaved={savedToGallery}
-                onDerive={generatedImage ? () => handleDerive(generatedImage) : undefined}
+                onDerive={generatedImage && !generatedVideoUrl ? () => handleDerive(generatedImage) : undefined}
                 formatLabel={selectedFormat.label}
                 aspectRatio={selectedFormat.width / selectedFormat.height}
               />
