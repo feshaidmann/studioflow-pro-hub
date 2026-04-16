@@ -1,77 +1,47 @@
 
 
-# Vídeo loop para Reels e Spotify Canvas
+# Padronização visual da seção de IA no Dashboard
 
-## Visão
-Story/Reels e Spotify Canvas (formatos verticais 1080×1920) passam a gerar **vídeo loop de 3-5 segundos** automaticamente: a IA gera uma imagem estática de alta qualidade, e o navegador anima essa imagem (Ken Burns + parallax sutil + leves variações de luz) gravando o resultado como WebM via MediaRecorder. Zero custo extra de IA, zero dependências externas.
+## Diagnóstico
 
-## Fluxo do usuário
-1. Seleciona **Story/Reels** ou **Spotify Canvas** nos chips de formato
-2. Aparece um seletor de **duração do loop** (3s / 4s / 5s) e estilo de movimento (zoom-in / pan-horizontal / parallax)
-3. Clica "Gerar Vídeo"
-4. IA gera imagem 1080×1920 (mesmo pipeline atual)
-5. Cliente renderiza a animação em `<canvas>` por N segundos a 30fps, captura via `MediaRecorder` → blob WebM
-6. Preview mostra `<video autoplay loop muted>` com download (.webm) e botão "Salvar na galeria"
-7. Galeria reconhece vídeos e renderiza `<video>` em vez de `<img>`
+Comparando com `DailyChecklist`, `ProjectAlertsCard`, `FinancialSummary` (padrão visual do dashboard), a seção de IA destoa em três pontos:
 
-## Arquitetura técnica
+1. **Card "Assistente IA"** (`Dashboard.tsx` linhas 219–285)
+   - Usa `border-primary/20` + `text-xs` + `text-primary` no título → todos os outros cards usam `glass-card` puro com `text-base` neutro e ícone `text-primary` (só o ícone, não o texto).
+   - Padding inconsistente: `pb-1 pt-3 px-4` no header e `pt-0 px-4 pb-3` no content → padrão é `pb-3` no header e `p-6 pt-0` (ou equivalente) no content.
+   - Tagline inline ("— pergunte qualquer coisa…") quebra a hierarquia visual.
 
-### 1. Detecção de formato de vídeo
-Adicionar flag `isVideo` em `FORMAT_OPTIONS` para `story` e `spotify_canvas`.
+2. **Botão "Próxima ação"** (linhas 297–326)
+   - Usa três variantes de borda/bg coloridas customizadas, label uppercase pequeno, ícone em círculo colorido → não combina com nenhum outro elemento. Deve virar um **Card** padrão com mesmo `glass-card` e indicador de severidade discreto (faixa lateral de 3px ou ícone colorido apenas).
 
-### 2. Novo componente `VideoLoopGenerator.tsx`
-- Recebe a imagem base64 + duração + estilo de movimento + dimensões
-- Cria `<canvas>` offscreen 1080×1920
-- Loop de animação com `requestAnimationFrame`:
-  - **Ken Burns**: `scale` de 1.0 → 1.12 e translate sutil (volta ao início no fim do loop = loop perfeito)
-  - **Parallax**: aplicar leve gradient overlay animado (vignette deslizando) por cima
-  - **Brilho pulsante**: filter `brightness(0.95 → 1.05 → 0.95)` em senoide
-- Usa `canvas.captureStream(30)` + `MediaRecorder` (`video/webm;codecs=vp9` com fallback `vp8`)
-- Garante loop perfeito: keyframes do início = keyframes do fim
-- Retorna `Blob` WebM
+3. **Hierarquia interna do chat (`AITaskAssistant.tsx`)**: o container interno (`rounded-lg border border-border/40 bg-card/40`) duplica visualmente o card pai, criando "card dentro de card". Trocar para fundo transparente sem borda quando `alwaysOpen`.
 
-### 3. Estado e UI em `Creative.tsx`
-- Novo estado: `loopDuration` (3|4|5), `loopMotion` ('zoom'|'pan'|'parallax')
-- Quando `selectedFormat.isVideo`: 
-  - mostrar painel "Configurações do loop" com 2 selects compactos
-  - botão muda de "Gerar Imagem" → "Gerar Vídeo Loop"
-  - após `generate()` retornar imagem, chamar `VideoLoopGenerator` para produzir blob
-  - armazenar em `generatedVideoBlob` + URL via `URL.createObjectURL`
-- Preview condicional: se vídeo, renderiza `<video src loop autoplay muted playsInline>`; senão `<img>`
+## Mudanças propostas
 
-### 4. Salvar na galeria
-- `useCreativeAssets.saveAsset` ganha parâmetro opcional `videoBlob`
-- Quando presente, faz upload do `.webm` (mime `video/webm`) ao bucket `creative-assets` em vez do PNG
-- `creative_assets` precisa de coluna nova `media_type` ('image' | 'video') — **migração SQL**
-- `public_url` aponta para o webm; `storage_path` termina em `.webm`
+### A) Card "Assistente IA" → padrão `glass-card`
+- Remover `border-primary/20 shadow-sm` (já vem do `glass-card`).
+- Header: `pb-3` (padrão), título `text-base flex items-center gap-2`, ícone `Bot h-4 w-4 text-primary`, texto `Assistente IA` em cor neutra (`foreground`).
+- Mover a tagline ("pergunte qualquer coisa…") para `CardDescription` abaixo do título, só em desktop, no mesmo tom `text-muted-foreground text-xs`.
+- Chevron de collapse alinhado à direita com `ml-auto` mantendo padrão.
+- Content: `px-6 pb-6 pt-0` (alinhado aos demais cards) ou `p-4 pt-0` se for para manter compactação mobile — usar mesma escala do `DailyChecklist`.
 
-### 5. Renderização na galeria
-- `GalleryDetailSheet` e cards da galeria detectam `media_type === 'video'` e renderizam `<video controls loop>`
-- Ícone de play overlay nas miniaturas para vídeos
+### B) Card "Próxima ação" → componente harmonizado
+Transformar o `<button>` solto em um `Card glass-card` clicável compacto:
+- Mesma borda/raio dos outros cards (`rounded-xl border-border/60`).
+- Faixa lateral colorida de 3px (`border-l-4`) indicando severidade (`border-l-destructive` / `border-l-warning` / `border-l-primary`) — substitui as três variantes de bg/border atuais.
+- Ícone Bot dentro de círculo `bg-muted` neutro (sem três variantes coloridas) + cor apenas no ícone conforme severidade.
+- Tipografia: label "Próxima ação" como `text-xs text-muted-foreground` (sem uppercase exagerado), título em `text-sm font-medium`.
+- Hover sutil padrão (`hover:bg-muted/30` já está ok).
 
-### 6. ImagePreview
-- Renomear conceitualmente; aceitar prop `videoUrl?: string` que sobrescreve a renderização para `<video>`
-- Botões "Baixar" passam a usar extensão `.webm` quando vídeo
+### C) Container interno do chat (`AITaskAssistant.tsx`)
+- Quando `alwaysOpen`: remover `border border-border/40 bg-card/40` do wrapper das mensagens — fica fundo transparente, sem "card duplo".
+- Manter borda/bg só no popover (modo não-`alwaysOpen`).
 
-## Migração SQL necessária
-```sql
-ALTER TABLE creative_assets 
-ADD COLUMN media_type text NOT NULL DEFAULT 'image' 
-CHECK (media_type IN ('image', 'video'));
-```
+## Arquivos modificados
 
-## Limitações conhecidas (transparentes ao usuário)
-- Saída em **WebM** (suportado por Chrome/Firefox/Edge nativamente; Safari recente também). Instagram aceita WebM convertendo automaticamente; para upload manual, usuário pode converter, mas a maioria das plataformas aceita direto.
-- Movimento é "animação de imagem", não geração de vídeo verdadeira — comunicar isso na UI com label sutil "loop animado"
-- Tamanho do arquivo: ~1-3 MB para 5s a 1080×1920 (aceitável)
+- `src/pages/Dashboard.tsx` — refatorar `aiAssistantCard` (header padrão) e botão `nextAction` (virar Card com faixa lateral).
+- `src/components/AITaskAssistant.tsx` — `chatBody` sem moldura quando `alwaysOpen`; ajustar paddings internos.
 
-## Arquivos modificados/criados
-- **Criar** `src/components/creative/VideoLoopGenerator.ts` (lógica pura: imagem + params → Blob)
-- **Modificar** `src/components/creative/FormatSelector.tsx` (flag `isVideo` em story e spotify_canvas)
-- **Modificar** `src/components/creative/FormatChips.tsx` (badge "vídeo" nos formatos com loop)
-- **Modificar** `src/components/creative/ImagePreview.tsx` (suporte a `videoUrl`)
-- **Modificar** `src/components/creative/GalleryDetailSheet.tsx` (renderização condicional)
-- **Modificar** `src/pages/Creative.tsx` (estados, painel de configuração, fluxo de geração de vídeo, preview condicional)
-- **Modificar** `src/hooks/useCreativeAssets.ts` (saveAsset aceita videoBlob, upload .webm)
-- **Migração** adicionar coluna `media_type` em `creative_assets`
+## Sem migrações de banco
+Mudanças puramente visuais.
 
