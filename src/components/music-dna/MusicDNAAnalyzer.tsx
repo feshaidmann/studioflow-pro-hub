@@ -1002,15 +1002,28 @@ export function MusicDNAAnalyzer() {
       )}
 
       {activeDiagnosis && lastInput ? (
-        <ResultView
-          input={lastInput}
-          diagnosis={activeDiagnosis}
-          onReset={handleReset}
-          onSave={handleSave}
-          isSaved={isSaved}
-          isSaving={isSaving}
-          savedAnalysisId={savedAnalysisId}
-        />
+        <>
+          {restoredFromCache && (
+            <div className="mb-4 flex items-center justify-between gap-3 p-3 rounded-lg bg-muted/40 border border-border animate-fade-in">
+              <p className="text-xs text-muted-foreground">
+                <History className="inline h-3 w-3 mr-1.5 -mt-0.5" />
+                Você está vendo a última análise restaurada da sessão.
+              </p>
+              <Button variant="outline" size="sm" className="text-xs gap-1.5 shrink-0" onClick={handleReset}>
+                ↻ Nova análise
+              </Button>
+            </div>
+          )}
+          <ResultView
+            input={lastInput}
+            diagnosis={activeDiagnosis}
+            onReset={handleReset}
+            onSave={handleSave}
+            isSaved={isSaved}
+            isSaving={isSaving}
+            savedAnalysisId={savedAnalysisId}
+          />
+        </>
       ) : isPending ? (
         <LoadingView
           trackName={lastInput?.name ?? ""}
