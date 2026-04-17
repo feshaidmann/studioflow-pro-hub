@@ -186,16 +186,19 @@ serve(async (req) => {
       systemParts.push("ABSOLUTE TEXT BAN: Do NOT render ANY text, letters, numbers, words, logos, watermarks or typography in the image. Pure visual composition only. Ignore any track title, artist name, release date or additional text fields — render none of them.");
     } else {
       if (trackName) {
-        systemParts.push(`Song title: "${trackName}". If appropriate for this format and composition, you may include it as readable typography. A minimalist composition may omit it.`);
+        systemParts.push(`MANDATORY TEXT — SONG TITLE: You MUST render the exact string "${trackName}" as the most prominent, clearly legible typography in the image. This is the song title and is REQUIRED — do not omit it, do not paraphrase it, do not translate it, do not abbreviate it. Spell it character-for-character exactly as written. Choose typography, size and placement that make it the dominant text element of the composition.`);
       }
       if (artistName) {
-        systemParts.push(`Artist name: "${artistName}". If appropriate, include it as readable text.`);
+        systemParts.push(`MANDATORY TEXT — ARTIST NAME: You MUST render the exact string "${artistName}" as clearly legible secondary typography in the image (smaller than the song title but still prominent). Required — do not omit, paraphrase, translate or abbreviate. Spell it character-for-character exactly as written.`);
       }
       if (releaseDate) {
-        systemParts.push(`Release date: ${releaseDate}. Include only if it fits the composition.`);
+        systemParts.push(`Release date: ${releaseDate}. Include as small supporting text if it fits the composition.`);
       }
       if (additionalText) {
         systemParts.push(`Additional text to render in the artwork (if appropriate): "${additionalText}". This is short supporting copy such as a tagline, edition number, or featured artist mention. Render it as legible typography only when it suits the composition.`);
+      }
+      if (trackName || artistName) {
+        systemParts.push("CRITICAL: Verify before finalizing that every mandatory text string above appears spelled exactly as given. Misspellings, omissions, or substitutions are not acceptable.");
       }
     }
 
