@@ -249,15 +249,9 @@ export default function Creative() {
       toast({ title: "Descreva sua ideia", description: "O campo de prompt não pode estar vazio.", variant: "destructive" });
       return;
     }
-    const metaParts: string[] = [];
-    if (trackName.trim()) metaParts.push(`Nome da música: "${trackName.trim()}"`);
-    if (artistName.trim()) metaParts.push(`Artista: "${artistName.trim()}"`);
-    if (releaseDate) metaParts.push(`Data de lançamento: ${releaseDate}`);
-    const metaPrefix = metaParts.length > 0 ? metaParts.join(". ") + ". " : "";
-
     const contextPrompt = linkedProject
-      ? `${metaPrefix}Para o projeto "${linkedProject.name}" do artista "${linkedProject.artist}". ${prompt}`
-      : `${metaPrefix}${prompt}`;
+      ? `Para o projeto "${linkedProject.name}" do artista "${linkedProject.artist}". ${prompt}`
+      : prompt;
 
     const result = await generate({
       prompt: contextPrompt,
@@ -322,14 +316,7 @@ export default function Creative() {
       handleGenerate();
       return;
     }
-    // Re-lê os campos personalizados atuais antes de regerar
-    const metaParts: string[] = [];
-    if (trackName.trim()) metaParts.push(`Nome da música: "${trackName.trim()}"`);
-    if (artistName.trim()) metaParts.push(`Artista: "${artistName.trim()}"`);
-    if (releaseDate) metaParts.push(`Data de lançamento: ${releaseDate}`);
-    const metaPrefix = metaParts.length > 0 ? metaParts.join(". ") + ". " : "";
-
-    const variationPrompt = `${metaPrefix}Crie uma variação desta arte mantendo o conceito mas alterando composição e paleta. Conceito original: ${prompt}`;
+    const variationPrompt = `Crie uma variação desta arte mantendo o conceito mas alterando composição e paleta. Conceito original: ${prompt}`;
     const result = await generate({
       prompt: variationPrompt,
       style,
