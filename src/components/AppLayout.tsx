@@ -342,15 +342,33 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
         )}
 
-        {/* Nav */}
+        {/* Nav — hierarquia espelhada do mobile */}
         <nav className="flex flex-1 flex-col p-2 gap-0.5 overflow-y-auto">
           <TooltipProvider delayDuration={200}>
+            {/* Principal: Home, Projetos, Finanças, Agenda */}
             {principalItems.map(renderNavItem)}
+            {renderNavItem(gestaoItems[0])}
+            {renderNavItem(gestaoItems[1])}
 
+            {/* Ferramentas: Editais, Profissionais, Criativo, DNA */}
             <div className="my-2 border-t border-border/30" />
-            {gestaoItems.map(renderNavItem)}
+            {sidebarOpen && (
+              <div className="px-2.5 pt-1 pb-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground/60">
+                {t("nav.section.tools") !== "nav.section.tools" ? t("nav.section.tools") : "Ferramentas"}
+              </div>
+            )}
+            {renderNavItem(gestaoItems[3])}
+            {renderNavItem(gestaoItems[5])}
+            {renderNavItem(gestaoItems[4])}
+            {renderNavItem(gestaoItems[2])}
 
+            {/* Conta */}
             <div className="my-2 border-t border-border/30" />
+            {sidebarOpen && (
+              <div className="px-2.5 pt-1 pb-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground/60">
+                {t("nav.section.account") !== "nav.section.account" ? t("nav.section.account") : "Conta"}
+              </div>
+            )}
             {renderNavItem(settingsNavItem)}
             {renderNavItem(tutorialNavItem)}
             {isAdmin && renderNavItem(adminNavItem)}
