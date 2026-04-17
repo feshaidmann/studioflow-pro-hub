@@ -29,7 +29,7 @@ import { getCachedAnalysis } from "@/hooks/useSavedAnalyses";
 import type { DiagnosisResult } from "@/hooks/useMusicDNA";
 import { generateVideoLoop, type VideoPreset } from "@/components/creative/VideoLoopGenerator";
 import { VideoEffectPicker } from "@/components/creative/VideoEffectPicker";
-import type { Intensity } from "@/components/creative/videoLayers";
+import type { Intensity, SpotEffect } from "@/components/creative/videoLayers";
 import { useRateLimitDialog } from "@/hooks/useRateLimitDialog";
 
 function QuotaIndicator() {
@@ -150,6 +150,7 @@ export default function Creative() {
   const [loopDuration, setLoopDuration] = useState<3 | 4 | 5>(4);
   const [videoPreset, setVideoPreset] = useState<VideoPreset>("cinematic");
   const [videoIntensity, setVideoIntensity] = useState<Intensity>("medium");
+  const [videoSpots, setVideoSpots] = useState<SpotEffect[]>([]);
   const [generatedVideoUrl, setGeneratedVideoUrl] = useState<string | null>(null);
   const [generatedVideoBlob, setGeneratedVideoBlob] = useState<Blob | null>(null);
   const [videoStatus, setVideoStatus] = useState<string | null>(null);
@@ -287,6 +288,7 @@ export default function Creative() {
             durationSec: loopDuration,
             preset: videoPreset,
             intensity: videoIntensity,
+            spots: videoSpots,
           });
           const url = URL.createObjectURL(blob);
           setGeneratedVideoBlob(blob);
@@ -309,7 +311,7 @@ export default function Creative() {
         setDnaCopyLoading(false);
       }
     }
-  }, [prompt, style, selectedFormat, linkedProject, selectedProjectId, generate, referenceImage, dnaSource, generateText, trackName, artistName, releaseDate, additionalText, noText, loopDuration, videoPreset, videoIntensity]);
+  }, [prompt, style, selectedFormat, linkedProject, selectedProjectId, generate, referenceImage, dnaSource, generateText, trackName, artistName, releaseDate, additionalText, noText, loopDuration, videoPreset, videoIntensity, videoSpots]);
 
   const handleVariation = useCallback(async () => {
     if (!generatedBase64 || !prompt.trim()) {
@@ -674,6 +676,8 @@ export default function Creative() {
                     onPresetChange={setVideoPreset}
                     intensity={videoIntensity}
                     onIntensityChange={setVideoIntensity}
+                    spots={videoSpots}
+                    onSpotsChange={setVideoSpots}
                   />
                   <p className="text-[10px] text-muted-foreground">
                     A IA gera a imagem e o navegador anima como vídeo loop perfeito (.webm) com camadas de efeito.
