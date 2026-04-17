@@ -322,7 +322,14 @@ export default function Creative() {
       handleGenerate();
       return;
     }
-    const variationPrompt = `Crie uma variação desta arte mantendo o conceito mas alterando composição e paleta. Conceito original: ${prompt}`;
+    // Re-lê os campos personalizados atuais antes de regerar
+    const metaParts: string[] = [];
+    if (trackName.trim()) metaParts.push(`Nome da música: "${trackName.trim()}"`);
+    if (artistName.trim()) metaParts.push(`Artista: "${artistName.trim()}"`);
+    if (releaseDate) metaParts.push(`Data de lançamento: ${releaseDate}`);
+    const metaPrefix = metaParts.length > 0 ? metaParts.join(". ") + ". " : "";
+
+    const variationPrompt = `${metaPrefix}Crie uma variação desta arte mantendo o conceito mas alterando composição e paleta. Conceito original: ${prompt}`;
     const result = await generate({
       prompt: variationPrompt,
       style,
@@ -331,13 +338,18 @@ export default function Creative() {
       height: selectedFormat.height,
       editImageUrl: generatedBase64,
       projectId: selectedProjectId && selectedProjectId !== "none" ? selectedProjectId : undefined,
+      trackName: trackName.trim() || undefined,
+      artistName: artistName.trim() || undefined,
+      releaseDate: releaseDate || undefined,
+      additionalText: additionalText.trim() || undefined,
+      noText: noText || undefined,
     });
     if (result) {
       setGeneratedImage(result.imageBase64);
       setGeneratedBase64(result.imageBase64);
       setSavedToGallery(false);
     }
-  }, [generatedBase64, prompt, style, selectedFormat, selectedProjectId, generate, handleGenerate]);
+  }, [generatedBase64, prompt, style, selectedFormat, selectedProjectId, generate, handleGenerate, trackName, artistName, releaseDate, additionalText, noText]);
 
   const handleUseAsReference = (url: string) => {
     setReferenceImage(url);
