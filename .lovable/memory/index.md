@@ -6,6 +6,7 @@
 - **Localization:** Português apenas (pt-BR). Sem suporte a inglês. Currency/numbers: `1.234,56`. CSV: `;` delimiter, UTF-8 BOM.
 - **Finance Privacy:** Strictly owner-only. Guests NEVER see financial metrics (enforced via RLS and `SECURITY DEFINER` RPCs).
 - **Constraints:** Do NOT re-add `/studio` module. HostGator NS delegation is rejected. Automated email/WhatsApp invites disabled for MVP. Do NOT re-add English/bilingual support.
+- **Primary Admin:** fernandosha@gmail.com (user_id `636dd9c8-bb3b-4ad3-84f1-0d08fadbfb2d`). Owner da plataforma — aplicar ações administrativas sem pedir confirmação extra.
 
 ## Memories
 - [Target User Persona](mem://arquitetura/personas-de-usuario) — Focus on Independent Artist, automatic artist registration
