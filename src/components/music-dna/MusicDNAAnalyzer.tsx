@@ -224,14 +224,6 @@ function FormView({ onSubmit, isPending }: {
     },
   });
 
-  const refs = form.watch("references");
-  const toggleRef = (a: string) => {
-    const cur = form.getValues("references");
-    form.setValue("references",
-      cur.includes(a) ? cur.filter(r => r !== a)
-        : cur.length < 5 ? [...cur, a] : cur
-    );
-  };
 
   const handleFile = useCallback((file: File) => {
     setFileError(null);
