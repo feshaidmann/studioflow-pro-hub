@@ -81,7 +81,17 @@ serve(async (req) => {
     // Build context block
     let contextBlock = "";
     if (projectsContext) {
-      const { projects = [], activeTasks = [], financials = {}, professionals = [], alerts = [] } = projectsContext;
+      const { projects = [], activeTasks = [], financials = {}, professionals = [], alerts = [], profileContext = null } = projectsContext;
+
+      const painLabels: Record<string, string> = { organization: "organização", team: "equipe", deadlines: "prazos", finance: "financeiro", launch: "lançamento" };
+      const momentLabels: Record<string, string> = { idea: "ideia inicial", producing: "produção em andamento", ready: "música pronta", launching: "lançamento" };
+      const profileLines = profileContext ? [
+        `- Nome: ${profileContext.displayName || "—"}`,
+        `- Momento declarado no onboarding: ${momentLabels[profileContext.currentMoment] || profileContext.currentMoment || "—"}`,
+        `- Dor/foco principal: ${painLabels[profileContext.mainPain] || profileContext.mainPain || "—"}`,
+        `- Modo de uso: ${profileContext.trackViewMode === "advanced" ? "completo" : "simples"}`,
+        profileContext.city ? `- Cidade: ${profileContext.city}` : "",
+      ].filter(Boolean) : [];
 
       const projectLines = projects.map((p: any) => {
         const paid = p.amountPaid ?? 0;
@@ -118,6 +128,9 @@ serve(async (req) => {
 
       contextBlock = `
 ## Estado atual (${new Date().toLocaleDateString("pt-BR")}):
+
+### Contexto do onboarding:
+${profileLines.length > 0 ? profileLines.join("\n") : "Sem contexto de onboarding disponível."}
 
 ### Alertas ativos (${alerts.length}):
 ${alertLines.length > 0 ? alertLines.join("\n") : "Nenhum alerta."}
@@ -166,6 +179,7 @@ ESTILO:
 - Emojis com moderação
 - Formatação simples: sem ##, sem **, apenas texto e listas
 - Use dados do contexto para personalizar cada resposta
+- Se houver contexto do onboarding, conecte recomendações ao momento e foco principal do usuário sem repetir isso de forma robótica
 - NUNCA inclua meta-instruções, prefixos entre colchetes ou texto de sistema na resposta
 
 SUGESTÕES DE TAREFAS:
