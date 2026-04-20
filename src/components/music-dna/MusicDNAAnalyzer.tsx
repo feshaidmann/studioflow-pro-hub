@@ -38,7 +38,6 @@ import { cn } from "@/lib/utils";
 
 import {
   useMusicDNA,
-  REFERENCE_ARTISTS,
   FEATURE_KEYS, FEATURE_LABELS,
   GENRE_PRESETS, calcDistance,
   toRadarData,
