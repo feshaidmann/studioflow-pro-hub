@@ -470,6 +470,7 @@ function LoadingView({ trackName, logs, progress }: {
 function ResultView({ input, diagnosis, onReset, onSave, isSaved, isSaving, savedAnalysisId }: {
   input: TrackInput | { name: string; notes?: string; references: string[] };
   diagnosis: DiagnosisResult;
+  benchmark?: MusicDnaBenchmark;
   savedAnalysisId?: string;
   onReset: () => void;
   onSave?: () => void;
@@ -545,6 +546,8 @@ function ResultView({ input, diagnosis, onReset, onSave, isSaved, isSaving, save
           </Card>
         ))}
       </div>
+
+      <BenchmarkPanel diagnosis={diagnosis} benchmark={benchmark} />
 
       {/* Resumo */}
       <Card className="border-l-4 border-l-primary animate-fade-in">
