@@ -917,7 +917,7 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
             </Button>
           )}
           {isSaved && (
-            <span className="inline-flex items-center gap-1.5 text-xs text-green-600 px-3 py-1">
+            <span className="inline-flex items-center gap-1.5 text-xs text-primary px-3 py-1">
               <Check className="h-3 w-3" /> Salva
             </span>
           )}
