@@ -581,6 +581,22 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
     }
   };
 
+  const jumpTo = (id: string) => scrollToAnchor(id, { extraOffset: 8 });
+  const metricItems = [
+    { label: "LUFS", value: `${realAnalysis?.lufs_integrated ?? audioAnalysis.lufs}`, unit: "LUFS", help: "volume percebido em plataformas" },
+    { label: "True Peak", value: `${realAnalysis?.true_peak_dbtp ?? audioAnalysis.truePeak}`, unit: "dBTP", help: "risco de distorção após streaming" },
+    { label: "DR", value: `${realAnalysis?.dynamic_range_lu ?? audioAnalysis.dynamicRange}`, unit: "LU", help: "variação entre partes suaves e fortes" },
+    { label: "BPM", value: `${realAnalysis?.bpm ?? "—"}`, unit: "", help: "pulso médio detectado" },
+    { label: "Tom", value: `${realAnalysis?.key ?? "—"}`, unit: "", help: "centro tonal provável" },
+    { label: "Duração", value: realAnalysis ? formatDuration(realAnalysis.duration_sec) : "—", unit: "", help: "tempo total da faixa" },
+  ];
+  const technicalItems = diagnostico_tecnico ? [
+    { label: "LUFS", help: "volume percebido em plataformas", text: diagnostico_tecnico.lufs_avaliacao },
+    { label: "True Peak", help: "risco de distorção após compressão/streaming", text: diagnostico_tecnico.true_peak_avaliacao },
+    { label: "Dynamic Range", help: "variação entre trechos suaves e fortes", text: diagnostico_tecnico.dynamic_range_avaliacao },
+    { label: "Espectro", help: "brilho, presença e distribuição de frequências", text: diagnostico_tecnico.espectro_avaliacao },
+  ] : [];
+
   return (
     <div className="space-y-4">
       {/* Header */}
