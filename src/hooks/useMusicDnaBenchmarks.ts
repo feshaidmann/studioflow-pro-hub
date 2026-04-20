@@ -2,6 +2,45 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { MusicDnaBenchmark } from "@/types/musicDna";
 
+const GENRE_ALIASES: Record<string, string> = {
+  mpb: "MPB Contemporânea",
+  "musica popular brasileira": "MPB Contemporânea",
+  bossa: "Bossa Nova",
+  samba: "Samba",
+  pagode: "Pagode",
+  funk: "Funk Carioca",
+  "funk carioca": "Funk Carioca",
+  forro: "Forró / Piseiro",
+  piseiro: "Forró / Piseiro",
+  sertanejo: "Sertanejo Universitário",
+  "sertanejo raiz": "Sertanejo Raiz",
+  "sertanejo universitario": "Sertanejo Universitário",
+  pop: "Pop Brasileiro",
+  "pop brasileiro": "Pop Brasileiro",
+  indie: "Indie BR",
+  "indie br": "Indie BR",
+  rock: "Rock Alternativo BR",
+  rap: "Rap BR",
+  trap: "Trap BR",
+  "trap brasileiro": "Trap BR",
+  rnb: "R&B / Soul",
+  "r&b": "R&B / Soul",
+  soul: "R&B / Soul",
+  reggae: "Reggae BR",
+  axe: "Axé / Pop Bahia",
+  axé: "Axé / Pop Bahia",
+  lofi: "Lo-Fi Hip Hop",
+  "lo-fi": "Lo-Fi Hip Hop",
+  house: "Eletrônica / House",
+  eletronica: "Eletrônica / House",
+  eletrônica: "Eletrônica / House",
+  folk: "Indie Folk",
+};
+
+function normalizeGenre(value: string) {
+  return value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9& ]/g, " ").replace(/\s+/g, " ").trim();
+}
+
 export function useMusicDnaBenchmarks() {
   return useQuery({
     queryKey: ["music-dna-benchmarks"],
@@ -58,7 +97,10 @@ export function useMusicDnaBenchmarks() {
 
 export function findBenchmarkForGenre(benchmarks: MusicDnaBenchmark[] | undefined, genre: string | undefined) {
   if (!benchmarks?.length) return undefined;
-  if (!genre) return benchmarks[0];
+  if (!genre) return undefined;
   const normalizedGenre = genre.toLowerCase();
-  return benchmarks.find((benchmark) => normalizedGenre.includes(benchmark.genero.toLowerCase())) ?? benchmarks[0];
+  const canonical = GENRE_ALIASES[normalizeGenre(genre)] ?? genre;
+  const normalizedCanonical = normalizeGenre(canonical);
+  return benchmarks.find((benchmark) => normalizeGenre(benchmark.genero) === normalizedCanonical)
+    ?? benchmarks.find((benchmark) => normalizedGenre.includes(benchmark.genero.toLowerCase()) || normalizeGenre(benchmark.genero).includes(normalizedCanonical));
 }
