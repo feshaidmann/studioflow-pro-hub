@@ -1,134 +1,126 @@
 
+## Plano: Implementar melhoria de CX no Music DNA
 
-## Plano: Expandir o banco de comparações do DNA Musical
+Vou transformar a tela de resultado do DNA Musical em uma experiência mais orientada à decisão, mantendo a profundidade técnica, mas reorganizando a informação para o artista entender primeiro “o que fazer agora”.
 
-Vou expandir o DNA Musical em duas camadas: **benchmarks por estilo** no banco de dados e **referências artísticas reais** usadas pela IA no relatório. A lista completa continuará oculta na tela inicial; o usuário só verá as referências escolhidas no relatório final.
+### 1. Criar um resumo executivo no topo do relatório
 
-### 1. Expandir os estilos de benchmark
+Adicionar um novo bloco logo após o header do resultado com:
 
-A tabela `music_dna_benchmarks` já existe e será usada como banco público de comparação. Vou popular/atualizar essa base com benchmarks por gênero, incluindo médias de:
+- Status da faixa:
+  - “Pronta para streaming”
+  - “Boa base, precisa ajustes”
+  - “Precisa revisão técnica”
+- Diagnóstico em uma frase curta
+- Principal força da faixa
+- Principal gargalo
+- Próxima ação recomendada
 
-- danceability
-- energy
-- loudness
-- speechiness
-- acousticness
-- instrumentalness
-- liveness
-- valence
-- tempo
-- LUFS
-- tonalidades mais comuns
+A ideia é que o usuário entenda o resultado principal antes de ver LUFS, True Peak, radar e métricas detalhadas.
 
-Estilos iniciais propostos:
+### 2. Reordenar a hierarquia do relatório
 
-- MPB Contemporânea
-- Bossa Nova
-- Samba
-- Pagode
-- Funk Carioca
-- Forró / Piseiro
-- Sertanejo Raiz
-- Sertanejo Universitário
-- Pop Brasileiro
-- Indie BR
-- Rock Alternativo BR
-- Rap BR
-- Trap BR
-- R&B / Soul
-- Reggae BR
-- Axé / Pop Bahia
-- Lo-Fi Hip Hop
-- Eletrônica / House
-- Indie Folk
-- Pop Internacional
+A ordem atual começa muito técnica. Vou reorganizar para:
 
-### 2. Expandir artistas de referência reais
+1. Resumo executivo
+2. Diagnóstico resumido
+3. Próximos passos de produção
+4. Pontos fortes e gargalos
+5. Referências mais próximas
+6. Benchmark de comparação
+7. Métricas técnicas
+8. Análise de seções
+9. Radar/perfil acústico
+10. Timeline e detalhes avançados
 
-Vou transformar o pool atual de 16 artistas em uma base maior, com aproximadamente 60–80 artistas reais, cada um marcado por territórios sonoros.
+Isso melhora principalmente no mobile, onde a tela é estreita e o relatório fica longo.
 
-Exemplos:
+### 3. Criar navegação rápida por âncoras
 
-- MPB/Indie BR: Tim Bernardes, Rubel, Liniker, Céu, Marina Sena, Ana Frango Elétrico, Tuyo, Terno Rei, Boogarins
-- Rap/Trap BR: Criolo, Emicida, Djonga, BK’, Baco Exu do Blues, Matuê, Don L, Flora Matos, Rincon Sapiência
-- Pop BR: Anitta, IZA, Duda Beat, Pabllo Vittar, Luísa Sonza, Jão
-- Sertanejo/Forró/Piseiro: Marília Mendonça, Maiara & Maraisa, Almir Sater, João Gomes, Zé Vaqueiro, Dominguinhos
-- Samba/Pagode/Axé: Cartola, Beth Carvalho, Zeca Pagodinho, Ferrugem, Ivete Sangalo, BaianaSystem
-- Rock BR: Pitty, Fresno, Scalene, Far From Alaska, Engenheiros do Hawaii
-- Internacional: Bon Iver, Phoebe Bridgers, Sufjan Stevens, Billie Eilish, Lorde, James Blake, SZA, Kendrick Lamar, Frank Ocean, Tyler the Creator
+Adicionar botões compactos no topo do relatório:
 
-### 3. Filtrar referências antes de enviar para a IA
+- “Resumo”
+- “Ações”
+- “Referências”
+- “Técnico”
 
-Em vez de mandar todos os artistas para a IA, vou criar uma função de seleção inteligente:
+Eles vão rolar suavemente para cada seção usando o helper existente `scrollToAnchor`.
 
-- Detecta o território mais provável da faixa a partir das features reais.
-- Cruza esse território com o gênero estimado e/ou informado.
-- Seleciona cerca de 15–20 artistas relevantes para o prompt.
-- A IA escolhe apenas 3–5 para exibir no relatório em `referencias_proximas`.
+### 4. Melhorar o estado de carregamento
 
-Isso aumenta precisão sem poluir o prompt e sem mostrar uma lista genérica ao usuário.
+Trocar mensagens excessivamente técnicas por etapas orientadas ao benefício:
 
-### 4. Melhorar o cálculo de referência acústica
+- “Lendo o áudio real da faixa”
+- “Medindo loudness, dinâmica e espectro”
+- “Comparando com benchmarks do gênero”
+- “Selecionando referências artísticas próximas”
+- “Gerando recomendações de produção”
 
-Hoje o relatório usa principalmente `GENRE_PRESETS` locais e, quando disponível, `music_dna_benchmarks`.
+A análise continua técnica por baixo; a interface fica mais clara para o usuário.
 
-Vou ajustar a lógica para priorizar:
+### 5. Agrupar detalhes técnicos em accordions no mobile
 
-1. Benchmark real do banco, quando houver correspondência de gênero.
-2. Preset expandido local, se o benchmark ainda não existir.
-3. Média geral, como fallback.
+No resultado, deixar abertos por padrão:
 
-Também vou melhorar a correspondência por nomes próximos, por exemplo:
+- Resumo
+- Próximos passos
+- Pontos fortes/gargalos
+- Referências
 
-- “Trap Brasileiro” → “Trap BR”
-- “MPB” → “MPB Contemporânea”
-- “Funk” → “Funk Carioca”
-- “Sertanejo” → “Sertanejo Universitário” ou “Sertanejo Raiz”
+E tornar colapsáveis:
 
-### 5. Atualizar o relatório para deixar a base clara
+- Diagnóstico técnico completo
+- Análise de seções
+- Perfil acústico/radar
+- Timeline
 
-No relatório, o bloco de benchmark passará a indicar:
+No desktop, a leitura continua mais aberta; no mobile, reduzimos o excesso visual.
 
-- qual gênero/benchmark foi usado;
-- quantas faixas compõem aquele benchmark;
-- se a comparação veio do banco público ou do fallback local;
-- os artistas próximos escolhidos pela IA, com similaridade e motivo técnico.
+### 6. Adicionar microcopy para termos técnicos
 
-A lista completa de artistas não volta para a tela de upload.
+Incluir explicações curtas e discretas para termos como:
 
-## Arquivos a alterar
+- LUFS: volume percebido em plataformas
+- True Peak: risco de distorção após compressão/streaming
+- Dynamic Range: variação entre partes suaves e fortes
+- Centroide espectral: percepção de brilho/presença
 
-- `src/hooks/useMusicDNA.ts`
-  - Expandir `Genre`
-  - Expandir `GENRE_PRESETS`
-  - Trocar `REFERENCE_ARTISTS` simples por referências categorizadas
-  - Adicionar helper para selecionar referências relevantes
-  - Incluir referências filtradas no prompt da IA
+Essas explicações não substituem o diagnóstico técnico; apenas ajudam o artista a interpretar.
 
-- `src/hooks/useMusicDnaBenchmarks.ts`
-  - Melhorar busca/fallback de benchmarks
-  - Adicionar aliases de gênero
-  - Evitar fallback ruim quando o gênero não bate exatamente
+### 7. Deixar referências artísticas mais claras
 
-- `src/types/musicDna.ts`
-  - Ajustar tipos auxiliares, se necessário, para representar fonte/qualidade do benchmark
+No bloco “Referências mais próximas”, adicionar uma nota:
+
+> “Essas referências indicam proximidade técnica/sonora, não uma sugestão para copiar estética.”
+
+Também vou manter a regra atual: a lista completa de artistas não aparece na tela inicial, apenas os 3–5 escolhidos no relatório.
+
+### 8. Ajustar componentes e arquivos
+
+Arquivos principais a alterar:
 
 - `src/components/music-dna/MusicDNAAnalyzer.tsx`
-  - Ajustar textos do bloco “Benchmark real”
-  - Manter artistas comparados apenas no relatório
+  - Adicionar resumo executivo
+  - Reordenar blocos do relatório
+  - Adicionar navegação rápida
+  - Criar accordions para detalhes técnicos
+  - Melhorar labels e microcopy
 
-- Banco de dados
-  - Inserir/atualizar registros iniciais em `music_dna_benchmarks`
-  - Sem criar nova tabela
-  - Sem alterar permissões existentes
+- `src/hooks/useMusicDNA.ts`
+  - Ajustar logs de carregamento para linguagem mais clara
+  - Se necessário, derivar status executivo a partir de LUFS, True Peak, Dynamic Range, distância estética e próximos passos
 
-## Resultado esperado
+- `src/lib/scrollToAnchor.ts`
+  - Reutilizar o helper existente, sem mudanças estruturais
 
-Após a mudança, cada música enviada será comparada contra:
+Não serão necessárias mudanças de banco, autenticação ou edge functions.
 
-- uma base expandida de aproximadamente 20 estilos;
-- benchmarks técnicos por gênero;
-- um pool de 60–80 artistas reais;
-- 15–20 referências relevantes enviadas à IA;
-- 3–5 artistas exibidos no relatório final, escolhidos de acordo com os dados reais da faixa.
+### Resultado esperado
 
+O DNA Musical continuará tecnicamente completo, mas a experiência ficará mais clara:
+
+- o artista entende o diagnóstico principal em poucos segundos;
+- as ações recomendadas aparecem antes das métricas profundas;
+- o relatório fica mais confortável no mobile;
+- os dados técnicos continuam disponíveis para produtores e engenheiros;
+- as referências artísticas ficam contextualizadas como comparação técnica, não como direção obrigatória.
