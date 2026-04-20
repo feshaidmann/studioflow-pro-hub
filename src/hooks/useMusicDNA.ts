@@ -182,7 +182,8 @@ export function toRadarData(track: AudioFeatures, ref: AudioFeatures) {
 function buildPrompt(
   input: TrackInput,
   analysis: RealAudioAnalysis,
-  instrumentData?: InstrumentDetection
+  instrumentData?: InstrumentDetection,
+  selectedReferences: string[] = input.references
 ): string {
   const pct = (v: number) => `${Math.round(v * 100)}%`;
   const db = (v: number) => `${v > 0 ? "+" : ""}${v.toFixed(1)}`;
@@ -252,6 +253,7 @@ BPM:     ${analysis.bpm.toFixed(1)}
 Tom:     ${analysis.key}
 Duração: ${Math.floor(analysis.duration_sec / 60)}:${String(Math.round(analysis.duration_sec % 60)).padStart(2, "0")}
 Referências: ${input.references.length ? input.references.join(", ") : "nenhuma"}
+Pool técnico de comparação sugerido: ${selectedReferences.length ? selectedReferences.join(", ") : "nenhum"}
 Descrição: ${input.notes || "não fornecida"}
 
 ════════════════════════════════════════════════
@@ -410,7 +412,10 @@ export function useMusicDNA(): UseMusicDNAReturn {
       setProgress(70);
       appendLog("🤖  Gerando diagnóstico avançado com IA…");
 
-      const prompt = buildPrompt(input, realAnalysis, instrumentResult);
+      const selectedReferences = selectReferenceArtists(tFeatures, input.genre, input.references, 18);
+      appendLog(`🎧  ${selectedReferences.length} referências reais selecionadas para comparação.`);
+
+      const prompt = buildPrompt(input, realAnalysis, instrumentResult, selectedReferences);
       const rawText = await callMusicDNAAnalyze(prompt);
       const clean = rawText.replace(/```json|```/g, "").trim();
       const parsed = JSON.parse(clean);
