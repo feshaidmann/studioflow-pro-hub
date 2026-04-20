@@ -35,6 +35,9 @@ import {
 } from "@/components/ui/collapsible";
 
 import { cn } from "@/lib/utils";
+import { LufsCompatibility } from "@/components/music-dna/LufsCompatibility";
+import { useMusicDnaBenchmarks, findBenchmarkForGenre } from "@/hooks/useMusicDnaBenchmarks";
+import { spotifyFeaturesFromDiagnosis, FEATURE_DESCRIPTIONS, type MusicDnaBenchmark, type SpotifyFeatures } from "@/types/musicDna";
 
 import {
   useMusicDNA,
@@ -112,6 +115,50 @@ function FeatureBar({ label, value, refValue }: {
           style={{ width: `${value * 100}%` }} />
       </div>
     </div>
+  );
+}
+
+function BenchmarkPanel({ diagnosis, benchmark }: { diagnosis: DiagnosisResult; benchmark?: MusicDnaBenchmark }) {
+  const features = spotifyFeaturesFromDiagnosis(diagnosis);
+  const benchmarkMap: Partial<Record<keyof SpotifyFeatures, number | null>> = benchmark ? {
+    danceability: benchmark.avg_danceability,
+    energy: benchmark.avg_energy,
+    speechiness: benchmark.avg_speechiness,
+    acousticness: benchmark.avg_acousticness,
+    instrumentalness: benchmark.avg_instrumentalness,
+    liveness: benchmark.avg_liveness,
+    valence: benchmark.avg_valence,
+  } : {};
+  const attrs: (keyof SpotifyFeatures)[] = ["danceability", "energy", "valence", "acousticness", "instrumentalness", "speechiness", "liveness"];
+
+  return (
+    <DiagCard icon="📈" title="Benchmark real — atributos estilo Spotify" variant="primary">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div className="space-y-2.5">
+          {attrs.map((key) => (
+            <FeatureBar
+              key={key}
+              label={FEATURE_DESCRIPTIONS[key]}
+              value={features[key] as number}
+              refValue={benchmarkMap[key] ?? undefined}
+            />
+          ))}
+        </div>
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-2">
+            <div className="rounded-lg bg-muted/30 border border-border p-3">
+              <p className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground">Fonte</p>
+              <p className="text-sm font-semibold">Web Audio local</p>
+            </div>
+            <div className="rounded-lg bg-muted/30 border border-border p-3">
+              <p className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground">Benchmark</p>
+              <p className="text-sm font-semibold">{benchmark ? `${benchmark.genero} · ${benchmark.total_faixas}` : "Sem base ainda"}</p>
+            </div>
+          </div>
+          <LufsCompatibility lufs={diagnosis.realAnalysis.lufs_integrated} />
+        </div>
+      </div>
+    </DiagCard>
   );
 }
 

@@ -82,19 +82,20 @@ export function spotifyFeaturesFromDiagnosis(diagnosis: DiagnosisResult): Spotif
 
 export function musicDnaColumnsFromDiagnosis(diagnosis: DiagnosisResult) {
   const features = spotifyFeaturesFromDiagnosis(diagnosis);
+  const clamp4 = (value: number) => Number(Math.max(0, Math.min(1, value)).toFixed(4));
   return {
-    danceability: features.danceability,
-    energy: features.energy,
+    danceability: clamp4(features.danceability),
+    energy: clamp4(features.energy),
     key_number: features.key,
     key_name: KEY_NAMES[features.key] ?? "C",
     loudness_db: features.loudness,
     mode_number: features.mode,
     mode_name: features.mode === 1 ? "major" : "minor",
-    speechiness: features.speechiness,
-    acousticness: features.acousticness,
-    instrumentalness: features.instrumentalness,
-    liveness: features.liveness,
-    valence: features.valence,
+    speechiness: clamp4(features.speechiness),
+    acousticness: clamp4(features.acousticness),
+    instrumentalness: clamp4(features.instrumentalness),
+    liveness: clamp4(features.liveness),
+    valence: clamp4(features.valence),
     tempo_bpm: features.tempo,
     duration_ms: features.duration_ms,
     time_signature: features.time_signature,
