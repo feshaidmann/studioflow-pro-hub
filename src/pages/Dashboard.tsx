@@ -309,7 +309,7 @@ export default function Dashboard() {
     </Collapsible>
   );
 
-  const dashboardSections: Record<string, JSX.Element | null> = {
+  const dashboardSections: Record<string, React.ReactNode> = {
     checklist: (
       <div id="checklist-section" className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         {isFirstRun && <FirstRunEmptyState onNavigate={navigate} recentProject={recentOnboardingProject} profile={profile} />}
@@ -332,7 +332,7 @@ export default function Dashboard() {
         <ProjectAlertsCard alerts={alerts} hidden={isFirstRun} />
       </div>
     ),
-    alerts: <div id="alerts-section"><ProjectAlertsCard alerts={alerts} hidden /></div>,
+    alerts: <div id="alerts-section"><ProjectAlertsCard alerts={alerts} hidden={isFirstRun} /></div>,
     team: <PendingTeamCard hidden={isFirstRun} />,
     projects: <ProjectHealthList projects={projectsWithHealth} hidden={isFirstRun} />,
     editais: <EditalProgressCard hidden={isFirstRun} />,

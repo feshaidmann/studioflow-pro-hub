@@ -65,6 +65,14 @@ interface ProjectContext {
   financials: { totalIncome: number; totalExpense: number; profit: number };
   professionals?: Array<{ name: string; specialty: string; bio: string; active: boolean; phone: string }>;
   alerts?: Array<{ title: string; severity: string; project: string; category: string }>;
+  profileContext?: {
+    displayName: string;
+    currentMoment: string;
+    mainPain: string;
+    trackViewMode: string;
+    city: string;
+    origin: string;
+  };
 }
 
 export interface AITaskAssistantHandle {
