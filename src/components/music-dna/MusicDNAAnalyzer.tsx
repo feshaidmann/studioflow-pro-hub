@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/collapsible";
 
 import { cn } from "@/lib/utils";
+import { scrollToAnchor } from "@/lib/scrollToAnchor";
 import { LufsCompatibility } from "@/components/music-dna/LufsCompatibility";
 import { useMusicDnaBenchmarks, findBenchmarkForGenre } from "@/hooks/useMusicDnaBenchmarks";
 import { spotifyFeaturesFromDiagnosis, FEATURE_DESCRIPTIONS, type MusicDnaBenchmark, type SpotifyFeatures } from "@/types/musicDna";
@@ -178,7 +179,7 @@ function CompatibilityBadge({ result }: { result: DiagnosisResult }) {
   const topRef = result.referencias_proximas?.[0];
 
   const genreCfg = score >= 75
-    ? "bg-green-500/10 text-green-600 border-green-500/30"
+    ? "bg-primary/10 text-primary border-primary/30"
     : score >= 50
     ? "bg-primary/10 text-primary border-primary/30"
     : "bg-destructive/10 text-destructive border-destructive/30";
@@ -209,7 +210,7 @@ function CompatibilityBadge({ result }: { result: DiagnosisResult }) {
 function PriorityBadge({ priority }: { priority: "Alta" | "Média" | "Baixa" }) {
   const styles: Record<string, string> = {
     Alta: "bg-destructive/10 text-destructive border-destructive/30",
-    Média: "bg-orange-500/10 text-orange-600 border-orange-500/30",
+    Média: "bg-accent/10 text-accent-foreground border-accent/30",
     Baixa: "bg-muted/20 text-muted-foreground border-border",
   };
   return (
@@ -233,7 +234,7 @@ function DiagCard({ icon, title, variant = "default", children }: {
   }[variant];
   const color = {
     primary: "text-primary",
-    success: "text-green-600",
+    success: "text-primary",
     destructive: "text-destructive",
     default: "text-muted-foreground",
   }[variant];
@@ -249,6 +250,79 @@ function DiagCard({ icon, title, variant = "default", children }: {
       </CardHeader>
       <CardContent className="px-4 pb-4">{children}</CardContent>
     </Card>
+  );
+}
+
+function DetailSection({ id, title, icon, children }: {
+  id: string;
+  title: string;
+  icon: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section id={id} className="scroll-mt-16">
+      <Collapsible className="md:hidden rounded-lg border border-border bg-card">
+        <CollapsibleTrigger className="flex w-full items-center justify-between px-4 py-3 text-left text-[11px] font-mono uppercase tracking-wider text-muted-foreground">
+          <span className="flex items-center gap-2"><span>{icon}</span>{title}</span>
+          <span className="text-primary">+</span>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="px-4 pb-4">
+          {children}
+        </CollapsibleContent>
+      </Collapsible>
+      <div className="hidden md:block">{children}</div>
+    </section>
+  );
+}
+
+function ExecutiveSummary({ diagnosis }: { diagnosis: DiagnosisResult }) {
+  const truePeak = diagnosis.realAnalysis?.true_peak_dbtp ?? diagnosis.audioAnalysis.truePeak;
+  const lufs = diagnosis.realAnalysis?.lufs_integrated ?? diagnosis.audioAnalysis.lufs;
+  const dynamicRange = diagnosis.realAnalysis?.dynamic_range_lu ?? diagnosis.audioAnalysis.dynamicRange;
+  const primaryStrength = diagnosis.pontos_fortes?.[0] ?? "A faixa já apresenta uma identidade sonora reconhecível.";
+  const mainBottleneck = diagnosis.gargalos_criativos?.[0] ?? "Vale refinar o contraste entre seções antes da finalização.";
+  const nextAction = diagnosis.proximos_passos?.[0]?.acao ?? diagnosis.sugestoes_arranjo?.[0] ?? "Revisar mix e arranjo com foco no ponto mais sensível do diagnóstico.";
+
+  const status = truePeak <= -1 && lufs >= -16 && lufs <= -10 && dynamicRange >= 7
+    ? { label: "Pronta para streaming", tone: "success" as const }
+    : truePeak > 0 || dynamicRange < 5
+    ? { label: "Precisa revisão técnica", tone: "destructive" as const }
+    : { label: "Boa base, precisa ajustes", tone: "primary" as const };
+
+  const toneClass = {
+    success: "bg-primary/10 text-primary border-primary/30",
+    destructive: "bg-destructive/10 text-destructive border-destructive/30",
+    primary: "bg-primary/10 text-primary border-primary/30",
+  }[status.tone];
+
+  return (
+    <section id="dna-resumo" className="scroll-mt-16">
+      <Card className="border-l-4 border-l-primary animate-fade-in">
+        <CardContent className="p-4 space-y-4">
+          <div className="flex items-start justify-between gap-3 flex-wrap">
+            <div>
+              <p className="text-[10px] font-mono uppercase tracking-widest text-primary mb-1">Resumo executivo</p>
+              <p className="text-sm leading-relaxed">{diagnosis.diagnostico_resumo}</p>
+            </div>
+            <Badge variant="outline" className={cn("text-[10px] font-mono uppercase tracking-wider", toneClass)}>
+              {status.label}
+            </Badge>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+            {[
+              { label: "Força principal", text: primaryStrength },
+              { label: "Gargalo principal", text: mainBottleneck },
+              { label: "Próxima ação", text: nextAction },
+            ].map((item) => (
+              <div key={item.label} className="rounded-lg bg-muted/30 border border-border p-3">
+                <p className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground mb-1">{item.label}</p>
+                <p className="text-xs leading-relaxed">{item.text}</p>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    </section>
   );
 }
 
@@ -507,6 +581,22 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
     }
   };
 
+  const jumpTo = (id: string) => scrollToAnchor(id, { extraOffset: 8 });
+  const metricItems = [
+    { label: "LUFS", value: `${realAnalysis?.lufs_integrated ?? audioAnalysis.lufs}`, unit: "LUFS", help: "volume percebido em plataformas" },
+    { label: "True Peak", value: `${realAnalysis?.true_peak_dbtp ?? audioAnalysis.truePeak}`, unit: "dBTP", help: "risco de distorção após streaming" },
+    { label: "DR", value: `${realAnalysis?.dynamic_range_lu ?? audioAnalysis.dynamicRange}`, unit: "LU", help: "variação entre partes suaves e fortes" },
+    { label: "BPM", value: `${realAnalysis?.bpm ?? "—"}`, unit: "", help: "pulso médio detectado" },
+    { label: "Tom", value: `${realAnalysis?.key ?? "—"}`, unit: "", help: "centro tonal provável" },
+    { label: "Duração", value: realAnalysis ? formatDuration(realAnalysis.duration_sec) : "—", unit: "", help: "tempo total da faixa" },
+  ];
+  const technicalItems = diagnostico_tecnico ? [
+    { label: "LUFS", help: "volume percebido em plataformas", text: diagnostico_tecnico.lufs_avaliacao },
+    { label: "True Peak", help: "risco de distorção após compressão/streaming", text: diagnostico_tecnico.true_peak_avaliacao },
+    { label: "Dynamic Range", help: "variação entre trechos suaves e fortes", text: diagnostico_tecnico.dynamic_range_avaliacao },
+    { label: "Espectro", help: "brilho, presença e distribuição de frequências", text: diagnostico_tecnico.espectro_avaliacao },
+  ] : [];
+
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -535,206 +625,58 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
         </div>
       </div>
 
-      {/* Audio metrics — expanded */}
-      <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 animate-fade-in">
+      <div className="sticky top-2 z-20 -mx-1 flex gap-1.5 overflow-x-auto rounded-lg border border-border bg-background/95 p-1 backdrop-blur animate-fade-in">
         {[
-          { label: "LUFS", value: `${realAnalysis?.lufs_integrated ?? audioAnalysis.lufs}`, unit: "LUFS" },
-          { label: "True Peak", value: `${realAnalysis?.true_peak_dbtp ?? audioAnalysis.truePeak}`, unit: "dBTP" },
-          { label: "DR", value: `${realAnalysis?.dynamic_range_lu ?? audioAnalysis.dynamicRange}`, unit: "LU" },
-          { label: "BPM", value: `${realAnalysis?.bpm ?? "—"}`, unit: "" },
-          { label: "Tom", value: `${realAnalysis?.key ?? "—"}`, unit: "" },
-          { label: "Duração", value: realAnalysis ? formatDuration(realAnalysis.duration_sec) : "—", unit: "" },
-        ].map((m) => (
-          <Card key={m.label} className="text-center py-2.5">
-            <p className="text-[8px] font-mono uppercase tracking-widest text-muted-foreground">{m.label}</p>
-            <p className="text-base font-bold text-primary leading-tight">{m.value}</p>
-            {m.unit && <p className="text-[9px] text-muted-foreground">{m.unit}</p>}
-          </Card>
+          { label: "Resumo", id: "dna-resumo" },
+          { label: "Ações", id: "dna-acoes" },
+          { label: "Referências", id: "dna-referencias" },
+          { label: "Técnico", id: "dna-tecnico" },
+        ].map((item) => (
+          <Button key={item.id} variant="ghost" size="sm" className="h-8 shrink-0 text-[11px]" onClick={() => jumpTo(item.id)}>
+            {item.label}
+          </Button>
         ))}
       </div>
 
-      <BenchmarkPanel diagnosis={diagnosis} benchmark={benchmark} />
+      <ExecutiveSummary diagnosis={diagnosis} />
 
-      {/* Resumo */}
-      <Card className="border-l-4 border-l-primary animate-fade-in">
-        <CardContent className="p-4">
-          <p className="text-[10px] font-mono uppercase tracking-widest text-primary mb-2">
-            Diagnóstico resumido
-          </p>
-          <p className="text-sm leading-relaxed">{diagnostico_resumo}</p>
-        </CardContent>
-      </Card>
-
-      {/* Diagnóstico Técnico */}
-      {diagnostico_tecnico && (
-        <DiagCard icon="🔬" title="Diagnóstico Técnico" variant="primary">
-          <div className="space-y-3">
-            {[
-              { label: "LUFS", text: diagnostico_tecnico.lufs_avaliacao },
-              { label: "True Peak", text: diagnostico_tecnico.true_peak_avaliacao },
-              { label: "Dynamic Range", text: diagnostico_tecnico.dynamic_range_avaliacao },
-              { label: "Espectro", text: diagnostico_tecnico.espectro_avaliacao },
-            ].map((item) => (
-              <div key={item.label} className="bg-muted/30 rounded-lg p-3 border-l-2 border-primary/30">
-                <p className="text-[9px] font-mono uppercase tracking-widest text-primary mb-1">{item.label}</p>
-                <p className="text-xs leading-relaxed">{item.text}</p>
-              </div>
-            ))}
-          </div>
-        </DiagCard>
-      )}
-
-      {/* Análise de Seções */}
-      {analise_seccoes && (
-        <DiagCard icon="📊" title="Análise de Seções" variant="default">
-          <div className="space-y-3">
-            <div className="bg-muted/30 rounded-lg p-3">
-              <p className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground mb-1">
-                Contraste Verso → Refrão
-              </p>
-              <p className="text-xs leading-relaxed">{analise_seccoes.contraste_verso_refrao}</p>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              <div className="bg-green-500/5 rounded-lg p-3 border border-green-500/20">
-                <p className="text-[9px] font-mono uppercase tracking-widest text-green-600 mb-1">
-                  Seção mais forte
-                </p>
-                <p className="text-xs leading-relaxed">{analise_seccoes.secao_mais_forte}</p>
-              </div>
-              <div className="bg-destructive/5 rounded-lg p-3 border border-destructive/20">
-                <p className="text-[9px] font-mono uppercase tracking-widest text-destructive mb-1">
-                  Seção mais fraca
-                </p>
-                <p className="text-xs leading-relaxed">{analise_seccoes.secao_mais_fraca}</p>
-              </div>
-            </div>
-          </div>
-        </DiagCard>
-      )}
-
-      {/* Section timeline (from realAnalysis) */}
-      {realAnalysis?.sections && realAnalysis.sections.length > 0 && (
-        <Card className="animate-fade-in">
-          <CardHeader className="pb-2 px-4 pt-3">
-            <CardTitle className="flex items-center gap-2 text-[11px] font-mono uppercase tracking-wider text-muted-foreground">
-              <span>🎬</span> Timeline de Seções
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="px-4 pb-4">
-            <div className="flex gap-0.5 h-6 rounded overflow-hidden">
-              {realAnalysis.sections.map((s, i) => {
-                const totalDuration = realAnalysis.duration_sec;
-                const width = ((s.end_sec - s.start_sec) / totalDuration) * 100;
-                const colors: Record<string, string> = {
-                  intro: "bg-blue-400/60",
-                  verse: "bg-primary/40",
-                  pre_chorus: "bg-orange-400/50",
-                  chorus: "bg-primary/80",
-                  bridge: "bg-purple-400/50",
-                  outro: "bg-muted-foreground/30",
-                };
-                return (
-                  <div
-                    key={i}
-                    className={cn("flex items-center justify-center text-[7px] font-mono text-foreground/80 uppercase", colors[s.label] || "bg-muted")}
-                    style={{ width: `${width}%` }}
-                    title={`${s.label} (${s.start_sec.toFixed(0)}s–${s.end_sec.toFixed(0)}s) · LUFS ${s.lufs} · E ${Math.round(s.energy * 100)}%`}
-                  >
-                    {width > 8 ? s.label.replace("_", " ") : ""}
-                  </div>
-                );
-              })}
-            </div>
-            <div className="flex gap-3 mt-2 flex-wrap">
-              {[
-                { label: "intro", color: "bg-blue-400/60" },
-                { label: "verse", color: "bg-primary/40" },
-                { label: "pre chorus", color: "bg-orange-400/50" },
-                { label: "chorus", color: "bg-primary/80" },
-                { label: "bridge", color: "bg-purple-400/50" },
-                { label: "outro", color: "bg-muted-foreground/30" },
-              ].filter(l => realAnalysis.sections.some(s => s.label === l.label.replace(" ", "_")))
-                .map(l => (
-                  <div key={l.label} className="flex items-center gap-1">
-                    <div className={cn("w-2 h-2 rounded-sm", l.color)} />
-                    <span className="text-[8px] font-mono uppercase text-muted-foreground">{l.label}</span>
-                  </div>
-                ))
-              }
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Radar + Perfil Acústico */}
-      <Card className="animate-scale-in">
-        <CardHeader className="pb-2 px-4 pt-3">
-          <CardTitle className="flex items-center gap-2 text-[11px] font-mono uppercase tracking-wider text-primary">
-            <span>📡</span> Perfil Acústico
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="px-4 pb-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
-            <AcousticRadar trackFeatures={trackFeatures} refFeatures={refFeatures} />
-            <div className="space-y-2.5">
-              {FEATURE_KEYS.map(k => (
-                <FeatureBar key={k} label={FEATURE_LABELS[k]}
-                  value={trackFeatures[k]} refValue={refFeatures[k]} />
-              ))}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Identidade */}
-      <DiagCard icon="🎭" title="Identidade da Faixa" variant="primary">
-        <div className="space-y-3">
-          <div>
-            <p className="text-base font-bold">{identidade?.mood_principal}</p>
-            <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-              {identidade?.territorio_sonoro}
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-1.5">
-            {(identidade?.tags ?? []).map(tag => (
-              <Badge key={tag} variant="outline"
-                className="text-[10px] font-mono bg-primary/10 border-primary/30 text-primary">
-                {tag}
-              </Badge>
-            ))}
-          </div>
-          <div className="rounded-md bg-muted/30 p-2.5 text-[11px] text-muted-foreground leading-relaxed">
-            <span className="text-primary">🎧 Ouvinte: </span>
-            {identidade?.persona_ouvinte}
-          </div>
-        </div>
-      </DiagCard>
-
-      {/* Refs + Fortes + Gargalos */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <DiagCard icon="🔗" title="Referências mais próximas">
+      <section id="dna-acoes" className="scroll-mt-16 space-y-4">
+        <DiagCard icon="🚀" title="Próximos passos de produção" variant="success">
           <div className="space-y-2">
-            {(referencias_proximas ?? []).map((r, i) => (
-              <div key={i} className={cn(
-                "flex justify-between items-start gap-3 py-2 text-xs",
-                i < referencias_proximas.length - 1 && "border-b border-border"
-              )}>
-                <div>
-                  <p className="font-semibold">{r.artista}</p>
-                  <p className="text-muted-foreground mt-0.5">{r.motivo}</p>
+            {(proximos_passos ?? []).map((p, i) => {
+              const key = `passo-${i}`;
+              const added = addedItems.has(key);
+              return (
+                <div key={i} className="flex gap-3 items-start bg-muted/20 rounded-lg p-3">
+                  <PriorityBadge priority={p.prioridade} />
+                  <div className="flex-1">
+                    <p className="text-xs leading-relaxed">{p.acao}</p>
+                    <p className="text-[10px] text-muted-foreground mt-1">
+                      Impacto: {p.impacto}
+                    </p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className={cn("h-6 w-6 shrink-0", added ? "text-primary" : "text-muted-foreground hover:text-primary")}
+                    onClick={() => !added && handleAddToTasks(p.acao, key)}
+                    disabled={added}
+                    title={added ? "Já adicionado" : "Adicionar à lista de tarefas"}
+                  >
+                    {added ? <Check className="h-3.5 w-3.5" /> : <ListPlus className="h-3.5 w-3.5" />}
+                  </Button>
                 </div>
-                <span className="font-mono text-primary shrink-0">{r.similaridade}</span>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </DiagCard>
 
-        <div className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <DiagCard icon="✅" title="Pontos fortes" variant="success">
             <ul className="space-y-1.5">
               {(pontos_fortes ?? []).map((p, i) => (
                 <li key={i} className="flex gap-2 text-xs leading-relaxed">
-                  <span className="text-green-600 shrink-0 font-bold">+</span> {p}
+                  <span className="text-primary shrink-0 font-bold">+</span> {p}
                 </li>
               ))}
             </ul>
@@ -750,64 +692,217 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
             </ul>
           </DiagCard>
         </div>
-      </div>
 
-      {/* Arranjo */}
-      <DiagCard icon="🎛️" title="Sugestões de arranjo, timbragem e mix" variant="primary">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-          {(sugestoes_arranjo ?? []).map((s, i) => {
-            const key = `arranjo-${i}`;
-            const added = addedItems.has(key);
-            return (
-              <div key={i}
-                className="bg-muted/30 rounded-lg p-3 text-xs leading-relaxed border-l-2 border-primary/40 flex items-start gap-2">
-                <span className="flex-1">{s}</span>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className={cn("h-6 w-6 shrink-0", added ? "text-green-600" : "text-muted-foreground hover:text-primary")}
-                  onClick={() => !added && handleAddToTasks(s, key)}
-                  disabled={added}
-                  title={added ? "Já adicionado" : "Adicionar à lista de tarefas"}
-                >
-                  {added ? <Check className="h-3.5 w-3.5" /> : <ListPlus className="h-3.5 w-3.5" />}
-                </Button>
-              </div>
-            );
-          })}
-        </div>
-      </DiagCard>
-
-      {/* Próximos passos */}
-      <DiagCard icon="🚀" title="Próximos passos de produção" variant="success">
-        <div className="space-y-2">
-          {(proximos_passos ?? []).map((p, i) => {
-            const key = `passo-${i}`;
-            const added = addedItems.has(key);
-            return (
-              <div key={i} className="flex gap-3 items-start bg-muted/20 rounded-lg p-3">
-                <PriorityBadge priority={p.prioridade} />
-                <div className="flex-1">
-                  <p className="text-xs leading-relaxed">{p.acao}</p>
-                  <p className="text-[10px] text-muted-foreground mt-1">
-                    Impacto: {p.impacto}
-                  </p>
+        <DiagCard icon="🎛️" title="Sugestões de arranjo, timbragem e mix" variant="primary">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+            {(sugestoes_arranjo ?? []).map((s, i) => {
+              const key = `arranjo-${i}`;
+              const added = addedItems.has(key);
+              return (
+                <div key={i}
+                  className="bg-muted/30 rounded-lg p-3 text-xs leading-relaxed border-l-2 border-primary/40 flex items-start gap-2">
+                  <span className="flex-1">{s}</span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className={cn("h-6 w-6 shrink-0", added ? "text-primary" : "text-muted-foreground hover:text-primary")}
+                    onClick={() => !added && handleAddToTasks(s, key)}
+                    disabled={added}
+                    title={added ? "Já adicionado" : "Adicionar à lista de tarefas"}
+                  >
+                    {added ? <Check className="h-3.5 w-3.5" /> : <ListPlus className="h-3.5 w-3.5" />}
+                  </Button>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className={cn("h-6 w-6 shrink-0", added ? "text-green-600" : "text-muted-foreground hover:text-primary")}
-                  onClick={() => !added && handleAddToTasks(p.acao, key)}
-                  disabled={added}
-                  title={added ? "Já adicionado" : "Adicionar à lista de tarefas"}
-                >
-                  {added ? <Check className="h-3.5 w-3.5" /> : <ListPlus className="h-3.5 w-3.5" />}
-                </Button>
+              );
+            })}
+          </div>
+        </DiagCard>
+      </section>
+
+      <section id="dna-referencias" className="scroll-mt-16 space-y-4">
+        <DiagCard icon="🔗" title="Referências mais próximas">
+          <div className="space-y-2">
+            <p className="rounded-md bg-muted/30 p-2.5 text-[11px] text-muted-foreground leading-relaxed">
+              Essas referências indicam proximidade técnica/sonora, não uma sugestão para copiar estética.
+            </p>
+            {(referencias_proximas ?? []).map((r, i) => (
+              <div key={i} className={cn(
+                "flex justify-between items-start gap-3 py-2 text-xs",
+                i < referencias_proximas.length - 1 && "border-b border-border"
+              )}>
+                <div>
+                  <p className="font-semibold">{r.artista}</p>
+                  <p className="text-muted-foreground mt-0.5">{r.motivo}</p>
+                </div>
+                <span className="font-mono text-primary shrink-0">{r.similaridade}</span>
               </div>
-            );
-          })}
+            ))}
+          </div>
+        </DiagCard>
+
+        <BenchmarkPanel diagnosis={diagnosis} benchmark={benchmark} />
+      </section>
+
+      <section id="dna-identidade" className="scroll-mt-16">
+        <DiagCard icon="🎭" title="Identidade da Faixa" variant="primary">
+          <div className="space-y-3">
+            <div>
+              <p className="text-base font-bold">{identidade?.mood_principal}</p>
+              <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                {identidade?.territorio_sonoro}
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {(identidade?.tags ?? []).map(tag => (
+                <Badge key={tag} variant="outline"
+                  className="text-[10px] font-mono bg-primary/10 border-primary/30 text-primary">
+                  {tag}
+                </Badge>
+              ))}
+            </div>
+            <div className="rounded-md bg-muted/30 p-2.5 text-[11px] text-muted-foreground leading-relaxed">
+              <span className="text-primary">🎧 Ouvinte: </span>
+              {identidade?.persona_ouvinte}
+            </div>
+          </div>
+        </DiagCard>
+      </section>
+
+      <DetailSection id="dna-tecnico" icon="🔬" title="Métricas e diagnóstico técnico">
+        <div className="space-y-4">
+          <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 animate-fade-in">
+            {metricItems.map((m) => (
+              <Card key={m.label} className="text-center py-2.5 px-1">
+                <p className="text-[8px] font-mono uppercase tracking-widest text-muted-foreground">{m.label}</p>
+                <p className="text-base font-bold text-primary leading-tight">{m.value}</p>
+                {m.unit && <p className="text-[9px] text-muted-foreground">{m.unit}</p>}
+                <p className="mt-1 text-[8px] leading-tight text-muted-foreground">{m.help}</p>
+              </Card>
+            ))}
+          </div>
+
+          {diagnostico_tecnico && (
+            <DiagCard icon="🔬" title="Diagnóstico Técnico" variant="primary">
+              <div className="space-y-3">
+                {technicalItems.map((item) => (
+                  <div key={item.label} className="bg-muted/30 rounded-lg p-3 border-l-2 border-primary/30">
+                    <div className="mb-1 flex items-center justify-between gap-2 flex-wrap">
+                      <p className="text-[9px] font-mono uppercase tracking-widest text-primary">{item.label}</p>
+                      <p className="text-[9px] text-muted-foreground">{item.help}</p>
+                    </div>
+                    <p className="text-xs leading-relaxed">{item.text}</p>
+                  </div>
+                ))}
+              </div>
+            </DiagCard>
+          )}
         </div>
-      </DiagCard>
+      </DetailSection>
+
+      {analise_seccoes && (
+        <DetailSection id="dna-secoes" icon="📊" title="Análise de seções">
+          <DiagCard icon="📊" title="Análise de Seções" variant="default">
+            <div className="space-y-3">
+              <div className="bg-muted/30 rounded-lg p-3">
+                <p className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground mb-1">
+                  Contraste Verso → Refrão
+                </p>
+                <p className="text-xs leading-relaxed">{analise_seccoes.contraste_verso_refrao}</p>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div className="bg-primary/5 rounded-lg p-3 border border-primary/20">
+                  <p className="text-[9px] font-mono uppercase tracking-widest text-primary mb-1">
+                    Seção mais forte
+                  </p>
+                  <p className="text-xs leading-relaxed">{analise_seccoes.secao_mais_forte}</p>
+                </div>
+                <div className="bg-destructive/5 rounded-lg p-3 border border-destructive/20">
+                  <p className="text-[9px] font-mono uppercase tracking-widest text-destructive mb-1">
+                    Seção mais fraca
+                  </p>
+                  <p className="text-xs leading-relaxed">{analise_seccoes.secao_mais_fraca}</p>
+                </div>
+              </div>
+            </div>
+          </DiagCard>
+        </DetailSection>
+      )}
+
+      <DetailSection id="dna-perfil" icon="📡" title="Perfil acústico">
+        <Card className="animate-scale-in">
+          <CardHeader className="pb-2 px-4 pt-3">
+            <CardTitle className="flex items-center gap-2 text-[11px] font-mono uppercase tracking-wider text-primary">
+              <span>📡</span> Perfil Acústico
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-4 pb-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+              <AcousticRadar trackFeatures={trackFeatures} refFeatures={refFeatures} />
+              <div className="space-y-2.5">
+                {FEATURE_KEYS.map(k => (
+                  <FeatureBar key={k} label={FEATURE_LABELS[k]}
+                    value={trackFeatures[k]} refValue={refFeatures[k]} />
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </DetailSection>
+
+      {realAnalysis?.sections && realAnalysis.sections.length > 0 && (
+        <DetailSection id="dna-timeline" icon="🎬" title="Timeline de seções">
+          <Card className="animate-fade-in">
+            <CardHeader className="pb-2 px-4 pt-3">
+              <CardTitle className="flex items-center gap-2 text-[11px] font-mono uppercase tracking-wider text-muted-foreground">
+                <span>🎬</span> Timeline de Seções
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="px-4 pb-4">
+              <div className="flex gap-0.5 h-6 rounded overflow-hidden">
+                {realAnalysis.sections.map((s, i) => {
+                  const totalDuration = realAnalysis.duration_sec;
+                  const width = ((s.end_sec - s.start_sec) / totalDuration) * 100;
+                  const colors: Record<string, string> = {
+                    intro: "bg-primary/20",
+                    verse: "bg-primary/40",
+                    pre_chorus: "bg-accent/40",
+                    chorus: "bg-primary/80",
+                    bridge: "bg-secondary/70",
+                    outro: "bg-muted-foreground/30",
+                  };
+                  return (
+                    <div
+                      key={i}
+                      className={cn("flex items-center justify-center text-[7px] font-mono text-foreground/80 uppercase", colors[s.label] || "bg-muted")}
+                      style={{ width: `${width}%` }}
+                      title={`${s.label} (${s.start_sec.toFixed(0)}s–${s.end_sec.toFixed(0)}s) · LUFS ${s.lufs} · E ${Math.round(s.energy * 100)}%`}
+                    >
+                      {width > 8 ? s.label.replace("_", " ") : ""}
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="flex gap-3 mt-2 flex-wrap">
+                {[
+                  { label: "intro", color: "bg-primary/20" },
+                  { label: "verse", color: "bg-primary/40" },
+                  { label: "pre chorus", color: "bg-accent/40" },
+                  { label: "chorus", color: "bg-primary/80" },
+                  { label: "bridge", color: "bg-secondary/70" },
+                  { label: "outro", color: "bg-muted-foreground/30" },
+                ].filter(l => realAnalysis.sections.some(s => s.label === l.label.replace(" ", "_")))
+                  .map(l => (
+                    <div key={l.label} className="flex items-center gap-1">
+                      <div className={cn("w-2 h-2 rounded-sm", l.color)} />
+                      <span className="text-[8px] font-mono uppercase text-muted-foreground">{l.label}</span>
+                    </div>
+                  ))
+                }
+              </div>
+            </CardContent>
+          </Card>
+        </DetailSection>
+      )}
 
       {/* Footer */}
       <div className="flex items-center justify-between gap-3 p-4 rounded-lg bg-muted/20 border border-border flex-wrap">
@@ -822,7 +917,7 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
             </Button>
           )}
           {isSaved && (
-            <span className="inline-flex items-center gap-1.5 text-xs text-green-600 px-3 py-1">
+            <span className="inline-flex items-center gap-1.5 text-xs text-primary px-3 py-1">
               <Check className="h-3 w-3" /> Salva
             </span>
           )}
