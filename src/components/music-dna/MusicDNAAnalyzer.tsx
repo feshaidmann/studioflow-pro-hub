@@ -120,6 +120,9 @@ function FeatureBar({ label, value, refValue }: {
 
 function BenchmarkPanel({ diagnosis, benchmark }: { diagnosis: DiagnosisResult; benchmark?: MusicDnaBenchmark }) {
   const features = spotifyFeaturesFromDiagnosis(diagnosis);
+  const benchmarkSource = benchmark ? "Banco público" : "Preset local";
+  const benchmarkLabel = benchmark ? benchmark.genero : diagnosis.genero_classificado || "Média geral";
+  const benchmarkCount = benchmark?.total_faixas ? `${benchmark.total_faixas} faixas` : "Fallback acústico";
   const benchmarkMap: Partial<Record<keyof SpotifyFeatures, number | null>> = benchmark ? {
     danceability: benchmark.avg_danceability,
     energy: benchmark.avg_energy,
@@ -132,7 +135,7 @@ function BenchmarkPanel({ diagnosis, benchmark }: { diagnosis: DiagnosisResult; 
   const attrs: (keyof SpotifyFeatures)[] = ["danceability", "energy", "valence", "acousticness", "instrumentalness", "speechiness", "liveness"];
 
   return (
-    <DiagCard icon="📈" title="Benchmark real — atributos estilo Spotify" variant="primary">
+    <DiagCard icon="📈" title="Benchmark de comparação — atributos estilo Spotify" variant="primary">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         <div className="space-y-2.5">
           {attrs.map((key) => (
@@ -148,13 +151,16 @@ function BenchmarkPanel({ diagnosis, benchmark }: { diagnosis: DiagnosisResult; 
           <div className="grid grid-cols-2 gap-2">
             <div className="rounded-lg bg-muted/30 border border-border p-3">
               <p className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground">Fonte</p>
-              <p className="text-sm font-semibold">Web Audio local</p>
+              <p className="text-sm font-semibold">{benchmarkSource}</p>
             </div>
             <div className="rounded-lg bg-muted/30 border border-border p-3">
               <p className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground">Benchmark</p>
-              <p className="text-sm font-semibold">{benchmark ? `${benchmark.genero} · ${benchmark.total_faixas}` : "Sem base ainda"}</p>
+              <p className="text-sm font-semibold">{benchmarkLabel} · {benchmarkCount}</p>
             </div>
           </div>
+          <p className="text-[11px] text-muted-foreground leading-relaxed">
+            As referências artísticas completas ficam ocultas; a IA recebe apenas um recorte técnico relevante e exibe aqui no relatório os 3–5 artistas mais próximos.
+          </p>
           <LufsCompatibility lufs={diagnosis.realAnalysis.lufs_integrated} />
         </div>
       </div>

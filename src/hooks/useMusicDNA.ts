@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { analyzeAudioFull, type AnalysisResult, type RealAudioAnalysis, type AudioSection } from "@/lib/audioAnalysis";
 import { detectInstruments, type InstrumentDetection } from "@/lib/instrumentDetection";
 import { lookupMusicDnaReferences, type MusicDnaLookupResult } from "@/lib/musicDnaLookup";
+import { ALL_REFERENCE_ARTISTS, selectReferenceArtists } from "@/lib/musicDnaReferences";
 
 // ── Re-exports ───────────────────────────────────────────────────────────────
 export type { RealAudioAnalysis, AudioSection } from "@/lib/audioAnalysis";
@@ -15,7 +16,20 @@ export type Genre =
   | "Indie Folk"
   | "Pop Brasileiro"
   | "Sertanejo Raiz"
+  | "Sertanejo Universitário"
   | "MPB Contemporânea"
+  | "Samba"
+  | "Pagode"
+  | "Funk Carioca"
+  | "Forró / Piseiro"
+  | "Indie BR"
+  | "Rock Alternativo BR"
+  | "Rap BR"
+  | "R&B / Soul"
+  | "Reggae BR"
+  | "Axé / Pop Bahia"
+  | "Eletrônica / House"
+  | "Pop Internacional"
   | "Lo-Fi Hip Hop"
   | "Trap BR"
   | "Bossa Nova"
@@ -98,19 +112,27 @@ export const GENRE_PRESETS: Record<Genre, AudioFeatures> = {
   "Indie Folk":        { energy: 0.35, danceability: 0.42, acousticness: 0.88, valence: 0.45, instrumentalness: 0.12, liveness: 0.18 },
   "Pop Brasileiro":    { energy: 0.72, danceability: 0.78, acousticness: 0.22, valence: 0.68, instrumentalness: 0.03, liveness: 0.14 },
   "Sertanejo Raiz":    { energy: 0.48, danceability: 0.55, acousticness: 0.75, valence: 0.62, instrumentalness: 0.06, liveness: 0.22 },
+  "Sertanejo Universitário": { energy: 0.66, danceability: 0.64, acousticness: 0.46, valence: 0.58, instrumentalness: 0.03, liveness: 0.18 },
   "MPB Contemporânea": { energy: 0.52, danceability: 0.58, acousticness: 0.55, valence: 0.50, instrumentalness: 0.15, liveness: 0.16 },
+  "Samba":             { energy: 0.62, danceability: 0.70, acousticness: 0.58, valence: 0.70, instrumentalness: 0.08, liveness: 0.28 },
+  "Pagode":            { energy: 0.64, danceability: 0.73, acousticness: 0.42, valence: 0.66, instrumentalness: 0.04, liveness: 0.24 },
+  "Funk Carioca":      { energy: 0.82, danceability: 0.88, acousticness: 0.08, valence: 0.62, instrumentalness: 0.02, liveness: 0.10 },
+  "Forró / Piseiro":   { energy: 0.74, danceability: 0.82, acousticness: 0.30, valence: 0.70, instrumentalness: 0.04, liveness: 0.20 },
+  "Indie BR":          { energy: 0.58, danceability: 0.56, acousticness: 0.38, valence: 0.48, instrumentalness: 0.18, liveness: 0.17 },
+  "Rock Alternativo BR": { energy: 0.78, danceability: 0.52, acousticness: 0.14, valence: 0.45, instrumentalness: 0.12, liveness: 0.22 },
+  "Rap BR":            { energy: 0.68, danceability: 0.74, acousticness: 0.18, valence: 0.44, instrumentalness: 0.04, liveness: 0.12 },
+  "R&B / Soul":        { energy: 0.55, danceability: 0.66, acousticness: 0.26, valence: 0.48, instrumentalness: 0.06, liveness: 0.12 },
+  "Reggae BR":         { energy: 0.55, danceability: 0.72, acousticness: 0.38, valence: 0.68, instrumentalness: 0.06, liveness: 0.20 },
+  "Axé / Pop Bahia":   { energy: 0.82, danceability: 0.80, acousticness: 0.18, valence: 0.78, instrumentalness: 0.03, liveness: 0.28 },
+  "Eletrônica / House": { energy: 0.82, danceability: 0.84, acousticness: 0.05, valence: 0.58, instrumentalness: 0.42, liveness: 0.10 },
+  "Pop Internacional": { energy: 0.70, danceability: 0.74, acousticness: 0.18, valence: 0.56, instrumentalness: 0.04, liveness: 0.12 },
   "Lo-Fi Hip Hop":     { energy: 0.30, danceability: 0.60, acousticness: 0.72, valence: 0.40, instrumentalness: 0.82, liveness: 0.08 },
   "Trap BR":           { energy: 0.80, danceability: 0.76, acousticness: 0.06, valence: 0.35, instrumentalness: 0.05, liveness: 0.12 },
   "Bossa Nova":        { energy: 0.28, danceability: 0.52, acousticness: 0.82, valence: 0.58, instrumentalness: 0.20, liveness: 0.12 },
   "Rock Alternativo":  { energy: 0.78, danceability: 0.52, acousticness: 0.15, valence: 0.42, instrumentalness: 0.18, liveness: 0.25 },
 };
 
-export const REFERENCE_ARTISTS: string[] = [
-  "Bon Iver", "Novo Amor", "Clarice Falcão", "Criolo",
-  "Emicida", "Ana Frango Elétrico", "Terno Rei", "Djonga",
-  "Pitty", "Fresno", "BK'", "Baco Exu do Blues",
-  "Tim Bernardes", "Rubel", "Mônica Salmaso", "Anavitória",
-];
+export const REFERENCE_ARTISTS: string[] = ALL_REFERENCE_ARTISTS;
 
 export const FEATURE_KEYS: (keyof AudioFeatures)[] = [
   "energy", "danceability", "acousticness",
@@ -160,7 +182,8 @@ export function toRadarData(track: AudioFeatures, ref: AudioFeatures) {
 function buildPrompt(
   input: TrackInput,
   analysis: RealAudioAnalysis,
-  instrumentData?: InstrumentDetection
+  instrumentData?: InstrumentDetection,
+  selectedReferences: string[] = input.references
 ): string {
   const pct = (v: number) => `${Math.round(v * 100)}%`;
   const db = (v: number) => `${v > 0 ? "+" : ""}${v.toFixed(1)}`;
@@ -230,6 +253,7 @@ BPM:     ${analysis.bpm.toFixed(1)}
 Tom:     ${analysis.key}
 Duração: ${Math.floor(analysis.duration_sec / 60)}:${String(Math.round(analysis.duration_sec % 60)).padStart(2, "0")}
 Referências: ${input.references.length ? input.references.join(", ") : "nenhuma"}
+Pool técnico de comparação sugerido: ${selectedReferences.length ? selectedReferences.join(", ") : "nenhum"}
 Descrição: ${input.notes || "não fornecida"}
 
 ════════════════════════════════════════════════
@@ -388,7 +412,10 @@ export function useMusicDNA(): UseMusicDNAReturn {
       setProgress(70);
       appendLog("🤖  Gerando diagnóstico avançado com IA…");
 
-      const prompt = buildPrompt(input, realAnalysis, instrumentResult);
+      const selectedReferences = selectReferenceArtists(tFeatures, input.genre, input.references, 18);
+      appendLog(`🎧  ${selectedReferences.length} referências reais selecionadas para comparação.`);
+
+      const prompt = buildPrompt(input, realAnalysis, instrumentResult, selectedReferences);
       const rawText = await callMusicDNAAnalyze(prompt);
       const clean = rawText.replace(/```json|```/g, "").trim();
       const parsed = JSON.parse(clean);
