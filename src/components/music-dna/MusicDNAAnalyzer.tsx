@@ -467,7 +467,7 @@ function LoadingView({ trackName, logs, progress }: {
 
 // ── RESULT VIEW ──────────────────────────────────────────────────────────────
 
-function ResultView({ input, diagnosis, onReset, onSave, isSaved, isSaving, savedAnalysisId }: {
+function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isSaving, savedAnalysisId }: {
   input: TrackInput | { name: string; notes?: string; references: string[] };
   diagnosis: DiagnosisResult;
   benchmark?: MusicDnaBenchmark;
@@ -905,6 +905,7 @@ export function MusicDNAAnalyzer() {
   const [viewingDiagnosis, setViewingDiagnosis] = useState<DiagnosisResult | null>(null);
   const [isSaved, setIsSaved] = useState(false);
   const { saveAnalysis, isSaving } = useSavedAnalyses();
+  const { data: benchmarks } = useMusicDnaBenchmarks();
 
   // Restore cached analysis on mount
   useEffect(() => {
@@ -980,6 +981,7 @@ export function MusicDNAAnalyzer() {
   };
 
   const activeDiagnosis = viewingDiagnosis || result;
+  const activeBenchmark = findBenchmarkForGenre(benchmarks, activeDiagnosis?.genero_classificado);
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-6">
@@ -1024,6 +1026,7 @@ export function MusicDNAAnalyzer() {
           <ResultView
             input={lastInput}
             diagnosis={activeDiagnosis}
+            benchmark={activeBenchmark}
             onReset={handleReset}
             onSave={handleSave}
             isSaved={isSaved}
