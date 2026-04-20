@@ -9,6 +9,7 @@ import {
 import { useProfile } from "@/contexts/ProfileContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProjects } from "@/contexts/ProjectContext";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,10 +19,10 @@ import { toast } from "sonner";
 /* ── option maps ────────────────────────────────────────────── */
 
 const MOMENTS = [
-  { value: "idea", label: "Tenho uma ideia", icon: Lightbulb, stage: "inicio" },
-  { value: "producing", label: "Já estou produzindo", icon: Disc3, stage: "gravacao" },
-  { value: "ready", label: "Tenho música pronta", icon: Radio, stage: "master" },
-  { value: "launching", label: "Quero lançar", icon: Rocket, stage: "upload" },
+  { value: "idea", label: "Tenho uma ideia", icon: Lightbulb, stage: "inicio", impact: "Seu projeto começa em organização criativa." },
+  { value: "producing", label: "Já estou produzindo", icon: Disc3, stage: "gravacao", impact: "Vamos priorizar gravação, arranjo e entregas." },
+  { value: "ready", label: "Tenho música pronta", icon: Radio, stage: "master", impact: "O projeto já nasce em masterização." },
+  { value: "launching", label: "Quero lançar", icon: Rocket, stage: "upload", impact: "Seu plano começa focado em distribuição." },
 ] as const;
 
 const PROJECT_TYPES = [
@@ -36,17 +37,58 @@ const MODES = [
 ];
 
 const PAINS = [
-  { value: "organization", label: "Organização", icon: FolderKanban },
-  { value: "team", label: "Equipe", icon: Users },
-  { value: "deadlines", label: "Prazos", icon: Clock },
-  { value: "finance", label: "Financeiro", icon: DollarSign },
-  { value: "launch", label: "Lançamento", icon: Upload },
+  { value: "organization", label: "Organização", icon: FolderKanban, impact: "Dashboard com checklist e progresso em primeiro plano." },
+  { value: "team", label: "Equipe", icon: Users, impact: "Vamos destacar convites, parceiros e responsáveis." },
+  { value: "deadlines", label: "Prazos", icon: Clock, impact: "Alertas e próximas datas ganham prioridade." },
+  { value: "finance", label: "Financeiro", icon: DollarSign, impact: "Receitas, custos e margem sobem no dashboard." },
+  { value: "launch", label: "Lançamento", icon: Upload, impact: "Checklist de lançamento e análise técnica vêm primeiro." },
 ] as const;
 
 const PROJECT_NAME_MAP: Record<string, string> = {
   single: "Meu Single",
   ep: "Meu EP",
   album: "Meu Álbum",
+};
+
+const TRACK_TEMPLATES: Record<string, string[]> = {
+  single: ["Voz Principal", "Instrumental / Beat", "Referência", "Master Bus"],
+  ep: ["Faixa 1", "Faixa 2", "Faixa 3", "Master Bus"],
+  album: ["Pré-produção", "Faixas principais", "Interlúdios / versões", "Master Bus"],
+};
+
+const PAIN_TASKS: Record<string, { description: string; task_area: string; severity?: string }[]> = {
+  organization: [
+    { description: "Definir a próxima etapa do projeto", task_area: "geral", severity: "high" },
+    { description: "Organizar referências e arquivos principais", task_area: "geral" },
+    { description: "Listar pendências para avançar esta semana", task_area: "geral" },
+  ],
+  team: [
+    { description: "Listar quem falta para finalizar o projeto", task_area: "equipe", severity: "high" },
+    { description: "Convidar um parceiro para o projeto", task_area: "equipe" },
+    { description: "Definir responsável pela próxima entrega", task_area: "equipe" },
+  ],
+  deadlines: [
+    { description: "Definir o próximo prazo realista do projeto", task_area: "geral", severity: "high" },
+    { description: "Marcar a próxima entrega crítica no checklist", task_area: "geral" },
+    { description: "Separar pendências que podem atrasar o lançamento", task_area: "geral" },
+  ],
+  finance: [
+    { description: "Definir orçamento estimado do projeto", task_area: "financeiro", severity: "high" },
+    { description: "Registrar investimento inicial", task_area: "financeiro" },
+    { description: "Anotar previsão de receita ou cachê", task_area: "financeiro" },
+  ],
+  launch: [
+    { description: "Definir data prevista de lançamento", task_area: "lancamento", severity: "high" },
+    { description: "Conferir LUFS/True Peak antes do upload", task_area: "lancamento" },
+    { description: "Preparar capa e texto curto de divulgação", task_area: "lancamento" },
+  ],
+};
+
+const MOMENT_TASKS: Record<string, { description: string; task_area: string; severity?: string }[]> = {
+  idea: [{ description: "Transformar a ideia em estrutura de música", task_area: "gravacao", severity: "high" }],
+  producing: [{ description: "Definir o que falta gravar ou editar", task_area: "gravacao", severity: "high" }],
+  ready: [{ description: "Rodar uma análise técnica da faixa pronta", task_area: "lancamento", severity: "high" }],
+  launching: [{ description: "Revisar checklist de distribuição antes do envio", task_area: "lancamento", severity: "high" }],
 };
 
 /* ── component ──────────────────────────────────────────────── */
