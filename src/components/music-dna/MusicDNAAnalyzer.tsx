@@ -38,7 +38,6 @@ import { cn } from "@/lib/utils";
 
 import {
   useMusicDNA,
-  REFERENCE_ARTISTS,
   FEATURE_KEYS, FEATURE_LABELS,
   GENRE_PRESETS, calcDistance,
   toRadarData,
@@ -224,14 +223,6 @@ function FormView({ onSubmit, isPending }: {
     },
   });
 
-  const refs = form.watch("references");
-  const toggleRef = (a: string) => {
-    const cur = form.getValues("references");
-    form.setValue("references",
-      cur.includes(a) ? cur.filter(r => r !== a)
-        : cur.length < 5 ? [...cur, a] : cur
-    );
-  };
 
   const handleFile = useCallback((file: File) => {
     setFileError(null);
@@ -352,40 +343,6 @@ function FormView({ onSubmit, isPending }: {
                 <FormMessage />
               </FormItem>
             )} />
-
-            <Collapsible>
-              <CollapsibleTrigger className="text-[10px] uppercase tracking-widest font-mono text-muted-foreground hover:text-foreground transition-colors">
-                + Artistas de referência ({refs.length}/5)
-              </CollapsibleTrigger>
-              <CollapsibleContent className="mt-2 space-y-2">
-                <p className="text-[11px] text-muted-foreground leading-relaxed">
-                  Selecione até 5 artistas que inspiram esta faixa. A IA usará para comparar identidade sonora.
-                </p>
-                <div className="flex flex-wrap gap-1.5">
-                  {REFERENCE_ARTISTS.map((artist) => {
-                    const selected = refs.includes(artist);
-                    const disabled = !selected && refs.length >= 5;
-                    return (
-                      <button
-                        key={artist}
-                        type="button"
-                        onClick={() => toggleRef(artist)}
-                        disabled={disabled}
-                        className={cn(
-                          "text-[10px] px-2.5 py-1 rounded-full border transition-all",
-                          selected
-                            ? "bg-primary text-primary-foreground border-primary"
-                            : "bg-muted/30 text-muted-foreground border-border hover:border-primary/40 hover:text-foreground",
-                          disabled && "opacity-40 cursor-not-allowed"
-                        )}
-                      >
-                        {artist}
-                      </button>
-                    );
-                  })}
-                </div>
-              </CollapsibleContent>
-            </Collapsible>
 
             <Collapsible>
               <CollapsibleTrigger className="text-[10px] uppercase tracking-widest font-mono text-muted-foreground hover:text-foreground transition-colors">
