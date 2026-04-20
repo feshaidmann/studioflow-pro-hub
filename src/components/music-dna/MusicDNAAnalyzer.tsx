@@ -253,6 +253,79 @@ function DiagCard({ icon, title, variant = "default", children }: {
   );
 }
 
+function DetailSection({ id, title, icon, children }: {
+  id: string;
+  title: string;
+  icon: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section id={id} className="scroll-mt-16">
+      <Collapsible className="md:hidden rounded-lg border border-border bg-card">
+        <CollapsibleTrigger className="flex w-full items-center justify-between px-4 py-3 text-left text-[11px] font-mono uppercase tracking-wider text-muted-foreground">
+          <span className="flex items-center gap-2"><span>{icon}</span>{title}</span>
+          <span className="text-primary">+</span>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="px-4 pb-4">
+          {children}
+        </CollapsibleContent>
+      </Collapsible>
+      <div className="hidden md:block">{children}</div>
+    </section>
+  );
+}
+
+function ExecutiveSummary({ diagnosis }: { diagnosis: DiagnosisResult }) {
+  const truePeak = diagnosis.realAnalysis?.true_peak_dbtp ?? diagnosis.audioAnalysis.truePeak;
+  const lufs = diagnosis.realAnalysis?.lufs_integrated ?? diagnosis.audioAnalysis.lufs;
+  const dynamicRange = diagnosis.realAnalysis?.dynamic_range_lu ?? diagnosis.audioAnalysis.dynamicRange;
+  const primaryStrength = diagnosis.pontos_fortes?.[0] ?? "A faixa já apresenta uma identidade sonora reconhecível.";
+  const mainBottleneck = diagnosis.gargalos_criativos?.[0] ?? "Vale refinar o contraste entre seções antes da finalização.";
+  const nextAction = diagnosis.proximos_passos?.[0]?.acao ?? diagnosis.sugestoes_arranjo?.[0] ?? "Revisar mix e arranjo com foco no ponto mais sensível do diagnóstico.";
+
+  const status = truePeak <= -1 && lufs >= -16 && lufs <= -10 && dynamicRange >= 7
+    ? { label: "Pronta para streaming", tone: "success" as const }
+    : truePeak > 0 || dynamicRange < 5
+    ? { label: "Precisa revisão técnica", tone: "destructive" as const }
+    : { label: "Boa base, precisa ajustes", tone: "primary" as const };
+
+  const toneClass = {
+    success: "bg-primary/10 text-primary border-primary/30",
+    destructive: "bg-destructive/10 text-destructive border-destructive/30",
+    primary: "bg-primary/10 text-primary border-primary/30",
+  }[status.tone];
+
+  return (
+    <section id="dna-resumo" className="scroll-mt-16">
+      <Card className="border-l-4 border-l-primary animate-fade-in">
+        <CardContent className="p-4 space-y-4">
+          <div className="flex items-start justify-between gap-3 flex-wrap">
+            <div>
+              <p className="text-[10px] font-mono uppercase tracking-widest text-primary mb-1">Resumo executivo</p>
+              <p className="text-sm leading-relaxed">{diagnosis.diagnostico_resumo}</p>
+            </div>
+            <Badge variant="outline" className={cn("text-[10px] font-mono uppercase tracking-wider", toneClass)}>
+              {status.label}
+            </Badge>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+            {[
+              { label: "Força principal", text: primaryStrength },
+              { label: "Gargalo principal", text: mainBottleneck },
+              { label: "Próxima ação", text: nextAction },
+            ].map((item) => (
+              <div key={item.label} className="rounded-lg bg-muted/30 border border-border p-3">
+                <p className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground mb-1">{item.label}</p>
+                <p className="text-xs leading-relaxed">{item.text}</p>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    </section>
+  );
+}
+
 function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
