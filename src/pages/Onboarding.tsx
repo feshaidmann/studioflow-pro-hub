@@ -162,10 +162,30 @@ export default function Onboarding() {
         key: "C",
         stage,
         projectType: projectType as "single" | "ep" | "album",
+        templateTracks: TRACK_TEMPLATES[projectType] ?? TRACK_TEMPLATES.single,
       });
       projectId = project?.id ?? null;
     } catch {
       toast.error("Erro ao criar projeto, mas seu perfil foi salvo.");
+    }
+
+    if (projectId) {
+      const starterTasks = [...(MOMENT_TASKS[moment] ?? []), ...(PAIN_TASKS[pain] ?? [])].slice(0, 4);
+      await supabase.from("tasks").upsert(
+        starterTasks.map((task, index) => ({
+          user_id: user.id,
+          project_id: projectId,
+          description: task.description,
+          auto_generated: true,
+          source: "onboarding",
+          source_key: `onboarding:${projectId}:${moment}:${pain}:${index}`,
+          source_module: "onboarding",
+          task_area: task.task_area,
+          severity: task.severity ?? "medium",
+        })),
+        { onConflict: "user_id,source_key", ignoreDuplicates: true }
+      );
+      localStorage.setItem("sfp_recent_onboarding_project", projectId);
     }
 
     // Update profile
@@ -186,6 +206,15 @@ export default function Onboarding() {
   /* ── step labels ────────────────────────────────────────── */
   const TOTAL_STEPS = 6;
   const stepLabels = ["Momento", "Tipo", "Modo", "Desafio", "Identidade", "Pronto"];
+  const selectedMoment = MOMENTS.find((m) => m.value === moment);
+  const selectedPain = PAINS.find((p) => p.value === pain);
+  const selectedProjectType = PROJECT_TYPES.find((t) => t.value === projectType);
+  const planItems = [
+    selectedMoment?.impact,
+    selectedPain?.impact,
+    projectType ? `${TRACK_TEMPLATES[projectType]?.length ?? 4} trilhas iniciais para ${selectedProjectType?.label}.` : null,
+    pain ? `${Math.min(4, ((MOMENT_TASKS[moment] ?? []).length + (PAIN_TASKS[pain] ?? []).length))} tarefas iniciais já contextualizadas.` : null,
+  ].filter(Boolean) as string[];
 
   /* ── render helpers ─────────────────────────────────────── */
   const OptionCard = ({
@@ -234,8 +263,8 @@ export default function Onboarding() {
           <div className="mx-auto h-14 w-14 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center">
             <Music className="h-7 w-7 text-primary" />
           </div>
-          <h1 className="text-2xl font-bold neon-text">StudioFlow</h1>
-          <p className="text-muted-foreground text-sm">Vamos configurar tudo pra você</p>
+          <h1 className="text-2xl font-bold text-foreground">StudioFlow</h1>
+          <p className="text-muted-foreground text-sm">Vamos montar seu plano inicial</p>
         </div>
 
         {/* Progress */}
@@ -269,10 +298,10 @@ export default function Onboarding() {
               <p className="text-sm font-semibold text-foreground">Onde você está agora?</p>
               <div className="space-y-2.5">
                 {MOMENTS.map((m) => (
-                  <OptionCard key={m.value} selected={moment === m.value} onClick={() => setMoment(m.value)} icon={m.icon} label={m.label} />
+                  <OptionCard key={m.value} selected={moment === m.value} onClick={() => setMoment(m.value)} icon={m.icon} label={m.label} desc={m.impact} />
                 ))}
               </div>
-              <Button onClick={handleNext} disabled={!canAdvance[1]} className="w-full neon-glow gap-2" size="lg">
+              <Button onClick={handleNext} disabled={!canAdvance[1]} className="w-full gap-2" size="lg">
                 Próximo <ArrowRight className="h-4 w-4" />
               </Button>
             </div>
@@ -289,7 +318,7 @@ export default function Onboarding() {
               </div>
               <div className="flex gap-2">
                 <Button variant="outline" onClick={handleBack} className="flex-1" size="lg">Voltar</Button>
-                <Button onClick={handleNext} disabled={!canAdvance[2]} className="flex-1 neon-glow gap-2" size="lg">
+                <Button onClick={handleNext} disabled={!canAdvance[2]} className="flex-1 gap-2" size="lg">
                   Próximo <ArrowRight className="h-4 w-4" />
                 </Button>
               </div>
@@ -311,7 +340,7 @@ export default function Onboarding() {
               </div>
               <div className="flex gap-2">
                 <Button variant="outline" onClick={handleBack} className="flex-1" size="lg">Voltar</Button>
-                <Button onClick={handleNext} className="flex-1 neon-glow gap-2" size="lg">
+                <Button onClick={handleNext} className="flex-1 gap-2" size="lg">
                   Próximo <ArrowRight className="h-4 w-4" />
                 </Button>
               </div>
