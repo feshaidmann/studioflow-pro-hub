@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/collapsible";
 
 import { cn } from "@/lib/utils";
+import { scrollToAnchor } from "@/lib/scrollToAnchor";
 import { LufsCompatibility } from "@/components/music-dna/LufsCompatibility";
 import { useMusicDnaBenchmarks, findBenchmarkForGenre } from "@/hooks/useMusicDnaBenchmarks";
 import { spotifyFeaturesFromDiagnosis, FEATURE_DESCRIPTIONS, type MusicDnaBenchmark, type SpotifyFeatures } from "@/types/musicDna";
