@@ -82,25 +82,29 @@ export function spotifyFeaturesFromDiagnosis(diagnosis: DiagnosisResult): Spotif
 
 export function musicDnaColumnsFromDiagnosis(diagnosis: DiagnosisResult) {
   const features = spotifyFeaturesFromDiagnosis(diagnosis);
+  const external = diagnosis.externalLookup;
   const clamp4 = (value: number) => Number(Math.max(0, Math.min(1, value)).toFixed(4));
+  const sourceFeatures = external?.features ?? {};
   return {
-    danceability: clamp4(features.danceability),
-    energy: clamp4(features.energy),
-    key_number: features.key,
-    key_name: KEY_NAMES[features.key] ?? "C",
-    loudness_db: features.loudness,
-    mode_number: features.mode,
-    mode_name: features.mode === 1 ? "major" : "minor",
-    speechiness: clamp4(features.speechiness),
-    acousticness: clamp4(features.acousticness),
-    instrumentalness: clamp4(features.instrumentalness),
-    liveness: clamp4(features.liveness),
-    valence: clamp4(features.valence),
-    tempo_bpm: features.tempo,
-    duration_ms: features.duration_ms,
-    time_signature: features.time_signature,
+    danceability: clamp4(sourceFeatures.danceability ?? features.danceability),
+    energy: clamp4(sourceFeatures.energy ?? features.energy),
+    key_number: sourceFeatures.key ?? features.key,
+    key_name: KEY_NAMES[sourceFeatures.key ?? features.key] ?? "C",
+    loudness_db: sourceFeatures.loudness ?? features.loudness,
+    mode_number: sourceFeatures.mode ?? features.mode,
+    mode_name: (sourceFeatures.mode ?? features.mode) === 1 ? "major" : "minor",
+    speechiness: clamp4(sourceFeatures.speechiness ?? features.speechiness),
+    acousticness: clamp4(sourceFeatures.acousticness ?? features.acousticness),
+    instrumentalness: clamp4(sourceFeatures.instrumentalness ?? features.instrumentalness),
+    liveness: clamp4(sourceFeatures.liveness ?? features.liveness),
+    valence: clamp4(sourceFeatures.valence ?? features.valence),
+    tempo_bpm: sourceFeatures.tempo ?? features.tempo,
+    duration_ms: sourceFeatures.duration_ms || features.duration_ms,
+    time_signature: sourceFeatures.time_signature ?? features.time_signature,
     lufs_integrated: diagnosis.realAnalysis.lufs_integrated,
     dynamic_range_db: diagnosis.realAnalysis.dynamic_range_lu,
-    fonte_analise: "web_audio",
+    fonte_analise: external?.fonte ?? "web_audio",
+    mbid: external?.mbid,
+    deezer_id: external?.deezerId,
   };
 }
