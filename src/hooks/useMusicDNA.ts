@@ -363,7 +363,7 @@ export function useMusicDNA(): UseMusicDNAReturn {
       // Step 1 — Audio analysis
       setStep("extracting");
       setProgress(15);
-      appendLog("🎵  Decodificando e analisando áudio…");
+      appendLog("🎵  Lendo o áudio real da faixa…");
 
       const [fullAnalysis, instrumentResult, externalLookup] = await Promise.all([
         analyzeAudioFull(input.file),
@@ -375,21 +375,14 @@ export function useMusicDNA(): UseMusicDNAReturn {
       const detectedInstruments = instrumentResult.instruments;
 
       setProgress(35);
-      appendLog(
-        `📊  LUFS: ${realAnalysis.lufs_integrated} · Peak: ${realAnalysis.true_peak_dbtp} dBTP · DR: ${realAnalysis.dynamic_range_lu} LU`
-      );
-      appendLog(
-        `🎹  BPM: ${realAnalysis.bpm} · Tom: ${realAnalysis.key} · Centroide: ${realAnalysis.spectral_centroid_hz} Hz`
-      );
-      if (externalLookup) appendLog(`🌐  Benchmark externo: ${externalLookup.fonte}`);
+      appendLog("📊  Medindo loudness, dinâmica e espectro…");
+      if (externalLookup) appendLog(`🌐  Comparando com benchmark externo: ${externalLookup.fonte}`);
 
       // Step 2 — Features from real analysis
       setStep("profiling");
       setProgress(45);
-      appendLog("🔍  Calculando perfil acústico e seções…");
-      appendLog(
-        `📐  ${realAnalysis.sections.length} seções detectadas · Energia: ${Math.round(realAnalysis.energy * 100)}%`
-      );
+      appendLog("🔍  Comparando com benchmarks do gênero…");
+      appendLog(`📐  Mapeando ${realAnalysis.sections.length} seções e o perfil acústico da faixa…`);
 
       const rFeatures = input.genre ? GENRE_PRESETS[input.genre] : getAveragePreset();
       const tFeatures: AudioFeatures = {
@@ -405,15 +398,15 @@ export function useMusicDNA(): UseMusicDNAReturn {
       setStep("computing");
       const distance = calcDistance(tFeatures, rFeatures);
       setProgress(58);
-      appendLog(`📐  Distância estética: ${distance.toFixed(3)}`);
+      appendLog("🧭  Calculando proximidade estética e técnica…");
 
       // Step 4 — AI
       setStep("generating");
       setProgress(70);
-      appendLog("🤖  Gerando diagnóstico avançado com IA…");
+      appendLog("🤖  Gerando recomendações de produção…");
 
       const selectedReferences = selectReferenceArtists(tFeatures, input.genre, input.references, 18);
-      appendLog(`🎧  ${selectedReferences.length} referências reais selecionadas para comparação.`);
+      appendLog("🎧  Selecionando referências artísticas próximas…");
 
       const prompt = buildPrompt(input, realAnalysis, instrumentResult, selectedReferences);
       const rawText = await callMusicDNAAnalyze(prompt);
