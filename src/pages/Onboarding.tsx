@@ -354,12 +354,12 @@ export default function Onboarding() {
               <p className="text-xs text-muted-foreground">Isso nos ajuda a priorizar o que mostrar pra você.</p>
               <div className="space-y-2.5">
                 {PAINS.map((p) => (
-                  <OptionCard key={p.value} selected={pain === p.value} onClick={() => setPain(p.value)} icon={p.icon} label={p.label} />
+                  <OptionCard key={p.value} selected={pain === p.value} onClick={() => setPain(p.value)} icon={p.icon} label={p.label} desc={p.impact} />
                 ))}
               </div>
               <div className="flex gap-2">
                 <Button variant="outline" onClick={handleBack} className="flex-1" size="lg">Voltar</Button>
-                <Button onClick={handleNext} disabled={!canAdvance[4]} className="flex-1 neon-glow gap-2" size="lg">
+                <Button onClick={handleNext} disabled={!canAdvance[4]} className="flex-1 gap-2" size="lg">
                   Próximo <ArrowRight className="h-4 w-4" />
                 </Button>
               </div>
@@ -401,7 +401,7 @@ export default function Onboarding() {
               </div>
               <div className="flex gap-2">
                 <Button variant="outline" onClick={handleBack} className="flex-1" size="lg">Voltar</Button>
-                <Button onClick={handleNext} disabled={!canAdvance[5]} className="flex-1 neon-glow gap-2" size="lg">
+                <Button onClick={handleNext} disabled={!canAdvance[5]} className="flex-1 gap-2" size="lg">
                   Próximo <ArrowRight className="h-4 w-4" />
                 </Button>
               </div>
@@ -411,7 +411,10 @@ export default function Onboarding() {
           {/* STEP 6 — Confirmação */}
           {step === 6 && (
             <div className="space-y-5">
-              <p className="text-sm font-semibold text-foreground">Tudo pronto!</p>
+              <div className="space-y-1">
+                <p className="text-sm font-semibold text-foreground">Seu StudioFlow vai começar assim</p>
+                <p className="text-xs text-muted-foreground">Este plano define projeto, dashboard, checklist e IA.</p>
+              </div>
 
               <div className="rounded-xl border border-border p-4 space-y-2.5">
                 <SummaryRow label="Momento" value={MOMENTS.find((m) => m.value === moment)?.label || "—"} />
@@ -422,13 +425,25 @@ export default function Onboarding() {
                 {city.trim() && <SummaryRow label="Cidade" value={city.trim()} />}
               </div>
 
+              <div className="rounded-xl bg-muted/50 border border-border p-4 space-y-2">
+                <p className="text-xs font-semibold text-foreground">Vamos criar</p>
+                <ul className="space-y-1.5">
+                  {planItems.map((item) => (
+                    <li key={item} className="flex gap-2 text-xs text-muted-foreground leading-snug">
+                      <Check className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" />
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
               <p className="text-[11px] text-muted-foreground/70 text-center">
-                Vamos criar seu primeiro projeto e te levar direto pra ele.
+                Depois disso, a IA já entende seu momento sem você repetir contexto.
               </p>
 
               <div className="flex gap-2">
                 <Button variant="outline" onClick={handleBack} className="flex-1" size="lg">Voltar</Button>
-                <Button onClick={handleConfirm} disabled={submitting} className="flex-1 neon-glow gap-2" size="lg">
+                <Button onClick={handleConfirm} disabled={submitting} className="flex-1 gap-2" size="lg">
                   {submitting ? "Criando..." : <>Começar <ArrowRight className="h-4 w-4" /></>}
                 </Button>
               </div>
