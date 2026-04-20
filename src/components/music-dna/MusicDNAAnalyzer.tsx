@@ -35,6 +35,9 @@ import {
 } from "@/components/ui/collapsible";
 
 import { cn } from "@/lib/utils";
+import { LufsCompatibility } from "@/components/music-dna/LufsCompatibility";
+import { useMusicDnaBenchmarks, findBenchmarkForGenre } from "@/hooks/useMusicDnaBenchmarks";
+import { spotifyFeaturesFromDiagnosis, FEATURE_DESCRIPTIONS, type MusicDnaBenchmark, type SpotifyFeatures } from "@/types/musicDna";
 
 import {
   useMusicDNA,
@@ -112,6 +115,50 @@ function FeatureBar({ label, value, refValue }: {
           style={{ width: `${value * 100}%` }} />
       </div>
     </div>
+  );
+}
+
+function BenchmarkPanel({ diagnosis, benchmark }: { diagnosis: DiagnosisResult; benchmark?: MusicDnaBenchmark }) {
+  const features = spotifyFeaturesFromDiagnosis(diagnosis);
+  const benchmarkMap: Partial<Record<keyof SpotifyFeatures, number | null>> = benchmark ? {
+    danceability: benchmark.avg_danceability,
+    energy: benchmark.avg_energy,
+    speechiness: benchmark.avg_speechiness,
+    acousticness: benchmark.avg_acousticness,
+    instrumentalness: benchmark.avg_instrumentalness,
+    liveness: benchmark.avg_liveness,
+    valence: benchmark.avg_valence,
+  } : {};
+  const attrs: (keyof SpotifyFeatures)[] = ["danceability", "energy", "valence", "acousticness", "instrumentalness", "speechiness", "liveness"];
+
+  return (
+    <DiagCard icon="📈" title="Benchmark real — atributos estilo Spotify" variant="primary">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div className="space-y-2.5">
+          {attrs.map((key) => (
+            <FeatureBar
+              key={key}
+              label={FEATURE_DESCRIPTIONS[key]}
+              value={features[key] as number}
+              refValue={benchmarkMap[key] ?? undefined}
+            />
+          ))}
+        </div>
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-2">
+            <div className="rounded-lg bg-muted/30 border border-border p-3">
+              <p className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground">Fonte</p>
+              <p className="text-sm font-semibold">Web Audio local</p>
+            </div>
+            <div className="rounded-lg bg-muted/30 border border-border p-3">
+              <p className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground">Benchmark</p>
+              <p className="text-sm font-semibold">{benchmark ? `${benchmark.genero} · ${benchmark.total_faixas}` : "Sem base ainda"}</p>
+            </div>
+          </div>
+          <LufsCompatibility lufs={diagnosis.realAnalysis.lufs_integrated} />
+        </div>
+      </div>
+    </DiagCard>
   );
 }
 
@@ -420,9 +467,10 @@ function LoadingView({ trackName, logs, progress }: {
 
 // ── RESULT VIEW ──────────────────────────────────────────────────────────────
 
-function ResultView({ input, diagnosis, onReset, onSave, isSaved, isSaving, savedAnalysisId }: {
+function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isSaving, savedAnalysisId }: {
   input: TrackInput | { name: string; notes?: string; references: string[] };
   diagnosis: DiagnosisResult;
+  benchmark?: MusicDnaBenchmark;
   savedAnalysisId?: string;
   onReset: () => void;
   onSave?: () => void;
@@ -498,6 +546,8 @@ function ResultView({ input, diagnosis, onReset, onSave, isSaved, isSaving, save
           </Card>
         ))}
       </div>
+
+      <BenchmarkPanel diagnosis={diagnosis} benchmark={benchmark} />
 
       {/* Resumo */}
       <Card className="border-l-4 border-l-primary animate-fade-in">
@@ -855,6 +905,7 @@ export function MusicDNAAnalyzer() {
   const [viewingDiagnosis, setViewingDiagnosis] = useState<DiagnosisResult | null>(null);
   const [isSaved, setIsSaved] = useState(false);
   const { saveAnalysis, isSaving } = useSavedAnalyses();
+  const { data: benchmarks } = useMusicDnaBenchmarks();
 
   // Restore cached analysis on mount
   useEffect(() => {
@@ -930,6 +981,7 @@ export function MusicDNAAnalyzer() {
   };
 
   const activeDiagnosis = viewingDiagnosis || result;
+  const activeBenchmark = findBenchmarkForGenre(benchmarks, activeDiagnosis?.genero_classificado);
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-6">
@@ -974,6 +1026,7 @@ export function MusicDNAAnalyzer() {
           <ResultView
             input={lastInput}
             diagnosis={activeDiagnosis}
+            benchmark={activeBenchmark}
             onReset={handleReset}
             onSave={handleSave}
             isSaved={isSaved}

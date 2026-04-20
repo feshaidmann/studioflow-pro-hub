@@ -655,31 +655,151 @@ export type Database = {
       }
       music_dna_analyses: {
         Row: {
+          acousticness: number | null
           created_at: string
+          danceability: number | null
+          deezer_id: number | null
           diagnosis: Json
+          duration_ms: number | null
+          dynamic_range_db: number | null
+          energy: number | null
+          fonte_analise: string | null
           genre: string
           id: string
           input_metadata: Json
+          instrumentalness: number | null
+          isrc: string | null
+          key_name: string | null
+          key_number: number | null
+          liveness: number | null
+          loudness_db: number | null
+          lufs_integrated: number | null
+          mbid: string | null
+          mode_name: string | null
+          mode_number: number | null
+          speechiness: number | null
+          spotify_id: string | null
+          tempo_bpm: number | null
+          time_signature: number | null
           track_name: string
           user_id: string
+          valence: number | null
         }
         Insert: {
+          acousticness?: number | null
           created_at?: string
+          danceability?: number | null
+          deezer_id?: number | null
           diagnosis?: Json
+          duration_ms?: number | null
+          dynamic_range_db?: number | null
+          energy?: number | null
+          fonte_analise?: string | null
           genre?: string
           id?: string
           input_metadata?: Json
+          instrumentalness?: number | null
+          isrc?: string | null
+          key_name?: string | null
+          key_number?: number | null
+          liveness?: number | null
+          loudness_db?: number | null
+          lufs_integrated?: number | null
+          mbid?: string | null
+          mode_name?: string | null
+          mode_number?: number | null
+          speechiness?: number | null
+          spotify_id?: string | null
+          tempo_bpm?: number | null
+          time_signature?: number | null
           track_name?: string
           user_id: string
+          valence?: number | null
         }
         Update: {
+          acousticness?: number | null
           created_at?: string
+          danceability?: number | null
+          deezer_id?: number | null
           diagnosis?: Json
+          duration_ms?: number | null
+          dynamic_range_db?: number | null
+          energy?: number | null
+          fonte_analise?: string | null
           genre?: string
           id?: string
           input_metadata?: Json
+          instrumentalness?: number | null
+          isrc?: string | null
+          key_name?: string | null
+          key_number?: number | null
+          liveness?: number | null
+          loudness_db?: number | null
+          lufs_integrated?: number | null
+          mbid?: string | null
+          mode_name?: string | null
+          mode_number?: number | null
+          speechiness?: number | null
+          spotify_id?: string | null
+          tempo_bpm?: number | null
+          time_signature?: number | null
           track_name?: string
           user_id?: string
+          valence?: number | null
+        }
+        Relationships: []
+      }
+      music_dna_benchmarks: {
+        Row: {
+          atualizado_em: string | null
+          avg_acousticness: number | null
+          avg_danceability: number | null
+          avg_energy: number | null
+          avg_instrumentalness: number | null
+          avg_liveness: number | null
+          avg_loudness_db: number | null
+          avg_lufs: number | null
+          avg_speechiness: number | null
+          avg_tempo_bpm: number | null
+          avg_valence: number | null
+          genero: string
+          id: string
+          top_keys: Json | null
+          total_faixas: number | null
+        }
+        Insert: {
+          atualizado_em?: string | null
+          avg_acousticness?: number | null
+          avg_danceability?: number | null
+          avg_energy?: number | null
+          avg_instrumentalness?: number | null
+          avg_liveness?: number | null
+          avg_loudness_db?: number | null
+          avg_lufs?: number | null
+          avg_speechiness?: number | null
+          avg_tempo_bpm?: number | null
+          avg_valence?: number | null
+          genero: string
+          id?: string
+          top_keys?: Json | null
+          total_faixas?: number | null
+        }
+        Update: {
+          atualizado_em?: string | null
+          avg_acousticness?: number | null
+          avg_danceability?: number | null
+          avg_energy?: number | null
+          avg_instrumentalness?: number | null
+          avg_liveness?: number | null
+          avg_loudness_db?: number | null
+          avg_lufs?: number | null
+          avg_speechiness?: number | null
+          avg_tempo_bpm?: number | null
+          avg_valence?: number | null
+          genero?: string
+          id?: string
+          top_keys?: Json | null
+          total_faixas?: number | null
         }
         Relationships: []
       }

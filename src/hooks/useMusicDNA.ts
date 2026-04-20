@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { analyzeAudioFull, type AnalysisResult, type RealAudioAnalysis, type AudioSection } from "@/lib/audioAnalysis";
 import { detectInstruments, type InstrumentDetection } from "@/lib/instrumentDetection";
+import { lookupMusicDnaReferences, type MusicDnaLookupResult } from "@/lib/musicDnaLookup";
 
 // ── Re-exports ───────────────────────────────────────────────────────────────
 export type { RealAudioAnalysis, AudioSection } from "@/lib/audioAnalysis";
@@ -86,6 +87,7 @@ export interface DiagnosisResult {
   refFeatures: AudioFeatures;
   audioAnalysis: AnalysisResult;
   realAnalysis: RealAudioAnalysis;
+  externalLookup?: MusicDnaLookupResult | null;
   detectedInstruments: string[];
   instrumentDetection: InstrumentDetection;
 }
@@ -339,9 +341,10 @@ export function useMusicDNA(): UseMusicDNAReturn {
       setProgress(15);
       appendLog("🎵  Decodificando e analisando áudio…");
 
-      const [fullAnalysis, instrumentResult] = await Promise.all([
+      const [fullAnalysis, instrumentResult, externalLookup] = await Promise.all([
         analyzeAudioFull(input.file),
         detectInstruments(input.file),
+        lookupMusicDnaReferences(input.name),
       ]);
 
       const { legacy: audioAnalysis, real: realAnalysis } = fullAnalysis;
@@ -354,6 +357,7 @@ export function useMusicDNA(): UseMusicDNAReturn {
       appendLog(
         `🎹  BPM: ${realAnalysis.bpm} · Tom: ${realAnalysis.key} · Centroide: ${realAnalysis.spectral_centroid_hz} Hz`
       );
+      if (externalLookup) appendLog(`🌐  Benchmark externo: ${externalLookup.fonte}`);
 
       // Step 2 — Features from real analysis
       setStep("profiling");
@@ -400,6 +404,7 @@ export function useMusicDNA(): UseMusicDNAReturn {
         refFeatures: rFeatures,
         audioAnalysis,
         realAnalysis,
+        externalLookup,
         detectedInstruments,
         instrumentDetection: instrumentResult,
       };

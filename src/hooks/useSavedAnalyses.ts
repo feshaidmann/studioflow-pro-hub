@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import type { DiagnosisResult } from "@/hooks/useMusicDNA";
+import { musicDnaColumnsFromDiagnosis } from "@/types/musicDna";
 
 export interface SavedAnalysis {
   id: string;
@@ -72,7 +73,8 @@ export function useSavedAnalyses() {
           genre: diagnosis.genero_classificado || "",
           input_metadata: input as any,
           diagnosis: diagnosis as any,
-        })
+          ...musicDnaColumnsFromDiagnosis(diagnosis),
+        } as any)
         .select("id")
         .single();
       if (error) throw error;
