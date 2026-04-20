@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, type ReactNode } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Bot, ChevronDown, ChevronUp } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -309,9 +309,9 @@ export default function Dashboard() {
     </Collapsible>
   );
 
-  const dashboardSections: Record<string, React.ReactNode> = {
+  const dashboardSections: Record<string, ReactNode> = {
     checklist: (
-      <div id="checklist-section" className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+      <div id="checklist-section" className="grid grid-cols-1 gap-3">
         {isFirstRun && <FirstRunEmptyState onNavigate={navigate} recentProject={recentOnboardingProject} profile={profile} />}
         <DailyChecklist
           activeTasks={activeTasks}
@@ -329,7 +329,6 @@ export default function Dashboard() {
           onInvokeAI={scrollToAI}
           projects={projects.map((p) => ({ id: p.id, name: p.name }))}
         />
-        <ProjectAlertsCard alerts={alerts} hidden={isFirstRun} />
       </div>
     ),
     alerts: <div id="alerts-section"><ProjectAlertsCard alerts={alerts} hidden={isFirstRun} /></div>,
