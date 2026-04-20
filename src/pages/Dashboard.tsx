@@ -28,6 +28,8 @@ import ProjectHealthList from "@/components/dashboard/ProjectHealthList";
 import PendingTeamCard from "@/components/dashboard/PendingTeamCard";
 import GuestProjectsList from "@/components/dashboard/GuestProjectsList";
 import EditalProgressCard from "@/components/dashboard/EditalProgressCard";
+import JourneyFocusCard from "@/components/dashboard/JourneyFocusCard";
+import { getJourneyPlan } from "@/lib/journeyPersonalization";
 
 export default function Dashboard() {
   const aiRef = useRef<AITaskAssistantHandle>(null);
@@ -37,7 +39,7 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const { projects, getMixPercent, getProjectFinancials, transactions } = useProjects();
-  const { displayName, isSimpleMode } = useProfile();
+  const { displayName, isSimpleMode, profile } = useProfile();
   const { activeTasks, completedTasks, loading: tasksLoading, addTask, toggleTask, deleteTask, updateTask, refresh: refreshTasks } = useTasks();
   const { user } = useAuth();
   const autoGenRef = useRef(false);
@@ -212,6 +214,11 @@ export default function Dashboard() {
   };
 
   const isFirstRun = projects.length === 0;
+  const journeyPlan = useMemo(() => getJourneyPlan(profile?.main_pain ?? "organization", profile?.current_moment ?? "", profile?.track_view_mode ?? "basic"), [profile]);
+  const recentOnboardingProject = useMemo(() => {
+    const id = localStorage.getItem("sfp_recent_onboarding_project");
+    return id ? projects.find((p) => p.id === id) ?? null : null;
+  }, [projects]);
 
   // Build "next recommended action" block
   const nextAction = useMemo(() => {
@@ -271,6 +278,14 @@ export default function Dashboard() {
                 financials,
                 professionals: professionals.map((p) => ({ name: p.name, specialty: p.specialty, bio: p.bio ?? "", active: true, phone: p.phone ?? "" })),
                 alerts: alerts.slice(0, 10).map((a) => ({ title: a.title, severity: a.severity, project: a.projectName, category: a.category })),
+                profileContext: profile ? {
+                  displayName,
+                  currentMoment: profile.current_moment,
+                  mainPain: profile.main_pain,
+                  trackViewMode: profile.track_view_mode,
+                  city: profile.city,
+                  origin: profile.origin,
+                } : undefined,
               }}
               onAddTask={async (description, projectId) => {
                 const validProjectId = projectId && projects.some((p) => p.id === projectId) ? projectId : null;
