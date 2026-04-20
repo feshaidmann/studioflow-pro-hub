@@ -179,7 +179,7 @@ function CompatibilityBadge({ result }: { result: DiagnosisResult }) {
   const topRef = result.referencias_proximas?.[0];
 
   const genreCfg = score >= 75
-    ? "bg-green-500/10 text-green-600 border-green-500/30"
+    ? "bg-primary/10 text-primary border-primary/30"
     : score >= 50
     ? "bg-primary/10 text-primary border-primary/30"
     : "bg-destructive/10 text-destructive border-destructive/30";
@@ -210,7 +210,7 @@ function CompatibilityBadge({ result }: { result: DiagnosisResult }) {
 function PriorityBadge({ priority }: { priority: "Alta" | "Média" | "Baixa" }) {
   const styles: Record<string, string> = {
     Alta: "bg-destructive/10 text-destructive border-destructive/30",
-    Média: "bg-orange-500/10 text-orange-600 border-orange-500/30",
+    Média: "bg-accent/10 text-accent-foreground border-accent/30",
     Baixa: "bg-muted/20 text-muted-foreground border-border",
   };
   return (
@@ -234,7 +234,7 @@ function DiagCard({ icon, title, variant = "default", children }: {
   }[variant];
   const color = {
     primary: "text-primary",
-    success: "text-green-600",
+    success: "text-primary",
     destructive: "text-destructive",
     default: "text-muted-foreground",
   }[variant];
