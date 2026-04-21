@@ -104,6 +104,11 @@ function buildDNAPrompt(diagnosis: DiagnosisResult, trackName: string, formatId 
     parts.push(`${prefix} para single musical.`);
   }
 
+  const cleanTitle = visualOnlyText(trackName);
+  if (cleanTitle) {
+    parts.push(`Use o título "${cleanTitle}" como inspiração conceitual para metáforas visuais, símbolos, cenário e paleta, sem inserir palavras do título como texto na imagem a menos que o campo de texto da arte permita.`);
+  }
+
   parts.push("Crie uma estrutura de imagem clara: assunto principal bem definido, plano de fundo com profundidade, primeiro plano com textura e área de respiro para tipografia.");
 
   const mood = visualOnlyText(diagnosis.identidade?.mood_principal);
