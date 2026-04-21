@@ -78,10 +78,16 @@ export function useSavedAnalyses() {
         .select("id")
         .single();
       if (error) throw error;
+      if (diagnosis.genero_classificado) {
+        supabase.rpc("recalcular_benchmark_genero" as never, { p_genero: diagnosis.genero_classificado } as never)
+          .then(() => queryClient.invalidateQueries({ queryKey: ["music-dna-benchmarks"] }))
+          .catch(() => undefined);
+      }
       return { id: data.id as string };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["music-dna-analyses"] });
+      queryClient.invalidateQueries({ queryKey: ["music-dna-benchmarks"] });
       toast.success("Análise salva com sucesso");
     },
     onError: (err: Error) => {
