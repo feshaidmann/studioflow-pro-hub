@@ -80,9 +80,6 @@ serve(async (req: Request) => {
     const action = body.action ?? "generate_diagnosis";
     const payload = body.payload ?? body;
     const prompt = payload.prompt ?? body.prompt;
-    if (!prompt?.trim()) {
-      return jsonResponse({ error: "prompt is required" }, 400);
-    }
 
     if (action === "save_features") {
       const p = payload ?? {};
@@ -92,7 +89,6 @@ serve(async (req: Request) => {
         .from("music_dna_analyses")
         .insert({
           user_id: data.claims.sub,
-          project_id: p.project_id ?? null,
           track_name: p.track_name ?? p.arquivo ?? "manual",
           genre: p.genero ?? p.genre ?? "",
           input_metadata: p.input_metadata ?? {},
@@ -126,6 +122,10 @@ serve(async (req: Request) => {
       const genre = p.genero ?? p.genre;
       if (genre) adminClient.rpc("recalcular_benchmark_genero", { p_genero: genre }).catch(() => undefined);
       return jsonResponse({ success: true, analysis });
+    }
+
+    if (!prompt?.trim()) {
+      return jsonResponse({ error: "prompt is required" }, 400);
     }
 
     let benchmark: unknown = null;
