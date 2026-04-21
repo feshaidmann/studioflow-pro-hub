@@ -7,6 +7,7 @@ export interface MusicDnaLookupResult {
   fonte: MusicDnaSource;
   mbid?: string;
   deezerId?: number;
+  previewUrl?: string;
 }
 
 export function parseArtistTitle(trackName: string) {
@@ -19,7 +20,7 @@ async function buscarMBID(artista: string, titulo: string): Promise<string | nul
   try {
     const query = encodeURIComponent(`${titulo} artist:${artista}`);
     const response = await fetch(`https://musicbrainz.org/ws/2/recording?query=${query}&fmt=json&limit=1`, {
-      headers: { "User-Agent": "StudioFlowPro/2.0" },
+      headers: { "User-Agent": "StudioFlowPro/2.0 (suporte@jamsessionproject.com.br)" },
     });
     const data = await response.json();
     return data.recordings?.[0]?.id ?? null;
@@ -75,6 +76,7 @@ async function buscarDeezer(artista: string | undefined, titulo: string): Promis
     return {
       fonte: "deezer",
       deezerId: track.id ?? undefined,
+      previewUrl: track.preview ?? undefined,
       features: {
         tempo: Number(track.bpm ?? 0),
         duration_ms: Number(track.duration ?? 0) * 1000,
@@ -87,6 +89,12 @@ async function buscarDeezer(artista: string | undefined, titulo: string): Promis
 
 export async function lookupMusicDnaReferences(trackName: string): Promise<MusicDnaLookupResult | null> {
   const { artista, titulo } = parseArtistTitle(trackName);
+  return lookupMusicDnaByMetadata({ artista, titulo });
+}
+
+export async function lookupMusicDnaByMetadata(input: { artista?: string; titulo?: string }): Promise<MusicDnaLookupResult | null> {
+  const { artista, titulo } = input;
+  if (!titulo?.trim()) return null;
   if (artista && titulo) {
     const mbid = await buscarMBID(artista, titulo);
     if (mbid) {

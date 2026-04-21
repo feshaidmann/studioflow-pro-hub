@@ -1,5 +1,7 @@
 import type { DiagnosisResult } from "@/hooks/useMusicDNA";
 
+export type MusicDnaSource = "acousticbrainz" | "deezer" | "web_audio" | "local";
+
 export interface SpotifyFeatures {
   danceability: number;
   energy: number;
@@ -30,6 +32,38 @@ export interface MusicDnaBenchmark {
   avg_tempo_bpm: number | null;
   avg_lufs: number | null;
   top_keys: Record<string, number> | null;
+}
+
+export interface MusicDnaSavedRow {
+  id: string;
+  user_id: string;
+  track_name: string;
+  genre: string;
+  input_metadata: unknown;
+  diagnosis: DiagnosisResult;
+  danceability: number | null;
+  energy: number | null;
+  key_number: number | null;
+  key_name: string | null;
+  loudness_db: number | null;
+  mode_number: number | null;
+  mode_name: string | null;
+  speechiness: number | null;
+  acousticness: number | null;
+  instrumentalness: number | null;
+  liveness: number | null;
+  valence: number | null;
+  tempo_bpm: number | null;
+  duration_ms: number | null;
+  time_signature: number | null;
+  lufs_integrated: number | null;
+  dynamic_range_db: number | null;
+  fonte_analise: MusicDnaSource | string | null;
+  mbid: string | null;
+  isrc: string | null;
+  deezer_id: number | null;
+  spotify_id: string | null;
+  created_at: string;
 }
 
 export const LUFS_TARGETS = {
@@ -85,19 +119,20 @@ export function musicDnaColumnsFromDiagnosis(diagnosis: DiagnosisResult) {
   const external = diagnosis.externalLookup;
   const clamp4 = (value: number) => Number(Math.max(0, Math.min(1, value)).toFixed(4));
   const sourceFeatures = external?.features ?? {};
+  const clampFeature = (value: number | undefined, fallback: number) => clamp4(value ?? fallback);
   return {
-    danceability: clamp4(sourceFeatures.danceability ?? features.danceability),
-    energy: clamp4(sourceFeatures.energy ?? features.energy),
+    danceability: clampFeature(sourceFeatures.danceability, features.danceability),
+    energy: clampFeature(sourceFeatures.energy, features.energy),
     key_number: sourceFeatures.key ?? features.key,
     key_name: KEY_NAMES[sourceFeatures.key ?? features.key] ?? "C",
     loudness_db: sourceFeatures.loudness ?? features.loudness,
     mode_number: sourceFeatures.mode ?? features.mode,
     mode_name: (sourceFeatures.mode ?? features.mode) === 1 ? "major" : "minor",
-    speechiness: clamp4(sourceFeatures.speechiness ?? features.speechiness),
-    acousticness: clamp4(sourceFeatures.acousticness ?? features.acousticness),
-    instrumentalness: clamp4(sourceFeatures.instrumentalness ?? features.instrumentalness),
-    liveness: clamp4(sourceFeatures.liveness ?? features.liveness),
-    valence: clamp4(sourceFeatures.valence ?? features.valence),
+    speechiness: clampFeature(sourceFeatures.speechiness, features.speechiness),
+    acousticness: clampFeature(sourceFeatures.acousticness, features.acousticness),
+    instrumentalness: clampFeature(sourceFeatures.instrumentalness, features.instrumentalness),
+    liveness: clampFeature(sourceFeatures.liveness, features.liveness),
+    valence: clampFeature(sourceFeatures.valence, features.valence),
     tempo_bpm: sourceFeatures.tempo ?? features.tempo,
     duration_ms: sourceFeatures.duration_ms || features.duration_ms,
     time_signature: sourceFeatures.time_signature ?? features.time_signature,

@@ -6,6 +6,7 @@ import { analyzeAudioFull, type AnalysisResult, type RealAudioAnalysis, type Aud
 import { detectInstruments, type InstrumentDetection } from "@/lib/instrumentDetection";
 import { lookupMusicDnaReferences, type MusicDnaLookupResult } from "@/lib/musicDnaLookup";
 import { ALL_REFERENCE_ARTISTS, selectReferenceArtists } from "@/lib/musicDnaReferences";
+import { KEY_NAMES } from "@/types/musicDna";
 
 // ── Re-exports ───────────────────────────────────────────────────────────────
 export type { RealAudioAnalysis, AudioSection } from "@/lib/audioAnalysis";
@@ -183,7 +184,8 @@ function buildPrompt(
   input: TrackInput,
   analysis: RealAudioAnalysis,
   instrumentData?: InstrumentDetection,
-  selectedReferences: string[] = input.references
+  selectedReferences: string[] = input.references,
+  externalLookup?: MusicDnaLookupResult | null
 ): string {
   const pct = (v: number) => `${Math.round(v * 100)}%`;
   const db = (v: number) => `${v > 0 ? "+" : ""}${v.toFixed(1)}`;
@@ -230,6 +232,24 @@ function buildPrompt(
   const instrSection = instrumentData?.instruments?.length
     ? `\nINSTRUMENTOS DETECTADOS (heurística espectral): ${instrumentData.instruments.join(", ")}`
     : "";
+  const externalFeatures = externalLookup?.features ?? {};
+  const keyIndex = Math.max(0, KEY_NAMES.findIndex((key) => analysis.key?.startsWith(key)));
+  const mode = /minor|menor|m\b/i.test(analysis.key ?? "") ? 0 : 1;
+  const spotifyAttrs = {
+    danceability: externalFeatures.danceability ?? analysis.danceability,
+    energy: externalFeatures.energy ?? analysis.energy,
+    key: externalFeatures.key ?? keyIndex,
+    loudness: externalFeatures.loudness ?? analysis.rms_dbfs,
+    mode: externalFeatures.mode ?? mode,
+    speechiness: externalFeatures.speechiness ?? analysis.speechiness,
+    acousticness: externalFeatures.acousticness ?? analysis.acousticness,
+    instrumentalness: externalFeatures.instrumentalness ?? analysis.instrumentalness,
+    liveness: externalFeatures.liveness ?? analysis.liveness,
+    valence: externalFeatures.valence ?? analysis.valence,
+    tempo: externalFeatures.tempo ?? analysis.bpm,
+    duration_ms: externalFeatures.duration_ms ?? Math.round(analysis.duration_sec * 1000),
+    time_signature: externalFeatures.time_signature ?? 4,
+  };
 
   return `
 Você é um produtor musical e engenheiro de áudio experiente, com domínio técnico profundo e paixão por ajudar artistas a evoluírem.
@@ -276,6 +296,10 @@ ATRIBUTOS MEDIDOS:
   Instrumentalidade:${pct(analysis.instrumentalness)}
   Liveness:         ${pct(analysis.liveness)}
   Speechiness:      ${pct(analysis.speechiness)}
+
+ATRIBUTOS ESTILO SPOTIFY — FONTE CONSOLIDADA:
+${JSON.stringify(spotifyAttrs, null, 2)}
+Fonte externa complementar: ${externalLookup?.fonte ?? "web_audio"}
 
 ════════════════════════════════════════════════
 ANÁLISE POR SEÇÃO
@@ -326,9 +350,9 @@ No "diagnostico_tecnico", inclua em cada campo: avaliação técnica com valores
 }`.trim();
 }
 
-async function callMusicDNAAnalyze(prompt: string): Promise<string> {
+async function callMusicDNAAnalyze(prompt: string, payload: Record<string, unknown> = {}): Promise<string> {
   const { data, error } = await supabase.functions.invoke("music-dna-analyze", {
-    body: { prompt },
+    body: { action: "generate_diagnosis", payload: { prompt, ...payload } },
   });
 
   if (error) throw new Error(error.message);
@@ -375,13 +399,14 @@ export function useMusicDNA(): UseMusicDNAReturn {
       const detectedInstruments = instrumentResult.instruments;
 
       setProgress(35);
-      appendLog("📊  Medindo loudness, dinâmica e espectro…");
-      if (externalLookup) appendLog(`🌐  Comparando com benchmark externo: ${externalLookup.fonte}`);
+      appendLog("📊  Analisando arquivo local via Web Audio API…");
+      appendLog("🌐  Buscando referência externa em AcousticBrainz e Deezer…");
+      appendLog(externalLookup ? `🌐  Fonte complementar encontrada: ${externalLookup.fonte}` : "🌐  Sem referência externa confiável; mantendo análise local como base.");
 
       // Step 2 — Features from real analysis
       setStep("profiling");
       setProgress(45);
-      appendLog("🔍  Comparando com benchmarks do gênero…");
+      appendLog("🔍  Consolidando atributos estilo Spotify…");
       appendLog(`📐  Mapeando ${realAnalysis.sections.length} seções e o perfil acústico da faixa…`);
 
       const rFeatures = input.genre ? GENRE_PRESETS[input.genre] : getAveragePreset();
@@ -403,13 +428,17 @@ export function useMusicDNA(): UseMusicDNAReturn {
       // Step 4 — AI
       setStep("generating");
       setProgress(70);
-      appendLog("🤖  Gerando recomendações de produção…");
+      appendLog("🤖  Gerando diagnóstico IA com atributos consolidados…");
 
       const selectedReferences = selectReferenceArtists(tFeatures, input.genre, input.references, 18);
       appendLog("🎧  Selecionando referências artísticas próximas…");
 
-      const prompt = buildPrompt(input, realAnalysis, instrumentResult, selectedReferences);
-      const rawText = await callMusicDNAAnalyze(prompt);
+      const prompt = buildPrompt(input, realAnalysis, instrumentResult, selectedReferences, externalLookup);
+      const rawText = await callMusicDNAAnalyze(prompt, {
+        features: externalLookup?.features,
+        genero: input.genre,
+        track_name: input.name,
+      });
       const clean = rawText.replace(/```json|```/g, "").trim();
       const parsed = JSON.parse(clean);
 
