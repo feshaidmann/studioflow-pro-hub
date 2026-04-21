@@ -38,16 +38,19 @@ export default function ReferenceImageUpload({ image, onImageChange }: Props) {
 
   if (image) {
     return (
-      <div className="relative rounded-lg overflow-hidden border border-border/40 inline-block">
-        <img src={image} alt="Referência" className="h-24 w-auto object-contain" />
-        <Button
-          variant="destructive"
-          size="icon"
-          className="absolute top-1 right-1 h-6 w-6"
-          onClick={() => onImageChange(null)}
-        >
-          <X className="h-3 w-3" />
-        </Button>
+      <div className="space-y-1.5">
+        <div className="relative rounded-lg overflow-hidden border border-border/40 inline-block">
+          <img src={image} alt="Referência" className="h-24 w-auto object-contain" />
+          <Button
+            variant="destructive"
+            size="icon"
+            className="absolute top-1 right-1 h-6 w-6"
+            onClick={() => onImageChange(null)}
+          >
+            <X className="h-3 w-3" />
+          </Button>
+        </div>
+        <p className="text-[10px] text-muted-foreground">Referência carregada — preservar identidade facial.</p>
       </div>
     );
   }
@@ -66,6 +69,7 @@ export default function ReferenceImageUpload({ image, onImageChange }: Props) {
       <p className="text-xs text-muted-foreground">
         Arraste uma imagem ou <span className="text-primary font-medium">escolha um arquivo</span>
       </p>
+      <p className="text-[10px] text-muted-foreground/80 mt-1">Envie uma foto autorizada do artista. As feições devem ser preservadas na geração.</p>
       <p className="text-[10px] text-muted-foreground/60 mt-0.5">PNG, JPG, WEBP — máx. 5 MB</p>
       <input
         ref={inputRef}

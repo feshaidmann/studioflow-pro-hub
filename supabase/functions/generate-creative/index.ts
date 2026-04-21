@@ -244,8 +244,11 @@ serve(async (req) => {
     }
 
     if (editImageUrl) {
-      systemParts.push("IMPORTANT: If there are human faces in the reference image, preserve them exactly — do not alter, distort or replace any facial features. Keep the person's identity intact.");
-      systemParts.push("Use the provided reference image as a base, adapting composition and layout while keeping the visual identity.");
+      systemParts.push("AUTHORIZED REFERENCE CONTEXT: The uploaded reference image is treated as authorized source material; assume the user holds the necessary image, likeness and related rights for promotional/artistic use.");
+      systemParts.push("STRICT IDENTITY PRESERVATION: If a human face or artist appears in the reference image, preserve the artist's facial identity exactly. Do NOT modify, replace, beautify, age, de-age, distort, reconstruct or reinterpret the face.");
+      systemParts.push("Do NOT change facial features, face shape, skin tone, apparent age, expression essence, distinctive marks, hairline, eye shape, nose, mouth, jawline or any identity-defining characteristic.");
+      systemParts.push("Use the reference image as the identity base, not merely as style inspiration. Only adapt non-identity elements such as composition, crop, background, scenery, lighting, color palette, clothing styling, typography, format and promotional layout.");
+      systemParts.push("If preserving identity conflicts with any requested visual style, prioritize identity preservation over style transformation.");
     }
 
     const messages: any[] = [
