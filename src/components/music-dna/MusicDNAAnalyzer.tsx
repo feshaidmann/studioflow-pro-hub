@@ -4,7 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
-  Radar, RadarChart, PolarGrid, PolarAngleAxis,
+  Radar, RadarChart, PolarAngleAxis,
   ResponsiveContainer, Legend,
 } from "recharts";
 import { Upload, X, FileAudio, Music, MessageSquare, ListPlus, Check, Save, Trash2, History, Palette } from "lucide-react";
@@ -73,7 +73,6 @@ function AcousticRadar({ trackFeatures, refFeatures }: {
     <ResponsiveContainer width="100%" height={280}>
       <RadarChart data={toRadarData(trackFeatures, refFeatures)}
         margin={{ top: 16, right: 30, bottom: 16, left: 30 }}>
-        <PolarGrid stroke="hsl(var(--border))" />
         <PolarAngleAxis dataKey="subject"
           tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10, fontFamily: "monospace" }}
         />
@@ -276,9 +275,9 @@ function DetailSection({ id, title, icon, children }: {
 }
 
 function ExecutiveSummary({ diagnosis }: { diagnosis: DiagnosisResult }) {
-  const truePeak = diagnosis.realAnalysis?.true_peak_dbtp ?? diagnosis.audioAnalysis.truePeak;
-  const lufs = diagnosis.realAnalysis?.lufs_integrated ?? diagnosis.audioAnalysis.lufs;
-  const dynamicRange = diagnosis.realAnalysis?.dynamic_range_lu ?? diagnosis.audioAnalysis.dynamicRange;
+  const truePeak = diagnosis.realAnalysis?.true_peak_dbtp ?? diagnosis.audioAnalysis?.truePeak ?? -1;
+  const lufs = diagnosis.realAnalysis?.lufs_integrated ?? diagnosis.audioAnalysis?.lufs ?? -14;
+  const dynamicRange = diagnosis.realAnalysis?.dynamic_range_lu ?? diagnosis.audioAnalysis?.dynamicRange ?? 8;
   const primaryStrength = diagnosis.pontos_fortes?.[0] ?? "A faixa já apresenta uma identidade sonora reconhecível.";
   const mainBottleneck = diagnosis.gargalos_criativos?.[0] ?? "Vale refinar o contraste entre seções antes da finalização.";
   const nextAction = diagnosis.proximos_passos?.[0]?.acao ?? diagnosis.sugestoes_arranjo?.[0] ?? "Revisar mix e arranjo com foco no ponto mais sensível do diagnóstico.";
