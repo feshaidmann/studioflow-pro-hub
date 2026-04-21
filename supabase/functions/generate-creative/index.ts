@@ -94,7 +94,7 @@ serve(async (req) => {
       "X-Quota-Daily-Resets-At": tomorrowResetUTC.toISOString(),
     };
 
-    const { prompt, style, format, width, height, editImageUrl, projectId, channelContext, mode, dnaContext, trackName, artistName, releaseDate, additionalText, noText, platform, objective, tone } = await req.json();
+    const { prompt, style, format, width, height, editImageUrl, projectId, channelContext, mode, dnaContext, trackName, artistName, releaseDate, additionalText, noText, platform, objective, tone, campaignPhase, length, hashtagsMode } = await req.json();
 
     // TEXT MODE — generate social media copy
     if (mode === "text") {
@@ -106,16 +106,23 @@ serve(async (req) => {
 
       const textSystemPrompt = [
         "Você é um copywriter de lançamento musical para artistas independentes no Brasil.",
-        "Gere uma legenda de rede social pensada primariamente para divulgar a música: destacar faixa, artista, momento de lançamento, convite para ouvir/salvar/compartilhar e conexão emocional com o público.",
-        "Use a estética e o DNA musical apenas como apoio de tom e imagética; não deixe a legenda virar descrição visual da capa.",
-        "A legenda deve ter no máximo 280 caracteres, incluir 3-5 hashtags relevantes, soar natural em pt-BR e terminar com uma chamada para ação clara.",
+        "A legenda deve vender/divulgar a música primeiro: destacar faixa, artista, momento de campanha, convite para ouvir/salvar/compartilhar e conexão emocional com o público.",
+        "Use estética e DNA Musical apenas para vocabulário, clima e sensibilidade cultural; nunca transforme a legenda em descrição da capa ou análise técnica.",
+        "Adapte estrutura e tamanho ao canal: TikTok/Reels/Shorts pedem gancho forte na primeira linha e CTA curto; Instagram aceita storytelling breve; Spotify/streaming pede chamada direta para ouvir/salvar; WhatsApp pede tom comunitário e íntimo.",
+        "Adapte o CTA ao objetivo informado. Se for pré-save/salvar, o pedido principal deve ser salvar/ativar lembrete; se for comentário, faça uma pergunta; se for show, direcione para agenda/contratação.",
+        "Tamanho: curto = até 220 caracteres; médio = 1-2 parágrafos curtos; storytelling = até 4 parágrafos curtos com arco emocional.",
+        "Hashtags: sem hashtags = nenhuma; poucas = 2-3; moderadas = 5-8. Use hashtags relevantes, não genéricas demais.",
+        "Sempre escreva em pt-BR natural, sem explicar decisões e sem aspas envolvendo a legenda.",
         "Responda APENAS com a legenda, sem explicações adicionais.",
         trackName ? `Música: ${trackName}` : "",
         artistName ? `Artista: ${artistName}` : "",
         releaseDate ? `Data de lançamento: ${releaseDate}` : "",
         platform ? `Canal principal: ${platform}` : "",
+        campaignPhase ? `Fase da campanha: ${campaignPhase}` : "",
         objective ? `Objetivo da legenda: ${objective}` : "",
         tone ? `Tom de voz: ${tone}` : "",
+        length ? `Tamanho desejado: ${length}` : "",
+        hashtagsMode ? `Uso de hashtags: ${hashtagsMode}` : "",
         format ? `Formato criativo relacionado: ${format}` : "",
         dnaContext ? `Contexto do DNA Musical: ${dnaContext}` : "",
       ].filter(Boolean).join("\n");
