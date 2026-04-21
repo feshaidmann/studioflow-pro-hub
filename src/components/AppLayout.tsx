@@ -104,6 +104,30 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     gestaoItems[2], // DNA Musical
   ];
 
+  // Prefetch dos chunks lazy ao abrir o drawer "Mais" ou hover na sidebar,
+  // para evitar a sensação de menu "inativo" causada pela latência do code-split.
+  const prefetchRoute = (path: string) => {
+    switch (path) {
+      case "/criativo":     import("@/pages/Creative");      break;
+      case "/editais":      import("@/pages/Editais");       break;
+      case "/professionals": import("@/pages/Professionals"); break;
+      case "/music-dna":    import("@/pages/MusicDNA");      break;
+      case "/agenda":       import("@/pages/Agenda");        break;
+      case "/finance":      import("@/pages/FinancialTracker"); break;
+      case "/projects":     import("@/pages/Projects");      break;
+      case "/settings":     import("@/pages/Settings");      break;
+      case "/tutorial":     import("@/pages/Tutorial");      break;
+      case "/admin":        import("@/pages/Admin");         break;
+    }
+  };
+
+  const handleMoreOpenChange = (open: boolean) => {
+    setMoreOpen(open);
+    if (open) {
+      toolDrawerItems.forEach((item) => prefetchRoute(item.path));
+    }
+  };
+
   // Seção "Conta" do drawer (lista compacta)
   const accountDrawerItems = [
     tutorialNavItem,
