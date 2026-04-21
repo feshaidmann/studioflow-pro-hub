@@ -727,6 +727,25 @@ export default function Creative() {
                 </Button>
               </div>
 
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-2 block">Preview</label>
+                <ImagePreview
+                  imageUrl={generatedImage}
+                  videoUrl={generatedVideoUrl}
+                  isLoading={generating || editingLoading || videoRendering}
+                  isVideoMode={selectedFormat.isVideo}
+                  videoStatus={videoStatus}
+                  onRegenerate={handleVariation}
+                  onEdit={handleEdit}
+                  onDownload={handleDownload}
+                  onSave={handleSaveToGallery}
+                  isSaved={savedToGallery}
+                  onDerive={generatedImage && !generatedVideoUrl ? () => handleDerive(generatedImage) : undefined}
+                  formatLabel={selectedFormat.label}
+                  aspectRatio={selectedFormat.width / selectedFormat.height}
+                />
+              </div>
+
               <CaptionGeneratorCard
                 prompt={captionPrompt || prompt}
                 dnaContext={dnaCaptionContext}
