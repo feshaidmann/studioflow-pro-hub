@@ -590,7 +590,14 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
   };
 
   // Sticky nav (~40px) + folga visual; evita que o título da seção fique escondido atrás da barra
-  const jumpTo = (id: string) => scrollToAnchor(id, { extraOffset: 56 });
+  const jumpTo = (id: string) => {
+    // Avisa Collapsibles (mobile) para abrirem antes do scroll
+    window.dispatchEvent(new CustomEvent("dna:jump", { detail: { id } }));
+    // Pequeno delay para o collapsible montar conteúdo antes de medir posição
+    requestAnimationFrame(() => {
+      scrollToAnchor(id, { extraOffset: 56 });
+    });
+  };
   const metricItems = [
     { label: "LUFS", value: `${realAnalysis?.lufs_integrated ?? audioAnalysis?.lufs ?? "—"}`, unit: "LUFS", help: "volume percebido em plataformas" },
     { label: "True Peak", value: `${realAnalysis?.true_peak_dbtp ?? audioAnalysis?.truePeak ?? "—"}`, unit: "dBTP", help: "risco de distorção após streaming" },
