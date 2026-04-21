@@ -399,13 +399,14 @@ export function useMusicDNA(): UseMusicDNAReturn {
       const detectedInstruments = instrumentResult.instruments;
 
       setProgress(35);
-      appendLog("📊  Medindo loudness, dinâmica e espectro…");
-      if (externalLookup) appendLog(`🌐  Comparando com benchmark externo: ${externalLookup.fonte}`);
+      appendLog("📊  Analisando arquivo local via Web Audio API…");
+      appendLog("🌐  Buscando referência externa em AcousticBrainz e Deezer…");
+      appendLog(externalLookup ? `🌐  Fonte complementar encontrada: ${externalLookup.fonte}` : "🌐  Sem referência externa confiável; mantendo análise local como base.");
 
       // Step 2 — Features from real analysis
       setStep("profiling");
       setProgress(45);
-      appendLog("🔍  Comparando com benchmarks do gênero…");
+      appendLog("🔍  Consolidando atributos estilo Spotify…");
       appendLog(`📐  Mapeando ${realAnalysis.sections.length} seções e o perfil acústico da faixa…`);
 
       const rFeatures = input.genre ? GENRE_PRESETS[input.genre] : getAveragePreset();
@@ -427,13 +428,17 @@ export function useMusicDNA(): UseMusicDNAReturn {
       // Step 4 — AI
       setStep("generating");
       setProgress(70);
-      appendLog("🤖  Gerando recomendações de produção…");
+      appendLog("🤖  Gerando diagnóstico IA com atributos consolidados…");
 
       const selectedReferences = selectReferenceArtists(tFeatures, input.genre, input.references, 18);
       appendLog("🎧  Selecionando referências artísticas próximas…");
 
-      const prompt = buildPrompt(input, realAnalysis, instrumentResult, selectedReferences);
-      const rawText = await callMusicDNAAnalyze(prompt);
+      const prompt = buildPrompt(input, realAnalysis, instrumentResult, selectedReferences, externalLookup);
+      const rawText = await callMusicDNAAnalyze(prompt, {
+        features: externalLookup?.features,
+        genero: input.genre,
+        track_name: input.name,
+      });
       const clean = rawText.replace(/```json|```/g, "").trim();
       const parsed = JSON.parse(clean);
 
