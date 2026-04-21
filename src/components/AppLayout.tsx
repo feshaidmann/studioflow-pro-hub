@@ -195,7 +195,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           })}
           {/* Botão "Mais" */}
           <button
-            onClick={() => setMoreOpen(true)}
+            onClick={() => handleMoreOpenChange(true)}
             className={cn(
               "flex flex-1 flex-col items-center gap-0.5 py-1.5 text-[11px] transition-colors min-h-[44px] justify-center rounded-lg",
               isMoreActive ? "text-primary font-medium" : "text-muted-foreground"
@@ -208,7 +208,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </nav>
 
         {/* Drawer "Mais" — P0: agrupado em Ferramentas + Conta */}
-        <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
+        <Sheet open={moreOpen} onOpenChange={handleMoreOpenChange}>
           <SheetContent side="bottom" className="rounded-t-2xl px-4 pb-8" style={{ paddingBottom: 'calc(2rem + env(safe-area-inset-bottom, 0px))' }}>
             <SheetHeader className="pb-3">
               <SheetTitle className="text-base">{t("nav.more")}</SheetTitle>
