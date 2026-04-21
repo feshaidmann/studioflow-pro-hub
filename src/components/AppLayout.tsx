@@ -104,6 +104,30 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     gestaoItems[2], // DNA Musical
   ];
 
+  // Prefetch dos chunks lazy ao abrir o drawer "Mais" ou hover na sidebar,
+  // para evitar a sensação de menu "inativo" causada pela latência do code-split.
+  const prefetchRoute = (path: string) => {
+    switch (path) {
+      case "/criativo":     import("@/pages/Creative");      break;
+      case "/editais":      import("@/pages/Editais");       break;
+      case "/professionals": import("@/pages/Professionals"); break;
+      case "/music-dna":    import("@/pages/MusicDNA");      break;
+      case "/agenda":       import("@/pages/Agenda");        break;
+      case "/finance":      import("@/pages/FinancialTracker"); break;
+      case "/projects":     import("@/pages/Projects");      break;
+      case "/settings":     import("@/pages/Settings");      break;
+      case "/tutorial":     import("@/pages/Tutorial");      break;
+      case "/admin":        import("@/pages/Admin");         break;
+    }
+  };
+
+  const handleMoreOpenChange = (open: boolean) => {
+    setMoreOpen(open);
+    if (open) {
+      toolDrawerItems.forEach((item) => prefetchRoute(item.path));
+    }
+  };
+
   // Seção "Conta" do drawer (lista compacta)
   const accountDrawerItems = [
     tutorialNavItem,
@@ -171,7 +195,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           })}
           {/* Botão "Mais" */}
           <button
-            onClick={() => setMoreOpen(true)}
+            onClick={() => handleMoreOpenChange(true)}
             className={cn(
               "flex flex-1 flex-col items-center gap-0.5 py-1.5 text-[11px] transition-colors min-h-[44px] justify-center rounded-lg",
               isMoreActive ? "text-primary font-medium" : "text-muted-foreground"
@@ -184,7 +208,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </nav>
 
         {/* Drawer "Mais" — P0: agrupado em Ferramentas + Conta */}
-        <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
+        <Sheet open={moreOpen} onOpenChange={handleMoreOpenChange}>
           <SheetContent side="bottom" className="rounded-t-2xl px-4 pb-8" style={{ paddingBottom: 'calc(2rem + env(safe-area-inset-bottom, 0px))' }}>
             <SheetHeader className="pb-3">
               <SheetTitle className="text-base">{t("nav.more")}</SheetTitle>
@@ -267,6 +291,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <NavLink
         key={item.path}
         to={getNavTo(item)}
+        onMouseEnter={() => prefetchRoute(item.path)}
+        onFocus={() => prefetchRoute(item.path)}
         className={cn(
           "flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-[13px] transition-all",
           active
