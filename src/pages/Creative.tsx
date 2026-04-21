@@ -304,36 +304,14 @@ export default function Creative() {
     }
   }, [prompt, style, selectedFormat, linkedProject, selectedProjectId, generate, referenceImage, trackName, artistName, releaseDate, additionalText, noText, loopDuration, videoPreset, videoIntensity, videoSpots]);
 
-  const handleGenerateCaption = useCallback(async () => {
-    if (!prompt.trim() && !trackName.trim() && !dnaSource) {
-      toast({ title: "Informe a música", description: "Preencha a ideia, o nome da faixa ou use um DNA Musical.", variant: "destructive" });
-      return;
-    }
+  const dnaCaptionContext = dnaSource
+    ? `Gênero: ${dnaSource.genero_classificado || ""}. Mood: ${dnaSource.identidade?.mood_principal || ""}. Território: ${dnaSource.identidade?.territorio_sonoro || ""}. Tags: ${(dnaSource.identidade?.tags || []).join(", ")}`
+    : undefined;
 
-    const captionPrompt = [
-      linkedProject ? `Projeto: ${linkedProject.name}. Artista do projeto: ${linkedProject.artist}.` : "",
-      prompt ? `Direção criativa/estética: ${prompt}` : "",
-    ].filter(Boolean).join(" ");
-
-    const dnaContext = dnaSource
-      ? `Gênero: ${dnaSource.genero_classificado || ""}. Mood: ${dnaSource.identidade?.mood_principal || ""}. Território: ${dnaSource.identidade?.territorio_sonoro || ""}. Tags: ${(dnaSource.identidade?.tags || []).join(", ")}`
-      : undefined;
-
-    setDnaCopyLoading(true);
-    const textResult = await generateText({
-      prompt: captionPrompt || "Legenda para divulgação musical",
-      dnaContext,
-      trackName: trackName.trim() || dnaTrackName || undefined,
-      artistName: artistName.trim() || linkedProject?.artist || undefined,
-      releaseDate: releaseDate || undefined,
-      platform: CAPTION_PLATFORMS.find((item) => item.value === captionPlatform)?.label || captionPlatform,
-      objective: CAPTION_OBJECTIVES.find((item) => item.value === captionObjective)?.label || captionObjective,
-      tone: CAPTION_TONES.find((item) => item.value === captionTone)?.label || captionTone,
-      format: selectedFormat.label,
-    });
-    if (textResult?.text) setDnaCopyText(textResult.text);
-    setDnaCopyLoading(false);
-  }, [prompt, trackName, dnaSource, linkedProject, generateText, dnaTrackName, artistName, releaseDate, captionPlatform, captionObjective, captionTone, selectedFormat.label]);
+  const captionPrompt = [
+    linkedProject ? `Projeto: ${linkedProject.name}. Artista do projeto: ${linkedProject.artist}.` : "",
+    prompt ? `Direção criativa/estética: ${prompt}` : "",
+  ].filter(Boolean).join(" ");
 
   const handleVariation = useCallback(async () => {
     if (!generatedBase64 || !prompt.trim()) {
