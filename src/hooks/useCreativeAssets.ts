@@ -157,7 +157,17 @@ export function useCreativeAssets() {
     return results;
   };
 
-  const generateText = async (params: { prompt: string; dnaContext?: string }) => {
+  const generateText = async (params: {
+    prompt: string;
+    dnaContext?: string;
+    trackName?: string;
+    artistName?: string;
+    releaseDate?: string;
+    platform?: string;
+    objective?: string;
+    tone?: string;
+    format?: string;
+  }) => {
     if (!user) return null;
     try {
       const { data, error } = await supabase.functions.invoke("generate-creative", {
@@ -165,6 +175,13 @@ export function useCreativeAssets() {
           mode: "text",
           prompt: params.prompt,
           dnaContext: params.dnaContext,
+          trackName: params.trackName,
+          artistName: params.artistName,
+          releaseDate: params.releaseDate,
+          platform: params.platform,
+          objective: params.objective,
+          tone: params.tone,
+          format: params.format,
         },
       });
       if (error) {
