@@ -313,5 +313,57 @@ export function useCreativeAssets() {
     queryClient.invalidateQueries({ queryKey: ["creative-assets"] });
   };
 
-  return { assets, isLoading, generating, generate, generateBatch, generateText, saveAsset, deleteAsset };
+  const saveCaption = async (params: {
+    caption: string;
+    projectId?: string;
+    trackName?: string;
+    artistName?: string;
+    platform: string;
+    campaignPhase: string;
+    objective: string;
+    tone: string;
+    length: string;
+    hashtagsMode: string;
+    prompt?: string;
+    dnaContext?: string;
+  }) => {
+    if (!user) return null;
+    const { data, error } = await (supabase as any)
+      .from("creative_captions")
+      .insert({
+        user_id: user.id,
+        project_id: params.projectId || null,
+        track_name: params.trackName || "",
+        artist_name: params.artistName || "",
+        caption: params.caption,
+        platform: params.platform,
+        campaign_phase: params.campaignPhase,
+        objective: params.objective,
+        tone: params.tone,
+        length: params.length,
+        hashtags_mode: params.hashtagsMode,
+        prompt: params.prompt || "",
+        dna_context: params.dnaContext || "",
+      })
+      .select()
+      .single();
+    if (error) {
+      toast({ title: "Erro ao salvar legenda", description: error.message, variant: "destructive" });
+      return null;
+    }
+    queryClient.invalidateQueries({ queryKey: ["creative-captions"] });
+    toast({ title: "Legenda salva no histórico!" });
+    return data as CreativeCaption;
+  };
+
+  const deleteCaption = async (id: string) => {
+    const { error } = await (supabase as any).from("creative_captions").delete().eq("id", id);
+    if (error) {
+      toast({ title: "Erro ao excluir legenda", description: error.message, variant: "destructive" });
+      return;
+    }
+    queryClient.invalidateQueries({ queryKey: ["creative-captions"] });
+  };
+
+  return { assets, captions, captionsLoading, isLoading, generating, generate, generateBatch, generateText, saveAsset, deleteAsset, saveCaption, deleteCaption };
 }
