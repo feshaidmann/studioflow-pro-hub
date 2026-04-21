@@ -1924,6 +1924,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      recalcular_benchmark_genero: {
+        Args: { p_genero: string }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "admin" | "user"
