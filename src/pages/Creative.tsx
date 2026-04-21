@@ -137,10 +137,7 @@ export default function Creative() {
   const [filterFormat, setFilterFormat] = useState<string>("all");
   const [filterProject, setFilterProject] = useState<string>("all");
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; path: string } | null>(null);
-  const [detailAsset, setDetailAsset] = useState<any>(null);
   const [lightboxIndex, setLightboxIndex] = useState<number>(-1);
-  const [dnaCopyText, setDnaCopyText] = useState<string>("");
-  const [dnaCopyLoading, setDnaCopyLoading] = useState(false);
   const [dnaSource, setDnaSource] = useState<DiagnosisResult | null>(null);
   const [dnaTrackName, setDnaTrackName] = useState("");
   const [trackName, setTrackName] = useState("");
@@ -148,9 +145,6 @@ export default function Creative() {
   const [releaseDate, setReleaseDate] = useState("");
   const [additionalText, setAdditionalText] = useState("");
   const [noText, setNoText] = useState(false);
-  const [captionPlatform, setCaptionPlatform] = useState("instagram");
-  const [captionObjective, setCaptionObjective] = useState("launch");
-  const [captionTone, setCaptionTone] = useState("authentic");
 
   // Video loop state
   const [loopDuration, setLoopDuration] = useState<3 | 4 | 5>(4);
@@ -165,7 +159,7 @@ export default function Creative() {
   const RELEASE_FORMATS = ["spotify_cover", "deezer_cover", "tidal_cover"];
   const isReleaseFormat = RELEASE_FORMATS.includes(selectedFormat.id);
 
-  const { assets, isLoading: assetsLoading, generating, generate, generateBatch, generateText, saveAsset, deleteAsset } = useCreativeAssets();
+  const { assets, captions, captionsLoading, isLoading: assetsLoading, generating, generate, generateBatch, generateText, saveAsset, deleteAsset, saveCaption, deleteCaption } = useCreativeAssets();
 
   const linkedProject = selectedProjectId && selectedProjectId !== "none"
     ? projects.find((p) => p.id === selectedProjectId)
@@ -182,7 +176,7 @@ export default function Creative() {
         const cached = getCachedAnalysis();
         if (cached) {
           diagnosis = cached.diagnosis;
-          trackName = cached.input?.name || "";
+          trackName = cleanTrackName(cached.input?.name || "");
         }
       } else {
         const { data, error } = await supabase
@@ -192,7 +186,7 @@ export default function Creative() {
           .single();
         if (!error && data) {
           diagnosis = data.diagnosis as unknown as DiagnosisResult;
-          trackName = data.track_name || "";
+          trackName = cleanTrackName(data.track_name || "");
         }
       }
 
