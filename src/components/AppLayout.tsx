@@ -291,6 +291,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <NavLink
         key={item.path}
         to={getNavTo(item)}
+        onMouseEnter={() => prefetchRoute(item.path)}
+        onFocus={() => prefetchRoute(item.path)}
         className={cn(
           "flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-[13px] transition-all",
           active
