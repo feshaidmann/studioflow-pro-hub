@@ -94,7 +94,7 @@ serve(async (req) => {
       "X-Quota-Daily-Resets-At": tomorrowResetUTC.toISOString(),
     };
 
-    const { prompt, style, format, width, height, editImageUrl, projectId, channelContext, mode, dnaContext, trackName, artistName, releaseDate, additionalText, noText } = await req.json();
+    const { prompt, style, format, width, height, editImageUrl, projectId, channelContext, mode, dnaContext, trackName, artistName, releaseDate, additionalText, noText, platform, objective, tone } = await req.json();
 
     // TEXT MODE — generate social media copy
     if (mode === "text") {
@@ -105,10 +105,18 @@ serve(async (req) => {
       }
 
       const textSystemPrompt = [
-        "Você é um copywriter especializado em música e redes sociais no Brasil.",
-        "Gere uma legenda criativa e engajante para Instagram/Spotify baseada na descrição do DNA musical abaixo.",
-        "A legenda deve ter no máximo 280 caracteres, incluir 3-5 hashtags relevantes, e ter tom autêntico e artístico.",
+        "Você é um copywriter de lançamento musical para artistas independentes no Brasil.",
+        "Gere uma legenda de rede social pensada primariamente para divulgar a música: destacar faixa, artista, momento de lançamento, convite para ouvir/salvar/compartilhar e conexão emocional com o público.",
+        "Use a estética e o DNA musical apenas como apoio de tom e imagética; não deixe a legenda virar descrição visual da capa.",
+        "A legenda deve ter no máximo 280 caracteres, incluir 3-5 hashtags relevantes, soar natural em pt-BR e terminar com uma chamada para ação clara.",
         "Responda APENAS com a legenda, sem explicações adicionais.",
+        trackName ? `Música: ${trackName}` : "",
+        artistName ? `Artista: ${artistName}` : "",
+        releaseDate ? `Data de lançamento: ${releaseDate}` : "",
+        platform ? `Canal principal: ${platform}` : "",
+        objective ? `Objetivo da legenda: ${objective}` : "",
+        tone ? `Tom de voz: ${tone}` : "",
+        format ? `Formato criativo relacionado: ${format}` : "",
         dnaContext ? `Contexto do DNA Musical: ${dnaContext}` : "",
       ].filter(Boolean).join("\n");
 
