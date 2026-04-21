@@ -102,8 +102,6 @@ function buildDNAPrompt(diagnosis: DiagnosisResult, trackName: string, formatId 
     parts.push(`Inclua ${instruments.join(" e ")} na composição.`);
   }
 
-  if (trackName) parts.push(`Título da faixa: '${trackName}'.`);
-
   return parts.join(" ") || `${prefix} para single musical.`;
 }
 
@@ -545,6 +543,7 @@ export default function Creative() {
                       <Input
                         value={trackName}
                         onChange={(e) => setTrackName(e.target.value)}
+                        onBlur={() => setTrackName((value) => cleanTrackName(value))}
                         placeholder="Ex: Noite Clara"
                         className="h-9 text-sm"
                       />

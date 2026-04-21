@@ -218,9 +218,9 @@ export function useCreativeAssets() {
           objective: params.objective,
           tone: params.tone,
           format: params.format,
-            campaignPhase: params.campaignPhase,
-            length: params.length,
-            hashtagsMode: params.hashtagsMode,
+          campaignPhase: params.campaignPhase,
+          length: params.length,
+          hashtagsMode: params.hashtagsMode,
         },
       });
       if (error) {
