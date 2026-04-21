@@ -4,7 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
-  Radar, RadarChart, PolarGrid, PolarAngleAxis,
+  Radar, RadarChart, PolarAngleAxis,
   ResponsiveContainer, Legend,
 } from "recharts";
 import { Upload, X, FileAudio, Music, MessageSquare, ListPlus, Check, Save, Trash2, History, Palette } from "lucide-react";
@@ -73,7 +73,6 @@ function AcousticRadar({ trackFeatures, refFeatures }: {
     <ResponsiveContainer width="100%" height={280}>
       <RadarChart data={toRadarData(trackFeatures, refFeatures)}
         margin={{ top: 16, right: 30, bottom: 16, left: 30 }}>
-        <PolarGrid stroke="hsl(var(--border))" />
         <PolarAngleAxis dataKey="subject"
           tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10, fontFamily: "monospace" }}
         />
@@ -276,9 +275,9 @@ function DetailSection({ id, title, icon, children }: {
 }
 
 function ExecutiveSummary({ diagnosis }: { diagnosis: DiagnosisResult }) {
-  const truePeak = diagnosis.realAnalysis?.true_peak_dbtp ?? diagnosis.audioAnalysis.truePeak;
-  const lufs = diagnosis.realAnalysis?.lufs_integrated ?? diagnosis.audioAnalysis.lufs;
-  const dynamicRange = diagnosis.realAnalysis?.dynamic_range_lu ?? diagnosis.audioAnalysis.dynamicRange;
+  const truePeak = diagnosis.realAnalysis?.true_peak_dbtp ?? diagnosis.audioAnalysis?.truePeak ?? -1;
+  const lufs = diagnosis.realAnalysis?.lufs_integrated ?? diagnosis.audioAnalysis?.lufs ?? -14;
+  const dynamicRange = diagnosis.realAnalysis?.dynamic_range_lu ?? diagnosis.audioAnalysis?.dynamicRange ?? 8;
   const primaryStrength = diagnosis.pontos_fortes?.[0] ?? "A faixa já apresenta uma identidade sonora reconhecível.";
   const mainBottleneck = diagnosis.gargalos_criativos?.[0] ?? "Vale refinar o contraste entre seções antes da finalização.";
   const nextAction = diagnosis.proximos_passos?.[0]?.acao ?? diagnosis.sugestoes_arranjo?.[0] ?? "Revisar mix e arranjo com foco no ponto mais sensível do diagnóstico.";
@@ -583,9 +582,9 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
 
   const jumpTo = (id: string) => scrollToAnchor(id, { extraOffset: 8 });
   const metricItems = [
-    { label: "LUFS", value: `${realAnalysis?.lufs_integrated ?? audioAnalysis.lufs}`, unit: "LUFS", help: "volume percebido em plataformas" },
-    { label: "True Peak", value: `${realAnalysis?.true_peak_dbtp ?? audioAnalysis.truePeak}`, unit: "dBTP", help: "risco de distorção após streaming" },
-    { label: "DR", value: `${realAnalysis?.dynamic_range_lu ?? audioAnalysis.dynamicRange}`, unit: "LU", help: "variação entre partes suaves e fortes" },
+    { label: "LUFS", value: `${realAnalysis?.lufs_integrated ?? audioAnalysis?.lufs ?? "—"}`, unit: "LUFS", help: "volume percebido em plataformas" },
+    { label: "True Peak", value: `${realAnalysis?.true_peak_dbtp ?? audioAnalysis?.truePeak ?? "—"}`, unit: "dBTP", help: "risco de distorção após streaming" },
+    { label: "DR", value: `${realAnalysis?.dynamic_range_lu ?? audioAnalysis?.dynamicRange ?? "—"}`, unit: "LU", help: "variação entre partes suaves e fortes" },
     { label: "BPM", value: `${realAnalysis?.bpm ?? "—"}`, unit: "", help: "pulso médio detectado" },
     { label: "Tom", value: `${realAnalysis?.key ?? "—"}`, unit: "", help: "centro tonal provável" },
     { label: "Duração", value: realAnalysis ? formatDuration(realAnalysis.duration_sec) : "—", unit: "", help: "tempo total da faixa" },
@@ -728,7 +727,7 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
             {(referencias_proximas ?? []).map((r, i) => (
               <div key={i} className={cn(
                 "flex justify-between items-start gap-3 py-2 text-xs",
-                i < referencias_proximas.length - 1 && "border-b border-border"
+                i < (referencias_proximas?.length ?? 0) - 1 && "border-b border-border"
               )}>
                 <div>
                   <p className="font-semibold">{r.artista}</p>
