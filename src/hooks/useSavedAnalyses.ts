@@ -79,7 +79,7 @@ export function useSavedAnalyses() {
         .single();
       if (error) throw error;
       if (diagnosis.genero_classificado) {
-        supabase.rpc("recalcular_benchmark_genero" as never, { p_genero: diagnosis.genero_classificado } as never)
+        Promise.resolve(supabase.rpc("recalcular_benchmark_genero" as never, { p_genero: diagnosis.genero_classificado } as never))
           .then(() => queryClient.invalidateQueries({ queryKey: ["music-dna-benchmarks"] }))
           .catch(() => undefined);
       }
