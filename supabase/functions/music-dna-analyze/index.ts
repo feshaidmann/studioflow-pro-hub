@@ -7,6 +7,42 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const MODEL = "google/gemini-3-flash-preview";
+const KEY_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+const TOKEN_INPUT_USD_PER_M = 0.35;
+const TOKEN_OUTPUT_USD_PER_M = 1.05;
+
+function jsonResponse(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
+function estimateCost(inputTokens = 0, outputTokens = 0) {
+  return Number(((inputTokens / 1_000_000) * TOKEN_INPUT_USD_PER_M + (outputTokens / 1_000_000) * TOKEN_OUTPUT_USD_PER_M).toFixed(8));
+}
+
+function buildStructuredPrompt(prompt: string, payload: Record<string, unknown>, benchmark: unknown) {
+  const features = payload.features ? JSON.stringify(payload.features, null, 2) : "{}";
+  const benchmarkCtx = benchmark ? JSON.stringify(benchmark, null, 2) : "Sem benchmark público disponível para este gênero.";
+  return `${prompt}\n\n════════════════════════════════════════════════\nATRIBUTOS ESTILO SPOTIFY — FONTE CONSOLIDADA\n════════════════════════════════════════════════\n${features}\n\nBenchmark do gênero:\n${benchmarkCtx}`;
+}
+
+async function logInvocation(adminClient: ReturnType<typeof createClient>, userId: string | null, status: "success" | "error", usage?: { prompt_tokens?: number; completion_tokens?: number }) {
+  const input = usage?.prompt_tokens ?? 0;
+  const output = usage?.completion_tokens ?? 0;
+  await adminClient.from("ai_invocations").insert({
+    function_name: "music-dna-analyze",
+    model: MODEL,
+    user_id: userId,
+    tokens_input: input || null,
+    tokens_output: output || null,
+    cost_usd: estimateCost(input, output),
+    status,
+  });
+}
+
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
