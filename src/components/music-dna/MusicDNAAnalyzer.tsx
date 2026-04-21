@@ -258,12 +258,21 @@ function DetailSection({ id, title, icon, children }: {
   icon: string;
   children: React.ReactNode;
 }) {
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<{ id: string }>).detail;
+      if (detail?.id === id) setOpen(true);
+    };
+    window.addEventListener("dna:jump", handler);
+    return () => window.removeEventListener("dna:jump", handler);
+  }, [id]);
   return (
     <section id={id} className="scroll-mt-16">
-      <Collapsible className="md:hidden rounded-lg border border-border bg-card">
+      <Collapsible open={open} onOpenChange={setOpen} className="md:hidden rounded-lg border border-border bg-card">
         <CollapsibleTrigger className="flex w-full items-center justify-between px-4 py-3 text-left text-[11px] font-mono uppercase tracking-wider text-muted-foreground">
           <span className="flex items-center gap-2"><span>{icon}</span>{title}</span>
-          <span className="text-primary">+</span>
+          <span className="text-primary">{open ? "−" : "+"}</span>
         </CollapsibleTrigger>
         <CollapsibleContent className="px-4 pb-4">
           {children}
