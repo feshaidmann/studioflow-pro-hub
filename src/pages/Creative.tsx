@@ -513,8 +513,8 @@ export default function Creative() {
             </div>
           )}
 
-          <div className="grid md:grid-cols-2 gap-6">
-            {/* Left: Controls */}
+          <div className="max-w-3xl space-y-6">
+            {/* Image generation flow */}
             <div className="space-y-4">
               {/* 3. Prompt — protagonist */}
               <div className="relative">
