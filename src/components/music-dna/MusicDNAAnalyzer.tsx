@@ -635,7 +635,18 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
           { label: "Referências", id: "dna-referencias" },
           { label: "Técnico", id: "dna-tecnico" },
         ].map((item) => (
-          <Button key={item.id} variant="ghost" size="sm" className="h-8 shrink-0 text-[11px]" onClick={() => jumpTo(item.id)}>
+          <Button
+            key={item.id}
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-8 shrink-0 text-[11px]"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              jumpTo(item.id);
+            }}
+          >
             {item.label}
           </Button>
         ))}
