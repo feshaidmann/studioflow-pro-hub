@@ -2,7 +2,7 @@ import { cn } from "@/lib/utils";
 import { FORMAT_OPTIONS, type FormatOption } from "./FormatSelector";
 import { MoreHorizontal, Video } from "lucide-react";
 
-const FEATURED_IDS = ["spotify_cover", "instagram_post", "story", "youtube_cover"];
+const FEATURED_IDS = ["spotify_cover", "instagram_post", "story", "reels_loop"];
 
 interface Props {
   selected: string;
@@ -20,7 +20,7 @@ export default function FormatChips({ selected, onSelect, onShowAll }: Props) {
       key={f.id}
       onClick={() => onSelect(f)}
       className={cn(
-        "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border whitespace-nowrap transition-all shrink-0",
+        "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border whitespace-nowrap transition-all shrink-0 min-h-8",
         active
           ? "bg-primary/10 border-primary/30 text-primary"
           : "bg-muted/40 border-border/50 text-muted-foreground hover:bg-muted hover:text-foreground"

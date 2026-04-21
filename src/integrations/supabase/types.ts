@@ -227,6 +227,63 @@ export type Database = {
           },
         ]
       }
+      creative_captions: {
+        Row: {
+          artist_name: string
+          campaign_phase: string
+          caption: string
+          created_at: string
+          dna_context: string
+          hashtags_mode: string
+          id: string
+          length: string
+          objective: string
+          platform: string
+          project_id: string | null
+          prompt: string
+          tone: string
+          track_name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          artist_name?: string
+          campaign_phase?: string
+          caption: string
+          created_at?: string
+          dna_context?: string
+          hashtags_mode?: string
+          id?: string
+          length?: string
+          objective?: string
+          platform?: string
+          project_id?: string | null
+          prompt?: string
+          tone?: string
+          track_name?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          artist_name?: string
+          campaign_phase?: string
+          caption?: string
+          created_at?: string
+          dna_context?: string
+          hashtags_mode?: string
+          id?: string
+          length?: string
+          objective?: string
+          platform?: string
+          project_id?: string | null
+          prompt?: string
+          tone?: string
+          track_name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       editais: {
         Row: {
           abertura: string | null

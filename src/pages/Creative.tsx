@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Palette, Sparkles, Trash2, ImageIcon, Download, Copy, FileText, Dna, X, Music, User, CalendarDays, ChevronDown, Video, PlayCircle, RefreshCw } from "lucide-react";
+import { Palette, Sparkles, ImageIcon, FileText, Dna, X, Music, User, CalendarDays, ChevronDown, Video, PlayCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -20,6 +20,7 @@ import ReferenceImageUpload from "@/components/creative/ReferenceImageUpload";
 import DeriveBatchDialog from "@/components/creative/DeriveBatchDialog";
 import GalleryLightbox from "@/components/creative/GalleryLightbox";
 import QuickTemplates, { type QuickTemplate } from "@/components/creative/QuickTemplates";
+import CaptionGeneratorCard from "@/components/creative/CaptionGeneratorCard";
 import { useCreativeAssets } from "@/hooks/useCreativeAssets";
 import { useProjects } from "@/contexts/ProjectContext";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -31,6 +32,7 @@ import { generateVideoLoop, type VideoPreset } from "@/components/creative/Video
 import { VideoEffectPicker } from "@/components/creative/VideoEffectPicker";
 import type { Intensity, SpotEffect } from "@/components/creative/videoLayers";
 import { useRateLimitDialog } from "@/hooks/useRateLimitDialog";
+import { cleanTrackName } from "@/lib/trackName";
 
 function QuotaIndicator() {
   const { quota } = useRateLimitDialog();
@@ -61,6 +63,7 @@ async function downloadFile(url: string, filename: string) {
 const FORMAT_PROMPT_PREFIX: Record<string, string> = {
   instagram_post: "Post artístico para Instagram",
   story: "Story vertical impactante",
+  reels_loop: "Loop vertical para Reels/Shorts",
   youtube_cover: "Capa cinematográfica para YouTube",
   spotify_cover: "Capa artística para single/álbum",
   spotify_canvas: "Canvas animado vertical para Spotify",
@@ -99,31 +102,8 @@ function buildDNAPrompt(diagnosis: DiagnosisResult, trackName: string, formatId 
     parts.push(`Inclua ${instruments.join(" e ")} na composição.`);
   }
 
-  if (trackName) parts.push(`Título da faixa: '${trackName}'.`);
-
   return parts.join(" ") || `${prefix} para single musical.`;
 }
-
-const CAPTION_PLATFORMS = [
-  { value: "instagram", label: "Instagram" },
-  { value: "reels", label: "Reels / Shorts" },
-  { value: "spotify", label: "Spotify" },
-  { value: "tiktok", label: "TikTok" },
-];
-
-const CAPTION_OBJECTIVES = [
-  { value: "pre-save", label: "Pré-save" },
-  { value: "launch", label: "Lançamento" },
-  { value: "engagement", label: "Engajamento" },
-  { value: "storytelling", label: "Storytelling" },
-];
-
-const CAPTION_TONES = [
-  { value: "authentic", label: "Autêntico" },
-  { value: "emotional", label: "Emocional" },
-  { value: "direct", label: "Direto" },
-  { value: "poetic", label: "Poético" },
-];
 
 export default function Creative() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -155,10 +135,7 @@ export default function Creative() {
   const [filterFormat, setFilterFormat] = useState<string>("all");
   const [filterProject, setFilterProject] = useState<string>("all");
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; path: string } | null>(null);
-  const [detailAsset, setDetailAsset] = useState<any>(null);
   const [lightboxIndex, setLightboxIndex] = useState<number>(-1);
-  const [dnaCopyText, setDnaCopyText] = useState<string>("");
-  const [dnaCopyLoading, setDnaCopyLoading] = useState(false);
   const [dnaSource, setDnaSource] = useState<DiagnosisResult | null>(null);
   const [dnaTrackName, setDnaTrackName] = useState("");
   const [trackName, setTrackName] = useState("");
@@ -166,9 +143,6 @@ export default function Creative() {
   const [releaseDate, setReleaseDate] = useState("");
   const [additionalText, setAdditionalText] = useState("");
   const [noText, setNoText] = useState(false);
-  const [captionPlatform, setCaptionPlatform] = useState("instagram");
-  const [captionObjective, setCaptionObjective] = useState("launch");
-  const [captionTone, setCaptionTone] = useState("authentic");
 
   // Video loop state
   const [loopDuration, setLoopDuration] = useState<3 | 4 | 5>(4);
@@ -183,7 +157,7 @@ export default function Creative() {
   const RELEASE_FORMATS = ["spotify_cover", "deezer_cover", "tidal_cover"];
   const isReleaseFormat = RELEASE_FORMATS.includes(selectedFormat.id);
 
-  const { assets, isLoading: assetsLoading, generating, generate, generateBatch, generateText, saveAsset, deleteAsset } = useCreativeAssets();
+  const { assets, captions, captionsLoading, isLoading: assetsLoading, generating, generate, generateBatch, generateText, saveAsset, deleteAsset, saveCaption, deleteCaption } = useCreativeAssets();
 
   const linkedProject = selectedProjectId && selectedProjectId !== "none"
     ? projects.find((p) => p.id === selectedProjectId)
@@ -200,7 +174,7 @@ export default function Creative() {
         const cached = getCachedAnalysis();
         if (cached) {
           diagnosis = cached.diagnosis;
-          trackName = cached.input?.name || "";
+          trackName = cleanTrackName(cached.input?.name || "");
         }
       } else {
         const { data, error } = await supabase
@@ -210,7 +184,7 @@ export default function Creative() {
           .single();
         if (!error && data) {
           diagnosis = data.diagnosis as unknown as DiagnosisResult;
-          trackName = data.track_name || "";
+          trackName = cleanTrackName(data.track_name || "");
         }
       }
 
@@ -328,36 +302,14 @@ export default function Creative() {
     }
   }, [prompt, style, selectedFormat, linkedProject, selectedProjectId, generate, referenceImage, trackName, artistName, releaseDate, additionalText, noText, loopDuration, videoPreset, videoIntensity, videoSpots]);
 
-  const handleGenerateCaption = useCallback(async () => {
-    if (!prompt.trim() && !trackName.trim() && !dnaSource) {
-      toast({ title: "Informe a música", description: "Preencha a ideia, o nome da faixa ou use um DNA Musical.", variant: "destructive" });
-      return;
-    }
+  const dnaCaptionContext = dnaSource
+    ? `Gênero: ${dnaSource.genero_classificado || ""}. Mood: ${dnaSource.identidade?.mood_principal || ""}. Território: ${dnaSource.identidade?.territorio_sonoro || ""}. Tags: ${(dnaSource.identidade?.tags || []).join(", ")}`
+    : undefined;
 
-    const captionPrompt = [
-      linkedProject ? `Projeto: ${linkedProject.name}. Artista do projeto: ${linkedProject.artist}.` : "",
-      prompt ? `Direção criativa/estética: ${prompt}` : "",
-    ].filter(Boolean).join(" ");
-
-    const dnaContext = dnaSource
-      ? `Gênero: ${dnaSource.genero_classificado || ""}. Mood: ${dnaSource.identidade?.mood_principal || ""}. Território: ${dnaSource.identidade?.territorio_sonoro || ""}. Tags: ${(dnaSource.identidade?.tags || []).join(", ")}`
-      : undefined;
-
-    setDnaCopyLoading(true);
-    const textResult = await generateText({
-      prompt: captionPrompt || "Legenda para divulgação musical",
-      dnaContext,
-      trackName: trackName.trim() || dnaTrackName || undefined,
-      artistName: artistName.trim() || linkedProject?.artist || undefined,
-      releaseDate: releaseDate || undefined,
-      platform: CAPTION_PLATFORMS.find((item) => item.value === captionPlatform)?.label || captionPlatform,
-      objective: CAPTION_OBJECTIVES.find((item) => item.value === captionObjective)?.label || captionObjective,
-      tone: CAPTION_TONES.find((item) => item.value === captionTone)?.label || captionTone,
-      format: selectedFormat.label,
-    });
-    if (textResult?.text) setDnaCopyText(textResult.text);
-    setDnaCopyLoading(false);
-  }, [prompt, trackName, dnaSource, linkedProject, generateText, dnaTrackName, artistName, releaseDate, captionPlatform, captionObjective, captionTone, selectedFormat.label]);
+  const captionPrompt = [
+    linkedProject ? `Projeto: ${linkedProject.name}. Artista do projeto: ${linkedProject.artist}.` : "",
+    prompt ? `Direção criativa/estética: ${prompt}` : "",
+  ].filter(Boolean).join(" ");
 
   const handleVariation = useCallback(async () => {
     if (!generatedBase64 || !prompt.trim()) {
@@ -405,21 +357,24 @@ export default function Creative() {
     if (!editPrompt.trim() || !generatedBase64) return;
     setEditDialogOpen(false);
     setEditingLoading(true);
-    const result = await generate({
-      prompt: editPrompt,
-      style,
-      format: selectedFormat.id,
-      width: selectedFormat.width,
-      height: selectedFormat.height,
-      editImageUrl: generatedBase64,
-      projectId: selectedProjectId && selectedProjectId !== "none" ? selectedProjectId : undefined,
-    });
-    if (result) {
-      setGeneratedImage(result.imageBase64);
-      setGeneratedBase64(result.imageBase64);
-      setSavedToGallery(false);
+    try {
+      const result = await generate({
+        prompt: editPrompt,
+        style,
+        format: selectedFormat.id,
+        width: selectedFormat.width,
+        height: selectedFormat.height,
+        editImageUrl: generatedBase64,
+        projectId: selectedProjectId && selectedProjectId !== "none" ? selectedProjectId : undefined,
+      });
+      if (result) {
+        setGeneratedImage(result.imageBase64);
+        setGeneratedBase64(result.imageBase64);
+        setSavedToGallery(false);
+      }
+    } finally {
+      setEditingLoading(false);
     }
-    setEditingLoading(false);
   };
 
   const handleDownload = () => {
@@ -588,6 +543,7 @@ export default function Creative() {
                       <Input
                         value={trackName}
                         onChange={(e) => setTrackName(e.target.value)}
+                        onBlur={() => setTrackName((value) => cleanTrackName(value))}
                         placeholder="Ex: Noite Clara"
                         className="h-9 text-sm"
                       />
@@ -772,63 +728,22 @@ export default function Creative() {
                 aspectRatio={selectedFormat.width / selectedFormat.height}
               />
 
-              <Card className="mt-4">
-                <CardContent className="p-4 space-y-3">
-                  <div className="flex items-center gap-2">
-                    <FileText className="h-4 w-4 text-primary" />
-                    <span className="text-xs font-medium">Legenda para divulgação da música</span>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                    <Select value={captionPlatform} onValueChange={setCaptionPlatform}>
-                      <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {CAPTION_PLATFORMS.map((item) => <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                    <Select value={captionObjective} onValueChange={setCaptionObjective}>
-                      <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {CAPTION_OBJECTIVES.map((item) => <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                    <Select value={captionTone} onValueChange={setCaptionTone}>
-                      <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {CAPTION_TONES.map((item) => <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {dnaCopyLoading ? (
-                    <p className="text-xs text-muted-foreground animate-pulse">Gerando legenda…</p>
-                  ) : dnaCopyText ? (
-                    <p className="text-sm leading-relaxed whitespace-pre-wrap">{dnaCopyText}</p>
-                  ) : (
-                    <p className="text-xs text-muted-foreground">Gere uma legenda separada da imagem, otimizada para divulgar a faixa.</p>
-                  )}
-
-                  <div className="flex flex-wrap gap-2">
-                    <Button variant="secondary" size="sm" className="text-xs gap-1.5" onClick={handleGenerateCaption} disabled={dnaCopyLoading}>
-                      {dnaCopyText ? <RefreshCw className="h-3 w-3" /> : <Sparkles className="h-3 w-3" />}
-                      {dnaCopyLoading ? "Gerando…" : dnaCopyText ? "Gerar novamente" : "Gerar legenda"}
-                    </Button>
-                    {dnaCopyText && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-xs gap-1.5"
-                        onClick={() => {
-                          navigator.clipboard.writeText(dnaCopyText);
-                          toast({ title: "Copiado!", description: "Legenda copiada para a área de transferência." });
-                        }}
-                      >
-                        <Copy className="h-3 w-3" /> Copiar legenda
-                      </Button>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
+              <div className="mt-4">
+                <CaptionGeneratorCard
+                  prompt={captionPrompt || prompt}
+                  dnaContext={dnaCaptionContext}
+                  trackName={trackName.trim() || dnaTrackName || undefined}
+                  artistName={artistName.trim() || linkedProject?.artist || undefined}
+                  releaseDate={releaseDate || undefined}
+                  projectId={selectedProjectId && selectedProjectId !== "none" ? selectedProjectId : undefined}
+                  formatLabel={selectedFormat.label}
+                  captions={captions}
+                  captionsLoading={captionsLoading}
+                  generateText={generateText}
+                  saveCaption={saveCaption}
+                  deleteCaption={deleteCaption}
+                />
+              </div>
             </div>
           </div>
         </TabsContent>

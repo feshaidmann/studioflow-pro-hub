@@ -20,6 +20,23 @@ export interface CreativeAsset {
   media_type?: "image" | "video";
 }
 
+export interface CreativeCaption {
+  id: string;
+  caption: string;
+  platform: string;
+  campaign_phase: string;
+  objective: string;
+  tone: string;
+  length: string;
+  hashtags_mode: string;
+  track_name: string;
+  artist_name: string;
+  project_id: string | null;
+  prompt: string;
+  dna_context: string;
+  created_at: string;
+}
+
 export function useCreativeAssets() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -37,6 +54,22 @@ export function useCreativeAssets() {
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data as CreativeAsset[];
+    },
+    enabled: !!user,
+  });
+
+  const { data: captions = [], isLoading: captionsLoading } = useQuery({
+    queryKey: ["creative-captions", user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+      const { data, error } = await (supabase as any)
+        .from("creative_captions")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(20);
+      if (error) throw error;
+      return data as CreativeCaption[];
     },
     enabled: !!user,
   });
@@ -167,6 +200,9 @@ export function useCreativeAssets() {
     objective?: string;
     tone?: string;
     format?: string;
+    campaignPhase?: string;
+    length?: string;
+    hashtagsMode?: string;
   }) => {
     if (!user) return null;
     try {
@@ -182,6 +218,9 @@ export function useCreativeAssets() {
           objective: params.objective,
           tone: params.tone,
           format: params.format,
+          campaignPhase: params.campaignPhase,
+          length: params.length,
+          hashtagsMode: params.hashtagsMode,
         },
       });
       if (error) {
@@ -274,5 +313,57 @@ export function useCreativeAssets() {
     queryClient.invalidateQueries({ queryKey: ["creative-assets"] });
   };
 
-  return { assets, isLoading, generating, generate, generateBatch, generateText, saveAsset, deleteAsset };
+  const saveCaption = async (params: {
+    caption: string;
+    projectId?: string;
+    trackName?: string;
+    artistName?: string;
+    platform: string;
+    campaignPhase: string;
+    objective: string;
+    tone: string;
+    length: string;
+    hashtagsMode: string;
+    prompt?: string;
+    dnaContext?: string;
+  }) => {
+    if (!user) return null;
+    const { data, error } = await (supabase as any)
+      .from("creative_captions")
+      .insert({
+        user_id: user.id,
+        project_id: params.projectId || null,
+        track_name: params.trackName || "",
+        artist_name: params.artistName || "",
+        caption: params.caption,
+        platform: params.platform,
+        campaign_phase: params.campaignPhase,
+        objective: params.objective,
+        tone: params.tone,
+        length: params.length,
+        hashtags_mode: params.hashtagsMode,
+        prompt: params.prompt || "",
+        dna_context: params.dnaContext || "",
+      })
+      .select()
+      .single();
+    if (error) {
+      toast({ title: "Erro ao salvar legenda", description: error.message, variant: "destructive" });
+      return null;
+    }
+    queryClient.invalidateQueries({ queryKey: ["creative-captions"] });
+    toast({ title: "Legenda salva no histórico!" });
+    return data as CreativeCaption;
+  };
+
+  const deleteCaption = async (id: string) => {
+    const { error } = await (supabase as any).from("creative_captions").delete().eq("id", id);
+    if (error) {
+      toast({ title: "Erro ao excluir legenda", description: error.message, variant: "destructive" });
+      return;
+    }
+    queryClient.invalidateQueries({ queryKey: ["creative-captions"] });
+  };
+
+  return { assets, captions, captionsLoading, isLoading, generating, generate, generateBatch, generateText, saveAsset, deleteAsset, saveCaption, deleteCaption };
 }
