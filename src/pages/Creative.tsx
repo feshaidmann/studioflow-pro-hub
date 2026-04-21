@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Palette, Sparkles, Trash2, ImageIcon, Download, Copy, FileText, Dna, X, Music, User, CalendarDays, ChevronDown, Video, PlayCircle } from "lucide-react";
+import { Palette, Sparkles, Trash2, ImageIcon, Download, Copy, FileText, Dna, X, Music, User, CalendarDays, ChevronDown, Video, PlayCircle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -104,6 +104,27 @@ function buildDNAPrompt(diagnosis: DiagnosisResult, trackName: string, formatId 
   return parts.join(" ") || `${prefix} para single musical.`;
 }
 
+const CAPTION_PLATFORMS = [
+  { value: "instagram", label: "Instagram" },
+  { value: "reels", label: "Reels / Shorts" },
+  { value: "spotify", label: "Spotify" },
+  { value: "tiktok", label: "TikTok" },
+];
+
+const CAPTION_OBJECTIVES = [
+  { value: "pre-save", label: "Pré-save" },
+  { value: "launch", label: "Lançamento" },
+  { value: "engagement", label: "Engajamento" },
+  { value: "storytelling", label: "Storytelling" },
+];
+
+const CAPTION_TONES = [
+  { value: "authentic", label: "Autêntico" },
+  { value: "emotional", label: "Emocional" },
+  { value: "direct", label: "Direto" },
+  { value: "poetic", label: "Poético" },
+];
+
 export default function Creative() {
   const [searchParams, setSearchParams] = useSearchParams();
   const projectIdParam = searchParams.get("project");
@@ -145,6 +166,9 @@ export default function Creative() {
   const [releaseDate, setReleaseDate] = useState("");
   const [additionalText, setAdditionalText] = useState("");
   const [noText, setNoText] = useState(false);
+  const [captionPlatform, setCaptionPlatform] = useState("instagram");
+  const [captionObjective, setCaptionObjective] = useState("launch");
+  const [captionTone, setCaptionTone] = useState("authentic");
 
   // Video loop state
   const [loopDuration, setLoopDuration] = useState<3 | 4 | 5>(4);
@@ -301,17 +325,39 @@ export default function Creative() {
         }
       }
 
-      if (dnaSource) {
-        setDnaCopyLoading(true);
-        const dnaContext = `Gênero: ${dnaSource.genero_classificado || ""}. Mood: ${dnaSource.identidade?.mood_principal || ""}. Território: ${dnaSource.identidade?.territorio_sonoro || ""}. Tags: ${(dnaSource.identidade?.tags || []).join(", ")}`;
-        const textResult = await generateText({ prompt: contextPrompt, dnaContext });
-        if (textResult?.text) {
-          setDnaCopyText(textResult.text);
-        }
-        setDnaCopyLoading(false);
-      }
     }
-  }, [prompt, style, selectedFormat, linkedProject, selectedProjectId, generate, referenceImage, dnaSource, generateText, trackName, artistName, releaseDate, additionalText, noText, loopDuration, videoPreset, videoIntensity, videoSpots]);
+  }, [prompt, style, selectedFormat, linkedProject, selectedProjectId, generate, referenceImage, trackName, artistName, releaseDate, additionalText, noText, loopDuration, videoPreset, videoIntensity, videoSpots]);
+
+  const handleGenerateCaption = useCallback(async () => {
+    if (!prompt.trim() && !trackName.trim() && !dnaSource) {
+      toast({ title: "Informe a música", description: "Preencha a ideia, o nome da faixa ou use um DNA Musical.", variant: "destructive" });
+      return;
+    }
+
+    const captionPrompt = [
+      linkedProject ? `Projeto: ${linkedProject.name}. Artista do projeto: ${linkedProject.artist}.` : "",
+      prompt ? `Direção criativa/estética: ${prompt}` : "",
+    ].filter(Boolean).join(" ");
+
+    const dnaContext = dnaSource
+      ? `Gênero: ${dnaSource.genero_classificado || ""}. Mood: ${dnaSource.identidade?.mood_principal || ""}. Território: ${dnaSource.identidade?.territorio_sonoro || ""}. Tags: ${(dnaSource.identidade?.tags || []).join(", ")}`
+      : undefined;
+
+    setDnaCopyLoading(true);
+    const textResult = await generateText({
+      prompt: captionPrompt || "Legenda para divulgação musical",
+      dnaContext,
+      trackName: trackName.trim() || dnaTrackName || undefined,
+      artistName: artistName.trim() || linkedProject?.artist || undefined,
+      releaseDate: releaseDate || undefined,
+      platform: CAPTION_PLATFORMS.find((item) => item.value === captionPlatform)?.label || captionPlatform,
+      objective: CAPTION_OBJECTIVES.find((item) => item.value === captionObjective)?.label || captionObjective,
+      tone: CAPTION_TONES.find((item) => item.value === captionTone)?.label || captionTone,
+      format: selectedFormat.label,
+    });
+    if (textResult?.text) setDnaCopyText(textResult.text);
+    setDnaCopyLoading(false);
+  }, [prompt, trackName, dnaSource, linkedProject, generateText, dnaTrackName, artistName, releaseDate, captionPlatform, captionObjective, captionTone, selectedFormat.label]);
 
   const handleVariation = useCallback(async () => {
     if (!generatedBase64 || !prompt.trim()) {
@@ -726,35 +772,63 @@ export default function Creative() {
                 aspectRatio={selectedFormat.width / selectedFormat.height}
               />
 
-              {/* DNA Copy Text Card */}
-              {(dnaCopyText || dnaCopyLoading) && (
-                <Card className="mt-4">
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <FileText className="h-4 w-4 text-primary" />
-                      <span className="text-xs font-medium">Legenda sugerida para redes sociais</span>
-                    </div>
-                    {dnaCopyLoading ? (
-                      <p className="text-xs text-muted-foreground animate-pulse">Gerando legenda…</p>
-                    ) : (
-                      <>
-                        <p className="text-sm leading-relaxed whitespace-pre-wrap">{dnaCopyText}</p>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="mt-3 text-xs gap-1.5"
-                          onClick={() => {
-                            navigator.clipboard.writeText(dnaCopyText);
-                            toast({ title: "Copiado!", description: "Legenda copiada para a área de transferência." });
-                          }}
-                        >
-                          <Copy className="h-3 w-3" /> Copiar legenda
-                        </Button>
-                      </>
+              <Card className="mt-4">
+                <CardContent className="p-4 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-4 w-4 text-primary" />
+                    <span className="text-xs font-medium">Legenda para divulgação da música</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <Select value={captionPlatform} onValueChange={setCaptionPlatform}>
+                      <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {CAPTION_PLATFORMS.map((item) => <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                    <Select value={captionObjective} onValueChange={setCaptionObjective}>
+                      <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {CAPTION_OBJECTIVES.map((item) => <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                    <Select value={captionTone} onValueChange={setCaptionTone}>
+                      <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {CAPTION_TONES.map((item) => <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {dnaCopyLoading ? (
+                    <p className="text-xs text-muted-foreground animate-pulse">Gerando legenda…</p>
+                  ) : dnaCopyText ? (
+                    <p className="text-sm leading-relaxed whitespace-pre-wrap">{dnaCopyText}</p>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">Gere uma legenda separada da imagem, otimizada para divulgar a faixa.</p>
+                  )}
+
+                  <div className="flex flex-wrap gap-2">
+                    <Button variant="secondary" size="sm" className="text-xs gap-1.5" onClick={handleGenerateCaption} disabled={dnaCopyLoading}>
+                      {dnaCopyText ? <RefreshCw className="h-3 w-3" /> : <Sparkles className="h-3 w-3" />}
+                      {dnaCopyLoading ? "Gerando…" : dnaCopyText ? "Gerar novamente" : "Gerar legenda"}
+                    </Button>
+                    {dnaCopyText && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-xs gap-1.5"
+                        onClick={() => {
+                          navigator.clipboard.writeText(dnaCopyText);
+                          toast({ title: "Copiado!", description: "Legenda copiada para a área de transferência." });
+                        }}
+                      >
+                        <Copy className="h-3 w-3" /> Copiar legenda
+                      </Button>
                     )}
-                  </CardContent>
-                </Card>
-              )}
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           </div>
         </TabsContent>
