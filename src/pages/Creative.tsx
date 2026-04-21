@@ -359,21 +359,24 @@ export default function Creative() {
     if (!editPrompt.trim() || !generatedBase64) return;
     setEditDialogOpen(false);
     setEditingLoading(true);
-    const result = await generate({
-      prompt: editPrompt,
-      style,
-      format: selectedFormat.id,
-      width: selectedFormat.width,
-      height: selectedFormat.height,
-      editImageUrl: generatedBase64,
-      projectId: selectedProjectId && selectedProjectId !== "none" ? selectedProjectId : undefined,
-    });
-    if (result) {
-      setGeneratedImage(result.imageBase64);
-      setGeneratedBase64(result.imageBase64);
-      setSavedToGallery(false);
+    try {
+      const result = await generate({
+        prompt: editPrompt,
+        style,
+        format: selectedFormat.id,
+        width: selectedFormat.width,
+        height: selectedFormat.height,
+        editImageUrl: generatedBase64,
+        projectId: selectedProjectId && selectedProjectId !== "none" ? selectedProjectId : undefined,
+      });
+      if (result) {
+        setGeneratedImage(result.imageBase64);
+        setGeneratedBase64(result.imageBase64);
+        setSavedToGallery(false);
+      }
+    } finally {
+      setEditingLoading(false);
     }
-    setEditingLoading(false);
   };
 
   const handleDownload = () => {
