@@ -258,12 +258,21 @@ function DetailSection({ id, title, icon, children }: {
   icon: string;
   children: React.ReactNode;
 }) {
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<{ id: string }>).detail;
+      if (detail?.id === id) setOpen(true);
+    };
+    window.addEventListener("dna:jump", handler);
+    return () => window.removeEventListener("dna:jump", handler);
+  }, [id]);
   return (
     <section id={id} className="scroll-mt-16">
-      <Collapsible className="md:hidden rounded-lg border border-border bg-card">
+      <Collapsible open={open} onOpenChange={setOpen} className="md:hidden rounded-lg border border-border bg-card">
         <CollapsibleTrigger className="flex w-full items-center justify-between px-4 py-3 text-left text-[11px] font-mono uppercase tracking-wider text-muted-foreground">
           <span className="flex items-center gap-2"><span>{icon}</span>{title}</span>
-          <span className="text-primary">+</span>
+          <span className="text-primary">{open ? "−" : "+"}</span>
         </CollapsibleTrigger>
         <CollapsibleContent className="px-4 pb-4">
           {children}
@@ -581,7 +590,14 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
   };
 
   // Sticky nav (~40px) + folga visual; evita que o título da seção fique escondido atrás da barra
-  const jumpTo = (id: string) => scrollToAnchor(id, { extraOffset: 56 });
+  const jumpTo = (id: string) => {
+    // Avisa Collapsibles (mobile) para abrirem antes do scroll
+    window.dispatchEvent(new CustomEvent("dna:jump", { detail: { id } }));
+    // Pequeno delay para o collapsible montar conteúdo antes de medir posição
+    requestAnimationFrame(() => {
+      scrollToAnchor(id, { extraOffset: 56 });
+    });
+  };
   const metricItems = [
     { label: "LUFS", value: `${realAnalysis?.lufs_integrated ?? audioAnalysis?.lufs ?? "—"}`, unit: "LUFS", help: "volume percebido em plataformas" },
     { label: "True Peak", value: `${realAnalysis?.true_peak_dbtp ?? audioAnalysis?.truePeak ?? "—"}`, unit: "dBTP", help: "risco de distorção após streaming" },
@@ -635,7 +651,18 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
           { label: "Referências", id: "dna-referencias" },
           { label: "Técnico", id: "dna-tecnico" },
         ].map((item) => (
-          <Button key={item.id} variant="ghost" size="sm" className="h-8 shrink-0 text-[11px]" onClick={() => jumpTo(item.id)}>
+          <Button
+            key={item.id}
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-8 shrink-0 text-[11px]"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              jumpTo(item.id);
+            }}
+          >
             {item.label}
           </Button>
         ))}
