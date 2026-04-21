@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Palette, Sparkles, Trash2, ImageIcon, Download, Copy, FileText, Dna, X, Music, User, CalendarDays, ChevronDown, Video, PlayCircle } from "lucide-react";
+import { Palette, Sparkles, Trash2, ImageIcon, Download, Copy, FileText, Dna, X, Music, User, CalendarDays, ChevronDown, Video, PlayCircle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -104,6 +104,27 @@ function buildDNAPrompt(diagnosis: DiagnosisResult, trackName: string, formatId 
   return parts.join(" ") || `${prefix} para single musical.`;
 }
 
+const CAPTION_PLATFORMS = [
+  { value: "instagram", label: "Instagram" },
+  { value: "reels", label: "Reels / Shorts" },
+  { value: "spotify", label: "Spotify" },
+  { value: "tiktok", label: "TikTok" },
+];
+
+const CAPTION_OBJECTIVES = [
+  { value: "pre-save", label: "Pré-save" },
+  { value: "launch", label: "Lançamento" },
+  { value: "engagement", label: "Engajamento" },
+  { value: "storytelling", label: "Storytelling" },
+];
+
+const CAPTION_TONES = [
+  { value: "authentic", label: "Autêntico" },
+  { value: "emotional", label: "Emocional" },
+  { value: "direct", label: "Direto" },
+  { value: "poetic", label: "Poético" },
+];
+
 export default function Creative() {
   const [searchParams, setSearchParams] = useSearchParams();
   const projectIdParam = searchParams.get("project");
@@ -145,6 +166,9 @@ export default function Creative() {
   const [releaseDate, setReleaseDate] = useState("");
   const [additionalText, setAdditionalText] = useState("");
   const [noText, setNoText] = useState(false);
+  const [captionPlatform, setCaptionPlatform] = useState("instagram");
+  const [captionObjective, setCaptionObjective] = useState("launch");
+  const [captionTone, setCaptionTone] = useState("authentic");
 
   // Video loop state
   const [loopDuration, setLoopDuration] = useState<3 | 4 | 5>(4);
@@ -301,17 +325,39 @@ export default function Creative() {
         }
       }
 
-      if (dnaSource) {
-        setDnaCopyLoading(true);
-        const dnaContext = `Gênero: ${dnaSource.genero_classificado || ""}. Mood: ${dnaSource.identidade?.mood_principal || ""}. Território: ${dnaSource.identidade?.territorio_sonoro || ""}. Tags: ${(dnaSource.identidade?.tags || []).join(", ")}`;
-        const textResult = await generateText({ prompt: contextPrompt, dnaContext });
-        if (textResult?.text) {
-          setDnaCopyText(textResult.text);
-        }
-        setDnaCopyLoading(false);
-      }
     }
-  }, [prompt, style, selectedFormat, linkedProject, selectedProjectId, generate, referenceImage, dnaSource, generateText, trackName, artistName, releaseDate, additionalText, noText, loopDuration, videoPreset, videoIntensity, videoSpots]);
+  }, [prompt, style, selectedFormat, linkedProject, selectedProjectId, generate, referenceImage, trackName, artistName, releaseDate, additionalText, noText, loopDuration, videoPreset, videoIntensity, videoSpots]);
+
+  const handleGenerateCaption = useCallback(async () => {
+    if (!prompt.trim() && !trackName.trim() && !dnaSource) {
+      toast({ title: "Informe a música", description: "Preencha a ideia, o nome da faixa ou use um DNA Musical.", variant: "destructive" });
+      return;
+    }
+
+    const captionPrompt = [
+      linkedProject ? `Projeto: ${linkedProject.name}. Artista do projeto: ${linkedProject.artist}.` : "",
+      prompt ? `Direção criativa/estética: ${prompt}` : "",
+    ].filter(Boolean).join(" ");
+
+    const dnaContext = dnaSource
+      ? `Gênero: ${dnaSource.genero_classificado || ""}. Mood: ${dnaSource.identidade?.mood_principal || ""}. Território: ${dnaSource.identidade?.territorio_sonoro || ""}. Tags: ${(dnaSource.identidade?.tags || []).join(", ")}`
+      : undefined;
+
+    setDnaCopyLoading(true);
+    const textResult = await generateText({
+      prompt: captionPrompt || "Legenda para divulgação musical",
+      dnaContext,
+      trackName: trackName.trim() || dnaTrackName || undefined,
+      artistName: artistName.trim() || linkedProject?.artist || undefined,
+      releaseDate: releaseDate || undefined,
+      platform: CAPTION_PLATFORMS.find((item) => item.value === captionPlatform)?.label || captionPlatform,
+      objective: CAPTION_OBJECTIVES.find((item) => item.value === captionObjective)?.label || captionObjective,
+      tone: CAPTION_TONES.find((item) => item.value === captionTone)?.label || captionTone,
+      format: selectedFormat.label,
+    });
+    if (textResult?.text) setDnaCopyText(textResult.text);
+    setDnaCopyLoading(false);
+  }, [prompt, trackName, dnaSource, linkedProject, generateText, dnaTrackName, artistName, releaseDate, captionPlatform, captionObjective, captionTone, selectedFormat.label]);
 
   const handleVariation = useCallback(async () => {
     if (!generatedBase64 || !prompt.trim()) {
