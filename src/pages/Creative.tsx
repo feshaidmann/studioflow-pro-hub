@@ -432,8 +432,6 @@ export default function Creative() {
   const assetProjectIds = [...new Set(assets.filter((a) => a.project_id).map((a) => a.project_id!))];
 
   const canGenerate = prompt.trim().length > 0;
-  const showStickyButton = isMobile && canGenerate && activeTab === "create";
-
   return (
     <div className="p-4 md:p-6 max-w-5xl mx-auto space-y-4 pb-20 md:pb-6">
       {/* Header */}
@@ -687,8 +685,8 @@ export default function Creative() {
                 </div>
               )}
 
-              {/* 6. Generate button — desktop */}
-              <div className="hidden md:block space-y-2">
+              {/* 6. Generate button */}
+              <div className="space-y-2">
                 <QuotaIndicator />
                 <Button
                   className="w-full"
@@ -707,6 +705,21 @@ export default function Creative() {
                           : "Gerar Imagem"}
                 </Button>
               </div>
+
+              <CaptionGeneratorCard
+                prompt={captionPrompt || prompt}
+                dnaContext={dnaCaptionContext}
+                trackName={trackName.trim() || dnaTrackName || undefined}
+                artistName={artistName.trim() || linkedProject?.artist || undefined}
+                releaseDate={releaseDate || undefined}
+                projectId={selectedProjectId && selectedProjectId !== "none" ? selectedProjectId : undefined}
+                formatLabel={selectedFormat.label}
+                captions={captions}
+                captionsLoading={captionsLoading}
+                generateText={generateText}
+                saveCaption={saveCaption}
+                deleteCaption={deleteCaption}
+              />
             </div>
 
             {/* Right: Preview */}
@@ -728,22 +741,6 @@ export default function Creative() {
                 aspectRatio={selectedFormat.width / selectedFormat.height}
               />
 
-              <div className="mt-4">
-                <CaptionGeneratorCard
-                  prompt={captionPrompt || prompt}
-                  dnaContext={dnaCaptionContext}
-                  trackName={trackName.trim() || dnaTrackName || undefined}
-                  artistName={artistName.trim() || linkedProject?.artist || undefined}
-                  releaseDate={releaseDate || undefined}
-                  projectId={selectedProjectId && selectedProjectId !== "none" ? selectedProjectId : undefined}
-                  formatLabel={selectedFormat.label}
-                  captions={captions}
-                  captionsLoading={captionsLoading}
-                  generateText={generateText}
-                  saveCaption={saveCaption}
-                  deleteCaption={deleteCaption}
-                />
-              </div>
             </div>
           </div>
         </TabsContent>
@@ -843,29 +840,6 @@ export default function Creative() {
           )}
         </TabsContent>
       </Tabs>
-
-      {/* Sticky generate button — mobile only */}
-      {showStickyButton && (
-        <div className="fixed bottom-16 left-0 right-0 p-3 bg-background/95 backdrop-blur-sm border-t border-border/50 z-40 md:hidden space-y-2">
-          <QuotaIndicator />
-          <Button
-            className="w-full"
-            onClick={handleGenerate}
-            disabled={generating || videoRendering || !canGenerate}
-          >
-            {selectedFormat.isVideo ? <Video className="h-4 w-4 mr-1.5" /> : <Sparkles className="h-4 w-4 mr-1.5" />}
-            {generating
-              ? "Gerando…"
-              : videoRendering
-                ? "Renderizando vídeo…"
-                : selectedFormat.isVideo
-                  ? "Gerar Vídeo Loop"
-                  : referenceImage
-                    ? "Gerar a partir da referência"
-                    : "Gerar Imagem"}
-          </Button>
-        </div>
-      )}
 
       {/* Gallery Lightbox */}
       <GalleryLightbox
