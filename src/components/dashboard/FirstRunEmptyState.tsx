@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -6,6 +6,9 @@ import {
   FolderPlus, ListMusic, UserPlus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { Project } from "@/data/mockData";
+import type { Profile } from "@/contexts/ProfileContext";
+import { getJourneyPlan } from "@/lib/journeyPersonalization";
 
 const ONBOARDING_STEPS = [
   {
@@ -31,11 +34,12 @@ const ONBOARDING_STEPS = [
   },
 ];
 
-export default function FirstRunEmptyState({ onNavigate }: { onNavigate: (path: string) => void }) {
+export default function FirstRunEmptyState({ onNavigate, recentProject, profile }: { onNavigate: (path: string) => void; recentProject?: Project | null; profile?: Profile | null }) {
   const STORAGE_KEY = "sfp_onboarding_done";
   const [done, setDone] = useState<string[]>(() => {
     try { return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "[]"); } catch { return []; }
   });
+  const plan = useMemo(() => getJourneyPlan(profile?.main_pain ?? "organization", profile?.current_moment ?? "", profile?.track_view_mode ?? "basic"), [profile]);
 
   const toggle = (id: string) => {
     setDone((prev) => {
@@ -48,6 +52,36 @@ export default function FirstRunEmptyState({ onNavigate }: { onNavigate: (path: 
   const completedCount = done.length;
   const totalCount = ONBOARDING_STEPS.length;
   const allDone = completedCount === totalCount;
+
+  if (recentProject) {
+    return (
+      <div className="col-span-full animate-fade-in">
+        <Card className="glass-card border-primary/20 relative overflow-hidden">
+          <CardContent className="p-6 md:p-8 relative z-10 space-y-5">
+            <div className="flex items-start gap-3">
+              <div className="p-2 rounded-lg bg-primary/10 text-primary shrink-0">
+                <Sparkles className="h-5 w-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-semibold uppercase text-primary">Projeto criado pelo onboarding</p>
+                <h2 className="text-2xl md:text-3xl font-bold text-foreground mt-1">{recentProject.name} já está pronto para avançar</h2>
+                <p className="text-muted-foreground text-sm leading-relaxed mt-2 max-w-md">
+                  Agora vamos transformar suas respostas em progresso real: checklist, análise técnica e próximas ações.
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Button className="gap-2" size="lg" onClick={() => onNavigate(`/projects/${recentProject.id}`)}>
+                Ver projeto <ArrowRight className="h-4 w-4" />
+              </Button>
+              <Button variant="outline" size="lg" onClick={() => onNavigate(plan.primaryPath)}>{plan.primaryLabel}</Button>
+              <Button variant="secondary" size="lg" onClick={() => onNavigate("/music-dna")}>Analisar faixa</Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="col-span-full animate-fade-in">
@@ -65,14 +99,14 @@ export default function FirstRunEmptyState({ onNavigate }: { onNavigate: (path: 
                 </div>
                 <span className="text-xs font-semibold uppercase tracking-widest text-primary">Primeiros passos</span>
               </div>
-              <h2 className="text-2xl md:text-3xl font-bold neon-text mb-2">
+              <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-2">
                 Vamos criar seu primeiro projeto
               </h2>
               <p className="text-muted-foreground text-sm leading-relaxed mb-6 max-w-md">
                 Do rascunho ao lançamento — organize sua música, acompanhe o progresso e colabore com sua equipe em um só lugar.
               </p>
               <Button
-                className="neon-glow active:scale-95 transition-transform gap-2"
+                className="active:scale-95 transition-transform gap-2"
                 size="lg"
                 onClick={() => onNavigate("/projects?new=1")}
               >

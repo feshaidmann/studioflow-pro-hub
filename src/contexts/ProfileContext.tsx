@@ -6,7 +6,7 @@ export type UserType = "artist";
 export type TrackViewMode = "basic" | "advanced";
 export type UserPlan = "free" | "pro";
 
-interface Profile {
+export interface Profile {
   id: string;
   display_name: string;
   username: string;

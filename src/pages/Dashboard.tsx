@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, type ReactNode } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Bot, ChevronDown, ChevronUp } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -28,6 +28,8 @@ import ProjectHealthList from "@/components/dashboard/ProjectHealthList";
 import PendingTeamCard from "@/components/dashboard/PendingTeamCard";
 import GuestProjectsList from "@/components/dashboard/GuestProjectsList";
 import EditalProgressCard from "@/components/dashboard/EditalProgressCard";
+import JourneyFocusCard from "@/components/dashboard/JourneyFocusCard";
+import { getJourneyPlan } from "@/lib/journeyPersonalization";
 
 export default function Dashboard() {
   const aiRef = useRef<AITaskAssistantHandle>(null);
@@ -37,7 +39,7 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const { projects, getMixPercent, getProjectFinancials, transactions } = useProjects();
-  const { displayName, isSimpleMode } = useProfile();
+  const { displayName, isSimpleMode, profile } = useProfile();
   const { activeTasks, completedTasks, loading: tasksLoading, addTask, toggleTask, deleteTask, updateTask, refresh: refreshTasks } = useTasks();
   const { user } = useAuth();
   const autoGenRef = useRef(false);
@@ -212,6 +214,11 @@ export default function Dashboard() {
   };
 
   const isFirstRun = projects.length === 0;
+  const journeyPlan = useMemo(() => getJourneyPlan(profile?.main_pain ?? "organization", profile?.current_moment ?? "", profile?.track_view_mode ?? "basic"), [profile]);
+  const recentOnboardingProject = useMemo(() => {
+    const id = localStorage.getItem("sfp_recent_onboarding_project");
+    return id ? projects.find((p) => p.id === id) ?? null : null;
+  }, [projects]);
 
   // Build "next recommended action" block
   const nextAction = useMemo(() => {
@@ -271,6 +278,14 @@ export default function Dashboard() {
                 financials,
                 professionals: professionals.map((p) => ({ name: p.name, specialty: p.specialty, bio: p.bio ?? "", active: true, phone: p.phone ?? "" })),
                 alerts: alerts.slice(0, 10).map((a) => ({ title: a.title, severity: a.severity, project: a.projectName, category: a.category })),
+                profileContext: profile ? {
+                  displayName,
+                  currentMoment: profile.current_moment,
+                  mainPain: profile.main_pain,
+                  trackViewMode: profile.track_view_mode,
+                  city: profile.city,
+                  origin: profile.origin,
+                } : undefined,
               }}
               onAddTask={async (description, projectId) => {
                 const validProjectId = projectId && projects.some((p) => p.id === projectId) ? projectId : null;
@@ -294,6 +309,37 @@ export default function Dashboard() {
     </Collapsible>
   );
 
+  const dashboardSections: Record<string, ReactNode> = {
+    checklist: (
+      <div id="checklist-section" className="grid grid-cols-1 gap-3">
+        {isFirstRun && <FirstRunEmptyState onNavigate={navigate} recentProject={recentOnboardingProject} profile={profile} />}
+        <DailyChecklist
+          activeTasks={activeTasks}
+          completedTasks={completedTasks}
+          loading={tasksLoading}
+          onAddTask={async (desc) => { await addTask({ description: desc }); }}
+          onToggleTask={toggleTask}
+          onDeleteTask={deleteTask}
+          onUpdateTask={(id, patch) => updateTask(id, patch)}
+          onRefresh={handleRefreshTasks}
+          refreshing={refreshing}
+          lastRefreshed={lastRefreshed}
+          hidden={isFirstRun}
+          aiRef={aiRef}
+          onInvokeAI={scrollToAI}
+          projects={projects.map((p) => ({ id: p.id, name: p.name }))}
+        />
+      </div>
+    ),
+    alerts: <div id="alerts-section"><ProjectAlertsCard alerts={alerts} hidden={isFirstRun} /></div>,
+    team: <PendingTeamCard hidden={isFirstRun} />,
+    projects: <ProjectHealthList projects={projectsWithHealth} hidden={isFirstRun} />,
+    editais: <EditalProgressCard hidden={isFirstRun} />,
+    releases: <div id="releases-section"><UpcomingReleases projects={projects} getMixPercent={getMixPercent} hidden={isFirstRun} /></div>,
+    finance: <FinancialSummary financials={financials} isSimpleMode={isSimpleMode} />,
+    transactions: !isSimpleMode ? <RecentTransactions transactions={transactions} /> : null,
+  };
+
   return (
     <div className="p-4 md:p-6 space-y-5 max-w-6xl mx-auto">
       <DashboardHeader
@@ -301,6 +347,14 @@ export default function Dashboard() {
         projects={projects}
         selectedProjectId={selectedProjectId}
         onSelectProject={setSelectedProjectId}
+        mainPain={profile?.main_pain}
+      />
+
+      <JourneyFocusCard
+        displayName={displayName}
+        profile={profile}
+        projectCount={projects.length}
+        onAskAI={(message) => { aiRef.current?.sendMessage(message); scrollToAI(); }}
       />
 
       {/* Next recommended action — click sends to AI */}
@@ -337,52 +391,13 @@ export default function Dashboard() {
       {/* AI Assistant — desktop: prominent; mobile: after checklist */}
       {!isMobile && aiAssistantCard}
 
-      {/* 1. O que fazer hoje + Alertas */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-        {isFirstRun && <FirstRunEmptyState onNavigate={navigate} />}
-
-        <DailyChecklist
-          activeTasks={activeTasks}
-          completedTasks={completedTasks}
-          loading={tasksLoading}
-          onAddTask={async (desc) => { await addTask({ description: desc }); }}
-          onToggleTask={toggleTask}
-          onDeleteTask={deleteTask}
-          onUpdateTask={(id, patch) => updateTask(id, patch)}
-          onRefresh={handleRefreshTasks}
-          refreshing={refreshing}
-          lastRefreshed={lastRefreshed}
-          hidden={isFirstRun}
-          aiRef={aiRef}
-          onInvokeAI={scrollToAI}
-          projects={projects.map((p) => ({ id: p.id, name: p.name }))}
-        />
-
-        <ProjectAlertsCard alerts={alerts} hidden={isFirstRun} />
-      </div>
+      {journeyPlan.sections.map((section) => dashboardSections[section]).filter(Boolean)}
 
       {/* AI Assistant on mobile — after checklist */}
       {isMobile && aiAssistantCard}
 
-      {/* 2. Equipe pendente */}
-      <PendingTeamCard hidden={isFirstRun} />
-
-      {/* 3. Projetos com score de saúde */}
-      <ProjectHealthList projects={projectsWithHealth} hidden={isFirstRun} />
-
       {/* 3b. Projetos como parceiro */}
       <GuestProjectsList projects={guestProjects} />
-
-      {/* 3c. Editais em andamento */}
-      <EditalProgressCard hidden={isFirstRun} />
-
-      {/* 4. Próximos lançamentos */}
-      <UpcomingReleases projects={projects} getMixPercent={getMixPercent} hidden={isFirstRun} />
-
-      {/* 5. Financeiro */}
-      <FinancialSummary financials={financials} isSimpleMode={isSimpleMode} />
-
-      {!isSimpleMode && <RecentTransactions transactions={transactions} />}
     </div>
   );
 }

@@ -9,6 +9,7 @@ import {
 import { useProfile } from "@/contexts/ProfileContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProjects } from "@/contexts/ProjectContext";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,10 +19,10 @@ import { toast } from "sonner";
 /* ── option maps ────────────────────────────────────────────── */
 
 const MOMENTS = [
-  { value: "idea", label: "Tenho uma ideia", icon: Lightbulb, stage: "inicio" },
-  { value: "producing", label: "Já estou produzindo", icon: Disc3, stage: "gravacao" },
-  { value: "ready", label: "Tenho música pronta", icon: Radio, stage: "master" },
-  { value: "launching", label: "Quero lançar", icon: Rocket, stage: "upload" },
+  { value: "idea", label: "Tenho uma ideia", icon: Lightbulb, stage: "inicio", impact: "Seu projeto começa em organização criativa." },
+  { value: "producing", label: "Já estou produzindo", icon: Disc3, stage: "gravacao", impact: "Vamos priorizar gravação, arranjo e entregas." },
+  { value: "ready", label: "Tenho música pronta", icon: Radio, stage: "master", impact: "O projeto já nasce em masterização." },
+  { value: "launching", label: "Quero lançar", icon: Rocket, stage: "upload", impact: "Seu plano começa focado em distribuição." },
 ] as const;
 
 const PROJECT_TYPES = [
@@ -36,17 +37,58 @@ const MODES = [
 ];
 
 const PAINS = [
-  { value: "organization", label: "Organização", icon: FolderKanban },
-  { value: "team", label: "Equipe", icon: Users },
-  { value: "deadlines", label: "Prazos", icon: Clock },
-  { value: "finance", label: "Financeiro", icon: DollarSign },
-  { value: "launch", label: "Lançamento", icon: Upload },
+  { value: "organization", label: "Organização", icon: FolderKanban, impact: "Dashboard com checklist e progresso em primeiro plano." },
+  { value: "team", label: "Equipe", icon: Users, impact: "Vamos destacar convites, parceiros e responsáveis." },
+  { value: "deadlines", label: "Prazos", icon: Clock, impact: "Alertas e próximas datas ganham prioridade." },
+  { value: "finance", label: "Financeiro", icon: DollarSign, impact: "Receitas, custos e margem sobem no dashboard." },
+  { value: "launch", label: "Lançamento", icon: Upload, impact: "Checklist de lançamento e análise técnica vêm primeiro." },
 ] as const;
 
 const PROJECT_NAME_MAP: Record<string, string> = {
   single: "Meu Single",
   ep: "Meu EP",
   album: "Meu Álbum",
+};
+
+const TRACK_TEMPLATES: Record<string, string[]> = {
+  single: ["Voz Principal", "Instrumental / Beat", "Referência", "Master Bus"],
+  ep: ["Faixa 1", "Faixa 2", "Faixa 3", "Master Bus"],
+  album: ["Pré-produção", "Faixas principais", "Interlúdios / versões", "Master Bus"],
+};
+
+const PAIN_TASKS: Record<string, { description: string; task_area: string; severity?: string }[]> = {
+  organization: [
+    { description: "Definir a próxima etapa do projeto", task_area: "geral", severity: "high" },
+    { description: "Organizar referências e arquivos principais", task_area: "geral" },
+    { description: "Listar pendências para avançar esta semana", task_area: "geral" },
+  ],
+  team: [
+    { description: "Listar quem falta para finalizar o projeto", task_area: "equipe", severity: "high" },
+    { description: "Convidar um parceiro para o projeto", task_area: "equipe" },
+    { description: "Definir responsável pela próxima entrega", task_area: "equipe" },
+  ],
+  deadlines: [
+    { description: "Definir o próximo prazo realista do projeto", task_area: "geral", severity: "high" },
+    { description: "Marcar a próxima entrega crítica no checklist", task_area: "geral" },
+    { description: "Separar pendências que podem atrasar o lançamento", task_area: "geral" },
+  ],
+  finance: [
+    { description: "Definir orçamento estimado do projeto", task_area: "financeiro", severity: "high" },
+    { description: "Registrar investimento inicial", task_area: "financeiro" },
+    { description: "Anotar previsão de receita ou cachê", task_area: "financeiro" },
+  ],
+  launch: [
+    { description: "Definir data prevista de lançamento", task_area: "lancamento", severity: "high" },
+    { description: "Conferir LUFS/True Peak antes do upload", task_area: "lancamento" },
+    { description: "Preparar capa e texto curto de divulgação", task_area: "lancamento" },
+  ],
+};
+
+const MOMENT_TASKS: Record<string, { description: string; task_area: string; severity?: string }[]> = {
+  idea: [{ description: "Transformar a ideia em estrutura de música", task_area: "gravacao", severity: "high" }],
+  producing: [{ description: "Definir o que falta gravar ou editar", task_area: "gravacao", severity: "high" }],
+  ready: [{ description: "Rodar uma análise técnica da faixa pronta", task_area: "lancamento", severity: "high" }],
+  launching: [{ description: "Revisar checklist de distribuição antes do envio", task_area: "lancamento", severity: "high" }],
 };
 
 /* ── component ──────────────────────────────────────────────── */
@@ -120,10 +162,30 @@ export default function Onboarding() {
         key: "C",
         stage,
         projectType: projectType as "single" | "ep" | "album",
+        templateTracks: TRACK_TEMPLATES[projectType] ?? TRACK_TEMPLATES.single,
       });
       projectId = project?.id ?? null;
     } catch {
       toast.error("Erro ao criar projeto, mas seu perfil foi salvo.");
+    }
+
+    if (projectId) {
+      const starterTasks = [...(MOMENT_TASKS[moment] ?? []), ...(PAIN_TASKS[pain] ?? [])].slice(0, 4);
+      await supabase.from("tasks").upsert(
+        starterTasks.map((task, index) => ({
+          user_id: user.id,
+          project_id: projectId,
+          description: task.description,
+          auto_generated: true,
+          source: "onboarding",
+          source_key: `onboarding:${projectId}:${moment}:${pain}:${index}`,
+          source_module: "onboarding",
+          task_area: task.task_area,
+          severity: task.severity ?? "medium",
+        })),
+        { onConflict: "user_id,source_key", ignoreDuplicates: true }
+      );
+      localStorage.setItem("sfp_recent_onboarding_project", projectId);
     }
 
     // Update profile
@@ -144,6 +206,15 @@ export default function Onboarding() {
   /* ── step labels ────────────────────────────────────────── */
   const TOTAL_STEPS = 6;
   const stepLabels = ["Momento", "Tipo", "Modo", "Desafio", "Identidade", "Pronto"];
+  const selectedMoment = MOMENTS.find((m) => m.value === moment);
+  const selectedPain = PAINS.find((p) => p.value === pain);
+  const selectedProjectType = PROJECT_TYPES.find((t) => t.value === projectType);
+  const planItems = [
+    selectedMoment?.impact,
+    selectedPain?.impact,
+    projectType ? `${TRACK_TEMPLATES[projectType]?.length ?? 4} trilhas iniciais para ${selectedProjectType?.label}.` : null,
+    pain ? `${Math.min(4, ((MOMENT_TASKS[moment] ?? []).length + (PAIN_TASKS[pain] ?? []).length))} tarefas iniciais já contextualizadas.` : null,
+  ].filter(Boolean) as string[];
 
   /* ── render helpers ─────────────────────────────────────── */
   const OptionCard = ({
@@ -192,8 +263,8 @@ export default function Onboarding() {
           <div className="mx-auto h-14 w-14 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center">
             <Music className="h-7 w-7 text-primary" />
           </div>
-          <h1 className="text-2xl font-bold neon-text">StudioFlow</h1>
-          <p className="text-muted-foreground text-sm">Vamos configurar tudo pra você</p>
+          <h1 className="text-2xl font-bold text-foreground">StudioFlow</h1>
+          <p className="text-muted-foreground text-sm">Vamos montar seu plano inicial</p>
         </div>
 
         {/* Progress */}
@@ -227,10 +298,10 @@ export default function Onboarding() {
               <p className="text-sm font-semibold text-foreground">Onde você está agora?</p>
               <div className="space-y-2.5">
                 {MOMENTS.map((m) => (
-                  <OptionCard key={m.value} selected={moment === m.value} onClick={() => setMoment(m.value)} icon={m.icon} label={m.label} />
+                  <OptionCard key={m.value} selected={moment === m.value} onClick={() => setMoment(m.value)} icon={m.icon} label={m.label} desc={m.impact} />
                 ))}
               </div>
-              <Button onClick={handleNext} disabled={!canAdvance[1]} className="w-full neon-glow gap-2" size="lg">
+              <Button onClick={handleNext} disabled={!canAdvance[1]} className="w-full gap-2" size="lg">
                 Próximo <ArrowRight className="h-4 w-4" />
               </Button>
             </div>
@@ -247,7 +318,7 @@ export default function Onboarding() {
               </div>
               <div className="flex gap-2">
                 <Button variant="outline" onClick={handleBack} className="flex-1" size="lg">Voltar</Button>
-                <Button onClick={handleNext} disabled={!canAdvance[2]} className="flex-1 neon-glow gap-2" size="lg">
+                <Button onClick={handleNext} disabled={!canAdvance[2]} className="flex-1 gap-2" size="lg">
                   Próximo <ArrowRight className="h-4 w-4" />
                 </Button>
               </div>
@@ -269,7 +340,7 @@ export default function Onboarding() {
               </div>
               <div className="flex gap-2">
                 <Button variant="outline" onClick={handleBack} className="flex-1" size="lg">Voltar</Button>
-                <Button onClick={handleNext} className="flex-1 neon-glow gap-2" size="lg">
+                <Button onClick={handleNext} className="flex-1 gap-2" size="lg">
                   Próximo <ArrowRight className="h-4 w-4" />
                 </Button>
               </div>
@@ -283,12 +354,12 @@ export default function Onboarding() {
               <p className="text-xs text-muted-foreground">Isso nos ajuda a priorizar o que mostrar pra você.</p>
               <div className="space-y-2.5">
                 {PAINS.map((p) => (
-                  <OptionCard key={p.value} selected={pain === p.value} onClick={() => setPain(p.value)} icon={p.icon} label={p.label} />
+                  <OptionCard key={p.value} selected={pain === p.value} onClick={() => setPain(p.value)} icon={p.icon} label={p.label} desc={p.impact} />
                 ))}
               </div>
               <div className="flex gap-2">
                 <Button variant="outline" onClick={handleBack} className="flex-1" size="lg">Voltar</Button>
-                <Button onClick={handleNext} disabled={!canAdvance[4]} className="flex-1 neon-glow gap-2" size="lg">
+                <Button onClick={handleNext} disabled={!canAdvance[4]} className="flex-1 gap-2" size="lg">
                   Próximo <ArrowRight className="h-4 w-4" />
                 </Button>
               </div>
@@ -330,7 +401,7 @@ export default function Onboarding() {
               </div>
               <div className="flex gap-2">
                 <Button variant="outline" onClick={handleBack} className="flex-1" size="lg">Voltar</Button>
-                <Button onClick={handleNext} disabled={!canAdvance[5]} className="flex-1 neon-glow gap-2" size="lg">
+                <Button onClick={handleNext} disabled={!canAdvance[5]} className="flex-1 gap-2" size="lg">
                   Próximo <ArrowRight className="h-4 w-4" />
                 </Button>
               </div>
@@ -340,7 +411,10 @@ export default function Onboarding() {
           {/* STEP 6 — Confirmação */}
           {step === 6 && (
             <div className="space-y-5">
-              <p className="text-sm font-semibold text-foreground">Tudo pronto!</p>
+              <div className="space-y-1">
+                <p className="text-sm font-semibold text-foreground">Seu StudioFlow vai começar assim</p>
+                <p className="text-xs text-muted-foreground">Este plano define projeto, dashboard, checklist e IA.</p>
+              </div>
 
               <div className="rounded-xl border border-border p-4 space-y-2.5">
                 <SummaryRow label="Momento" value={MOMENTS.find((m) => m.value === moment)?.label || "—"} />
@@ -351,13 +425,25 @@ export default function Onboarding() {
                 {city.trim() && <SummaryRow label="Cidade" value={city.trim()} />}
               </div>
 
+              <div className="rounded-xl bg-muted/50 border border-border p-4 space-y-2">
+                <p className="text-xs font-semibold text-foreground">Vamos criar</p>
+                <ul className="space-y-1.5">
+                  {planItems.map((item) => (
+                    <li key={item} className="flex gap-2 text-xs text-muted-foreground leading-snug">
+                      <Check className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" />
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
               <p className="text-[11px] text-muted-foreground/70 text-center">
-                Vamos criar seu primeiro projeto e te levar direto pra ele.
+                Depois disso, a IA já entende seu momento sem você repetir contexto.
               </p>
 
               <div className="flex gap-2">
                 <Button variant="outline" onClick={handleBack} className="flex-1" size="lg">Voltar</Button>
-                <Button onClick={handleConfirm} disabled={submitting} className="flex-1 neon-glow gap-2" size="lg">
+                <Button onClick={handleConfirm} disabled={submitting} className="flex-1 gap-2" size="lg">
                   {submitting ? "Criando..." : <>Começar <ArrowRight className="h-4 w-4" /></>}
                 </Button>
               </div>
