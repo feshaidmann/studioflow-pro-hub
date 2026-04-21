@@ -10,6 +10,29 @@ const corsHeaders = {
     "x-quota-daily-limit, x-quota-daily-used, x-quota-weekly-limit, x-quota-weekly-used, x-quota-daily-resets-at",
 };
 
+const IMAGE_MODEL = "google/gemini-3.1-flash-image-preview";
+
+async function requestImage(messages: any[], lovableKey: string) {
+  const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${lovableKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: IMAGE_MODEL,
+      messages,
+      modalities: ["image", "text"],
+    }),
+  });
+
+  return response;
+}
+
+function extractImageData(aiData: any): string | null {
+  return aiData?.choices?.[0]?.message?.images?.[0]?.image_url?.url ?? null;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -242,18 +265,7 @@ serve(async (req) => {
       messages.push({ role: "user", content: prompt });
     }
 
-    const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${lovableKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-3.1-flash-image-preview",
-        messages,
-        modalities: ["image", "text"],
-      }),
-    });
+    let aiResp = await requestImage(messages, lovableKey);
 
     if (!aiResp.ok) {
       const status = aiResp.status;
@@ -272,15 +284,47 @@ serve(async (req) => {
       throw new Error("AI generation failed");
     }
 
-    const aiData = await aiResp.json();
-    const imageData = aiData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-    if (!imageData) throw new Error("No image returned from AI");
+    let aiData = await aiResp.json();
+    let imageData = extractImageData(aiData);
+
+    if (!imageData) {
+      console.warn("AI returned no image; retrying with stricter image-only instruction", {
+        finishReason: aiData?.choices?.[0]?.finish_reason,
+        contentPreview: String(aiData?.choices?.[0]?.message?.content ?? "").slice(0, 240),
+      });
+
+      const retryMessages = [
+        ...messages,
+        {
+          role: "user",
+          content: "Gere a imagem agora. Responda obrigatoriamente com uma imagem renderizada no campo images; não responda apenas com texto.",
+        },
+      ];
+      aiResp = await requestImage(retryMessages, lovableKey);
+
+      if (!aiResp.ok) {
+        const txt = await aiResp.text();
+        console.error("AI retry error:", aiResp.status, txt);
+        return new Response(JSON.stringify({ error: "Não foi possível gerar a imagem agora. Tente novamente em instantes.", code: "image_generation_failed", fallback: true }), {
+          status: 200, headers: { ...corsHeaders, ...quotaHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      aiData = await aiResp.json();
+      imageData = extractImageData(aiData);
+    }
+
+    if (!imageData) {
+      return new Response(JSON.stringify({ error: "A IA respondeu sem uma imagem. Ajuste o prompt ou tente gerar novamente.", code: "no_image_returned", fallback: true }), {
+        status: 200, headers: { ...corsHeaders, ...quotaHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     // Log AI usage
     await supabase.from("ai_invocations").insert({
       user_id: user.id,
       function_name: "generate-creative",
-      model: "google/gemini-3.1-flash-image-preview",
+        model: IMAGE_MODEL,
       status: "success",
     });
 
