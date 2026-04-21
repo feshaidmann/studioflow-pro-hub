@@ -665,7 +665,7 @@ export default function Creative() {
                     <ReferenceImageUpload image={referenceImage} onImageChange={setReferenceImage} />
                     {referenceImage && (
                       <p className="text-[10px] text-muted-foreground mt-1">
-                        A IA usará esta imagem como base para criar sua peça.
+                        A IA usará esta imagem como referência autorizada e deverá preservar as feições do artista, alterando apenas estética, composição, cenário e iluminação.
                       </p>
                     )}
                   </div>
