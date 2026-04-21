@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Palette, Sparkles, Trash2, ImageIcon, Download, Copy, FileText, Dna, X, Music, User, CalendarDays, ChevronDown, Video, PlayCircle, RefreshCw } from "lucide-react";
+import { Palette, Sparkles, ImageIcon, Download, FileText, Dna, X, Music, User, CalendarDays, ChevronDown, Video, PlayCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -20,6 +20,7 @@ import ReferenceImageUpload from "@/components/creative/ReferenceImageUpload";
 import DeriveBatchDialog from "@/components/creative/DeriveBatchDialog";
 import GalleryLightbox from "@/components/creative/GalleryLightbox";
 import QuickTemplates, { type QuickTemplate } from "@/components/creative/QuickTemplates";
+import CaptionGeneratorCard from "@/components/creative/CaptionGeneratorCard";
 import { useCreativeAssets } from "@/hooks/useCreativeAssets";
 import { useProjects } from "@/contexts/ProjectContext";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -31,6 +32,7 @@ import { generateVideoLoop, type VideoPreset } from "@/components/creative/Video
 import { VideoEffectPicker } from "@/components/creative/VideoEffectPicker";
 import type { Intensity, SpotEffect } from "@/components/creative/videoLayers";
 import { useRateLimitDialog } from "@/hooks/useRateLimitDialog";
+import { cleanTrackName } from "@/lib/trackName";
 
 function QuotaIndicator() {
   const { quota } = useRateLimitDialog();
@@ -61,6 +63,7 @@ async function downloadFile(url: string, filename: string) {
 const FORMAT_PROMPT_PREFIX: Record<string, string> = {
   instagram_post: "Post artístico para Instagram",
   story: "Story vertical impactante",
+  reels_loop: "Loop vertical para Reels/Shorts",
   youtube_cover: "Capa cinematográfica para YouTube",
   spotify_cover: "Capa artística para single/álbum",
   spotify_canvas: "Canvas animado vertical para Spotify",
@@ -103,27 +106,6 @@ function buildDNAPrompt(diagnosis: DiagnosisResult, trackName: string, formatId 
 
   return parts.join(" ") || `${prefix} para single musical.`;
 }
-
-const CAPTION_PLATFORMS = [
-  { value: "instagram", label: "Instagram" },
-  { value: "reels", label: "Reels / Shorts" },
-  { value: "spotify", label: "Spotify" },
-  { value: "tiktok", label: "TikTok" },
-];
-
-const CAPTION_OBJECTIVES = [
-  { value: "pre-save", label: "Pré-save" },
-  { value: "launch", label: "Lançamento" },
-  { value: "engagement", label: "Engajamento" },
-  { value: "storytelling", label: "Storytelling" },
-];
-
-const CAPTION_TONES = [
-  { value: "authentic", label: "Autêntico" },
-  { value: "emotional", label: "Emocional" },
-  { value: "direct", label: "Direto" },
-  { value: "poetic", label: "Poético" },
-];
 
 export default function Creative() {
   const [searchParams, setSearchParams] = useSearchParams();
