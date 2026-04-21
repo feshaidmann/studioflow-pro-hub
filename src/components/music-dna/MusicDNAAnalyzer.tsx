@@ -582,9 +582,9 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
 
   const jumpTo = (id: string) => scrollToAnchor(id, { extraOffset: 8 });
   const metricItems = [
-    { label: "LUFS", value: `${realAnalysis?.lufs_integrated ?? audioAnalysis.lufs}`, unit: "LUFS", help: "volume percebido em plataformas" },
-    { label: "True Peak", value: `${realAnalysis?.true_peak_dbtp ?? audioAnalysis.truePeak}`, unit: "dBTP", help: "risco de distorção após streaming" },
-    { label: "DR", value: `${realAnalysis?.dynamic_range_lu ?? audioAnalysis.dynamicRange}`, unit: "LU", help: "variação entre partes suaves e fortes" },
+    { label: "LUFS", value: `${realAnalysis?.lufs_integrated ?? audioAnalysis?.lufs ?? "—"}`, unit: "LUFS", help: "volume percebido em plataformas" },
+    { label: "True Peak", value: `${realAnalysis?.true_peak_dbtp ?? audioAnalysis?.truePeak ?? "—"}`, unit: "dBTP", help: "risco de distorção após streaming" },
+    { label: "DR", value: `${realAnalysis?.dynamic_range_lu ?? audioAnalysis?.dynamicRange ?? "—"}`, unit: "LU", help: "variação entre partes suaves e fortes" },
     { label: "BPM", value: `${realAnalysis?.bpm ?? "—"}`, unit: "", help: "pulso médio detectado" },
     { label: "Tom", value: `${realAnalysis?.key ?? "—"}`, unit: "", help: "centro tonal provável" },
     { label: "Duração", value: realAnalysis ? formatDuration(realAnalysis.duration_sec) : "—", unit: "", help: "tempo total da faixa" },
@@ -727,7 +727,7 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
             {(referencias_proximas ?? []).map((r, i) => (
               <div key={i} className={cn(
                 "flex justify-between items-start gap-3 py-2 text-xs",
-                i < referencias_proximas.length - 1 && "border-b border-border"
+                i < (referencias_proximas?.length ?? 0) - 1 && "border-b border-border"
               )}>
                 <div>
                   <p className="font-semibold">{r.artista}</p>
