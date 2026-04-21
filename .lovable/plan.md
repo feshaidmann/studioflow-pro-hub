@@ -1,397 +1,424 @@
 
-## Plano: CX 10/10 para onboarding e jornada personalizada
+## Plano: Evoluir o Criativo para CX 10/10
 
-Vou transformar o onboarding de uma configuração inicial simples em uma experiência que entrega valor imediatamente: o usuário responde algumas perguntas e vê, logo depois, um StudioFlow claramente adaptado ao momento, dor principal e tipo de projeto dele.
+Vou transformar a tela do Criativo em um fluxo mais coerente para artista independente: primeiro entender a música/campanha, depois gerar imagem e legenda de forma separada, com filtros próprios, regeração independente e histórico útil.
 
 ## Objetivo
 
-Fazer com que o artista sinta:
+A experiência final deve deixar claro:
 
-- “O app entendeu meu momento.”
-- “Meu primeiro projeto já nasceu com estrutura útil.”
-- “O dashboard está priorizando o que importa para mim.”
-- “A IA sabe meu contexto sem eu precisar explicar tudo de novo.”
-- “As tarefas iniciais fazem sentido com o que eu preenchi.”
+- imagem e legenda são entregas separadas;
+- a legenda é pensada para divulgar a música, não apenas descrever a estética;
+- os filtros de legenda mudam de fato o resultado;
+- dados vindos do DNA Musical não aparecem como nomes técnicos feios;
+- formatos, tamanhos e expectativas ficam coerentes;
+- mobile fica menos longo e mais guiado.
 
-## 1. Melhorar o onboarding em si
+## 1. Corrigir coerência de dados da música
 
-### Ajustes de experiência
+### Problema atual
 
-No `src/pages/Onboarding.tsx`, vou evoluir o fluxo atual para parecer menos “formulário” e mais “configuração guiada”.
-
-Mudanças:
-
-- Trocar textos genéricos por textos orientados a benefício.
-- Mostrar, em cada etapa, o impacto da resposta:
-  - “Isso define o estágio inicial do seu projeto.”
-  - “Isso muda o tipo de checklist que vamos criar.”
-  - “Isso prioriza os blocos do seu dashboard.”
-- Remover classes visuais antigas como `neon-text` e `neon-glow`, alinhando com a identidade macOS minimalista/light mode.
-- Melhorar a tela final de confirmação para mostrar um “Plano inicial” antes de concluir.
-
-Exemplo da confirmação final:
+Quando o Criativo recebe dados do DNA Musical, o nome da faixa pode vir como nome técnico de arquivo, por exemplo:
 
 ```text
-Seu StudioFlow vai começar assim:
-
-Projeto: Meu Single
-Momento: Tenho música pronta
-Foco principal: Lançamento
-
-Vamos criar:
-- projeto já na etapa de masterização
-- checklist inicial de lançamento
-- atalhos para DNA Musical / Master Analyzer
-- dashboard priorizando próximos passos de lançamento
+01 Você é Linda MASTER 010824.wav
 ```
 
-## 2. Criar um “Plano Inicial Personalizado”
+Isso pode virar título público na arte e na legenda.
 
-Hoje o onboarding cria um projeto e salva `current_moment` e `main_pain`, mas essas informações quase não viram experiência personalizada.
+### Implementação
 
-Vou adicionar uma camada de mapeamento que transforma as respostas em:
-
-- frase de boas-vindas personalizada;
-- próxima ação recomendada;
-- tarefas iniciais;
-- CTA principal;
-- prioridade visual no dashboard.
-
-Exemplos:
-
-### Se `main_pain = finance`
-
-O dashboard prioriza:
-
-- resumo financeiro;
-- alerta para cadastrar custos/receitas;
-- CTA: “Registrar primeiro custo ou receita”.
-
-Tarefas iniciais:
-
-- “Definir orçamento estimado do projeto”
-- “Registrar investimento inicial”
-- “Anotar previsão de receita ou cachê”
-
-### Se `main_pain = team`
-
-O dashboard prioriza:
-
-- equipe pendente;
-- profissionais;
-- convite de parceiros.
-
-Tarefas iniciais:
-
-- “Listar quem falta para finalizar o projeto”
-- “Convidar um parceiro para o projeto”
-- “Definir responsável pela próxima entrega”
-
-### Se `main_pain = launch`
-
-O dashboard prioriza:
-
-- próximos lançamentos;
-- checklist de lançamento;
-- análise técnica.
-
-Tarefas iniciais:
-
-- “Definir data prevista de lançamento”
-- “Rodar análise do master”
-- “Preparar capa e materiais de divulgação”
-
-### Se `current_moment = ready`
-
-O projeto já nasce em etapa de masterização e a experiência recomenda:
-
-- Master Analyzer;
-- Music DNA;
-- checklist de distribuição.
-
-### Se `current_moment = idea`
-
-O projeto nasce em início e a experiência recomenda:
-
-- organizar repertório;
-- definir estrutura do single/EP/álbum;
-- criar primeiras tarefas de composição/produção.
-
-## 3. Criar componente de boas-vindas contextual no Dashboard
-
-Adicionar um novo componente:
+Criar uma função utilitária no próprio módulo ou em `src/lib` para limpar nomes técnicos:
 
 ```text
-src/components/dashboard/JourneyFocusCard.tsx
+01 Minha Musica MASTER FINAL.wav
+→ Minha Musica
 ```
 
-Ele será exibido no topo do dashboard, principalmente nos primeiros acessos, com:
+A limpeza deve remover:
 
-- saudação personalizada;
-- momento atual;
-- foco escolhido;
-- próxima melhor ação;
-- CTA principal;
-- CTA secundário;
-- explicação curta de por que aquilo aparece.
+- extensão de arquivo;
+- prefixos numéricos;
+- termos técnicos comuns: `master`, `final`, `mix`, `v1`, `v2`, datas, `wav`, `mp3`;
+- excesso de espaços, underscores e hífens.
 
-Exemplo:
+Aplicar essa limpeza ao preencher `trackName` vindo do DNA Musical.
+
+## 2. Reorganizar a tela em blocos de decisão
+
+Hoje a tela mistura prompt, detalhes da faixa, estética, imagem e legenda em uma jornada longa.
+
+Vou reorganizar `src/pages/Creative.tsx` em seções mais claras:
 
 ```text
-Ana, seu foco agora é lançamento.
-
-Como você disse que quer lançar, deixei seu dashboard priorizando
-checklist, prazo e análise técnica da faixa.
-
-Próxima melhor ação:
-Rodar o DNA Musical ou Master Analyzer antes de enviar para as plataformas.
-
-[Analisar minha faixa] [Ver checklist de lançamento]
+1. Música e campanha
+2. Direção visual
+3. Imagem
+4. Legenda
+5. Galeria
 ```
 
-Esse card deve usar os dados de `profile.current_moment` e `profile.main_pain`.
+### Música e campanha
 
-## 4. Reordenar o Dashboard dinamicamente
+Campos principais:
 
-No `src/pages/Dashboard.tsx`, a ordem dos blocos será adaptada conforme `main_pain`.
+- nome da música;
+- artista;
+- data de lançamento;
+- projeto vinculado;
+- fase da campanha.
 
-Hoje a ordem é fixa:
+A ideia é fazer o usuário entender que a criação nasce da música, não só da estética.
 
-1. Checklist
-2. Alertas
-3. Equipe
-4. Projetos
-5. Editais
-6. Lançamentos
-7. Financeiro
+### Direção visual
 
-Vou transformar isso em uma hierarquia contextual.
+Campos:
 
-### Organização
+- formato visual;
+- descrição da ideia;
+- estilo;
+- referência visual;
+- arte com texto / sem texto.
 
-- `organization`: Checklist, Projetos, Alertas, IA
-- `team`: Equipe, Convites, Projetos, Checklist
-- `deadlines`: Alertas, Checklist, Lançamentos, Projetos
-- `finance`: Financeiro, Transações, Alertas de orçamento, Projetos
-- `launch`: Lançamentos, Checklist, Master/DNA, Projetos
+### Imagem
 
-No modo simples, manter menos blocos e mais foco. No modo completo, exibir mais detalhes.
+Área dedicada para:
 
-## 5. Gerar tarefas iniciais com base no onboarding
+- gerar imagem;
+- gerar novamente / variação;
+- editar;
+- baixar;
+- salvar;
+- desdobrar para outros canais.
 
-Ao concluir o onboarding, além de criar o projeto, o app vai criar um pequeno checklist inicial usando a tabela `tasks` existente.
+### Legenda
 
-Não precisa criar nova tabela.
+Área independente para:
 
-As tarefas serão geradas a partir da combinação:
+- gerar legenda;
+- gerar novamente;
+- copiar;
+- salvar no histórico;
+- filtrar por plataforma, objetivo, tom, CTA e tamanho.
 
-- `current_moment`
-- `main_pain`
-- `projectType`
-- projeto criado
+## 3. Separar totalmente imagem e legenda
 
-Exemplo:
+### Problema atual
+
+A legenda já foi separada tecnicamente, mas ainda fica visualmente subordinada ao preview da imagem.
+
+### Implementação
+
+Criar um componente dedicado:
 
 ```text
-current_moment = launching
-main_pain = launch
-projectType = single
-
-Tarefas:
-- Definir data de lançamento do single
-- Conferir LUFS/True Peak antes do upload
-- Preparar capa em formato quadrado
-- Criar texto curto de divulgação
+src/components/creative/CaptionGeneratorCard.tsx
 ```
 
-Essas tarefas entrarão como:
+Ele receberá:
 
-- `auto_generated: true`
-- `source: "onboarding"`
-- `source_module: "onboarding"`
-- `task_area` correspondente: `lancamento`, `financeiro`, `equipe`, `gravacao`, etc.
+- `trackName`
+- `artistName`
+- `releaseDate`
+- `prompt`
+- `dnaSource`
+- filtros de legenda
+- função `generateText`
 
-## 6. Personalizar o projeto criado no onboarding
+E controlará:
 
-Hoje o projeto criado recebe dados básicos e depois ganha tracks padrão genéricas.
+- estado de loading da legenda;
+- texto gerado;
+- botão “Gerar legenda”;
+- botão “Gerar novamente”;
+- botão “Copiar”;
+- botão “Salvar legenda”, se houver persistência.
 
-Vou melhorar isso para que o projeto inicial reflita melhor o tipo escolhido.
+Isso reduz o tamanho de `Creative.tsx` e deixa a experiência mais legível.
 
-### Single
+## 4. Implementar filtros reais de legenda
 
-Tracks sugeridas:
+### Filtros atuais
 
-- Voz Principal
-- Instrumental / Beat
-- Referência
-- Master Bus
+Hoje existem:
 
-### EP
+- plataforma;
+- objetivo;
+- tom.
 
-Tracks sugeridas:
+Vou expandir para:
 
-- Faixa 1
-- Faixa 2
-- Faixa 3
-- Master Bus
+### Plataforma
 
-### Álbum
+- Instagram Feed
+- Reels / Shorts
+- TikTok
+- Spotify / streaming
+- WhatsApp / comunidade
 
-Tracks sugeridas:
+### Fase da campanha
 
-- Pré-produção
-- Faixas principais
-- Interlúdios / versões
-- Master Bus
+- teaser;
+- pré-save;
+- lançamento;
+- pós-lançamento;
+- bastidores;
+- show / agenda.
 
-Se o usuário estiver em modo simples, a estrutura continua enxuta. Se estiver em modo completo, podemos criar mais detalhes técnicos.
+### Objetivo
 
-## 7. Injetar contexto de onboarding na IA
+- ouvir agora;
+- salvar / pré-save;
+- comentar;
+- compartilhar;
+- seguir o artista;
+- chamar para show/evento.
 
-Hoje o `AITaskAssistant` recebe projetos, tarefas, finanças, profissionais e alertas, mas não recebe diretamente:
+### Tom
 
-- momento atual;
-- dor principal;
-- modo escolhido;
-- cidade;
-- origem do onboarding.
+- autêntico;
+- emocional;
+- direto;
+- poético;
+- bem-humorado;
+- urgente.
 
-Vou expandir o contexto enviado para a IA no Dashboard:
+### Tamanho
+
+- curto;
+- médio;
+- storytelling.
+
+### Hashtags
+
+- poucas;
+- moderadas;
+- sem hashtags.
+
+Esses filtros serão enviados para a função de IA e aparecerão explicitamente no prompt de geração da legenda.
+
+## 5. Melhorar o prompt da legenda no backend
+
+Atualizar a função `generate-creative` no modo texto para que ela respeite os novos filtros.
+
+A regra principal será:
 
 ```text
-profileContext:
-- displayName
-- currentMoment
-- mainPain
-- trackViewMode
-- city
+A legenda deve vender/divulgar a música primeiro.
+A estética/DNA só orienta o vocabulário e o clima.
 ```
 
-E atualizar a função `ai-task-assistant` para usar isso no prompt.
+### Ajustes importantes
 
-Resultado esperado:
+- remover limite fixo universal de 280 caracteres;
+- variar tamanho conforme o filtro escolhido;
+- adaptar CTA conforme objetivo;
+- adaptar linguagem por plataforma;
+- evitar legenda que pareça descrição de capa;
+- evitar excesso de hashtags;
+- sempre usar pt-BR natural;
+- se tiver nome da música e artista, eles devem aparecer de forma orgânica.
 
-Em vez de uma resposta genérica, a IA poderá dizer:
+Exemplo de instrução interna:
 
 ```text
-Como seu foco principal é lançamento e seu projeto está em master,
-eu faria nesta ordem:
+Se plataforma = TikTok/Reels:
+- primeira linha com gancho forte;
+- CTA curto;
+- linguagem mais direta.
 
-- Rodar análise técnica da faixa
-- Definir data de upload
-- Preparar capa e descrição
-- Revisar checklist de distribuição
+Se plataforma = Instagram:
+- legenda mais completa;
+- pode ter storytelling curto;
+- hashtags no final.
+
+Se objetivo = pré-save:
+- CTA principal deve ser salvar/ativar lembrete.
 ```
 
-## 8. Melhorar o estado vazio pós-onboarding
+## 6. Persistir legendas no histórico
 
-O componente `FirstRunEmptyState` hoje usa `localStorage` e assume que ainda não existe projeto.
+Para CX 10/10, a legenda não deve sumir ao sair da tela.
 
-Como o onboarding já cria um projeto, a experiência pós-onboarding deve ser diferente.
-
-Vou ajustar para dois estados:
-
-### Sem projeto real
-
-Mostrar primeiros passos tradicionais.
-
-### Projeto recém-criado pelo onboarding
-
-Mostrar uma experiência mais personalizada:
+Vou adicionar uma tabela no banco:
 
 ```text
-Seu primeiro projeto já está criado.
-
-Agora vamos transformar ele em progresso real.
-
-[Ver projeto] [Gerar checklist com IA] [Analisar faixa]
+creative_captions
 ```
 
-A checklist visual local deve deixar de ser o principal mecanismo de personalização e passar a refletir tarefas reais quando possível.
+Campos planejados:
 
-## 9. Microcopy e design
+- `id`
+- `user_id`
+- `project_id`
+- `track_name`
+- `artist_name`
+- `caption`
+- `platform`
+- `campaign_phase`
+- `objective`
+- `tone`
+- `length`
+- `hashtags_mode`
+- `prompt`
+- `dna_context`
+- `created_at`
 
-Ajustes visuais e de texto:
+Regras de acesso:
 
-- Remover linguagem genérica: “Vamos configurar tudo pra você”.
-- Usar linguagem mais concreta: “Vamos montar seu plano inicial”.
-- Remover efeitos neon/gamer do onboarding e dashboard.
-- Manter light mode, glassmorphism leve e estética macOS.
-- Melhorar espaçamento no viewport mobile de 434px.
-- Reduzir passos com sensação de fricção.
-- Dar mais feedback após cada escolha.
+- cada usuário só vê e gerencia suas próprias legendas;
+- leitura, criação, atualização e exclusão serão protegidas por autenticação.
 
-## 10. Arquivos principais a alterar
+Na interface, o card de legenda poderá mostrar:
 
-### Onboarding
+- legenda atual;
+- últimas legendas geradas;
+- botão copiar;
+- botão excluir;
+- filtro por projeto/música futuramente.
 
-- `src/pages/Onboarding.tsx`
-  - melhorar copy;
-  - remover neon;
-  - adicionar preview do plano inicial;
-  - gerar tarefas iniciais;
-  - personalizar projeto criado;
-  - manter segurança do fluxo obrigatório.
+## 7. Corrigir incoerência de formatos
 
-### Dashboard
+### Problema atual
 
-- `src/pages/Dashboard.tsx`
-  - ler `profile` completo;
-  - criar ordem dinâmica dos blocos;
-  - passar contexto de onboarding para IA;
-  - inserir novo card contextual.
+Algumas capas dizem `3000×3000`, mas o objeto de formato usa `1920×1920`.
 
-- `src/components/dashboard/DashboardHeader.tsx`
-  - substituir saudação genérica por saudação contextual.
+### Implementação
 
-- `src/components/dashboard/FirstRunEmptyState.tsx`
-  - adaptar para pós-onboarding com projeto já criado.
+Ajustar `src/components/creative/FormatSelector.tsx` para que a descrição reflita o que o sistema realmente usa.
 
-- `src/components/dashboard/JourneyFocusCard.tsx`
-  - novo componente com foco da jornada.
+Opções:
 
-### Tarefas
+- ou atualizar descrição para `1920×1920`;
+- ou alterar o formato para gerar/salvar metadata como `3000×3000`, se o fluxo suportar bem.
 
-- `src/hooks/useTasks.ts`
-  - reutilizar `addTask` para tarefas iniciais.
-  - se necessário, adicionar helper para criação em lote.
+Vou priorizar coerência visual e técnica: o usuário não deve ver uma promessa diferente do arquivo gerado.
 
-### IA
+## 8. Permitir imagem vertical estática separada de vídeo
 
-- `src/components/AITaskAssistant.tsx`
-  - aceitar `profileContext`.
+### Problema atual
 
-- `supabase/functions/ai-task-assistant/index.ts`
-  - incluir contexto do onboarding no prompt.
+`Story / Reels` está marcado como vídeo automaticamente.
 
-### Geração automática de tarefas
+Isso impede o usuário de escolher uma imagem vertical estática para story.
 
-- `supabase/functions/generate-daily-tasks/index.ts`
-  - opcionalmente considerar `main_pain` e `current_moment` ao gerar tarefas futuras.
-  - manter regras atuais de prazo, orçamento, convite, master e lançamento.
+### Implementação
 
-## 11. Critério de sucesso CX 10/10
+Separar formatos:
+
+```text
+Story estático — 1080×1920
+Reels / Shorts loop — 1080×1920 vídeo
+Canvas Spotify — 1080×1920 vídeo
+```
+
+Assim o usuário escolhe conscientemente entre imagem e loop animado.
+
+## 9. Corrigir estados de loading e erros
+
+Ajustes técnicos em `Creative.tsx` e `useCreativeAssets.ts`:
+
+- garantir `try/finally` em `handleGenerateCaption`;
+- garantir `try/finally` em edição de imagem;
+- evitar loading travado quando a função falhar;
+- exibir erro específico quando faltar música, prompt ou contexto;
+- capturar headers de cota também na geração de legenda, se disponíveis;
+- remover estado morto `detailAsset`.
+
+## 10. Melhorar mobile em 434px
+
+A tela atual fica longa no mobile.
+
+Vou aplicar:
+
+- cards mais compactos;
+- seções colapsáveis com resumo;
+- CTA sticky apenas para imagem;
+- legenda com botão próprio dentro do card;
+- menos controles simultâneos abertos;
+- labels mais curtos;
+- melhor espaçamento entre chips e selects.
+
+Estrutura mobile esperada:
+
+```text
+[Música e campanha]
+[Direção visual]
+[Gerar imagem]
+
+[Preview]
+
+[Legenda]
+[Gerar legenda]
+[Copiar / salvar]
+```
+
+## 11. Melhorar a galeria
+
+A galeria atual salva apenas imagem/vídeo.
+
+Com a nova tabela de legendas, a experiência passa a ter dois históricos:
+
+- artes geradas;
+- legendas geradas.
+
+Nesta etapa, vou implementar pelo menos o histórico básico de legendas no card de legenda, sem necessariamente misturar com a galeria visual.
+
+## 12. Arquivos principais
+
+### Frontend
+
+- `src/pages/Creative.tsx`
+  - reorganizar fluxo;
+  - remover estados mortos;
+  - conectar novos filtros;
+  - separar imagem e legenda visualmente.
+
+- `src/components/creative/CaptionGeneratorCard.tsx`
+  - novo componente de geração, re-geração, cópia e histórico de legenda.
+
+- `src/components/creative/FormatSelector.tsx`
+  - corrigir descrições;
+  - separar story estático de vídeo.
+
+- `src/components/creative/FormatChips.tsx`
+  - atualizar formatos destacados.
+
+- `src/components/creative/QuickTemplates.tsx`
+  - ajustar templates para campanha musical, não só estética.
+
+- `src/hooks/useCreativeAssets.ts`
+  - expandir `generateText`;
+  - adicionar funções para salvar/listar/excluir legendas, se a tabela for criada.
+
+### Backend / banco
+
+- criar tabela `creative_captions` com regras de acesso por usuário;
+- atualizar função `generate-creative` para novos filtros de legenda;
+- manter geração de imagem e legenda independentes.
+
+## 13. Critérios de sucesso
 
 A implementação estará boa quando:
 
-- o usuário entende por que cada pergunta do onboarding existe;
-- o projeto criado reflete o momento informado;
-- o dashboard muda de prioridade conforme a dor principal;
-- a IA responde com base no onboarding;
-- as primeiras tarefas não são genéricas;
-- o artista vê uma próxima ação clara nos primeiros segundos;
-- a experiência mobile fica limpa e sem excesso visual;
-- nenhuma informação preenchida fica “morta” no banco sem afetar a jornada.
+- o usuário consegue gerar imagem sem legenda;
+- o usuário consegue gerar legenda sem imagem;
+- ambos têm botão de gerar novamente;
+- os filtros de legenda alteram claramente o resultado;
+- a legenda prioriza divulgação da música;
+- DNA Musical melhora o contexto sem transformar a legenda em descrição estética;
+- nomes técnicos de arquivo não aparecem como título público;
+- formatos têm descrições coerentes;
+- Story estático e vídeo loop são escolhas separadas;
+- mobile fica mais organizado e menos cansativo.
 
 ## Resultado esperado
 
-Depois da implementação, o onboarding deixa de ser apenas cadastro e passa a ser o motor da experiência personalizada do StudioFlow.
+O Criativo deixa de ser apenas “gerador de imagem com legenda” e passa a funcionar como um mini kit de campanha musical:
 
-O usuário entra, responde poucas perguntas e recebe:
-
-- projeto inicial coerente;
-- dashboard priorizado;
-- checklist inicial relevante;
-- IA contextualizada;
-- próxima ação clara;
-- sensação real de produto personalizado.
+- arte visual;
+- legenda de divulgação;
+- filtros por canal e objetivo;
+- histórico de legendas;
+- integração mais limpa com DNA Musical;
+- experiência mais clara para lançamento de música.
