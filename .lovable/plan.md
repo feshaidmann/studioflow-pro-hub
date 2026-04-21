@@ -1,95 +1,268 @@
 
-## Plano: Ratificar preservação das feições do artista no Criativo
+## Plano: consolidar o Music DNA com atributos reais estilo Spotify
 
-Vou reforçar o fluxo de geração de imagem para que, sempre que houver uma imagem de referência com rosto humano, a IA seja instruída de forma explícita a preservar identidade, feições e características faciais do artista. A experiência também deixará claro ao usuário que a imagem enviada é tratada como material autorizado por ele.
+Vou evoluir o módulo `/music-dna` sem recriar a tela do zero, aproveitando o que já existe: análise local via Web Audio API, lookup externo, benchmarks, salvamento de análises e diagnóstico por IA. O objetivo é remover os últimos pontos “simulados”, padronizar os 13 atributos estilo Spotify e garantir que o diagnóstico, o salvamento e os benchmarks usem a mesma fonte de verdade.
 
-## Ajustes propostos
+## Estado atual identificado
 
-### 1. Reforçar o prompt da função de geração de imagem
+Parte do pedido já está implementada:
 
-Atualizar `supabase/functions/generate-creative/index.ts` para tornar a regra de preservação facial mais forte quando `editImageUrl` existir.
+- `music_dna_analyses` já possui colunas para atributos estilo Spotify, LUFS, dinâmica e fontes externas.
+- `music_dna_benchmarks` já existe com RLS pública para leitura e admin para gestão.
+- `src/types/musicDna.ts` já tem `SpotifyFeatures`, `MusicDnaBenchmark`, `KEY_NAMES`, `LUFS_TARGETS` e conversão de diagnóstico para colunas.
+- `src/lib/musicDnaLookup.ts` já consulta MusicBrainz/AcousticBrainz e Deezer em cascata.
+- `src/lib/audioAnalysis.ts` já calcula atributos reais no browser via Web Audio API.
+- `src/hooks/useMusicDNA.ts` já combina análise local, lookup externo e IA.
+- `src/hooks/useSavedAnalyses.ts` já salva os atributos detalhados na tabela.
+- A UI já exibe benchmark, compatibilidade de LUFS, histórico e integração com Criativo.
 
-Hoje já existe uma instrução de preservação, mas vou ampliar para cobrir:
+O que ainda precisa ser corrigido/ratificado:
 
-- não alterar feições;
-- não trocar identidade;
-- não “embelezar” ou reconstruir o rosto;
-- não mudar estrutura facial, idade aparente, expressão essencial, tom de pele ou traços distintivos;
-- usar a referência como base de identidade, não apenas como inspiração visual;
-- permitir alterações apenas em composição, cenário, iluminação, paleta, roupa, tipografia e formato da peça.
+- a Edge Function `music-dna-analyze` ainda só aceita `{ prompt }`, não registra custo em `ai_invocations` e não suporta ações estruturadas como `generate_diagnosis`/`save_features`;
+- o lookup externo existe em `src/lib/musicDnaLookup.ts`, mas não como hook dedicado com estados/toasts;
+- o campo sugerido `arquivo` não existe na tabela atual; a tabela usa `track_name`, `input_metadata` e `diagnosis`, então não vou inserir coluna nova desnecessária;
+- a migration enviada no prompt contém itens que já existem, mas ainda falta validar/ajustar a RPC de benchmark se ela não estiver no banco;
+- o diagnóstico por IA precisa receber os 13 atributos em formato padronizado e logar tokens/custo.
 
-Exemplo de intenção do prompt:
+## Implementação proposta
+
+### 1. Migration mínima e segura
+
+Criar uma migration apenas para o que faltar, sem duplicar estrutura existente.
+
+A migration vai:
+
+- manter as colunas já existentes em `music_dna_analyses`;
+- garantir que `music_dna_benchmarks` tenha `genero UNIQUE`, caso ainda não esteja aplicado;
+- criar/atualizar `public.recalcular_benchmark_genero(p_genero text)`;
+- ajustar a função para usar a coluna real `genre`, não `genero`, porque a tabela atual usa `genre`;
+- calcular médias dos atributos:
+  - `danceability`
+  - `energy`
+  - `loudness_db`
+  - `speechiness`
+  - `acousticness`
+  - `instrumentalness`
+  - `liveness`
+  - `valence`
+  - `tempo_bpm`
+  - `lufs_integrated`
+- montar `top_keys` com `key_name + mode_name`.
+
+Não vou criar colunas inexistentes como `arquivo`, pois isso conflita com o schema atual e não é necessário para a jornada já existente.
+
+### 2. Padronizar tipos em `src/types/musicDna.ts`
+
+Ajustar os tipos sem quebrar imports atuais:
+
+- manter `SpotifyFeatures`, `MusicDnaBenchmark`, `KEY_NAMES`, `LUFS_TARGETS`;
+- adicionar um tipo opcional `MusicDnaSource = "acousticbrainz" | "deezer" | "web_audio" | "local"`;
+- adicionar um tipo de linha salva alinhado ao schema real:
+  - `track_name`
+  - `genre`
+  - `input_metadata`
+  - `diagnosis`
+  - atributos Spotify e metadados externos;
+- manter `musicDnaColumnsFromDiagnosis()` como fonte de mapeamento para salvar análises;
+- garantir clamp/normalização dos atributos entre `0` e `1` quando aplicável.
+
+### 3. Criar hook dedicado de lookup
+
+Criar `src/hooks/useMusicDnaLookup.ts` como fachada reutilizável sobre `src/lib/musicDnaLookup.ts`.
+
+Ele vai oferecer:
+
+- `lookup({ artista, titulo, trackName, file })`;
+- `isLoading`;
+- retorno com:
+  - `features`
+  - `fonte`
+  - `mbid`
+  - `deezerId`
+  - `previewUrl`, se disponível futuramente.
+
+Para evitar duplicação, a lógica principal continuará em `src/lib/musicDnaLookup.ts`, mas será expandida para:
+
+- aceitar artista/título explicitamente;
+- manter fallback por `trackName`;
+- retornar `previewUrl` do Deezer quando existir;
+- usar User-Agent mais completo no MusicBrainz.
+
+### 4. Reforçar análise local real via Web Audio API
+
+Manter `src/lib/audioAnalysis.ts` como fonte principal da análise local.
+
+Ajustar onde necessário para:
+
+- garantir que os 13 atributos estilo Spotify sejam sempre derivados:
+  - `danceability`
+  - `energy`
+  - `key`
+  - `loudness`
+  - `mode`
+  - `speechiness`
+  - `acousticness`
+  - `instrumentalness`
+  - `liveness`
+  - `valence`
+  - `tempo`
+  - `duration_ms`
+  - `time_signature`
+- usar AcousticBrainz/Deezer apenas como enriquecimento quando disponível;
+- manter Web Audio como fallback obrigatório quando a busca externa falhar.
+
+### 5. Atualizar `useMusicDNA.ts`
+
+Ajustar o fluxo principal para deixar explícita a cascata:
 
 ```text
-Preserve the artist's facial identity exactly. Do not modify facial features,
-face shape, skin tone, age appearance, expression essence, distinctive marks,
-or identity. The user is assumed to hold the necessary image and related rights.
-Use the reference image as authorized source material.
+Arquivo/track name
+  → AcousticBrainz por MBID, se artista/título forem identificáveis
+  → Deezer, se AcousticBrainz falhar
+  → Web Audio API local sempre disponível como base real
+  → IA gera diagnóstico usando atributos consolidados
 ```
 
-### 2. Incluir a premissa de direitos de imagem no backend
+Mudanças previstas:
 
-Adicionar ao system prompt uma instrução clara de contexto:
+- incluir no prompt um bloco “ATRIBUTOS ESTILO SPOTIFY” com os 13 campos consolidados;
+- dar prioridade ao Web Audio para métricas realmente extraídas do arquivo;
+- usar externo para complementar BPM/duração/chave quando fizer sentido;
+- manter `externalLookup` no `DiagnosisResult`;
+- manter o tom técnico definido na memória do projeto;
+- preservar compatibilidade com a UI atual.
 
-- a plataforma parte do princípio de que o usuário possui autorização/direitos sobre a imagem enviada;
-- a IA não deve recusar a edição por esse motivo;
-- a edição deve se limitar a criar material artístico/promocional preservando a identidade.
+### 6. Evoluir a Edge Function `music-dna-analyze`
 
-Isso evita respostas ambíguas quando o modelo interpreta rosto real como conteúdo sensível.
+Atualizar `supabase/functions/music-dna-analyze/index.ts` para suportar dois formatos:
 
-### 3. Melhorar o texto visível na área de referência
+#### Formato atual, para compatibilidade
 
-Atualizar `src/pages/Creative.tsx`, no bloco “Imagem de referência”, para substituir a mensagem atual:
-
-```text
-A IA usará esta imagem como base para criar sua peça.
+```ts
+{ prompt: string }
 ```
 
-por algo mais explícito e tranquilizador:
+Continua funcionando.
 
-```text
-A IA usará esta imagem como referência autorizada e deverá preservar as feições do artista, alterando apenas estética, composição, cenário e iluminação.
+#### Novo formato estruturado
+
+```ts
+{
+  action: "generate_diagnosis",
+  payload: {
+    prompt,
+    features,
+    genero,
+    track_name
+  }
+}
 ```
 
-### 4. Ajustar o componente de upload de referência
+Também vou preparar, mas só usar se necessário:
 
-Atualizar `src/components/creative/ReferenceImageUpload.tsx` para incluir uma microcopy abaixo do upload, seguindo o padrão visual minimalista atual:
-
-```text
-Envie uma foto autorizada do artista. As feições devem ser preservadas na geração.
+```ts
+{
+  action: "save_features",
+  payload: ...
+}
 ```
 
-Quando houver imagem carregada, também manter um lembrete discreto:
+No projeto atual o salvamento já funciona no frontend via RLS, então não vou trocar o fluxo principal para service role sem necessidade.
 
-```text
-Referência carregada — preservar identidade facial.
-```
+A função também passará a:
 
-### 5. Reforçar variações, edições e desdobramentos
+- validar JWT com `getClaims`;
+- usar client admin apenas para logs e leitura de benchmark;
+- buscar benchmark do gênero quando disponível;
+- chamar Lovable AI Gateway;
+- extrair `prompt_tokens` e `completion_tokens`;
+- inserir registro em `ai_invocations` com:
+  - `function_name: "music-dna-analyze"`
+  - `model: "google/gemini-3-flash-preview"`
+  - `user_id`
+  - `tokens_input`
+  - `tokens_output`
+  - `cost_usd`
+  - `status: "success"` ou `"error"`;
+- retornar erros 402/429 com mensagens amigáveis;
+- manter CORS completo.
 
-Garantir que os fluxos que usam imagem base também recebam a mesma regra:
+### 7. Atualizar salvamento e benchmarks
 
-- “Gerar a partir da referência”;
-- “Criar variação”;
-- “Editar imagem”;
-- “Desdobrar para canais”.
+Ajustar `src/hooks/useSavedAnalyses.ts` para:
 
-A função backend já detecta `editImageUrl`, então a principal blindagem ficará centralizada ali. No frontend, a comunicação será alinhada para o usuário entender que a preservação facial é parte do comportamento esperado.
+- salvar os atributos já consolidados via `musicDnaColumnsFromDiagnosis`;
+- após salvar, chamar a RPC `recalcular_benchmark_genero` para o gênero salvo, se disponível;
+- invalidar:
+  - `music-dna-analyses`
+  - `music-dna-benchmarks`
+- manter fallback caso a RPC falhe, sem bloquear o usuário.
 
-### 6. Atualizar linguagem sem criar fricção jurídica
+### 8. UI do Music DNA
 
-Não vou adicionar checkbox obrigatório nem modal de consentimento, para não atrapalhar a jornada criativa. A premissa será comunicada como orientação de uso:
+A interface atual será preservada, com pequenos reforços:
 
-- “foto autorizada”;
-- “preservar feições”;
-- “alterar apenas estética/composição”.
+- mostrar claramente a fonte dos atributos:
+  - AcousticBrainz
+  - Deezer
+  - Web Audio
+- no painel de benchmark, manter “Banco público” vs “Preset local”;
+- na tela de carregamento, logs mais claros:
+  - “Buscando referência externa”
+  - “Analisando arquivo local”
+  - “Consolidando atributos estilo Spotify”
+  - “Gerando diagnóstico IA”
+- manter as seções técnicas colapsáveis no mobile.
+
+### 9. Correções de compatibilidade
+
+Durante a implementação vou evitar estes problemas:
+
+- não editar `src/integrations/supabase/client.ts`;
+- não editar `src/integrations/supabase/types.ts`;
+- não criar tabela de roles nem alterar auth;
+- não usar coluna `arquivo`, porque ela não existe;
+- não substituir a UI inteira por uma versão paralela;
+- não remover cache de sessão nem integração com Criativo;
+- não quebrar o histórico de análises salvas.
+
+## Arquivos previstos
+
+- `supabase/migrations/...`  
+  RPC/ajustes mínimos para benchmark.
+
+- `supabase/functions/music-dna-analyze/index.ts`  
+  diagnóstico estruturado, logs de custo e compatibilidade com `{ prompt }`.
+
+- `src/types/musicDna.ts`  
+  tipos complementares e mapeamento consolidado.
+
+- `src/lib/musicDnaLookup.ts`  
+  retorno mais completo e suporte a artista/título.
+
+- `src/hooks/useMusicDnaLookup.ts`  
+  novo hook de lookup com estado de carregamento.
+
+- `src/hooks/useMusicDNA.ts`  
+  cascata real, prompt com 13 atributos e integração com novo formato da função.
+
+- `src/hooks/useSavedAnalyses.ts`  
+  recálculo de benchmark pós-salvamento.
+
+- `src/hooks/useMusicDnaBenchmarks.ts`  
+  pequenos ajustes se necessário para compatibilidade de tipos.
+
+- `src/components/music-dna/MusicDNAAnalyzer.tsx`  
+  microajustes visuais/textuais para fonte da análise e logs.
 
 ## Resultado esperado
 
-Depois da alteração:
+Ao final:
 
-- imagens de referência com artista terão preservação facial reforçada;
-- a IA receberá instruções mais rígidas para não alterar a identidade;
-- o usuário entenderá que a foto enviada é assumida como autorizada;
-- variações e desdobramentos manterão o rosto do artista consistente;
-- o Criativo continuará fluido, sem adicionar etapas burocráticas.
+- o Music DNA usará análise real do arquivo como base;
+- AcousticBrainz e Deezer funcionarão como enriquecimento em cascata;
+- os 13 atributos estilo Spotify estarão padronizados no diagnóstico e no banco;
+- análises salvas alimentarão benchmarks por gênero;
+- a IA terá contexto técnico mais preciso;
+- cada chamada de IA será registrada em `ai_invocations`;
+- a jornada atual, histórico, cache e integração com Criativo continuarão funcionando.
