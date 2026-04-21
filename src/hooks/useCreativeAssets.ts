@@ -20,6 +20,23 @@ export interface CreativeAsset {
   media_type?: "image" | "video";
 }
 
+export interface CreativeCaption {
+  id: string;
+  caption: string;
+  platform: string;
+  campaign_phase: string;
+  objective: string;
+  tone: string;
+  length: string;
+  hashtags_mode: string;
+  track_name: string;
+  artist_name: string;
+  project_id: string | null;
+  prompt: string;
+  dna_context: string;
+  created_at: string;
+}
+
 export function useCreativeAssets() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -37,6 +54,22 @@ export function useCreativeAssets() {
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data as CreativeAsset[];
+    },
+    enabled: !!user,
+  });
+
+  const { data: captions = [], isLoading: captionsLoading } = useQuery({
+    queryKey: ["creative-captions", user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+      const { data, error } = await (supabase as any)
+        .from("creative_captions")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(20);
+      if (error) throw error;
+      return data as CreativeCaption[];
     },
     enabled: !!user,
   });
@@ -167,6 +200,9 @@ export function useCreativeAssets() {
     objective?: string;
     tone?: string;
     format?: string;
+    campaignPhase?: string;
+    length?: string;
+    hashtagsMode?: string;
   }) => {
     if (!user) return null;
     try {
@@ -182,6 +218,9 @@ export function useCreativeAssets() {
           objective: params.objective,
           tone: params.tone,
           format: params.format,
+            campaignPhase: params.campaignPhase,
+            length: params.length,
+            hashtagsMode: params.hashtagsMode,
         },
       });
       if (error) {
