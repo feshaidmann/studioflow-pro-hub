@@ -78,29 +78,45 @@ function getFormatPrefix(formatId: string): string {
   return FORMAT_PROMPT_PREFIX[formatId] || "Arte visual";
 }
 
+const TECHNICAL_DNA_TERMS = [
+  /\b(acorde|acordes|chord|chords|harmonia|harmônico|harmônica|progressão|progressao|campo harmônico|campo harmonico)\b/gi,
+  /\b(baixo|bass|guitarra|violão|violao|piano|teclado|synth|sintetizador|bateria|drums|percussão|percussao|vocal|voz|lead|pad|linha de|riff|melodia)\b/gi,
+  /\b(bpm|tempo|tom|tonalidade|key|modo maior|modo menor|lufs|db|compressão|compressao|mix|master)\b/gi,
+];
+
+function visualOnlyText(value?: string | null): string | null {
+  if (!value) return null;
+  const cleaned = TECHNICAL_DNA_TERMS.reduce((text, pattern) => text.replace(pattern, ""), value)
+    .replace(/[()\[\]{}]/g, " ")
+    .replace(/\s{2,}/g, " ")
+    .replace(/\s+([,.])/g, "$1")
+    .trim();
+  return cleaned.length > 2 ? cleaned : null;
+}
+
 function buildDNAPrompt(diagnosis: DiagnosisResult, trackName: string, formatId = "spotify_cover"): string {
   const parts: string[] = [];
   const prefix = getFormatPrefix(formatId);
   const genre = diagnosis.genero_classificado;
   if (genre) {
-    parts.push(`${prefix} de ${genre}.`);
+    parts.push(`${prefix} para uma música de ${genre}, traduzindo a energia sonora em linguagem visual.`);
   } else {
     parts.push(`${prefix} para single musical.`);
   }
 
-  const mood = diagnosis.identidade?.mood_principal;
-  if (mood) parts.push(`Atmosfera: ${mood}.`);
+  parts.push("Crie uma estrutura de imagem clara: assunto principal bem definido, plano de fundo com profundidade, primeiro plano com textura e área de respiro para tipografia.");
 
-  const territory = diagnosis.identidade?.territorio_sonoro;
-  if (territory) parts.push(`Cenário: ${territory}.`);
+  const mood = visualOnlyText(diagnosis.identidade?.mood_principal);
+  if (mood) parts.push(`Atmosfera visual: ${mood}.`);
 
-  const tags = diagnosis.identidade?.tags;
-  if (tags && tags.length > 0) parts.push(`Elementos visuais: ${tags.join(", ")}.`);
+  const territory = visualOnlyText(diagnosis.identidade?.territorio_sonoro);
+  if (territory) parts.push(`Ambientação: ${territory}.`);
 
-  const instruments = diagnosis.detectedInstruments;
-  if (instruments && instruments.length > 0) {
-    parts.push(`Inclua ${instruments.join(" e ")} na composição.`);
-  }
+  const tags = diagnosis.identidade?.tags?.map(visualOnlyText).filter(Boolean).slice(0, 6);
+  if (tags && tags.length > 0) parts.push(`Componentes visuais sugeridos: ${tags.join(", ")}.`);
+
+  parts.push("Direção fotográfica: lente cinematográfica entre 35mm e 50mm, profundidade de campo moderada, iluminação expressiva, contraste controlado e paleta coerente com o clima da faixa.");
+  parts.push("Não representar acordes, cifras, partituras, linhas de instrumentos, equipamentos musicais técnicos ou diagramas sonoros.");
 
   return parts.join(" ") || `${prefix} para single musical.`;
 }

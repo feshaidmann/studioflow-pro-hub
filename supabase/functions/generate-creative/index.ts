@@ -184,6 +184,8 @@ serve(async (req) => {
     const systemParts: string[] = [
       "You are a visual art generator for musicians and artists.",
       "CRITICAL TEXT RULE: The user's creative description (user message) is COMPOSITION GUIDANCE ONLY — it describes mood, style, scenery, colors, elements. You MUST NOT render any of its words, phrases or sentences as visible text, captions, labels or typography in the image. Treat the description purely as visual direction.",
+      "If the creative description comes from Music DNA, interpret it as visual direction only: composition structure, subject, scene components, ambience, camera lens, lighting, color palette, depth and texture.",
+      "Do NOT include or depict music theory, chords, chord names, sheet music, tablature, instrument lines, DAW waveforms, technical audio diagrams, BPM/LUFS/readouts, or literal instrument-arrangement references unless the user explicitly asks for a visible instrument as an object.",
       "The ONLY text allowed in the image comes from the dedicated text fields listed below in this system prompt (track title, artist name, release date, additional text). If no such fields are provided, render NO text at all.",
       `Target format: ${format}. Aspect ratio suitable for ${width}x${height}.`,
       "Any allowed text rendered in the image MUST be in Brazilian Portuguese (pt-BR) for generic words. Proper names (song titles, album titles, artist names, band names) must appear in their ORIGINAL language exactly as given — never translated.",
