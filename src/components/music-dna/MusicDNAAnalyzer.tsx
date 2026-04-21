@@ -518,7 +518,7 @@ function LoadingView({ trackName, logs, progress }: {
         <div className="text-4xl">🧬</div>
         <h3 className="text-lg font-bold">Analisando "{trackName}"</h3>
         <p className="text-sm text-muted-foreground">
-          Análise espectral · BPM & Tom · Seções · Diagnóstico IA
+          Web Audio · AcousticBrainz/Deezer · Atributos Spotify · Diagnóstico IA
         </p>
       </div>
       <Progress value={progress} className="h-1" />
@@ -563,7 +563,7 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
     identidade, diagnostico_tecnico, analise_seccoes,
     referencias_proximas, pontos_fortes, gargalos_criativos,
     sugestoes_arranjo, proximos_passos, diagnostico_resumo,
-    distance, trackFeatures, refFeatures, audioAnalysis, realAnalysis,
+    distance, trackFeatures, refFeatures, audioAnalysis, realAnalysis, externalLookup,
   } = diagnosis;
 
   const formatDuration = (sec: number) =>
@@ -614,6 +614,9 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
                 {input.references.slice(0, 2).join(", ")}
               </span>
             )}
+            <Badge variant="outline" className="text-[10px] font-mono bg-muted/30 border-border text-muted-foreground">
+              Fonte: {externalLookup?.fonte ?? "web_audio"}
+            </Badge>
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
