@@ -772,35 +772,63 @@ export default function Creative() {
                 aspectRatio={selectedFormat.width / selectedFormat.height}
               />
 
-              {/* DNA Copy Text Card */}
-              {(dnaCopyText || dnaCopyLoading) && (
-                <Card className="mt-4">
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <FileText className="h-4 w-4 text-primary" />
-                      <span className="text-xs font-medium">Legenda sugerida para redes sociais</span>
-                    </div>
-                    {dnaCopyLoading ? (
-                      <p className="text-xs text-muted-foreground animate-pulse">Gerando legenda…</p>
-                    ) : (
-                      <>
-                        <p className="text-sm leading-relaxed whitespace-pre-wrap">{dnaCopyText}</p>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="mt-3 text-xs gap-1.5"
-                          onClick={() => {
-                            navigator.clipboard.writeText(dnaCopyText);
-                            toast({ title: "Copiado!", description: "Legenda copiada para a área de transferência." });
-                          }}
-                        >
-                          <Copy className="h-3 w-3" /> Copiar legenda
-                        </Button>
-                      </>
+              <Card className="mt-4">
+                <CardContent className="p-4 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-4 w-4 text-primary" />
+                    <span className="text-xs font-medium">Legenda para divulgação da música</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <Select value={captionPlatform} onValueChange={setCaptionPlatform}>
+                      <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {CAPTION_PLATFORMS.map((item) => <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                    <Select value={captionObjective} onValueChange={setCaptionObjective}>
+                      <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {CAPTION_OBJECTIVES.map((item) => <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                    <Select value={captionTone} onValueChange={setCaptionTone}>
+                      <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {CAPTION_TONES.map((item) => <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {dnaCopyLoading ? (
+                    <p className="text-xs text-muted-foreground animate-pulse">Gerando legenda…</p>
+                  ) : dnaCopyText ? (
+                    <p className="text-sm leading-relaxed whitespace-pre-wrap">{dnaCopyText}</p>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">Gere uma legenda separada da imagem, otimizada para divulgar a faixa.</p>
+                  )}
+
+                  <div className="flex flex-wrap gap-2">
+                    <Button variant="secondary" size="sm" className="text-xs gap-1.5" onClick={handleGenerateCaption} disabled={dnaCopyLoading}>
+                      {dnaCopyText ? <RefreshCw className="h-3 w-3" /> : <Sparkles className="h-3 w-3" />}
+                      {dnaCopyLoading ? "Gerando…" : dnaCopyText ? "Gerar novamente" : "Gerar legenda"}
+                    </Button>
+                    {dnaCopyText && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-xs gap-1.5"
+                        onClick={() => {
+                          navigator.clipboard.writeText(dnaCopyText);
+                          toast({ title: "Copiado!", description: "Legenda copiada para a área de transferência." });
+                        }}
+                      >
+                        <Copy className="h-3 w-3" /> Copiar legenda
+                      </Button>
                     )}
-                  </CardContent>
-                </Card>
-              )}
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           </div>
         </TabsContent>
