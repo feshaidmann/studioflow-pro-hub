@@ -70,8 +70,8 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_ANON_KEY")!
     );
-    const { data: claimsData, error: claimsError } =
-      await anonClient.auth.getClaims(token);
+    const { data: { user: __authUser }, error: claimsError } = await anonClient.auth.getUser(token);
+  const claimsData = __authUser ? { claims: { sub: __authUser.id, email: __authUser.email } } : null;
     if (claimsError || !claimsData?.claims?.sub)
       throw new Error("Invalid token");
     const userId = claimsData.claims.sub;
