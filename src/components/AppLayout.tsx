@@ -55,8 +55,8 @@ const drawerSubLabels: Record<string, string> = {
   "/editais":            "Chamadas e inscrições",
   "/professionals":      "Equipe e parceiros",
   "/criativo":           "Arte com IA",
-  "/track-intelligence": "Diagnóstico de release",
-  "/music-dna":          "Análise de master",
+  "/track-intelligence": "Está pronto para lançar?",
+  "/music-dna":          "Análise técnica de mix/master",
 };
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {

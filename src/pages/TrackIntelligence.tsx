@@ -74,7 +74,8 @@ export default function TrackIntelligence() {
                 </div>
                 <button
                   onClick={(e) => { e.stopPropagation(); remove(it.id); }}
-                  className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
+                  aria-label="Excluir análise"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
