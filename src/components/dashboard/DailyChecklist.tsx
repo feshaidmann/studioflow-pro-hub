@@ -277,11 +277,11 @@ export default function DailyChecklist({
                                 <Shield className="h-3 w-3" />
                               </Button>
                             )}
-                            {aiRef?.current && (
+                            {aiRef && (
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-5 w-5 text-primary hover:text-primary/80 transition-opacity"
+                                className="h-6 w-6 text-primary hover:text-primary/80 hover:bg-primary/10 rounded-full transition-colors"
                                 title="Pedir ajuda da IA com esta tarefa"
                                 onClick={() => {
                                   const desc = task.description.replace(/^\[DNA\]\s*/, "");
@@ -309,7 +309,7 @@ export default function DailyChecklist({
                                   onInvokeAI?.();
                                 }}
                               >
-                                <Bot className="h-3 w-3" />
+                                <Bot className="h-3.5 w-3.5" />
                               </Button>
                             )}
                             <Button variant="ghost" size="icon" className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive" onClick={() => onDeleteTask(task.id)}>
