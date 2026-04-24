@@ -94,6 +94,7 @@ DADOS DO PROJETO (coletados automaticamente — VERIFIQUE CONTRA O DECLARADO):
 - Última análise técnica: ${ctx.last_master_analysis_date ?? "nunca"}
 - Progresso do checklist de release: ${checklistGapNote}
 ${masterDivergence ? "\n⚠️ DIVERGÊNCIA DETECTADA: artista declarou master pronto, mas nenhum Master Analyzer foi executado. INCLUA isso como gap obrigatório de severidade 'warning' com action_label='Analisar master' e action_route='/music-dna'." : ""}
+${dnaBlock}
 
 REGRAS DE ROTAS PARA action_route (use apenas estas):
 - "/music-dna" → gaps técnicos / mix / master / análise acústica
