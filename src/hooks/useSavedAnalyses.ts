@@ -9,10 +9,12 @@ export interface SavedAnalysis {
   id: string;
   track_name: string;
   genre: string;
+  project_id: string | null;
   input_metadata: {
     name: string;
     notes?: string;
     references: string[];
+    projectId?: string;
   };
   diagnosis: DiagnosisResult;
   created_at: string;
