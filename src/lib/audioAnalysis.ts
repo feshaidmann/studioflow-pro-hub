@@ -638,10 +638,8 @@ export async function analyzeAudio(file: File): Promise<AnalysisResult> {
   src.start(0);
   const rendered = await offline.startRendering();
 
-  // Free original decoded buffer reference (best effort)
-  // (no explicit free in the Web Audio API — drop the reference)
-  // @ts-expect-error - intentional rebind to release memory
-  decoded = null;
+  // Free original decoded buffer reference (best effort — no explicit free in the Web Audio API)
+  (decoded as unknown) = null as unknown as AudioBuffer;
 
   const sampleRate = rendered.sampleRate;
   const mono = rendered.getChannelData(0);
