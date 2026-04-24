@@ -482,6 +482,33 @@ function FormView({ onSubmit, isPending, projects }: {
               </FormItem>
             )} />
 
+            <FormField control={form.control} name="projectId" render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-[10px] uppercase tracking-widest font-mono text-muted-foreground">
+                  Vincular a um projeto (opcional)
+                </FormLabel>
+                <Select
+                  value={field.value || "__none__"}
+                  onValueChange={(v) => field.onChange(v === "__none__" ? "" : v)}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Sem projeto vinculado" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="__none__">Sem projeto vinculado</SelectItem>
+                    {projects.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.name}{p.artist ? ` — ${p.artist}` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )} />
+
             <Collapsible>
               <CollapsibleTrigger className="text-[10px] uppercase tracking-widest font-mono text-muted-foreground hover:text-foreground transition-colors">
                 + Notas adicionais (opcional)
