@@ -343,8 +343,10 @@ function formatFileSize(bytes: number): string {
 
 // ── FORM VIEW ────────────────────────────────────────────────────────────────
 
-function FormView({ onSubmit, isPending }: {
-  onSubmit: (v: FormValues, file: File) => void; isPending: boolean;
+function FormView({ onSubmit, isPending, projects }: {
+  onSubmit: (v: FormValues, file: File) => void;
+  isPending: boolean;
+  projects: Array<{ id: string; name: string; artist: string }>;
 }) {
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
@@ -355,7 +357,7 @@ function FormView({ onSubmit, isPending }: {
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
-      references: [], notes: "",
+      references: [], notes: "", projectId: "",
     },
   });
 
