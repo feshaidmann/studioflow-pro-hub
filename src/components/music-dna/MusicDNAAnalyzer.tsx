@@ -1205,7 +1205,7 @@ export function MusicDNAAnalyzer() {
         />
       ) : (
         <>
-          <FormView onSubmit={handleSubmit} isPending={isPending} />
+          <FormView onSubmit={handleSubmit} isPending={isPending} projects={projects} />
           <div className="mt-6">
             <SavedAnalysesList onLoad={handleLoadSaved} />
           </div>
