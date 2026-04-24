@@ -71,6 +71,11 @@ ANÁLISE TÉCNICA REAL (DNA Musical vinculada ao projeto — use estes números 
 REGRAS ADICIONAIS QUANDO HÁ ANÁLISE TÉCNICA:
 - Em dimensions.technical.justification, cite LUFS, BPM e dynamic range literais e compare com alvos das plataformas-alvo (Spotify -14 LUFS, Apple Music -16 LUFS, YouTube -14 LUFS, TikTok -14 LUFS).
 - Em recommendations, se LUFS estiver fora do alvo de alguma plataforma selecionada, gere recomendação específica citando o delta em dB.
+
+DYNAMIC RANGE (regra específica — NÃO restritiva):
+- Dynamic Range é INFORMATIVO, nunca bloqueador. Qualquer gap de DR deve ter severity "ok" ou no máximo "warning" — NUNCA "critical" — e nunca derrubar o score técnico isoladamente.
+- Sempre comente o DR atual no summary e em dimensions.technical.justification, posicionando-o como ponto de observação (não defeito): cite o valor (${dna.dynamic_range_db ?? "n/a"} dB) e referencie faixas saudáveis típicas por gênero (pop/eletrônica 6-9 dB, rock/indie 8-11 dB, MPB/jazz/acústico 10-14 dB).
+- Se o DR estiver fora da faixa típica do gênero declarado, inclua UMA recommendation acionável (ajuste de compressão no master, headroom no mix, automação de dinâmica, referência de mastering) com passos concretos para mover o DR em direção ao alvo, sem exigir refazer a faixa.
 ${dna.genre && input.genre && dna.genre.toLowerCase() !== input.genre.toLowerCase() ? `- DIVERGÊNCIA DE GÊNERO: declarado "${input.genre}" mas DNA detectou "${dna.genre}". Inclua gap obrigatório warning "Gênero declarado difere da análise técnica" com action_route="/music-dna".` : ""}` : "";
 
   return `Analise o seguinte projeto musical e gere um diagnóstico de prontidão de release.
