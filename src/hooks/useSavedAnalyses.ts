@@ -64,7 +64,7 @@ export function useSavedAnalyses() {
       input,
       diagnosis,
     }: {
-      input: { name: string; notes?: string; references: string[] };
+      input: { name: string; notes?: string; references: string[]; projectId?: string };
       diagnosis: DiagnosisResult;
     }): Promise<{ id: string }> => {
       const { data, error } = await supabase
@@ -73,6 +73,7 @@ export function useSavedAnalyses() {
           user_id: user!.id,
           track_name: input.name,
           genre: diagnosis.genero_classificado || "",
+          project_id: input.projectId || null,
           input_metadata: input as any,
           diagnosis: diagnosis as any,
           ...musicDnaColumnsFromDiagnosis(diagnosis),
