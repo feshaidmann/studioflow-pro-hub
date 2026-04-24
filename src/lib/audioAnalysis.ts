@@ -610,6 +610,12 @@ export async function analyzeAudio(file: File): Promise<AnalysisResult> {
     throw new Error("Arquivo muito grande (>200MB). Reduza o tamanho ou exporte em MP3 320 kbps.");
   }
 
+  // Detect mobile/low-memory devices to apply stricter limits and avoid tab kills
+  const isMobile = typeof navigator !== "undefined" && /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+  const lowMem = typeof navigator !== "undefined" && (navigator as any).deviceMemory && (navigator as any).deviceMemory <= 4;
+  // Analyze at most ~120s on mobile (representative window for LUFS/TP/DR), full track on desktop
+  const MAX_DURATION_SEC = isMobile || lowMem ? 120 : 600;
+
   let arrayBuffer: ArrayBuffer | null = await file.arrayBuffer();
 
   // Step 1 — decode at original rate using a temporary AudioContext
@@ -628,21 +634,41 @@ export async function analyzeAudio(file: File): Promise<AnalysisResult> {
   arrayBuffer = null;
   try { await probeCtx.close(); } catch { /* ignore */ }
 
-  // Step 2 — downsample to 22.05 kHz mono via OfflineAudioContext to save RAM
+  // Step 2 — try downsample to 22.05 kHz mono via OfflineAudioContext (best path).
+  // On mobile this can OOM-kill the tab on long tracks, so we fallback to an in-place
+  // mono sum from the AudioBuffer if rendering fails or the track is very long.
   const TARGET_SR = 22050;
-  const targetLength = Math.max(1, Math.ceil(decoded.duration * TARGET_SR));
-  const offline = new OfflineAudioContext(1, targetLength, TARGET_SR);
-  const src = offline.createBufferSource();
-  src.buffer = decoded;
-  src.connect(offline.destination);
-  src.start(0);
-  const rendered = await offline.startRendering();
+  const analyzeSeconds = Math.min(decoded.duration, MAX_DURATION_SEC);
+  let mono: Float32Array;
+  let sampleRate: number;
 
-  // Free original decoded buffer reference (best effort — no explicit free in the Web Audio API)
+  try {
+    const targetLength = Math.max(1, Math.ceil(analyzeSeconds * TARGET_SR));
+    const offline = new OfflineAudioContext(1, targetLength, TARGET_SR);
+    const src = offline.createBufferSource();
+    src.buffer = decoded;
+    src.connect(offline.destination);
+    src.start(0);
+    const rendered = await offline.startRendering();
+    sampleRate = rendered.sampleRate;
+    mono = rendered.getChannelData(0).slice(0, targetLength);
+  } catch (err) {
+    console.warn("OfflineAudioContext fallback (likely low memory):", err);
+    // Fallback: sum channels manually, capped to MAX_DURATION_SEC
+    const srcSr = decoded.sampleRate;
+    const numCh = decoded.numberOfChannels;
+    const wantSamples = Math.min(decoded.length, Math.floor(analyzeSeconds * srcSr));
+    const sum = new Float32Array(wantSamples);
+    for (let ch = 0; ch < numCh; ch++) {
+      const data = decoded.getChannelData(ch);
+      for (let i = 0; i < wantSamples; i++) sum[i] += data[i] / numCh;
+    }
+    sampleRate = srcSr;
+    mono = sum;
+  }
+
+  // Free the decoded buffer reference ASAP
   (decoded as unknown) = null as unknown as AudioBuffer;
-
-  const sampleRate = rendered.sampleRate;
-  const mono = rendered.getChannelData(0);
 
   const truePeak = computeTruePeak(mono);
   const blockEnergies = computeBlockEnergies(mono, sampleRate, 0.4);
