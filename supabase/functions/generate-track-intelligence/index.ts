@@ -53,6 +53,26 @@ function buildUserPrompt(input: any, ctx: any) {
     ? `${ctx.release_checklist_completed ?? 0} de ${ctx.release_checklist_total ?? 0} itens (${ctx.release_checklist_progress}%)`
     : "checklist de release não iniciado";
 
+  // Build technical block from linked DNA analysis (if any)
+  const dna = ctx.dna_analysis;
+  const dnaBlock = dna ? `
+
+ANÁLISE TÉCNICA REAL (DNA Musical vinculada ao projeto — use estes números literais):
+- LUFS integrado: ${dna.lufs_integrated ?? "n/a"} dB
+- Dynamic range: ${dna.dynamic_range_db ?? "n/a"} dB
+- Loudness: ${dna.loudness_db ?? "n/a"} dB
+- BPM: ${dna.tempo_bpm ?? "n/a"}
+- Tom: ${dna.key_name ?? "n/a"} ${dna.mode_name ?? ""}
+- Energy: ${dna.energy ?? "n/a"} · Danceability: ${dna.danceability ?? "n/a"} · Valence: ${dna.valence ?? "n/a"}
+- Gênero detectado pela análise: ${dna.genre ?? "n/a"}
+- Resumo do diagnóstico técnico: ${dna.summary ?? "—"}
+- Data da análise: ${dna.created_at ?? "n/a"}
+
+REGRAS ADICIONAIS QUANDO HÁ ANÁLISE TÉCNICA:
+- Em dimensions.technical.justification, cite LUFS, BPM e dynamic range literais e compare com alvos das plataformas-alvo (Spotify -14 LUFS, Apple Music -16 LUFS, YouTube -14 LUFS, TikTok -14 LUFS).
+- Em recommendations, se LUFS estiver fora do alvo de alguma plataforma selecionada, gere recomendação específica citando o delta em dB.
+${dna.genre && input.genre && dna.genre.toLowerCase() !== input.genre.toLowerCase() ? `- DIVERGÊNCIA DE GÊNERO: declarado "${input.genre}" mas DNA detectou "${dna.genre}". Inclua gap obrigatório warning "Gênero declarado difere da análise técnica" com action_route="/music-dna".` : ""}` : "";
+
   return `Analise o seguinte projeto musical e gere um diagnóstico de prontidão de release.
 
 DADOS DECLARADOS PELO ARTISTA:
@@ -74,6 +94,7 @@ DADOS DO PROJETO (coletados automaticamente — VERIFIQUE CONTRA O DECLARADO):
 - Última análise técnica: ${ctx.last_master_analysis_date ?? "nunca"}
 - Progresso do checklist de release: ${checklistGapNote}
 ${masterDivergence ? "\n⚠️ DIVERGÊNCIA DETECTADA: artista declarou master pronto, mas nenhum Master Analyzer foi executado. INCLUA isso como gap obrigatório de severidade 'warning' com action_label='Analisar master' e action_route='/music-dna'." : ""}
+${dnaBlock}
 
 REGRAS DE ROTAS PARA action_route (use apenas estas):
 - "/music-dna" → gaps técnicos / mix / master / análise acústica
@@ -122,28 +143,77 @@ function tryParse(content: string) {
 }
 
 async function collectProjectContext(supabase: any, projectId: string | null, userId: string, trackTitle: string) {
-  // Always check for prior Master Analyzer runs for this track (even without project)
   let masterAnalyzerRun: "sim" | "não" = "não";
   let lastMasterAnalysisDate: string | null = null;
-  try {
-    const { data: dnaList } = await supabase
-      .from("music_dna_analyses")
-      .select("id, created_at, track_name")
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false })
-      .limit(20);
-    if (dnaList && dnaList.length > 0) {
-      const normalized = (s: string) => (s || "").trim().toLowerCase();
-      const match = dnaList.find((d: any) => normalized(d.track_name) === normalized(trackTitle));
-      if (match) {
+  let dnaAnalysis: any = null;
+
+  // 1) Preferred: DNA analysis directly linked to the project
+  if (projectId) {
+    try {
+      const { data: linked } = await supabase
+        .from("music_dna_analyses")
+        .select("id, created_at, track_name, genre, lufs_integrated, dynamic_range_db, loudness_db, tempo_bpm, key_name, mode_name, energy, danceability, valence, diagnosis")
+        .eq("project_id", projectId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (linked) {
         masterAnalyzerRun = "sim";
-        lastMasterAnalysisDate = match.created_at;
+        lastMasterAnalysisDate = linked.created_at;
+        dnaAnalysis = {
+          created_at: linked.created_at,
+          genre: linked.genre,
+          lufs_integrated: linked.lufs_integrated,
+          dynamic_range_db: linked.dynamic_range_db,
+          loudness_db: linked.loudness_db,
+          tempo_bpm: linked.tempo_bpm,
+          key_name: linked.key_name,
+          mode_name: linked.mode_name,
+          energy: linked.energy,
+          danceability: linked.danceability,
+          valence: linked.valence,
+          summary: (linked.diagnosis as any)?.diagnostico_resumo ?? null,
+        };
       }
-    }
-  } catch (e) { console.error("DNA lookup error", e); }
+    } catch (e) { console.error("Linked DNA lookup error", e); }
+  }
+
+  // 2) Fallback: search by track name (legacy analyses without project_id)
+  if (!dnaAnalysis) {
+    try {
+      const { data: dnaList } = await supabase
+        .from("music_dna_analyses")
+        .select("id, created_at, track_name, genre, lufs_integrated, dynamic_range_db, loudness_db, tempo_bpm, key_name, mode_name, energy, danceability, valence, diagnosis")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false })
+        .limit(20);
+      if (dnaList && dnaList.length > 0) {
+        const normalized = (s: string) => (s || "").trim().toLowerCase();
+        const match = dnaList.find((d: any) => normalized(d.track_name) === normalized(trackTitle));
+        if (match) {
+          masterAnalyzerRun = "sim";
+          lastMasterAnalysisDate = match.created_at;
+          dnaAnalysis = {
+            created_at: match.created_at,
+            genre: match.genre,
+            lufs_integrated: match.lufs_integrated,
+            dynamic_range_db: match.dynamic_range_db,
+            loudness_db: match.loudness_db,
+            tempo_bpm: match.tempo_bpm,
+            key_name: match.key_name,
+            mode_name: match.mode_name,
+            energy: match.energy,
+            danceability: match.danceability,
+            valence: match.valence,
+            summary: (match.diagnosis as any)?.diagnostico_resumo ?? null,
+          };
+        }
+      }
+    } catch (e) { console.error("DNA fallback lookup error", e); }
+  }
 
   if (!projectId) {
-    return { master_analyzer_run: masterAnalyzerRun, last_master_analysis_date: lastMasterAnalysisDate };
+    return { master_analyzer_run: masterAnalyzerRun, last_master_analysis_date: lastMasterAnalysisDate, dna_analysis: dnaAnalysis };
   }
 
   try {
@@ -187,10 +257,11 @@ async function collectProjectContext(supabase: any, projectId: string | null, us
       release_checklist_total,
       release_checklist_completed,
       release_checklist_progress,
+      dna_analysis: dnaAnalysis,
     };
   } catch (e) {
     console.error("collectProjectContext error", e);
-    return { master_analyzer_run: masterAnalyzerRun, last_master_analysis_date: lastMasterAnalysisDate };
+    return { master_analyzer_run: masterAnalyzerRun, last_master_analysis_date: lastMasterAnalysisDate, dna_analysis: dnaAnalysis };
   }
 }
 
