@@ -143,28 +143,77 @@ function tryParse(content: string) {
 }
 
 async function collectProjectContext(supabase: any, projectId: string | null, userId: string, trackTitle: string) {
-  // Always check for prior Master Analyzer runs for this track (even without project)
   let masterAnalyzerRun: "sim" | "não" = "não";
   let lastMasterAnalysisDate: string | null = null;
-  try {
-    const { data: dnaList } = await supabase
-      .from("music_dna_analyses")
-      .select("id, created_at, track_name")
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false })
-      .limit(20);
-    if (dnaList && dnaList.length > 0) {
-      const normalized = (s: string) => (s || "").trim().toLowerCase();
-      const match = dnaList.find((d: any) => normalized(d.track_name) === normalized(trackTitle));
-      if (match) {
+  let dnaAnalysis: any = null;
+
+  // 1) Preferred: DNA analysis directly linked to the project
+  if (projectId) {
+    try {
+      const { data: linked } = await supabase
+        .from("music_dna_analyses")
+        .select("id, created_at, track_name, genre, lufs_integrated, dynamic_range_db, loudness_db, tempo_bpm, key_name, mode_name, energy, danceability, valence, diagnosis")
+        .eq("project_id", projectId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (linked) {
         masterAnalyzerRun = "sim";
-        lastMasterAnalysisDate = match.created_at;
+        lastMasterAnalysisDate = linked.created_at;
+        dnaAnalysis = {
+          created_at: linked.created_at,
+          genre: linked.genre,
+          lufs_integrated: linked.lufs_integrated,
+          dynamic_range_db: linked.dynamic_range_db,
+          loudness_db: linked.loudness_db,
+          tempo_bpm: linked.tempo_bpm,
+          key_name: linked.key_name,
+          mode_name: linked.mode_name,
+          energy: linked.energy,
+          danceability: linked.danceability,
+          valence: linked.valence,
+          summary: (linked.diagnosis as any)?.diagnostico_resumo ?? null,
+        };
       }
-    }
-  } catch (e) { console.error("DNA lookup error", e); }
+    } catch (e) { console.error("Linked DNA lookup error", e); }
+  }
+
+  // 2) Fallback: search by track name (legacy analyses without project_id)
+  if (!dnaAnalysis) {
+    try {
+      const { data: dnaList } = await supabase
+        .from("music_dna_analyses")
+        .select("id, created_at, track_name, genre, lufs_integrated, dynamic_range_db, loudness_db, tempo_bpm, key_name, mode_name, energy, danceability, valence, diagnosis")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false })
+        .limit(20);
+      if (dnaList && dnaList.length > 0) {
+        const normalized = (s: string) => (s || "").trim().toLowerCase();
+        const match = dnaList.find((d: any) => normalized(d.track_name) === normalized(trackTitle));
+        if (match) {
+          masterAnalyzerRun = "sim";
+          lastMasterAnalysisDate = match.created_at;
+          dnaAnalysis = {
+            created_at: match.created_at,
+            genre: match.genre,
+            lufs_integrated: match.lufs_integrated,
+            dynamic_range_db: match.dynamic_range_db,
+            loudness_db: match.loudness_db,
+            tempo_bpm: match.tempo_bpm,
+            key_name: match.key_name,
+            mode_name: match.mode_name,
+            energy: match.energy,
+            danceability: match.danceability,
+            valence: match.valence,
+            summary: (match.diagnosis as any)?.diagnostico_resumo ?? null,
+          };
+        }
+      }
+    } catch (e) { console.error("DNA fallback lookup error", e); }
+  }
 
   if (!projectId) {
-    return { master_analyzer_run: masterAnalyzerRun, last_master_analysis_date: lastMasterAnalysisDate };
+    return { master_analyzer_run: masterAnalyzerRun, last_master_analysis_date: lastMasterAnalysisDate, dna_analysis: dnaAnalysis };
   }
 
   try {
