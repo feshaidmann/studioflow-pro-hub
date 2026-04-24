@@ -52,9 +52,19 @@ serve(async (req) => {
     const { data: { user }, error: authErr } = await anonClient.auth.getUser(authHeader.replace("Bearer ", ""));
     if (authErr || !user) throw new Error("Unauthorized");
 
+    // Check if user is admin — admins têm tokens ilimitados na fase de testes
+    const { data: adminRole } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", user.id)
+      .eq("role", "admin")
+      .maybeSingle();
+    const isAdmin = !!adminRole;
+
     // Check AI usage quota (20 daily, 80 weekly) — counted in BRT (UTC-3)
-    const DAILY_LIMIT = 20;
-    const WEEKLY_LIMIT = 80;
+    // Admins bypass quotas (effectively unlimited)
+    const DAILY_LIMIT = isAdmin ? Number.MAX_SAFE_INTEGER : 20;
+    const WEEKLY_LIMIT = isAdmin ? Number.MAX_SAFE_INTEGER : 80;
     const BRT_OFFSET_MS = -3 * 60 * 60 * 1000; // BRT = UTC-3
 
     const now = new Date();
