@@ -1100,7 +1100,7 @@ export function MusicDNAAnalyzer() {
       notes: values.notes,
       references: values.references,
     };
-    setLastInput(input);
+    setLastInput({ ...input, projectId: values.projectId || undefined });
     setViewingDiagnosis(null);
     setRestoredFromCache(false);
     analyze(input);
