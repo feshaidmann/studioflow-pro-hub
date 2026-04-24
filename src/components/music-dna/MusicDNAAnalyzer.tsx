@@ -60,6 +60,7 @@ const formSchema = z.object({
   name: z.string().min(1, "Nome da faixa é obrigatório"),
   references: z.array(z.string()).max(5),
   notes: z.string().optional(),
+  projectId: z.string().optional(),
 });
 type FormValues = z.infer<typeof formSchema>;
 
