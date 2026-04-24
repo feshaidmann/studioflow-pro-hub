@@ -1134,7 +1134,8 @@ export function MusicDNAAnalyzer() {
   };
 
   const handleLoadSaved = (saved: SavedAnalysis) => {
-    const input = saved.input_metadata as { name: string; notes?: string; references: string[] };
+    const meta = saved.input_metadata as { name: string; notes?: string; references: string[]; projectId?: string };
+    const input = { ...meta, projectId: meta.projectId ?? saved.project_id ?? undefined };
     setLastInput(input);
     setViewingDiagnosis(saved.diagnosis);
     setIsSaved(true);
