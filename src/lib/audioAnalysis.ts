@@ -599,11 +599,64 @@ export async function analyzeAudioFull(file: File): Promise<{
 }
 
 /**
- * Legacy analysis function — backward compatible.
+ * Legacy analysis function — lightweight version for Master Analyzer.
+ * Computes only LUFS, true peak and dynamic range, downsampling to 22.05 kHz mono
+ * to drastically reduce memory and CPU on mobile devices (avoids tab being killed
+ * by Chrome Android on large MP3 masters). The arrayBuffer is released ASAP.
  */
 export async function analyzeAudio(file: File): Promise<AnalysisResult> {
-  const { legacy } = await analyzeAudioFull(file);
-  return legacy;
+  // Hard cap to avoid OOM on mobile (200 MB)
+  if (file.size > 200 * 1024 * 1024) {
+    throw new Error("Arquivo muito grande (>200MB). Reduza o tamanho ou exporte em MP3 320 kbps.");
+  }
+
+  let arrayBuffer: ArrayBuffer | null = await file.arrayBuffer();
+
+  // Step 1 — decode at original rate using a temporary AudioContext
+  const probeCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+  let decoded: AudioBuffer;
+  try {
+    decoded = await probeCtx.decodeAudioData(arrayBuffer.slice(0));
+  } catch {
+    try { await probeCtx.close(); } catch { /* ignore */ }
+    arrayBuffer = null;
+    throw new Error(
+      "Não foi possível decodificar o arquivo de áudio. Verifique se o formato é válido (WAV, MP3, OGG, FLAC ou AAC) e se o arquivo não está corrompido."
+    );
+  }
+  // Release the original ArrayBuffer immediately
+  arrayBuffer = null;
+  try { await probeCtx.close(); } catch { /* ignore */ }
+
+  // Step 2 — downsample to 22.05 kHz mono via OfflineAudioContext to save RAM
+  const TARGET_SR = 22050;
+  const targetLength = Math.max(1, Math.ceil(decoded.duration * TARGET_SR));
+  const offline = new OfflineAudioContext(1, targetLength, TARGET_SR);
+  const src = offline.createBufferSource();
+  src.buffer = decoded;
+  src.connect(offline.destination);
+  src.start(0);
+  const rendered = await offline.startRendering();
+
+  // Free original decoded buffer reference (best effort)
+  // (no explicit free in the Web Audio API — drop the reference)
+  // @ts-expect-error - intentional rebind to release memory
+  decoded = null;
+
+  const sampleRate = rendered.sampleRate;
+  const mono = rendered.getChannelData(0);
+
+  const truePeak = computeTruePeak(mono);
+  const blockEnergies = computeBlockEnergies(mono, sampleRate, 0.4);
+  const lufsIntegrated = computeLufs(blockEnergies);
+  const dynamicRange = computeDynamicRange(blockEnergies);
+
+  const r = (v: number) => Math.round(v * 10) / 10;
+  return {
+    lufs: r(lufsIntegrated),
+    truePeak: r(truePeak),
+    dynamicRange: r(dynamicRange),
+  };
 }
 
 /**
