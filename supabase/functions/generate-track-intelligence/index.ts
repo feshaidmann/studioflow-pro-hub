@@ -53,6 +53,26 @@ function buildUserPrompt(input: any, ctx: any) {
     ? `${ctx.release_checklist_completed ?? 0} de ${ctx.release_checklist_total ?? 0} itens (${ctx.release_checklist_progress}%)`
     : "checklist de release não iniciado";
 
+  // Build technical block from linked DNA analysis (if any)
+  const dna = ctx.dna_analysis;
+  const dnaBlock = dna ? `
+
+ANÁLISE TÉCNICA REAL (DNA Musical vinculada ao projeto — use estes números literais):
+- LUFS integrado: ${dna.lufs_integrated ?? "n/a"} dB
+- Dynamic range: ${dna.dynamic_range_db ?? "n/a"} dB
+- Loudness: ${dna.loudness_db ?? "n/a"} dB
+- BPM: ${dna.tempo_bpm ?? "n/a"}
+- Tom: ${dna.key_name ?? "n/a"} ${dna.mode_name ?? ""}
+- Energy: ${dna.energy ?? "n/a"} · Danceability: ${dna.danceability ?? "n/a"} · Valence: ${dna.valence ?? "n/a"}
+- Gênero detectado pela análise: ${dna.genre ?? "n/a"}
+- Resumo do diagnóstico técnico: ${dna.summary ?? "—"}
+- Data da análise: ${dna.created_at ?? "n/a"}
+
+REGRAS ADICIONAIS QUANDO HÁ ANÁLISE TÉCNICA:
+- Em dimensions.technical.justification, cite LUFS, BPM e dynamic range literais e compare com alvos das plataformas-alvo (Spotify -14 LUFS, Apple Music -16 LUFS, YouTube -14 LUFS, TikTok -14 LUFS).
+- Em recommendations, se LUFS estiver fora do alvo de alguma plataforma selecionada, gere recomendação específica citando o delta em dB.
+${dna.genre && input.genre && dna.genre.toLowerCase() !== input.genre.toLowerCase() ? `- DIVERGÊNCIA DE GÊNERO: declarado "${input.genre}" mas DNA detectou "${dna.genre}". Inclua gap obrigatório warning "Gênero declarado difere da análise técnica" com action_route="/music-dna".` : ""}` : "";
+
   return `Analise o seguinte projeto musical e gere um diagnóstico de prontidão de release.
 
 DADOS DECLARADOS PELO ARTISTA:
