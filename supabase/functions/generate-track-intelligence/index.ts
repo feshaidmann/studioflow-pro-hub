@@ -257,10 +257,11 @@ async function collectProjectContext(supabase: any, projectId: string | null, us
       release_checklist_total,
       release_checklist_completed,
       release_checklist_progress,
+      dna_analysis: dnaAnalysis,
     };
   } catch (e) {
     console.error("collectProjectContext error", e);
-    return { master_analyzer_run: masterAnalyzerRun, last_master_analysis_date: lastMasterAnalysisDate };
+    return { master_analyzer_run: masterAnalyzerRun, last_master_analysis_date: lastMasterAnalysisDate, dna_analysis: dnaAnalysis };
   }
 }
 
