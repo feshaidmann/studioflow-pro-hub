@@ -1751,6 +1751,77 @@ export type Database = {
           },
         ]
       }
+      track_intelligence_analyses: {
+        Row: {
+          artwork_status: string
+          consolidated_score: number | null
+          created_at: string
+          diagnosis: Json | null
+          distributor_status: string
+          error_message: string | null
+          genre: string
+          id: string
+          master_status: string
+          project_id: string | null
+          release_goal: string
+          score_label: string | null
+          status: string
+          target_audience: string
+          target_platforms: string[]
+          target_release_date: string
+          track_title: string
+          user_id: string
+        }
+        Insert: {
+          artwork_status: string
+          consolidated_score?: number | null
+          created_at?: string
+          diagnosis?: Json | null
+          distributor_status: string
+          error_message?: string | null
+          genre: string
+          id?: string
+          master_status: string
+          project_id?: string | null
+          release_goal: string
+          score_label?: string | null
+          status?: string
+          target_audience: string
+          target_platforms?: string[]
+          target_release_date: string
+          track_title: string
+          user_id: string
+        }
+        Update: {
+          artwork_status?: string
+          consolidated_score?: number | null
+          created_at?: string
+          diagnosis?: Json | null
+          distributor_status?: string
+          error_message?: string | null
+          genre?: string
+          id?: string
+          master_status?: string
+          project_id?: string | null
+          release_goal?: string
+          score_label?: string | null
+          status?: string
+          target_audience?: string
+          target_platforms?: string[]
+          target_release_date?: string
+          track_title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "track_intelligence_analyses_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       track_templates: {
         Row: {
           created_at: string

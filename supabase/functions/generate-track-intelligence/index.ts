@@ -1,0 +1,242 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
+
+const AI_MODEL = "google/gemini-2.5-flash";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+};
+
+const SYSTEM_PROMPT = `Você é o Track Intelligence do StudioFlow Pro, um diagnóstico de prontidão de release para artistas independentes brasileiros. Sua função é analisar os dados de um projeto musical e retornar um diagnóstico estruturado em JSON.
+
+REGRAS INVIOLÁVEIS:
+1. Toda afirmação deve ser ancorada em dados do JSON de entrada. Nunca invente dados.
+2. Não faça comparações com bancos de dados de faixas — você não tem esse acesso.
+3. Não use linguagem vaga ou elogios genéricos. Seja direto, técnico e acionável.
+4. Retorne APENAS o JSON conforme schema fornecido. Sem texto antes ou depois. Sem markdown.
+5. Scores devem refletir os dados reais — não infle scores sem justificativa.
+6. Recomendações devem ser específicas: citar dado do projeto, citar plataforma, citar prazo quando calculável.
+
+Schema de saída obrigatório:
+{
+  "consolidated_score": number (0-100),
+  "score_label": "Pronto para lançar" | "Quase lá" | "Precisa de atenção" | "Não recomendado lançar",
+  "dimensions": {
+    "technical": { "score": number, "justification": string },
+    "completeness": { "score": number, "justification": string },
+    "strategy": { "score": number, "justification": string },
+    "market": { "score": number, "justification": string }
+  },
+  "gaps": [
+    { "id": string, "title": string, "description": string, "severity": "critical"|"warning"|"ok", "action_label": string|null, "action_route": string|null }
+  ],
+  "recommendations": [
+    { "priority": number, "title": string, "body": string }
+  ],
+  "summary": string
+}
+
+Cálculo do consolidated_score: (technical*0.35) + (completeness*0.25) + (strategy*0.25) + (market*0.15).
+Faixas do score_label: 85-100 "Pronto para lançar", 65-84 "Quase lá", 40-64 "Precisa de atenção", 0-39 "Não recomendado lançar".
+Sempre retorne entre 3 e 6 gaps e exatamente 3 recommendations.`;
+
+function buildUserPrompt(input: any, ctx: any) {
+  const today = new Date().toISOString().slice(0, 10);
+  const target = new Date(input.target_release_date);
+  const daysUntil = Math.ceil((target.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+
+  return `Analise o seguinte projeto musical e gere um diagnóstico de prontidão de release.
+
+DADOS DECLARADOS PELO ARTISTA:
+- Título da faixa: ${input.track_title}
+- Gênero: ${input.genre}
+- Público-alvo: ${input.target_audience}
+- Data-alvo de lançamento: ${input.target_release_date} (hoje: ${today} — ${daysUntil} dias)
+- Plataformas-alvo: ${(input.target_platforms || []).join(", ")}
+- Objetivo do release: ${input.release_goal}
+- Master validado: ${input.master_status}
+- Artwork pronto: ${input.artwork_status}
+- Distribuidora configurada: ${input.distributor_status}
+
+DADOS DO PROJETO (coletados automaticamente):
+- Estágio atual: ${ctx.project_stage ?? "n/a"}
+- Tracks aprovadas: ${ctx.tracks_approved ?? 0} de ${ctx.tracks_total ?? 0}
+- Colaboradores confirmados: ${ctx.collaborators_confirmed ?? 0} de ${ctx.collaborators_total ?? 0}
+- Tarefas abertas: ${ctx.open_tasks_count ?? 0}
+- Master Analyzer executado: ${ctx.master_analyzer_run ?? "não"}
+
+Retorne o JSON conforme schema, sem nenhum texto adicional.`;
+}
+
+async function callAI(apiKey: string, userPrompt: string, retry = false) {
+  const body: any = {
+    model: AI_MODEL,
+    messages: [
+      { role: "system", content: SYSTEM_PROMPT },
+      { role: "user", content: userPrompt },
+    ],
+    response_format: { type: "json_object" },
+  };
+  if (retry) body.temperature = 0;
+
+  const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!r.ok) {
+    const txt = await r.text();
+    throw new Error(`AI gateway ${r.status}: ${txt}`);
+  }
+  const json = await r.json();
+  const content = json.choices?.[0]?.message?.content ?? "";
+  return content;
+}
+
+function tryParse(content: string) {
+  try { return JSON.parse(content); } catch { /**/ }
+  // strip markdown fences
+  const m = content.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (m) {
+    try { return JSON.parse(m[1]); } catch { /**/ }
+  }
+  return null;
+}
+
+async function collectProjectContext(supabase: any, projectId: string | null) {
+  if (!projectId) return {};
+  try {
+    const [{ data: project }, { data: tasks }, { data: members }] = await Promise.all([
+      supabase.from("projects").select("stage, name, project_type").eq("id", projectId).maybeSingle(),
+      supabase.from("tasks").select("id, completed").eq("project_id", projectId),
+      supabase.from("project_members").select("id, status, accepted_at").eq("project_id", projectId),
+    ]);
+    const tracks_total = (tasks || []).length;
+    const tracks_approved = (tasks || []).filter((t: any) => t.completed).length;
+    const open_tasks_count = tracks_total - tracks_approved;
+    const collaborators_total = (members || []).length;
+    const collaborators_confirmed = (members || []).filter((m: any) => m.accepted_at || m.status === "accepted").length;
+    return {
+      project_stage: project?.stage ?? null,
+      project_name: project?.name ?? null,
+      tracks_total, tracks_approved, open_tasks_count,
+      collaborators_total, collaborators_confirmed,
+      master_analyzer_run: "desconhecido",
+    };
+  } catch (e) {
+    console.error("collectProjectContext error", e);
+    return {};
+  }
+}
+
+serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader?.startsWith("Bearer ")) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  const supabase = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_ANON_KEY")!,
+    { global: { headers: { Authorization: authHeader } } },
+  );
+
+  const token = authHeader.replace("Bearer ", "");
+  const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+  if (authError || !user) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  if (!LOVABLE_API_KEY) {
+    return new Response(JSON.stringify({ error: "LOVABLE_API_KEY not configured" }), {
+      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  let analysisId: string | null = null;
+
+  try {
+    const input = await req.json();
+    const required = ["track_title", "genre", "target_audience", "target_release_date", "target_platforms", "release_goal", "master_status", "artwork_status", "distributor_status"];
+    for (const k of required) {
+      if (input[k] === undefined || input[k] === null || input[k] === "") {
+        return new Response(JSON.stringify({ error: `Campo obrigatório ausente: ${k}` }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
+    // Insert pending row first
+    const { data: inserted, error: insErr } = await supabase
+      .from("track_intelligence_analyses")
+      .insert({
+        user_id: user.id,
+        project_id: input.project_id || null,
+        track_title: input.track_title,
+        genre: input.genre,
+        target_audience: input.target_audience,
+        target_release_date: input.target_release_date,
+        target_platforms: input.target_platforms,
+        release_goal: input.release_goal,
+        master_status: input.master_status,
+        artwork_status: input.artwork_status,
+        distributor_status: input.distributor_status,
+        status: "pending",
+      })
+      .select("id")
+      .single();
+    if (insErr) throw insErr;
+    analysisId = inserted.id;
+
+    const ctx = await collectProjectContext(supabase, input.project_id || null);
+    const userPrompt = buildUserPrompt(input, ctx);
+
+    let content = await callAI(LOVABLE_API_KEY, userPrompt, false);
+    let parsed = tryParse(content);
+    if (!parsed) {
+      content = await callAI(LOVABLE_API_KEY, userPrompt, true);
+      parsed = tryParse(content);
+    }
+    if (!parsed) {
+      throw new Error("Resposta da IA inválida");
+    }
+
+    const score = Math.round(Number(parsed.consolidated_score) || 0);
+    const label = String(parsed.score_label || "");
+
+    await supabase
+      .from("track_intelligence_analyses")
+      .update({
+        diagnosis: parsed,
+        consolidated_score: score,
+        score_label: label,
+        status: "completed",
+      })
+      .eq("id", analysisId);
+
+    return new Response(JSON.stringify({ id: analysisId, diagnosis: parsed }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  } catch (e) {
+    console.error("generate-track-intelligence error:", e);
+    if (analysisId) {
+      await supabase
+        .from("track_intelligence_analyses")
+        .update({ status: "error", error_message: e instanceof Error ? e.message : String(e) })
+        .eq("id", analysisId);
+    }
+    return new Response(
+      JSON.stringify({ error: "Diagnóstico temporariamente indisponível — tente novamente" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
+  }
+});
