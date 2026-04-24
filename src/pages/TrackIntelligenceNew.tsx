@@ -250,6 +250,18 @@ export default function TrackIntelligenceNew() {
               {projects.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
             </SelectContent>
           </Select>
+          {linkedDna && (
+            <div className="flex items-start gap-1.5 text-[11px] text-primary/80 bg-primary/5 border border-primary/15 rounded-md px-2 py-1.5">
+              <Sparkles className="h-3 w-3 mt-0.5 shrink-0" />
+              <span>
+                Análise técnica encontrada nesse projeto:{" "}
+                {linkedDna.lufs != null && <>LUFS {Number(linkedDna.lufs).toFixed(1)} · </>}
+                {linkedDna.bpm != null && <>{Math.round(Number(linkedDna.bpm))} BPM · </>}
+                {linkedDna.key && <>{linkedDna.key} {linkedDna.mode || ""}</>}
+                {" "}— será usada no diagnóstico.
+              </span>
+            </div>
+          )}
         </div>
 
         <div className="space-y-1.5">
