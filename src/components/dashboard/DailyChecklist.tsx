@@ -281,7 +281,7 @@ export default function DailyChecklist({
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-5 w-5 text-primary hover:text-primary/80 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
+                                className="h-5 w-5 text-primary hover:text-primary/80 transition-opacity"
                                 title="Pedir ajuda da IA com esta tarefa"
                                 onClick={() => {
                                   const desc = task.description.replace(/^\[DNA\]\s*/, "");
