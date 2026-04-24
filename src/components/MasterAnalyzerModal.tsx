@@ -109,8 +109,9 @@ export default function MasterAnalyzerModal({
       setResult(analysisResult);
       setSuggestions(generateSuggestions(analysisResult));
       setProgress(100);
-    } catch {
-      setError("Não foi possível decodificar o arquivo. Verifique se é um WAV, MP3 ou FLAC válido.");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Não foi possível decodificar o arquivo. Verifique se é um WAV, MP3 ou FLAC válido.";
+      setError(msg);
     } finally {
       setAnalyzing(false);
     }
