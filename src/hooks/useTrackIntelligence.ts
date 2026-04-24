@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { extractRateLimitInfo } from "@/hooks/useRateLimitDialog";
 
 export type TIASeverity = "critical" | "warning" | "ok";
 
@@ -120,10 +121,83 @@ export function useTrackIntelligence(id: string | undefined) {
   return { item, loading };
 }
 
-export async function generateTrackIntelligence(input: TIAInput): Promise<{ id: string } | null> {
+/**
+ * Returns the most recent completed analysis for a project (used in ProjectReleaseTab and Dashboard).
+ */
+export function useLatestTrackIntelligence(projectId: string | null | undefined) {
+  const [latest, setLatest] = useState<TIARecord | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const refresh = useCallback(async () => {
+    if (!projectId) { setLatest(null); setLoading(false); return; }
+    setLoading(true);
+    const { data } = await (supabase as any)
+      .from("track_intelligence_analyses")
+      .select("*")
+      .eq("project_id", projectId)
+      .eq("status", "completed")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    setLatest((data as TIARecord) || null);
+    setLoading(false);
+  }, [projectId]);
+
+  useEffect(() => { refresh(); }, [refresh]);
+
+  return { latest, loading, refresh };
+}
+
+/**
+ * Returns the analysis immediately preceding the given one (same project_id, or same track_title if no project).
+ * Used for showing score delta on result page.
+ */
+export function usePreviousAnalysis(current: TIARecord | null) {
+  const [previous, setPrevious] = useState<TIARecord | null>(null);
+
+  useEffect(() => {
+    if (!current) { setPrevious(null); return; }
+    let cancel = false;
+    (async () => {
+      let q = (supabase as any)
+        .from("track_intelligence_analyses")
+        .select("*")
+        .eq("status", "completed")
+        .lt("created_at", current.created_at)
+        .order("created_at", { ascending: false })
+        .limit(1);
+      if (current.project_id) {
+        q = q.eq("project_id", current.project_id);
+      } else {
+        q = q.eq("track_title", current.track_title).is("project_id", null);
+      }
+      const { data } = await q.maybeSingle();
+      if (!cancel) setPrevious((data as TIARecord) || null);
+    })();
+    return () => { cancel = true; };
+  }, [current]);
+
+  return previous;
+}
+
+export async function generateTrackIntelligence(
+  input: TIAInput,
+  onRateLimit?: (info: any) => void,
+): Promise<{ id: string } | null> {
   const { data, error } = await supabase.functions.invoke("generate-track-intelligence", { body: input });
-  if (error || !data?.id) {
-    toast.error(data?.error || error?.message || "Erro ao gerar diagnóstico");
+
+  if (error) {
+    const rateInfo = await extractRateLimitInfo(error);
+    if (rateInfo && onRateLimit) {
+      onRateLimit(rateInfo);
+      return null;
+    }
+    toast.error(error.message || "Erro ao gerar diagnóstico");
+    return null;
+  }
+
+  if (!data?.id) {
+    toast.error(data?.error || "Erro ao gerar diagnóstico");
     return null;
   }
   return { id: data.id };

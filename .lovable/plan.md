@@ -1,268 +1,122 @@
+# Track Intelligence — Plano de melhorias de CX
 
-## Plano: consolidar o Music DNA com atributos reais estilo Spotify
+Implementação dos 5 pontos prioritários da análise crítica, em ordem de impacto.
 
-Vou evoluir o módulo `/music-dna` sem recriar a tela do zero, aproveitando o que já existe: análise local via Web Audio API, lookup externo, benchmarks, salvamento de análises e diagnóstico por IA. O objetivo é remover os últimos pontos “simulados”, padronizar os 13 atributos estilo Spotify e garantir que o diagnóstico, o salvamento e os benchmarks usem a mesma fonte de verdade.
+---
 
-## Estado atual identificado
-
-Parte do pedido já está implementada:
-
-- `music_dna_analyses` já possui colunas para atributos estilo Spotify, LUFS, dinâmica e fontes externas.
-- `music_dna_benchmarks` já existe com RLS pública para leitura e admin para gestão.
-- `src/types/musicDna.ts` já tem `SpotifyFeatures`, `MusicDnaBenchmark`, `KEY_NAMES`, `LUFS_TARGETS` e conversão de diagnóstico para colunas.
-- `src/lib/musicDnaLookup.ts` já consulta MusicBrainz/AcousticBrainz e Deezer em cascata.
-- `src/lib/audioAnalysis.ts` já calcula atributos reais no browser via Web Audio API.
-- `src/hooks/useMusicDNA.ts` já combina análise local, lookup externo e IA.
-- `src/hooks/useSavedAnalyses.ts` já salva os atributos detalhados na tabela.
-- A UI já exibe benchmark, compatibilidade de LUFS, histórico e integração com Criativo.
-
-O que ainda precisa ser corrigido/ratificado:
-
-- a Edge Function `music-dna-analyze` ainda só aceita `{ prompt }`, não registra custo em `ai_invocations` e não suporta ações estruturadas como `generate_diagnosis`/`save_features`;
-- o lookup externo existe em `src/lib/musicDnaLookup.ts`, mas não como hook dedicado com estados/toasts;
-- o campo sugerido `arquivo` não existe na tabela atual; a tabela usa `track_name`, `input_metadata` e `diagnosis`, então não vou inserir coluna nova desnecessária;
-- a migration enviada no prompt contém itens que já existem, mas ainda falta validar/ajustar a RPC de benchmark se ela não estiver no banco;
-- o diagnóstico por IA precisa receber os 13 atributos em formato padronizado e logar tokens/custo.
-
-## Implementação proposta
-
-### 1. Migration mínima e segura
-
-Criar uma migration apenas para o que faltar, sem duplicar estrutura existente.
-
-A migration vai:
-
-- manter as colunas já existentes em `music_dna_analyses`;
-- garantir que `music_dna_benchmarks` tenha `genero UNIQUE`, caso ainda não esteja aplicado;
-- criar/atualizar `public.recalcular_benchmark_genero(p_genero text)`;
-- ajustar a função para usar a coluna real `genre`, não `genero`, porque a tabela atual usa `genre`;
-- calcular médias dos atributos:
-  - `danceability`
-  - `energy`
-  - `loudness_db`
-  - `speechiness`
-  - `acousticness`
-  - `instrumentalness`
-  - `liveness`
-  - `valence`
-  - `tempo_bpm`
-  - `lufs_integrated`
-- montar `top_keys` com `key_name + mode_name`.
+## 1. Pré-preencher form a partir do projeto + verificar Master Analyzer
 
-Não vou criar colunas inexistentes como `arquivo`, pois isso conflita com o schema atual e não é necessário para a jornada já existente.
+**Objetivo**: eliminar trabalho duplicado e tornar o diagnóstico confiável cruzando declaração com dados reais.
 
-### 2. Padronizar tipos em `src/types/musicDna.ts`
-
-Ajustar os tipos sem quebrar imports atuais:
-
-- manter `SpotifyFeatures`, `MusicDnaBenchmark`, `KEY_NAMES`, `LUFS_TARGETS`;
-- adicionar um tipo opcional `MusicDnaSource = "acousticbrainz" | "deezer" | "web_audio" | "local"`;
-- adicionar um tipo de linha salva alinhado ao schema real:
-  - `track_name`
-  - `genre`
-  - `input_metadata`
-  - `diagnosis`
-  - atributos Spotify e metadados externos;
-- manter `musicDnaColumnsFromDiagnosis()` como fonte de mapeamento para salvar análises;
-- garantir clamp/normalização dos atributos entre `0` e `1` quando aplicável.
-
-### 3. Criar hook dedicado de lookup
-
-Criar `src/hooks/useMusicDnaLookup.ts` como fachada reutilizável sobre `src/lib/musicDnaLookup.ts`.
-
-Ele vai oferecer:
-
-- `lookup({ artista, titulo, trackName, file })`;
-- `isLoading`;
-- retorno com:
-  - `features`
-  - `fonte`
-  - `mbid`
-  - `deezerId`
-  - `previewUrl`, se disponível futuramente.
-
-Para evitar duplicação, a lógica principal continuará em `src/lib/musicDnaLookup.ts`, mas será expandida para:
-
-- aceitar artista/título explicitamente;
-- manter fallback por `trackName`;
-- retornar `previewUrl` do Deezer quando existir;
-- usar User-Agent mais completo no MusicBrainz.
-
-### 4. Reforçar análise local real via Web Audio API
-
-Manter `src/lib/audioAnalysis.ts` como fonte principal da análise local.
-
-Ajustar onde necessário para:
-
-- garantir que os 13 atributos estilo Spotify sejam sempre derivados:
-  - `danceability`
-  - `energy`
-  - `key`
-  - `loudness`
-  - `mode`
-  - `speechiness`
-  - `acousticness`
-  - `instrumentalness`
-  - `liveness`
-  - `valence`
-  - `tempo`
-  - `duration_ms`
-  - `time_signature`
-- usar AcousticBrainz/Deezer apenas como enriquecimento quando disponível;
-- manter Web Audio como fallback obrigatório quando a busca externa falhar.
-
-### 5. Atualizar `useMusicDNA.ts`
-
-Ajustar o fluxo principal para deixar explícita a cascata:
-
-```text
-Arquivo/track name
-  → AcousticBrainz por MBID, se artista/título forem identificáveis
-  → Deezer, se AcousticBrainz falhar
-  → Web Audio API local sempre disponível como base real
-  → IA gera diagnóstico usando atributos consolidados
-```
-
-Mudanças previstas:
-
-- incluir no prompt um bloco “ATRIBUTOS ESTILO SPOTIFY” com os 13 campos consolidados;
-- dar prioridade ao Web Audio para métricas realmente extraídas do arquivo;
-- usar externo para complementar BPM/duração/chave quando fizer sentido;
-- manter `externalLookup` no `DiagnosisResult`;
-- manter o tom técnico definido na memória do projeto;
-- preservar compatibilidade com a UI atual.
-
-### 6. Evoluir a Edge Function `music-dna-analyze`
-
-Atualizar `supabase/functions/music-dna-analyze/index.ts` para suportar dois formatos:
-
-#### Formato atual, para compatibilidade
-
-```ts
-{ prompt: string }
-```
-
-Continua funcionando.
-
-#### Novo formato estruturado
-
-```ts
-{
-  action: "generate_diagnosis",
-  payload: {
-    prompt,
-    features,
-    genero,
-    track_name
-  }
-}
-```
-
-Também vou preparar, mas só usar se necessário:
-
-```ts
-{
-  action: "save_features",
-  payload: ...
-}
-```
-
-No projeto atual o salvamento já funciona no frontend via RLS, então não vou trocar o fluxo principal para service role sem necessidade.
-
-A função também passará a:
-
-- validar JWT com `getClaims`;
-- usar client admin apenas para logs e leitura de benchmark;
-- buscar benchmark do gênero quando disponível;
-- chamar Lovable AI Gateway;
-- extrair `prompt_tokens` e `completion_tokens`;
-- inserir registro em `ai_invocations` com:
-  - `function_name: "music-dna-analyze"`
-  - `model: "google/gemini-3-flash-preview"`
-  - `user_id`
-  - `tokens_input`
-  - `tokens_output`
-  - `cost_usd`
-  - `status: "success"` ou `"error"`;
-- retornar erros 402/429 com mensagens amigáveis;
-- manter CORS completo.
-
-### 7. Atualizar salvamento e benchmarks
-
-Ajustar `src/hooks/useSavedAnalyses.ts` para:
-
-- salvar os atributos já consolidados via `musicDnaColumnsFromDiagnosis`;
-- após salvar, chamar a RPC `recalcular_benchmark_genero` para o gênero salvo, se disponível;
-- invalidar:
-  - `music-dna-analyses`
-  - `music-dna-benchmarks`
-- manter fallback caso a RPC falhe, sem bloquear o usuário.
-
-### 8. UI do Music DNA
-
-A interface atual será preservada, com pequenos reforços:
-
-- mostrar claramente a fonte dos atributos:
-  - AcousticBrainz
-  - Deezer
-  - Web Audio
-- no painel de benchmark, manter “Banco público” vs “Preset local”;
-- na tela de carregamento, logs mais claros:
-  - “Buscando referência externa”
-  - “Analisando arquivo local”
-  - “Consolidando atributos estilo Spotify”
-  - “Gerando diagnóstico IA”
-- manter as seções técnicas colapsáveis no mobile.
-
-### 9. Correções de compatibilidade
-
-Durante a implementação vou evitar estes problemas:
-
-- não editar `src/integrations/supabase/client.ts`;
-- não editar `src/integrations/supabase/types.ts`;
-- não criar tabela de roles nem alterar auth;
-- não usar coluna `arquivo`, porque ela não existe;
-- não substituir a UI inteira por uma versão paralela;
-- não remover cache de sessão nem integração com Criativo;
-- não quebrar o histórico de análises salvas.
-
-## Arquivos previstos
-
-- `supabase/migrations/...`  
-  RPC/ajustes mínimos para benchmark.
-
-- `supabase/functions/music-dna-analyze/index.ts`  
-  diagnóstico estruturado, logs de custo e compatibilidade com `{ prompt }`.
-
-- `src/types/musicDna.ts`  
-  tipos complementares e mapeamento consolidado.
-
-- `src/lib/musicDnaLookup.ts`  
-  retorno mais completo e suporte a artista/título.
-
-- `src/hooks/useMusicDnaLookup.ts`  
-  novo hook de lookup com estado de carregamento.
-
-- `src/hooks/useMusicDNA.ts`  
-  cascata real, prompt com 13 atributos e integração com novo formato da função.
-
-- `src/hooks/useSavedAnalyses.ts`  
-  recálculo de benchmark pós-salvamento.
-
-- `src/hooks/useMusicDnaBenchmarks.ts`  
-  pequenos ajustes se necessário para compatibilidade de tipos.
-
-- `src/components/music-dna/MusicDNAAnalyzer.tsx`  
-  microajustes visuais/textuais para fonte da análise e logs.
-
-## Resultado esperado
-
-Ao final:
-
-- o Music DNA usará análise real do arquivo como base;
-- AcousticBrainz e Deezer funcionarão como enriquecimento em cascata;
-- os 13 atributos estilo Spotify estarão padronizados no diagnóstico e no banco;
-- análises salvas alimentarão benchmarks por gênero;
-- a IA terá contexto técnico mais preciso;
-- cada chamada de IA será registrada em `ai_invocations`;
-- a jornada atual, histórico, cache e integração com Criativo continuarão funcionando.
+### Frontend (`TrackIntelligenceNew.tsx`)
+- Quando `project_id` está selecionado, buscar dados do projeto via `useProjects()` e preencher automaticamente:
+  - `trackTitle` ← `project.name`
+  - `genre` ← `project.perfil_cultural.genero` (se existir)
+  - `date` ← derivado da etapa "Lançamento" ou data padrão (+30 dias)
+  - `masterStatus` ← derivado de `project.master_done` E presença de análise em `music_dna_analyses` do mesmo projeto
+  - `artworkStatus` / `distStatus` ← derivado do `release_checklists` do projeto (itens "artwork_pronto", "distribuidora_configurada")
+- Mostrar badge "Pré-preenchido do projeto" ao lado de cada campo auto-preenchido (cor sutil, removível ao editar).
+- Banner no topo: "Dados carregados de **{nome do projeto}** — revise antes de gerar."
+
+### Backend (`generate-track-intelligence/index.ts`)
+- Em `collectProjectContext`:
+  - Buscar `music_dna_analyses` filtrado por `user_id` e (idealmente) por título da faixa similar — para popular `master_analyzer_run` com `"sim" | "não"` real.
+  - Buscar `release_checklists` do projeto e contar itens completos vs total.
+  - **Corrigir bug semântico**: renomear `tracks_total/approved` para `tasks_total/completed` e adicionar `release_checklist_progress` separado.
+- No `buildUserPrompt`, adicionar instrução à IA:
+  > Se `master_status` declarado for "sim" mas `master_analyzer_run` for "não", crie automaticamente um gap de severidade `warning` indicando divergência.
+
+---
+
+## 2. CTA contextual no projeto e dashboard
+
+**Objetivo**: descoberta no momento certo da jornada.
+
+### `ProjectReleaseTab.tsx`
+- Adicionar card **"Diagnóstico de prontidão"** acima do checklist:
+  - Se nunca analisou: botão "Verificar prontidão deste release" → `/track-intelligence/new?project={id}`
+  - Se já analisou: mostrar score atual + label + botão "Ver diagnóstico" e "Atualizar"
+- Buscar última análise via novo hook `useLatestTrackIntelligence(projectId)`.
+
+### `Dashboard.tsx` (via novo componente `ReleaseReadinessCard`)
+- Mostrar card quando: usuário tem ≥1 projeto na etapa "lancamento" OU com release em < 30 dias E sem análise nos últimos 14 dias.
+- Card compacto: "Você tem **X release(s)** se aproximando. Verifique a prontidão." + CTA.
+
+### Reposicionamento textual
+- Atualizar `drawerSubLabels` em `AppLayout.tsx`:
+  - Track Intelligence: "Está pronto para lançar?"
+  - DNA Musical: "Análise técnica de mix/master"
+- Adicionar tooltip no card de resultado explicando: "DNA Musical analisa o áudio. Track Intelligence analisa o release como um todo."
+
+---
+
+## 3. Criar tarefa a partir de recomendação
+
+**Objetivo**: fechar o loop diagnóstico → ação.
+
+### `TrackIntelligenceResult.tsx`
+- Botão "Criar tarefa" em cada item de `recommendations` E em cada gap `critical`/`warning`.
+- Ao clicar: insere em `tasks` com:
+  - `description`: título da recomendação/gap
+  - `project_id`: projeto vinculado (se houver)
+  - `source`: `"track_intelligence"`
+  - `source_module`: `"track_intelligence"`
+  - `source_key`: `analysisId:itemId` (para evitar duplicatas)
+  - `severity`: mapeado da severidade do gap
+- Estado visual: botão muda para "✓ Tarefa criada" quando `source_key` já existe.
+- Toast com link "Ver no Dashboard".
+
+---
+
+## 4. Comparação com análise anterior + agrupamento por projeto
+
+**Objetivo**: dar sentido ao histórico, mostrar evolução.
+
+### `TrackIntelligenceResult.tsx`
+- Buscar análise anterior do mesmo `project_id` (ou mesmo `track_title` se sem projeto).
+- Card pequeno acima do score: "Última análise: **{data}** — score era **{X}** ({+/- delta})"
+- Setinha colorida: verde se melhorou, vermelha se piorou.
+
+### `TrackIntelligence.tsx` (lista)
+- Agrupar análises por projeto (collapsible). Análises avulsas em grupo "Sem projeto".
+- Mostrar mini-trendline (sparkline) com últimos 5 scores por projeto.
+
+---
+
+## 5. Polimento visual + rate-limit + acessibilidade mobile
+
+### Visual (alinhar com identidade macOS-minimalist)
+- `TrackIntelligenceResult.tsx`: substituir emojis 🔴🟡🟢 por dots `<span className="h-2 w-2 rounded-full bg-destructive" />` etc., usando tokens do design system.
+- `TrackIntelligence.tsx`: botão de excluir sempre visível em mobile (remover `opacity-0 group-hover:opacity-100`); manter padrão atual em desktop via `md:opacity-0 md:group-hover:opacity-100`.
+
+### Loading mais informativo
+- `TrackIntelligenceNew.tsx`: substituir tela cheia de spinner por **skeleton do resultado** (ScoreDial em pulse + 3 cards skeleton), mantendo mensagens rotativas no topo.
+
+### Rate-limit
+- Em `generateTrackIntelligence` (hook): envolver o invoke com `extractRateLimitInfo` e abrir o `RateLimitDialog` quando aplicável (padrão já usado em outros módulos de IA).
+- No backend: adicionar verificação de quota antes da chamada Gemini (consultar `ai_invocations` últimas 24h por `user_id` + `function_name`).
+
+---
+
+## Arquivos afetados
+
+**Editar:**
+- `src/pages/TrackIntelligenceNew.tsx` (pré-preenchimento, skeleton)
+- `src/pages/TrackIntelligenceResult.tsx` (criar tarefa, comparação, dots)
+- `src/pages/TrackIntelligence.tsx` (agrupamento, sparkline, delete mobile)
+- `src/hooks/useTrackIntelligence.ts` (rate-limit, hook latest, hook compare)
+- `src/components/project-hub/ProjectReleaseTab.tsx` (card de prontidão)
+- `src/pages/Dashboard.tsx` (ReleaseReadinessCard)
+- `src/components/AppLayout.tsx` (sublabels)
+- `supabase/functions/generate-track-intelligence/index.ts` (contexto rico, rate-limit, fix semântico)
+
+**Criar:**
+- `src/components/dashboard/ReleaseReadinessCard.tsx`
+- `src/components/track-intelligence/ScoreDelta.tsx` (sparkline + delta)
+
+---
+
+## Não-objetivos (fora deste escopo)
+- Exportar PDF/compartilhar diagnóstico (sugerir como próximo passo).
+- Análise acústica do áudio dentro do TI (continua delegado ao Master Analyzer).
+- Migração de schema (todas as colunas necessárias já existem nas tabelas atuais).

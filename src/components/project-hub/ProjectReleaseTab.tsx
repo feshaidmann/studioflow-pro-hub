@@ -11,6 +11,7 @@ import {
   ChevronDown, Loader2, AlertTriangle, Megaphone, MessageCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import ReadinessCard from "./ReadinessCard";
 
 const SECTION_ICON: Record<string, React.ElementType> = {
   distribuicao: Truck,
@@ -101,6 +102,9 @@ export default function ProjectReleaseTab({ projectId }: { projectId: string }) 
 
   return (
     <div className="space-y-4">
+      {/* Track Intelligence — diagnóstico 360º */}
+      <ReadinessCard projectId={projectId} />
+
       {/* Progress summary */}
       <Card className="border-border bg-card/60">
         <CardHeader className="pb-2 pt-4 px-4">

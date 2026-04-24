@@ -47,6 +47,12 @@ function buildUserPrompt(input: any, ctx: any) {
   const target = new Date(input.target_release_date);
   const daysUntil = Math.ceil((target.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
 
+  // Detect divergence between declared master_status and real Master Analyzer run
+  const masterDivergence = input.master_status === "sim" && ctx.master_analyzer_run === "não";
+  const checklistGapNote = ctx.release_checklist_progress != null
+    ? `${ctx.release_checklist_completed ?? 0} de ${ctx.release_checklist_total ?? 0} itens (${ctx.release_checklist_progress}%)`
+    : "checklist de release não iniciado";
+
   return `Analise o seguinte projeto musical e gere um diagnóstico de prontidão de release.
 
 DADOS DECLARADOS PELO ARTISTA:
@@ -60,12 +66,22 @@ DADOS DECLARADOS PELO ARTISTA:
 - Artwork pronto: ${input.artwork_status}
 - Distribuidora configurada: ${input.distributor_status}
 
-DADOS DO PROJETO (coletados automaticamente):
+DADOS DO PROJETO (coletados automaticamente — VERIFIQUE CONTRA O DECLARADO):
 - Estágio atual: ${ctx.project_stage ?? "n/a"}
-- Tracks aprovadas: ${ctx.tracks_approved ?? 0} de ${ctx.tracks_total ?? 0}
+- Tarefas concluídas: ${ctx.tasks_completed ?? 0} de ${ctx.tasks_total ?? 0} (${ctx.open_tasks_count ?? 0} abertas)
 - Colaboradores confirmados: ${ctx.collaborators_confirmed ?? 0} de ${ctx.collaborators_total ?? 0}
-- Tarefas abertas: ${ctx.open_tasks_count ?? 0}
-- Master Analyzer executado: ${ctx.master_analyzer_run ?? "não"}
+- Master Analyzer (DNA Musical) executado para esta faixa: ${ctx.master_analyzer_run ?? "desconhecido"}
+- Última análise técnica: ${ctx.last_master_analysis_date ?? "nunca"}
+- Progresso do checklist de release: ${checklistGapNote}
+${masterDivergence ? "\n⚠️ DIVERGÊNCIA DETECTADA: artista declarou master pronto, mas nenhum Master Analyzer foi executado. INCLUA isso como gap obrigatório de severidade 'warning' com action_label='Analisar master' e action_route='/music-dna'." : ""}
+
+REGRAS DE ROTAS PARA action_route (use apenas estas):
+- "/music-dna" → gaps técnicos / mix / master / análise acústica
+- "/projects/${input.project_id ?? ""}" → gaps de projeto / colaboradores / tarefas
+- "/criativo" → gaps de artwork / capa / conteúdo visual
+- "/professionals" → gaps de equipe / contratação
+- "/agenda" → gaps de planejamento de datas
+- "/track-intelligence" → re-análise
 
 Retorne o JSON conforme schema, sem nenhum texto adicional.`;
 }
@@ -105,29 +121,76 @@ function tryParse(content: string) {
   return null;
 }
 
-async function collectProjectContext(supabase: any, projectId: string | null) {
-  if (!projectId) return {};
+async function collectProjectContext(supabase: any, projectId: string | null, userId: string, trackTitle: string) {
+  // Always check for prior Master Analyzer runs for this track (even without project)
+  let masterAnalyzerRun: "sim" | "não" = "não";
+  let lastMasterAnalysisDate: string | null = null;
   try {
-    const [{ data: project }, { data: tasks }, { data: members }] = await Promise.all([
-      supabase.from("projects").select("stage, name, project_type").eq("id", projectId).maybeSingle(),
-      supabase.from("tasks").select("id, completed").eq("project_id", projectId),
-      supabase.from("project_members").select("id, status, accepted_at").eq("project_id", projectId),
+    const { data: dnaList } = await supabase
+      .from("music_dna_analyses")
+      .select("id, created_at, track_name")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(20);
+    if (dnaList && dnaList.length > 0) {
+      const normalized = (s: string) => (s || "").trim().toLowerCase();
+      const match = dnaList.find((d: any) => normalized(d.track_name) === normalized(trackTitle));
+      if (match) {
+        masterAnalyzerRun = "sim";
+        lastMasterAnalysisDate = match.created_at;
+      }
+    }
+  } catch (e) { console.error("DNA lookup error", e); }
+
+  if (!projectId) {
+    return { master_analyzer_run: masterAnalyzerRun, last_master_analysis_date: lastMasterAnalysisDate };
+  }
+
+  try {
+    const [{ data: project }, { data: tasks }, { data: members }, { data: checklist }] = await Promise.all([
+      supabase.from("projects").select("stage, name, project_type, master_done").eq("id", projectId).maybeSingle(),
+      supabase.from("tasks").select("id, completed").eq("project_id", projectId).eq("dismissed", false),
+      supabase.from("project_members").select("id, delivery_status").eq("project_id", projectId),
+      supabase.from("release_checklists").select("items").eq("project_id", projectId).maybeSingle(),
     ]);
-    const tracks_total = (tasks || []).length;
-    const tracks_approved = (tasks || []).filter((t: any) => t.completed).length;
-    const open_tasks_count = tracks_total - tracks_approved;
+    const tasks_total = (tasks || []).length;
+    const tasks_completed = (tasks || []).filter((t: any) => t.completed).length;
+    const open_tasks_count = tasks_total - tasks_completed;
     const collaborators_total = (members || []).length;
-    const collaborators_confirmed = (members || []).filter((m: any) => m.accepted_at || m.status === "accepted").length;
+    const collaborators_confirmed = (members || []).filter((m: any) => m.delivery_status === "ativo" || m.delivery_status === "entregue").length;
+
+    // Compute release checklist progress
+    let release_checklist_total = 0;
+    let release_checklist_completed = 0;
+    if (checklist?.items && typeof checklist.items === "object") {
+      for (const v of Object.values(checklist.items as Record<string, any>)) {
+        release_checklist_total++;
+        if (v?.checked) release_checklist_completed++;
+      }
+    }
+    const release_checklist_progress = release_checklist_total > 0
+      ? Math.round((release_checklist_completed / release_checklist_total) * 100)
+      : null;
+
+    // If project.master_done is true and we found a DNA analysis, confirm it
+    if (project?.master_done && masterAnalyzerRun === "não") {
+      // Project marked master_done but no DNA analysis with matching track name — keep as "não"
+    }
+
     return {
       project_stage: project?.stage ?? null,
       project_name: project?.name ?? null,
-      tracks_total, tracks_approved, open_tasks_count,
+      tasks_total, tasks_completed, open_tasks_count,
       collaborators_total, collaborators_confirmed,
-      master_analyzer_run: "desconhecido",
+      master_analyzer_run: masterAnalyzerRun,
+      last_master_analysis_date: lastMasterAnalysisDate,
+      release_checklist_total,
+      release_checklist_completed,
+      release_checklist_progress,
     };
   } catch (e) {
     console.error("collectProjectContext error", e);
-    return {};
+    return { master_analyzer_run: masterAnalyzerRun, last_master_analysis_date: lastMasterAnalysisDate };
   }
 }
 
@@ -197,8 +260,8 @@ serve(async (req) => {
     if (insErr) throw insErr;
     analysisId = inserted.id;
 
-    const ctx = await collectProjectContext(supabase, input.project_id || null);
-    const userPrompt = buildUserPrompt(input, ctx);
+    const ctx = await collectProjectContext(supabase, input.project_id || null, user.id, input.track_title);
+    const userPrompt = buildUserPrompt({ ...input, project_id: input.project_id || null }, ctx);
 
     let content = await callAI(LOVABLE_API_KEY, userPrompt, false);
     let parsed = tryParse(content);
