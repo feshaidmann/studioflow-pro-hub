@@ -9,6 +9,7 @@ import {
 } from "recharts";
 import { Upload, X, FileAudio, Music, MessageSquare, ListPlus, Check, Save, Trash2, History, Palette } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useProjects } from "@/contexts/ProjectContext";
 import { useTasks } from "@/hooks/useTasks";
 import { toast } from "sonner";
 import {
@@ -60,6 +61,7 @@ const formSchema = z.object({
   name: z.string().min(1, "Nome da faixa é obrigatório"),
   references: z.array(z.string()).max(5),
   notes: z.string().optional(),
+  projectId: z.string().optional(),
 });
 type FormValues = z.infer<typeof formSchema>;
 
@@ -342,8 +344,10 @@ function formatFileSize(bytes: number): string {
 
 // ── FORM VIEW ────────────────────────────────────────────────────────────────
 
-function FormView({ onSubmit, isPending }: {
-  onSubmit: (v: FormValues, file: File) => void; isPending: boolean;
+function FormView({ onSubmit, isPending, projects }: {
+  onSubmit: (v: FormValues, file: File) => void;
+  isPending: boolean;
+  projects: Array<{ id: string; name: string; artist: string }>;
 }) {
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
@@ -354,7 +358,7 @@ function FormView({ onSubmit, isPending }: {
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
-      references: [], notes: "",
+      references: [], notes: "", projectId: "",
     },
   });
 
@@ -475,6 +479,33 @@ function FormView({ onSubmit, isPending }: {
                 <FormControl>
                   <Input placeholder="Ex: Maré Alta — versão demo" {...field} />
                 </FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+
+            <FormField control={form.control} name="projectId" render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-[10px] uppercase tracking-widest font-mono text-muted-foreground">
+                  Vincular a um projeto (opcional)
+                </FormLabel>
+                <Select
+                  value={field.value || "__none__"}
+                  onValueChange={(v) => field.onChange(v === "__none__" ? "" : v)}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Sem projeto vinculado" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="__none__">Sem projeto vinculado</SelectItem>
+                    {projects.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.name}{p.artist ? ` — ${p.artist}` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <FormMessage />
               </FormItem>
             )} />
@@ -1032,11 +1063,12 @@ function SavedAnalysesList({ onLoad }: {
 
 export function MusicDNAAnalyzer() {
   const { progress, logs, result, isPending, error, analyze, reset } = useMusicDNA();
-  const [lastInput, setLastInput] = useState<{ name: string; notes?: string; references: string[] } | null>(null);
+  const [lastInput, setLastInput] = useState<{ name: string; notes?: string; references: string[]; projectId?: string } | null>(null);
   const [viewingDiagnosis, setViewingDiagnosis] = useState<DiagnosisResult | null>(null);
   const [isSaved, setIsSaved] = useState(false);
   const { saveAnalysis, isSaving } = useSavedAnalyses();
   const { data: benchmarks } = useMusicDnaBenchmarks();
+  const { projects } = useProjects();
 
   // Restore cached analysis on mount
   useEffect(() => {
@@ -1068,7 +1100,7 @@ export function MusicDNAAnalyzer() {
       notes: values.notes,
       references: values.references,
     };
-    setLastInput(input);
+    setLastInput({ ...input, projectId: values.projectId || undefined });
     setViewingDiagnosis(null);
     setRestoredFromCache(false);
     analyze(input);
@@ -1102,7 +1134,8 @@ export function MusicDNAAnalyzer() {
   };
 
   const handleLoadSaved = (saved: SavedAnalysis) => {
-    const input = saved.input_metadata as { name: string; notes?: string; references: string[] };
+    const meta = saved.input_metadata as { name: string; notes?: string; references: string[]; projectId?: string };
+    const input = { ...meta, projectId: meta.projectId ?? saved.project_id ?? undefined };
     setLastInput(input);
     setViewingDiagnosis(saved.diagnosis);
     setIsSaved(true);
@@ -1173,7 +1206,7 @@ export function MusicDNAAnalyzer() {
         />
       ) : (
         <>
-          <FormView onSubmit={handleSubmit} isPending={isPending} />
+          <FormView onSubmit={handleSubmit} isPending={isPending} projects={projects} />
           <div className="mt-6">
             <SavedAnalysesList onLoad={handleLoadSaved} />
           </div>

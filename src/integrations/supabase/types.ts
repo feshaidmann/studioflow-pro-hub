@@ -734,6 +734,7 @@ export type Database = {
           mbid: string | null
           mode_name: string | null
           mode_number: number | null
+          project_id: string | null
           speechiness: number | null
           spotify_id: string | null
           tempo_bpm: number | null
@@ -765,6 +766,7 @@ export type Database = {
           mbid?: string | null
           mode_name?: string | null
           mode_number?: number | null
+          project_id?: string | null
           speechiness?: number | null
           spotify_id?: string | null
           tempo_bpm?: number | null
@@ -796,6 +798,7 @@ export type Database = {
           mbid?: string | null
           mode_name?: string | null
           mode_number?: number | null
+          project_id?: string | null
           speechiness?: number | null
           spotify_id?: string | null
           tempo_bpm?: number | null

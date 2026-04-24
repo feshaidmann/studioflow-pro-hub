@@ -9,10 +9,12 @@ export interface SavedAnalysis {
   id: string;
   track_name: string;
   genre: string;
+  project_id: string | null;
   input_metadata: {
     name: string;
     notes?: string;
     references: string[];
+    projectId?: string;
   };
   diagnosis: DiagnosisResult;
   created_at: string;
@@ -20,13 +22,13 @@ export interface SavedAnalysis {
 
 const SESSION_KEY = "music-dna-last-analysis";
 
-export function cacheLastAnalysis(input: { name: string; notes?: string; references: string[] }, diagnosis: DiagnosisResult) {
+export function cacheLastAnalysis(input: { name: string; notes?: string; references: string[]; projectId?: string }, diagnosis: DiagnosisResult) {
   try {
     sessionStorage.setItem(SESSION_KEY, JSON.stringify({ input, diagnosis, timestamp: Date.now() }));
   } catch { /* quota exceeded */ }
 }
 
-export function getCachedAnalysis(): { input: { name: string; notes?: string; references: string[] }; diagnosis: DiagnosisResult } | null {
+export function getCachedAnalysis(): { input: { name: string; notes?: string; references: string[]; projectId?: string }; diagnosis: DiagnosisResult } | null {
   try {
     const raw = sessionStorage.getItem(SESSION_KEY);
     if (!raw) return null;
@@ -62,7 +64,7 @@ export function useSavedAnalyses() {
       input,
       diagnosis,
     }: {
-      input: { name: string; notes?: string; references: string[] };
+      input: { name: string; notes?: string; references: string[]; projectId?: string };
       diagnosis: DiagnosisResult;
     }): Promise<{ id: string }> => {
       const { data, error } = await supabase
@@ -71,6 +73,7 @@ export function useSavedAnalyses() {
           user_id: user!.id,
           track_name: input.name,
           genre: diagnosis.genero_classificado || "",
+          project_id: input.projectId || null,
           input_metadata: input as any,
           diagnosis: diagnosis as any,
           ...musicDnaColumnsFromDiagnosis(diagnosis),
