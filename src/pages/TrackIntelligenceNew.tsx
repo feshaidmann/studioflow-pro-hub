@@ -68,12 +68,14 @@ export default function TrackIntelligenceNew() {
   const [msgIdx, setMsgIdx] = useState(0);
   const [prefilled, setPrefilled] = useState<Record<string, boolean>>({});
   const [prefillBanner, setPrefillBanner] = useState<string | null>(null);
+  const [linkedDna, setLinkedDna] = useState<{ lufs: number | null; bpm: number | null; key: string | null; mode: string | null; genre: string | null } | null>(null);
 
   // Pré-preenche a partir do projeto
   useEffect(() => {
     if (!projectId || !user) {
       setPrefilled({});
       setPrefillBanner(null);
+      setLinkedDna(null);
       return;
     }
     const p = projects.find(x => x.id === projectId);
@@ -85,24 +87,48 @@ export default function TrackIntelligenceNew() {
     if (!date && p.uploadDate) { setDate(p.uploadDate); filled.date = true; }
 
     (async () => {
-      // 1. Verifica se há análise técnica (DNA Musical) com mesmo nome de track
-      const { data: dnaMatches } = await supabase
+      // 1. Busca DNA vinculada diretamente ao projeto (preferencial)
+      const { data: linked } = await supabase
         .from("music_dna_analyses")
-        .select("id, track_name")
-        .eq("user_id", user.id)
+        .select("id, track_name, genre, lufs_integrated, tempo_bpm, key_name, mode_name")
+        .eq("project_id", projectId)
         .order("created_at", { ascending: false })
-        .limit(20);
+        .limit(1)
+        .maybeSingle();
 
-      const hasDna = (dnaMatches || []).some(
-        (d: any) => (d.track_name || "").trim().toLowerCase() === p.name.trim().toLowerCase(),
-      );
+      let hasDna = !!linked;
+
+      if (linked) {
+        setLinkedDna({
+          lufs: linked.lufs_integrated as any,
+          bpm: linked.tempo_bpm as any,
+          key: linked.key_name,
+          mode: linked.mode_name,
+          genre: linked.genre,
+        });
+        // Sugere gênero detectado se artista ainda não escolheu
+        if (!genre && linked.genre) { setGenre(linked.genre); filled.genre = true; }
+      } else {
+        setLinkedDna(null);
+        // 2. Fallback legado: busca por nome
+        const { data: dnaMatches } = await supabase
+          .from("music_dna_analyses")
+          .select("id, track_name")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false })
+          .limit(20);
+        hasDna = (dnaMatches || []).some(
+          (d: any) => (d.track_name || "").trim().toLowerCase() === p.name.trim().toLowerCase(),
+        );
+      }
+
       if (!masterStatus) {
         if (p.masterDone && hasDna) { setMasterStatus("sim"); filled.masterStatus = true; }
         else if (p.masterDone) { setMasterStatus("em_andamento"); filled.masterStatus = true; }
         else { setMasterStatus("nao"); filled.masterStatus = true; }
       }
 
-      // 2. Lê release_checklist do projeto
+      // 3. Lê release_checklist do projeto
       const { data: checklist } = await supabase
         .from("release_checklists")
         .select("items")
