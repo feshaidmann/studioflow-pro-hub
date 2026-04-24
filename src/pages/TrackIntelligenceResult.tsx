@@ -1,9 +1,53 @@
+import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ChevronLeft, Loader2, AlertCircle, Info, Plus, ArrowRight, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { ChevronLeft, Loader2, AlertCircle, Info, Plus, ArrowRight, TrendingUp, TrendingDown, Minus, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useTrackIntelligence, usePreviousAnalysis, type TIASeverity } from "@/hooks/useTrackIntelligence";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
+
+function CreateTaskButton({ title, projectId, sourceKey }: { title: string; projectId: string | null; sourceKey: string }) {
+  const { user } = useAuth();
+  const [created, setCreated] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!user) return;
+    supabase.from("tasks").select("id").eq("source_key", sourceKey).maybeSingle()
+      .then(({ data }) => { if (data) setCreated(true); });
+  }, [user, sourceKey]);
+
+  const handle = async () => {
+    if (!user || created) return;
+    setLoading(true);
+    const { error } = await supabase.from("tasks").insert({
+      user_id: user.id,
+      description: title,
+      project_id: projectId,
+      source: "track_intelligence",
+      source_module: "track_intelligence",
+      source_key: sourceKey,
+      auto_generated: false,
+    });
+    setLoading(false);
+    if (error) { toast.error("Erro ao criar tarefa"); return; }
+    setCreated(true);
+    toast.success("Tarefa criada");
+  };
+
+  return (
+    <Button
+      size="sm" variant="ghost"
+      className="h-6 px-2 text-[11px] gap-1 text-muted-foreground hover:text-foreground -ml-1"
+      onClick={handle} disabled={created || loading}
+    >
+      {created ? <><Check className="h-3 w-3 text-[hsl(var(--success))]" /> Tarefa criada</> : <><Plus className="h-3 w-3" /> Criar tarefa</>}
+    </Button>
+  );
+}
 
 const SEVERITY_STYLES: Record<TIASeverity, { dotClass: string; label: string; border: string }> = {
   critical: { dotClass: "bg-destructive",                label: "Crítico", border: "border-destructive/30" },
@@ -202,9 +246,14 @@ export default function TrackIntelligenceResult() {
               <div className="shrink-0 h-7 w-7 rounded-full bg-primary/10 text-primary text-xs font-semibold flex items-center justify-center">
                 {r.priority}
               </div>
-              <div className="flex-1 space-y-1">
+              <div className="flex-1 space-y-1.5">
                 <h3 className="text-sm font-medium">{r.title}</h3>
                 <p className="text-xs text-muted-foreground leading-relaxed">{r.body}</p>
+                <CreateTaskButton
+                  title={r.title}
+                  projectId={item.project_id}
+                  sourceKey={`${item.id}:rec:${r.priority}`}
+                />
               </div>
             </div>
           ))}
