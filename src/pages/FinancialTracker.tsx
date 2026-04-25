@@ -118,6 +118,7 @@ function KpiCard({
   icon: Icon,
   colorClass,
   trend,
+  tooltip,
 }: {
   label: string;
   value: string;
@@ -125,6 +126,7 @@ function KpiCard({
   icon: React.ElementType;
   colorClass: string;
   trend?: number | null;
+  tooltip?: string;
 }) {
   return (
     <Card className="glass-card gradient-border animate-fade-in">
@@ -133,7 +135,28 @@ function KpiCard({
           <Icon className={`h-5 w-5 ${colorClass}`} />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-xs text-muted-foreground leading-snug">{label}</p>
+          <div className="flex items-center gap-1">
+            <p className="text-xs text-muted-foreground leading-snug">{label}</p>
+            {tooltip && (
+              <TooltipProvider delayDuration={150}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      aria-label="Ver explicação"
+                      className="text-muted-foreground/70 hover:text-foreground"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <HelpCircle className="h-3 w-3" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="max-w-[240px] text-[11px] leading-snug">
+                    {tooltip}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+          </div>
           <p className={`text-lg font-bold font-mono-nums ${colorClass} leading-tight`}>{value}</p>
           {sub && <p className="text-[11px] text-muted-foreground mt-0.5">{sub}</p>}
           {trend !== undefined && trend !== null && (
