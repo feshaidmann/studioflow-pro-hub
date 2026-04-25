@@ -79,6 +79,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import ProjectAISheet from "@/components/project-hub/ProjectAISheet";
+import { MobileStickyHeader } from "@/components/ui/mobile-sticky-header";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -389,17 +390,38 @@ export default function FinancialTracker() {
 
   return (
     <div className="p-4 md:p-6 space-y-6 pb-12 max-w-6xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <h1 className="text-2xl md:text-3xl font-bold neon-text">Financeiro</h1>
+      {/* Mobile sticky header com CTA primário */}
+      <MobileStickyHeader
+        title="Financeiro"
+        cta={
+          <Button
+            size="sm"
+            className="h-9 active:scale-95 transition-transform"
+            onClick={() => { setEditTx(null); setFormOpen(true); }}
+          >
+            <Plus className="h-4 w-4 mr-1" /> Nova
+          </Button>
+        }
+      />
+
+      {/* Header desktop */}
+      <div className="hidden md:flex items-center justify-between flex-wrap gap-3">
+        <h1 className="text-3xl font-bold">Financeiro</h1>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setFinAiOpen(true)}>
             <Sparkles className="h-3.5 w-3.5" /> IA
           </Button>
-          <Button className="neon-glow active:scale-95 transition-transform" onClick={() => { setEditTx(null); setFormOpen(true); }}>
+          <Button onClick={() => { setEditTx(null); setFormOpen(true); }}>
             <Plus className="h-4 w-4 mr-1" /> Nova Transação
           </Button>
         </div>
+      </div>
+
+      {/* Botão IA mobile (compacto) */}
+      <div className="md:hidden -mt-2">
+        <Button variant="outline" size="sm" className="gap-1.5 w-full" onClick={() => setFinAiOpen(true)}>
+          <Sparkles className="h-3.5 w-3.5" /> Pergunte à IA financeira
+        </Button>
       </div>
 
       {/* KPI Cards */}
