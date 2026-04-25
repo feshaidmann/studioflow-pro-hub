@@ -130,7 +130,29 @@ export default function Dashboard() {
     const lastGen = Number(localStorage.getItem(THROTTLE_KEY) || "0");
     if (Date.now() - lastGen < THROTTLE_MS) { refreshTasks(); return; }
     const run = async () => {
-      try { await supabase.functions.invoke("generate-daily-tasks", { body: {} }); localStorage.setItem(THROTTLE_KEY, String(Date.now())); } catch {}
+      try {
+        // Conta tarefas auto-geradas ativas antes
+        const { count: beforeCount } = await supabase
+          .from("tasks")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", user.id)
+          .eq("auto_generated", true)
+          .eq("completed", false)
+          .eq("dismissed", false);
+        await supabase.functions.invoke("generate-daily-tasks", { body: {} });
+        localStorage.setItem(THROTTLE_KEY, String(Date.now()));
+        const { count: afterCount } = await supabase
+          .from("tasks")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", user.id)
+          .eq("auto_generated", true)
+          .eq("completed", false)
+          .eq("dismissed", false);
+        const delta = (afterCount ?? 0) - (beforeCount ?? 0);
+        if (delta > 0) {
+          toast.info(`Checklist atualizado · ${delta} ${delta === 1 ? "nova tarefa" : "novas tarefas"}`, { duration: 4000 });
+        }
+      } catch {}
       refreshTasks();
     };
     run();
