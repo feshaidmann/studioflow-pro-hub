@@ -79,6 +79,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import ProjectAISheet from "@/components/project-hub/ProjectAISheet";
+import { MobileStickyHeader } from "@/components/ui/mobile-sticky-header";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -231,12 +232,13 @@ export default function FinancialTracker() {
     [transactions]
   );
 
-  // Reset to page 1 whenever any filter changes
-  const resetPage = () => setPage(1);
+  // Reset to page 1 sempre que filtros/busca mudam (efeito colateral fora do useMemo)
+  useEffect(() => {
+    setPage(1);
+  }, [filterProject, filterType, filterMonth, filterStatus, search]);
 
-  // ── Filtered transactions ──
+  // ── Filtered transactions (puro, sem efeitos colaterais) ──
   const filtered = useMemo(() => {
-    resetPage();
     let list = [...transactions];
     if (filterProject !== "all") list = list.filter((t) => t.projectId === filterProject);
     if (filterType !== "all") list = list.filter((t) => t.type === filterType);
@@ -249,7 +251,6 @@ export default function FinancialTracker() {
       t.category.toLowerCase().includes(search.toLowerCase())
     );
     return list.sort((a, b) => b.date.localeCompare(a.date));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [transactions, filterProject, filterType, filterMonth, filterStatus, search, currentMonth]);
 
   // ── Pagination ──
@@ -389,17 +390,38 @@ export default function FinancialTracker() {
 
   return (
     <div className="p-4 md:p-6 space-y-6 pb-12 max-w-6xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <h1 className="text-2xl md:text-3xl font-bold neon-text">Financeiro</h1>
+      {/* Mobile sticky header com CTA primário */}
+      <MobileStickyHeader
+        title="Financeiro"
+        cta={
+          <Button
+            size="sm"
+            className="h-9 active:scale-95 transition-transform"
+            onClick={() => { setEditTx(null); setFormOpen(true); }}
+          >
+            <Plus className="h-4 w-4 mr-1" /> Nova
+          </Button>
+        }
+      />
+
+      {/* Header desktop */}
+      <div className="hidden md:flex items-center justify-between flex-wrap gap-3">
+        <h1 className="text-3xl font-bold">Financeiro</h1>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setFinAiOpen(true)}>
             <Sparkles className="h-3.5 w-3.5" /> IA
           </Button>
-          <Button className="neon-glow active:scale-95 transition-transform" onClick={() => { setEditTx(null); setFormOpen(true); }}>
+          <Button onClick={() => { setEditTx(null); setFormOpen(true); }}>
             <Plus className="h-4 w-4 mr-1" /> Nova Transação
           </Button>
         </div>
+      </div>
+
+      {/* Botão IA mobile (compacto) */}
+      <div className="md:hidden -mt-2">
+        <Button variant="outline" size="sm" className="gap-1.5 w-full" onClick={() => setFinAiOpen(true)}>
+          <Sparkles className="h-3.5 w-3.5" /> Pergunte à IA financeira
+        </Button>
       </div>
 
       {/* KPI Cards */}
@@ -505,7 +527,7 @@ export default function FinancialTracker() {
             <CardTitle className="text-sm flex items-center gap-2">
               <Clock className="h-4 w-4 text-warning" />
               Pagamentos pendentes por colaborador
-              <Badge variant="secondary" className="text-[10px]">{pendingFees.length}</Badge>
+              <Badge variant="secondary" className="text-[11px]">{pendingFees.length}</Badge>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-1.5">

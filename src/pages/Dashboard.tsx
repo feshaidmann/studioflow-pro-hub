@@ -53,19 +53,24 @@ export default function Dashboard() {
   // Fetch guest (partner) projects
   const [guestProjects, setGuestProjects] = useState<{ id: string; name: string; artist: string; stage: string; completed: boolean; project_type: string; role: string }[]>([]);
   const [guestTasks, setGuestTasks] = useState<{ description: string; source: string; dueDate: string | null; assignedTo: string; blocked: boolean; blockedReason: string; severity: string; projectName: string }[]>([]);
+  const [loadingGuestProjects, setLoadingGuestProjects] = useState(true);
+  const [loadingGuestTasks, setLoadingGuestTasks] = useState(true);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) { setLoadingGuestProjects(false); return; }
+    setLoadingGuestProjects(true);
     supabase.rpc("get_member_projects").then(({ data }) => {
       if (data) setGuestProjects(data.map((d: any) => ({ id: d.id, name: d.name, artist: d.artist, stage: d.stage, completed: d.completed, project_type: d.project_type, role: d.role })));
+      setLoadingGuestProjects(false);
     });
   }, [user]);
 
   // Fetch tasks for guest projects
   useEffect(() => {
-    if (!user || guestProjects.length === 0) return;
+    if (!user || guestProjects.length === 0) { setLoadingGuestTasks(false); return; }
     const ids = guestProjects.filter(g => !g.completed).map(g => g.id);
-    if (ids.length === 0) return;
+    if (ids.length === 0) { setLoadingGuestTasks(false); return; }
+    setLoadingGuestTasks(true);
     supabase
       .from("tasks")
       .select("description, source, due_date, assigned_to, blocked, blocked_reason, severity, project_id")
@@ -81,13 +86,16 @@ export default function Dashboard() {
             projectName: nameMap[t.project_id] || "",
           })));
         }
+        setLoadingGuestTasks(false);
       });
   }, [user, guestProjects]);
 
   // Fetch pending invites for alert detection
   const [pendingInvites, setPendingInvites] = useState<{ projectId: string; professionalName: string; createdAt: string }[]>([]);
+  const [loadingInvites, setLoadingInvites] = useState(true);
   useEffect(() => {
-    if (!user) return;
+    if (!user) { setLoadingInvites(false); return; }
+    setLoadingInvites(true);
     supabase
       .from("project_invitations")
       .select("project_id, professional_name, created_at")
@@ -99,6 +107,7 @@ export default function Dashboard() {
             data.map((d) => ({ projectId: d.project_id, professionalName: d.professional_name, createdAt: d.created_at }))
           );
         }
+        setLoadingInvites(false);
       });
   }, [user]);
 
@@ -397,7 +406,7 @@ export default function Dashboard() {
       {isMobile && aiAssistantCard}
 
       {/* 3b. Projetos como parceiro */}
-      <GuestProjectsList projects={guestProjects} />
+      <GuestProjectsList projects={guestProjects} loading={loadingGuestProjects} />
     </div>
   );
 }

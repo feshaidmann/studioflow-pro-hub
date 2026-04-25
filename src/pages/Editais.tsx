@@ -32,6 +32,7 @@ import { useMatchEditais, type MatchedEdital } from "@/hooks/useMatchEditais";
 import { supabase } from "@/integrations/supabase/client";
 import EditalCompareDialog from "@/components/editais/EditalCompareDialog";
 import { Checkbox } from "@/components/ui/checkbox";
+import { MobileStickyHeader } from "@/components/ui/mobile-sticky-header";
 
 const AREA_OPTIONS = ["Música", "Audiovisual", "Ambos", "Outra"];
 const ITEMS_PER_PAGE = 20;
@@ -246,7 +247,7 @@ function EditalTable({
                 {e.titulo}
                 {e.inferido && <Info className="inline h-3 w-3 text-muted-foreground ml-1" />}
               </p>
-              <Badge variant="outline" className={statusColor(e.status) + " shrink-0 text-[10px]"}>{e.status}</Badge>
+              <Badge variant="outline" className={statusColor(e.status) + " shrink-0 text-[11px]"}>{e.status}</Badge>
             </div>
             {e.resumo && e.resumo !== "—" && e.resumo !== "" && (
               <p className="text-xs text-muted-foreground line-clamp-2">{e.resumo}</p>
@@ -263,18 +264,30 @@ function EditalTable({
                 <span className="text-xs font-semibold text-green-700">{e.valor}</span>
               </div>
             )}
-            {/* Mobile: labeled CTA + secondary actions in dropdown */}
-            <div className="flex items-center gap-1.5 pt-1" onClick={(ev) => ev.stopPropagation()}>
+            {/* Mobile: CTA primário largo + ações secundárias no canto direito */}
+            <div className="flex items-center gap-2 pt-1.5" onClick={(ev) => ev.stopPropagation()}>
               {onStartApplication && e.id && (
-                <Button variant="default" size="sm" className="h-7 text-xs" onClick={() => onStartApplication(e)}>
-                  <ClipboardList className="h-3 w-3 mr-1" />
+                <Button
+                  variant="default"
+                  size="sm"
+                  className="h-9 flex-1 text-sm font-medium"
+                  onClick={() => onStartApplication(e)}
+                >
+                  <ClipboardList className="h-4 w-4 mr-1.5" />
                   Candidatar
                 </Button>
               )}
               {(onEdit || onDelete || (e.link && e.link !== "—")) && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-7 w-7"><MoreHorizontal className="h-3.5 w-3.5" /></Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-9 w-9 shrink-0"
+                      aria-label="Mais ações"
+                    >
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     {e.link && e.link !== "—" && (
@@ -716,7 +729,7 @@ function PipelineTab({ applications, onUpdate, onDelete, onOpenChecklist, onOpen
                     <Button
                       size="sm"
                       variant={app.status === "interesse" ? "outline" : "default"}
-                      className="h-6 text-[10px] w-full"
+                      className="h-6 text-[11px] w-full"
                       onClick={() => {
                         if (app.status === "interesse") {
                           onUpdate({ id: app.id, status: "preparando" });
@@ -928,7 +941,12 @@ export default function Editais() {
 
   return (
     <div className="p-4 md:p-6 max-w-6xl mx-auto space-y-6">
-      <div>
+      {/* Mobile sticky header (sem CTA: ação primária é a busca abaixo) */}
+      <MobileStickyHeader
+        title={t("editais.title")}
+        subtitle={t("editais.subtitle")}
+      />
+      <div className="hidden md:block">
         <h1 className="text-xl font-semibold">{t("editais.title")}</h1>
         <p className="text-sm text-muted-foreground mt-0.5">{t("editais.subtitle")}</p>
       </div>
@@ -1060,9 +1078,9 @@ export default function Editais() {
                       <div className="h-10 w-10 rounded-full bg-primary/10 text-primary flex items-center justify-center mb-2">
                         {s.icon}
                       </div>
-                      <span className="text-[10px] text-muted-foreground">Passo {s.step}</span>
+                      <span className="text-[11px] text-muted-foreground">Passo {s.step}</span>
                       <span className="text-xs font-medium">{s.label}</span>
-                      <span className="text-[10px] text-muted-foreground mt-0.5">{s.desc}</span>
+                      <span className="text-[11px] text-muted-foreground mt-0.5">{s.desc}</span>
                     </div>
                   ))}
                 </div>
@@ -1210,7 +1228,7 @@ export default function Editais() {
                     >
                       <div className="flex items-start justify-between gap-2">
                         <p className="text-sm font-medium leading-snug flex-1">{m.titulo}</p>
-                        <Badge variant="secondary" className="shrink-0 text-[10px]">
+                        <Badge variant="secondary" className="shrink-0 text-[11px]">
                           Score {m.score}
                         </Badge>
                       </div>
@@ -1218,7 +1236,7 @@ export default function Editais() {
                         {m.orgao && <span>{m.orgao}</span>}
                         {m.estado && <span>UF: {m.estado}</span>}
                         <span>Prazo: {formatDate(m.prazo)}</span>
-                        <Badge variant="outline" className={statusColor(m.status) + " text-[10px]"}>{m.status}</Badge>
+                        <Badge variant="outline" className={statusColor(m.status) + " text-[11px]"}>{m.status}</Badge>
                       </div>
                       {m.valor && m.valor !== "" && (
                         <div className="flex items-center gap-1">
@@ -1305,7 +1323,7 @@ export default function Editais() {
                     {/* Compare bar */}
                     {compareIds.size > 0 && (
                       <div className="flex items-center gap-2 pt-2">
-                        <Badge variant="outline" className="text-[10px]">{compareIds.size} selecionado{compareIds.size > 1 ? "s" : ""}</Badge>
+                        <Badge variant="outline" className="text-[11px]">{compareIds.size} selecionado{compareIds.size > 1 ? "s" : ""}</Badge>
                         <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setCompareOpen(true)} disabled={compareIds.size < 2}>
                           <Scale className="h-3 w-3 mr-1" />
                           Comparar
@@ -1393,15 +1411,15 @@ export default function Editais() {
                     </p>
                     <div className="flex flex-col gap-1.5 mt-3 text-xs text-left max-w-xs">
                       <div className="flex items-center gap-2">
-                        <span className="h-5 w-5 rounded-full bg-primary/10 text-primary text-[10px] flex items-center justify-center font-bold shrink-0">1</span>
+                        <span className="h-5 w-5 rounded-full bg-primary/10 text-primary text-[11px] flex items-center justify-center font-bold shrink-0">1</span>
                         <span>Busque editais na aba "Buscar"</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="h-5 w-5 rounded-full bg-primary/10 text-primary text-[10px] flex items-center justify-center font-bold shrink-0">2</span>
+                        <span className="h-5 w-5 rounded-full bg-primary/10 text-primary text-[11px] flex items-center justify-center font-bold shrink-0">2</span>
                         <span>Salve os que interessam</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="h-5 w-5 rounded-full bg-primary/10 text-primary text-[10px] flex items-center justify-center font-bold shrink-0">3</span>
+                        <span className="h-5 w-5 rounded-full bg-primary/10 text-primary text-[11px] flex items-center justify-center font-bold shrink-0">3</span>
                         <span>Clique "Candidatar" para iniciar o acompanhamento</span>
                       </div>
                     </div>

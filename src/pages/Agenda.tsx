@@ -23,6 +23,7 @@ import EventForm from "@/components/agenda/EventForm";
 import TransactionForm from "@/components/finance/TransactionForm";
 import { EVENT_TYPES } from "@/lib/eventTypes";
 import { cn } from "@/lib/utils";
+import { MobileStickyHeader } from "@/components/ui/mobile-sticky-header";
 
 type DateFilter = "all" | "today" | "week" | "month";
 
@@ -179,17 +180,32 @@ export default function Agenda() {
 
   return (
     <div className="p-4 md:p-6 space-y-6 max-w-5xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
+      {/* Mobile sticky header com CTA */}
+      <MobileStickyHeader
+        title={t("agenda.title")}
+        subtitle={!loading ? `${events.length} ${events.length !== 1 ? t("agenda.events") : t("agenda.event")}` : undefined}
+        cta={
+          <Button
+            size="sm"
+            className="h-9 active:scale-95 transition-transform"
+            onClick={() => { setEditEvent(null); setFormOpen(true); }}
+          >
+            <Plus className="h-4 w-4 mr-1" /> Novo
+          </Button>
+        }
+      />
+
+      {/* Header desktop */}
+      <div className="hidden md:flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-2">
           <CalendarDays className="h-6 w-6 text-primary" />
-          <h1 className="text-2xl md:text-3xl font-bold neon-text">{t("agenda.title")}</h1>
+          <h1 className="text-3xl font-bold">{t("agenda.title")}</h1>
           {!loading && (
             <Badge variant="secondary" className="text-xs">{events.length} {events.length !== 1 ? t("agenda.events") : t("agenda.event")}</Badge>
           )}
         </div>
         <Button
-          className="neon-glow active:scale-95 transition-transform"
+          className="active:scale-95 transition-transform"
           onClick={() => { setEditEvent(null); setFormOpen(true); }}
         >
           <Plus className="h-4 w-4 mr-1" /> {t("agenda.newEvent")}

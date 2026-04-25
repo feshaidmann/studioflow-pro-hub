@@ -134,8 +134,33 @@ export default function Creative() {
   const { projects } = useProjects();
   const isMobile = useIsMobile();
 
-  const [selectedFormat, setSelectedFormat] = useState<FormatOption>(FORMAT_OPTIONS[0]);
-  const [style, setStyle] = useState<string | null>(null);
+  // ── Persistência de preferências do usuário (P0.6) ──
+  // Lê escolhas anteriores do localStorage para reduzir fricção em uso recorrente.
+  const PREFS_KEY = "sfp_creative_prefs_v1";
+  type CreativePrefs = {
+    formatId?: string;
+    style?: string | null;
+    projectId?: string;
+    noText?: boolean;
+    videoPreset?: VideoPreset;
+    loopDuration?: 3 | 4 | 5;
+    videoIntensity?: Intensity;
+  };
+  const initialPrefs: CreativePrefs = (() => {
+    try {
+      const raw = typeof window !== "undefined" ? window.localStorage.getItem(PREFS_KEY) : null;
+      return raw ? (JSON.parse(raw) as CreativePrefs) : {};
+    } catch {
+      return {};
+    }
+  })();
+
+  const initialFormat =
+    (initialPrefs.formatId && FORMAT_OPTIONS.find((f) => f.id === initialPrefs.formatId)) ||
+    FORMAT_OPTIONS[0];
+
+  const [selectedFormat, setSelectedFormat] = useState<FormatOption>(initialFormat);
+  const [style, setStyle] = useState<string | null>(initialPrefs.style ?? null);
   const [prompt, setPrompt] = useState("");
   const [editPrompt, setEditPrompt] = useState("");
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
@@ -151,7 +176,9 @@ export default function Creative() {
   const [trackDetailsOpen, setTrackDetailsOpen] = useState(false);
   const [styleOpen, setStyleOpen] = useState(false);
 
-  const [selectedProjectId, setSelectedProjectId] = useState<string>(projectIdParam || "none");
+  const [selectedProjectId, setSelectedProjectId] = useState<string>(
+    projectIdParam || initialPrefs.projectId || "none",
+  );
 
   // Gallery
   const [filterFormat, setFilterFormat] = useState<string>("all");
@@ -164,17 +191,35 @@ export default function Creative() {
   const [artistName, setArtistName] = useState("");
   const [releaseDate, setReleaseDate] = useState("");
   const [additionalText, setAdditionalText] = useState("");
-  const [noText, setNoText] = useState(false);
+  const [noText, setNoText] = useState<boolean>(initialPrefs.noText ?? false);
 
   // Video loop state
-  const [loopDuration, setLoopDuration] = useState<3 | 4 | 5>(4);
-  const [videoPreset, setVideoPreset] = useState<VideoPreset>("cinematic");
-  const [videoIntensity, setVideoIntensity] = useState<Intensity>("medium");
+  const [loopDuration, setLoopDuration] = useState<3 | 4 | 5>(initialPrefs.loopDuration ?? 4);
+  const [videoPreset, setVideoPreset] = useState<VideoPreset>(initialPrefs.videoPreset ?? "cinematic");
+  const [videoIntensity, setVideoIntensity] = useState<Intensity>(initialPrefs.videoIntensity ?? "medium");
   const [videoSpots, setVideoSpots] = useState<SpotEffect[]>([]);
   const [generatedVideoUrl, setGeneratedVideoUrl] = useState<string | null>(null);
   const [generatedVideoBlob, setGeneratedVideoBlob] = useState<Blob | null>(null);
   const [videoStatus, setVideoStatus] = useState<string | null>(null);
   const [videoRendering, setVideoRendering] = useState(false);
+
+  // Persiste preferências sempre que mudarem (debounce implícito pelo React batching)
+  useEffect(() => {
+    try {
+      const prefs: CreativePrefs = {
+        formatId: selectedFormat.id,
+        style,
+        projectId: selectedProjectId,
+        noText,
+        videoPreset,
+        loopDuration,
+        videoIntensity,
+      };
+      window.localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
+    } catch {
+      // Ignora QuotaExceeded/SecurityError silenciosamente
+    }
+  }, [selectedFormat.id, style, selectedProjectId, noText, videoPreset, loopDuration, videoIntensity]);
 
   const RELEASE_FORMATS = ["spotify_cover", "deezer_cover", "tidal_cover"];
   const isReleaseFormat = RELEASE_FORMATS.includes(selectedFormat.id);

@@ -12,6 +12,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
@@ -45,6 +46,7 @@ import {
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { MobileStickyHeader } from "@/components/ui/mobile-sticky-header";
 
 const schema = z.object({
   name: z.string().trim().min(2, "Nome obrigatório").max(100),
@@ -347,15 +349,25 @@ export default function Professionals() {
 
   return (
     <div className="p-4 md:p-6 space-y-6 max-w-5xl mx-auto">
-      <header className="flex items-center justify-between animate-fade-in">
+      <MobileStickyHeader
+        title="Meus Contatos"
+        subtitle={`${professionals.length} contato${professionals.length !== 1 ? "s" : ""}`}
+        cta={
+          <Button size="sm" className="h-9 gap-1.5" onClick={openCreate}>
+            <Plus className="h-4 w-4" /> Novo
+          </Button>
+        }
+      />
+
+      <header className="hidden md:flex items-center justify-between animate-fade-in">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold neon-text flex items-center gap-2">
+          <h1 className="text-3xl font-bold flex items-center gap-2">
             <Users className="h-7 w-7" />
             Meus Contatos
           </h1>
           <p className="text-muted-foreground mt-1">Sua agenda de profissionais — músicos, engenheiros e colaboradores.</p>
         </div>
-        <Button onClick={openCreate} className="gap-2 neon-glow active:scale-95 transition-transform">
+        <Button onClick={openCreate} className="gap-2 active:scale-95 transition-transform">
           <Plus className="h-4 w-4" /> Novo Contato
         </Button>
       </header>
@@ -367,11 +379,11 @@ export default function Professionals() {
             <div className="flex items-center justify-between gap-3">
               <div className="relative flex-1 max-w-xs">
                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                <input
+                <Input
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Buscar por nome, e-mail ou especialidade..."
-                  className="w-full pl-8 pr-3 py-1.5 text-sm rounded-md bg-background border border-border focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground/60"
+                  className="h-9 pl-8 pr-8 text-sm"
                 />
                 {search && (
                   <button onClick={() => setSearch("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
@@ -426,16 +438,19 @@ export default function Professionals() {
 
               {/* Especialidade */}
               {specialties.length > 0 && (
-                <select
-                  value={filterSpecialty}
-                  onChange={(e) => setFilterSpecialty(e.target.value)}
-                  className={`px-2.5 py-1 rounded-md border text-xs bg-background transition-colors focus:outline-none focus:ring-1 focus:ring-primary ${filterSpecialty !== "all" ? "border-primary/40 text-primary font-medium" : "border-border text-muted-foreground"}`}
-                >
-                  <option value="all">Todas especialidades</option>
-                  {specialties.map((s) => (
-                    <option key={s} value={s}>{s}</option>
-                  ))}
-                </select>
+                <Select value={filterSpecialty} onValueChange={setFilterSpecialty}>
+                  <SelectTrigger
+                    className={`h-7 px-2.5 text-xs w-auto gap-1.5 ${filterSpecialty !== "all" ? "border-primary/40 text-primary font-medium" : ""}`}
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas especialidades</SelectItem>
+                    {specialties.map((s) => (
+                      <SelectItem key={s} value={s}>{s}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               )}
             </div>
           </div>

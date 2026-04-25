@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useTrackIntelligenceList } from "@/hooks/useTrackIntelligence";
+import { MobileStickyHeader } from "@/components/ui/mobile-sticky-header";
 
 const scoreColor = (s: number | null) => {
   if (s === null) return "text-muted-foreground";
@@ -18,7 +19,17 @@ export default function TrackIntelligence() {
 
   return (
     <div className="container max-w-5xl mx-auto px-4 py-6 space-y-6">
-      <header className="flex items-start justify-between gap-4">
+      <MobileStickyHeader
+        title="Track Intelligence"
+        subtitle="Diagnóstico de prontidão de release"
+        cta={
+          <Button size="sm" className="h-9 gap-1.5" onClick={() => navigate("/track-intelligence/new")}>
+            <Plus className="h-4 w-4" /> Nova
+          </Button>
+        }
+      />
+
+      <header className="hidden md:flex items-start justify-between gap-4">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <AudioWaveform className="h-5 w-5 text-primary" />
