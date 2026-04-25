@@ -456,6 +456,7 @@ export default function FinancialTracker() {
           value={formatCurrency(kpis.balanceAll)}
           icon={DollarSign}
           colorClass={kpis.balanceAll >= 0 ? "text-success" : "text-destructive"}
+          tooltip="Soma de todas as transações marcadas como pagas, em todos os meses. Não considera receitas/despesas pendentes nem o filtro de mês selecionado abaixo."
         />
         <KpiCard
           label={`Receitas — ${new Date(now.getFullYear(), now.getMonth(), 1).toLocaleDateString("pt-BR", { month: "long" })}`}
@@ -463,6 +464,7 @@ export default function FinancialTracker() {
           icon={TrendingUp}
           colorClass="text-success"
           trend={kpis.incomeMonthTrend}
+          tooltip="Receitas pagas neste mês corrente. A variação compara com o mês anterior, ignorando o filtro abaixo."
         />
         <KpiCard
           label={`Despesas — ${new Date(now.getFullYear(), now.getMonth(), 1).toLocaleDateString("pt-BR", { month: "long" })}`}
@@ -470,12 +472,14 @@ export default function FinancialTracker() {
           icon={TrendingDown}
           colorClass="text-destructive"
           trend={kpis.expenseMonthTrend}
+          tooltip="Despesas pagas neste mês corrente. A variação compara com o mês anterior, ignorando o filtro abaixo."
         />
         <KpiCard
           label={`Resultado — ${new Date(now.getFullYear(), now.getMonth(), 1).toLocaleDateString("pt-BR", { month: "long" })}`}
           value={formatCurrency(kpis.resultMonth)}
           icon={kpis.resultMonth >= 0 ? TrendingUp : TrendingDown}
           colorClass={kpis.resultMonth >= 0 ? "text-success" : "text-destructive"}
+          tooltip="Receitas menos despesas pagas neste mês corrente."
         />
       </div>
 
