@@ -127,7 +127,7 @@ serve(async (req) => {
       "X-Quota-Daily-Resets-At": tomorrowResetUTC.toISOString(),
     };
 
-    const { prompt, style, format, width, height, editImageUrl, projectId, channelContext, mode, dnaContext, trackName, artistName, releaseDate, additionalText, noText, platform, objective, tone, campaignPhase, length, hashtagsMode } = await req.json();
+    const { prompt, style, format, width, height, editImageUrl, referenceMode, projectId, channelContext, mode, dnaContext, trackName, artistName, releaseDate, additionalText, noText, platform, objective, tone, campaignPhase, length, hashtagsMode } = await req.json();
 
     // TEXT MODE — generate social media copy
     if (mode === "text") {
