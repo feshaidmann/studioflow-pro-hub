@@ -460,12 +460,42 @@ export default function Creative() {
       <div className="flex items-center gap-2">
         <Palette className="h-5 w-5 text-primary" />
         <h1 className="text-lg font-semibold">Criativo</h1>
-        {linkedProject && (
-          <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
-            {linkedProject.name}
-          </span>
-        )}
       </div>
+
+      {/* Context chip — projeto vinculado via deep-link ou seleção */}
+      {linkedProject && (
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-primary/20 bg-primary/5 px-3 py-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <FolderKanban className="h-4 w-4 text-primary shrink-0" />
+            <div className="min-w-0">
+              <p className="text-[11px] uppercase tracking-wider text-primary/70 leading-none mb-0.5">Para o projeto</p>
+              <p className="text-[13px] font-medium text-foreground truncate">{linkedProject.name}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-1 shrink-0">
+            <Button asChild variant="ghost" size="sm" className="h-7 px-2 text-[12px]">
+              <Link to={`/projects/${linkedProject.id}`}>
+                <ArrowLeft className="h-3.5 w-3.5 mr-1" />
+                Voltar ao projeto
+              </Link>
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-muted-foreground hover:text-foreground"
+              onClick={() => {
+                setSelectedProjectId("none");
+                const next = new URLSearchParams(searchParams);
+                next.delete("project");
+                setSearchParams(next, { replace: true });
+              }}
+              aria-label="Remover vínculo com o projeto"
+            >
+              <X className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        </div>
+      )}
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
