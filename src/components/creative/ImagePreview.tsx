@@ -62,7 +62,7 @@ export default function ImagePreview({
     const phases = isVideoMode ? VIDEO_LOADING_PHASES : LOADING_PHASES;
     return (
       <div className="flex flex-col items-center gap-4">
-        <Skeleton className={cn("w-full max-w-md rounded-xl", aspectClass)} />
+        <Skeleton className={cn("w-full rounded-xl", widthClass, aspectClass)} />
         <p className="text-sm text-muted-foreground animate-pulse">
           {videoStatus || phases[loadingPhase]}
         </p>
