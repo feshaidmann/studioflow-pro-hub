@@ -329,7 +329,13 @@ serve(async (req) => {
       }
       const txt = await aiResp.text();
       console.error("AI error:", status, txt);
-      throw new Error("AI generation failed");
+      return new Response(JSON.stringify({
+        error: "Não foi possível gerar a imagem agora. Ajuste o prompt ou tente novamente em instantes.",
+        code: "image_generation_failed",
+        fallback: true,
+      }), {
+        status: 200, headers: { ...corsHeaders, ...quotaHeaders, "Content-Type": "application/json" },
+      });
     }
 
     let aiData = await aiResp.json();
