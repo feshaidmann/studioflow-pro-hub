@@ -239,8 +239,8 @@ export default function MasterAnalyzerModal({
                 </div>
               </div>
 
-              {/* Suggestions (only if not ready) */}
-              {!isSpotifyReady && (
+              {/* Suggestions (if not ready or dynamic advisory) */}
+              {(!isSpotifyReady || dynamicWarn) && (
                 <div className="rounded-lg border border-warning/30 bg-warning/5 p-4 space-y-2">
                   <p className="text-sm font-medium flex items-center gap-2">
                     <Lightbulb className="h-4 w-4 text-warning" />
@@ -256,14 +256,23 @@ export default function MasterAnalyzerModal({
               )}
 
               {/* Status banner */}
-              {isSpotifyReady ? (
+              {isSpotifyReady && !dynamicWarn && (
                 <div className="flex items-center gap-2 rounded-lg bg-success/10 border border-success/30 p-3">
                   <CheckCircle2 className="h-5 w-5 text-success shrink-0" />
                   <p className="text-sm font-medium text-success">
                     Master dentro dos padrões de streaming! Pronto para envio.
                   </p>
                 </div>
-              ) : (
+              )}
+              {isSpotifyReady && dynamicWarn && (
+                <div className="flex items-center gap-2 rounded-lg bg-warning/10 border border-warning/30 p-3">
+                  <AlertTriangle className="h-5 w-5 text-warning shrink-0" />
+                  <p className="text-sm font-medium text-warning">
+                    Master aprovado para envio. Atenção: dinâmica abaixo do ideal ({result.dynamicRange.toFixed(1)} LU) — considere reduzir compressão em futuras versões.
+                  </p>
+                </div>
+              )}
+              {isSpotifyReady === false && (
                 <div className="flex items-center gap-2 rounded-lg bg-destructive/10 border border-destructive/30 p-3">
                   <AlertTriangle className="h-5 w-5 text-destructive shrink-0" />
                   <p className="text-sm font-medium text-destructive">
