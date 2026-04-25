@@ -281,6 +281,7 @@ export default function Creative() {
       width: selectedFormat.width,
       height: selectedFormat.height,
       editImageUrl: referenceImage || undefined,
+      referenceMode: referenceImage ? "identity" : undefined,
       projectId: selectedProjectId && selectedProjectId !== "none" ? selectedProjectId : undefined,
       trackName: trackName.trim() || undefined,
       artistName: artistName.trim() || undefined,
