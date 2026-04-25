@@ -43,6 +43,25 @@ function statusColor(status: string) {
   return "bg-muted text-muted-foreground border-border";
 }
 
+function StatusBadge({ status, className }: { status: string; className?: string }) {
+  const badge = (
+    <Badge variant="outline" className={(statusColor(status) + " " + (className || "")).trim()}>
+      {status}
+    </Badge>
+  );
+  if (status !== "Indefinido") return badge;
+  return (
+    <TooltipProvider delayDuration={150}>
+      <Tooltip>
+        <TooltipTrigger asChild><span className="inline-flex">{badge}</span></TooltipTrigger>
+        <TooltipContent side="top" className="max-w-[240px] text-xs">
+          Prazo não informado pela fonte. Pode estar aberto — confira o link oficial antes de se inscrever.
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
+
 const STATUS_ORDER: Record<string, number> = { Aberto: 0, Indefinido: 1, Encerrado: 2 };
 
 function sortAndFilterEditais(items: Edital[], filterStatus: string): Edital[] {
