@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Users, Music2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { DataSkeleton } from "@/components/ui/data-skeleton";
 
 interface GuestProject {
   id: string;
@@ -19,10 +20,27 @@ const STAGE_LABEL: Record<string, string> = {
 
 interface GuestProjectsListProps {
   projects: GuestProject[];
+  loading?: boolean;
 }
 
-export default function GuestProjectsList({ projects }: GuestProjectsListProps) {
+export default function GuestProjectsList({ projects, loading }: GuestProjectsListProps) {
   const navigate = useNavigate();
+
+  if (loading) {
+    return (
+      <Card className="glass-card animate-fade-in" style={{ animationDelay: "80ms" }}>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Users className="h-4 w-4 text-primary" />
+            Projetos como Parceiro
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <DataSkeleton lines={2} />
+        </CardContent>
+      </Card>
+    );
+  }
 
   const active = projects.filter((p) => !p.completed);
 

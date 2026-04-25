@@ -406,7 +406,7 @@ export default function Dashboard() {
       {isMobile && aiAssistantCard}
 
       {/* 3b. Projetos como parceiro */}
-      <GuestProjectsList projects={guestProjects} />
+      <GuestProjectsList projects={guestProjects} loading={loadingGuestProjects} />
     </div>
   );
 }
