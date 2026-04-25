@@ -493,11 +493,28 @@ export default function Projects() {
   const teamForSelected = selectedProject ? professionals[selectedProject.id] || [] : [];
   const masterForSelected = selectedProject ? masterResults[selectedProject.id] : undefined;
 
+  const activosCount = projects.filter((p) => !p.completed).length;
+
   return (
     <div className="p-4 md:p-6 space-y-6 max-w-6xl mx-auto">
-      <div className="flex items-start justify-between gap-3 flex-wrap">
+      {/* Mobile sticky header com CTA primário */}
+      <MobileStickyHeader
+        title={t("projects.title")}
+        subtitle={`${activosCount} ${activosCount === 1 ? "ativo" : "ativos"}`}
+        cta={
+          <Button
+            size="sm"
+            className="h-9 active:scale-95 transition-transform"
+            onClick={() => { setForm((prev) => ({ ...prev, artist: prev.artist || displayName })); setDialogOpen(true); }}
+          >
+            <Plus className="h-4 w-4 mr-1" /> Novo
+          </Button>
+        }
+      />
+
+      <div className="hidden md:flex items-start justify-between gap-3 flex-wrap">
         <div className="min-w-0">
-          <h1 className="text-2xl md:text-3xl font-bold neon-text">{t("projects.title")}</h1>
+          <h1 className="text-3xl font-bold">{t("projects.title")}</h1>
           {(() => {
             const activos = projects.filter((p) => !p.completed);
             const quase = activos.filter((p) => getProjectStatus(p).key === "quase").length;
@@ -511,7 +528,7 @@ export default function Projects() {
         </div>
         <Dialog open={dialogOpen} onOpenChange={(open) => { if (open) setForm((prev) => ({ ...prev, artist: prev.artist || displayName })); setDialogOpen(open); }}>
           <DialogTrigger asChild>
-            <Button className="neon-glow active:scale-95 transition-transform shrink-0"><Plus className="h-4 w-4 mr-1" /> <span className="hidden sm:inline">{t("projects.addProject")}</span><span className="sm:hidden">Novo</span></Button>
+            <Button className="active:scale-95 transition-transform shrink-0"><Plus className="h-4 w-4 mr-1" /> {t("projects.addProject")}</Button>
           </DialogTrigger>
           <DialogContent className="glass-card border-border">
             <DialogHeader>
