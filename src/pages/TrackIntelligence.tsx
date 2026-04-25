@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useTrackIntelligenceList } from "@/hooks/useTrackIntelligence";
+import { MobileStickyHeader } from "@/components/ui/mobile-sticky-header";
 
 const scoreColor = (s: number | null) => {
   if (s === null) return "text-muted-foreground";

@@ -32,6 +32,7 @@ import { useMatchEditais, type MatchedEdital } from "@/hooks/useMatchEditais";
 import { supabase } from "@/integrations/supabase/client";
 import EditalCompareDialog from "@/components/editais/EditalCompareDialog";
 import { Checkbox } from "@/components/ui/checkbox";
+import { MobileStickyHeader } from "@/components/ui/mobile-sticky-header";
 
 const AREA_OPTIONS = ["Música", "Audiovisual", "Ambos", "Outra"];
 const ITEMS_PER_PAGE = 20;
@@ -940,7 +941,12 @@ export default function Editais() {
 
   return (
     <div className="p-4 md:p-6 max-w-6xl mx-auto space-y-6">
-      <div>
+      {/* Mobile sticky header (sem CTA: ação primária é a busca abaixo) */}
+      <MobileStickyHeader
+        title={t("editais.title")}
+        subtitle={t("editais.subtitle")}
+      />
+      <div className="hidden md:block">
         <h1 className="text-xl font-semibold">{t("editais.title")}</h1>
         <p className="text-sm text-muted-foreground mt-0.5">{t("editais.subtitle")}</p>
       </div>
