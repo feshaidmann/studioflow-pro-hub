@@ -1,5 +1,73 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
+import { Image } from "https://deno.land/x/imagescript@1.2.17/mod.ts";
+
+function gcd(a: number, b: number): number { return b === 0 ? a : gcd(b, a % b); }
+function aspectLabel(w: number, h: number): string {
+  const g = gcd(w, h);
+  const rw = w / g, rh = h / g;
+  if (rw === rh) return "1:1 perfectly square";
+  if (rw === 16 && rh === 9) return "16:9 horizontal landscape";
+  if (rw === 9 && rh === 16) return "9:16 vertical portrait";
+  if (rw === 4 && rh === 5) return "4:5 vertical";
+  if (rw === 3 && rh === 2) return "3:2 horizontal";
+  return `${rw}:${rh} ${w > h ? "horizontal" : w < h ? "vertical" : "square"}`;
+}
+
+function base64ToBytes(b64: string): Uint8Array {
+  const raw = b64.replace(/^data:image\/\w+;base64,/, "");
+  const bin = atob(raw);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return bytes;
+}
+
+function bytesToBase64Png(bytes: Uint8Array): string {
+  let bin = "";
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    bin += String.fromCharCode(...bytes.subarray(i, i + chunk));
+  }
+  return `data:image/png;base64,${btoa(bin)}`;
+}
+
+async function normalizeImageToFormat(imageDataUrl: string, targetW: number, targetH: number): Promise<string> {
+  try {
+    const bytes = base64ToBytes(imageDataUrl);
+    const img = await Image.decode(bytes);
+    const targetRatio = targetW / targetH;
+    const currentRatio = img.width / img.height;
+    let working = img;
+
+    // Center-crop if aspect ratio differs by more than 2%
+    if (Math.abs(targetRatio - currentRatio) > 0.02) {
+      let cropW: number, cropH: number;
+      if (currentRatio > targetRatio) {
+        // too wide → crop width
+        cropH = img.height;
+        cropW = Math.round(cropH * targetRatio);
+      } else {
+        // too tall → crop height
+        cropW = img.width;
+        cropH = Math.round(cropW / targetRatio);
+      }
+      const x = Math.floor((img.width - cropW) / 2);
+      const y = Math.floor((img.height - cropH) / 2);
+      working = img.crop(x, y, cropW, cropH);
+    }
+
+    // Resize to target dimensions (Lanczos is default in ImageScript)
+    if (working.width !== targetW || working.height !== targetH) {
+      working = working.resize(targetW, targetH);
+    }
+
+    const out = await working.encode();
+    return bytesToBase64Png(out);
+  } catch (e) {
+    console.error("normalizeImageToFormat failed:", e);
+    return imageDataUrl; // fallback to original
+  }
+}
 
 
 const corsHeaders = {
