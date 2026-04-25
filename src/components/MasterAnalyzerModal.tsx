@@ -12,8 +12,8 @@ import { Upload, FileAudio, Lightbulb, CheckCircle2, AlertCircle, AlertTriangle,
 import { analyzeAudio, generateSuggestions, type AnalysisResult } from "@/lib/audioAnalysis";
 import type { Project } from "@/data/mockData";
 
-function RadialGauge({ label, value, target, unit, min, max, reverse }: {
-  label: string; value: number; target: number; unit: string; min: number; max: number; reverse?: boolean;
+function RadialGauge({ label, value, target, unit, min, max, reverse, advisory }: {
+  label: string; value: number; target: number; unit: string; min: number; max: number; reverse?: boolean; advisory?: boolean;
 }) {
   const pct = Math.max(0, Math.min(100, ((value - min) / (max - min)) * 100));
   const isGood = reverse ? value <= target : value >= target;
@@ -21,9 +21,12 @@ function RadialGauge({ label, value, target, unit, min, max, reverse }: {
     ? value > target && value <= target + 2
     : value < target && value >= target - 2;
 
-  const color = isGood ? "text-success" : isWarn ? "text-warning" : "text-destructive";
-  const strokeColor = isGood ? "stroke-success" : isWarn ? "stroke-warning" : "stroke-destructive";
-  const dotColor = isGood ? "bg-success" : isWarn ? "bg-warning" : "bg-destructive";
+  // advisory metrics never show as destructive — out-of-range becomes warning (orange)
+  const tone: "good" | "warn" | "bad" = isGood ? "good" : isWarn ? "warn" : advisory ? "warn" : "bad";
+
+  const color = tone === "good" ? "text-success" : tone === "warn" ? "text-warning" : "text-destructive";
+  const strokeColor = tone === "good" ? "stroke-success" : tone === "warn" ? "stroke-warning" : "stroke-destructive";
+  const dotColor = tone === "good" ? "bg-success" : tone === "warn" ? "bg-warning" : "bg-destructive";
 
   const radius = 54;
   const circumference = Math.PI * radius;
