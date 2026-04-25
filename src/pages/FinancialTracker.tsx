@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import { Link } from "react-router-dom";
 import Papa from "papaparse";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -681,9 +682,19 @@ export default function FinancialTracker() {
                             ? `Outros (${tx.customCategory})`
                             : tx.category}
                         </TableCell>
-                        <TableCell className="hidden md:table-cell">
+                        <TableCell className="hidden md:table-cell" onClick={(e) => e.stopPropagation()}>
                           {tx.projectId
-                            ? <Badge variant="secondary" className="text-xs">{projectName(tx.projectId)}</Badge>
+                            ? (
+                              <Link
+                                to={`/projects/${tx.projectId}`}
+                                className="inline-flex"
+                                title="Abrir projeto"
+                              >
+                                <Badge variant="secondary" className="text-xs hover:bg-primary/15 hover:text-primary transition-colors cursor-pointer">
+                                  {projectName(tx.projectId)}
+                                </Badge>
+                              </Link>
+                            )
                             : <span className="text-xs text-muted-foreground">—</span>
                           }
                         </TableCell>

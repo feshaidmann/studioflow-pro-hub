@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -79,6 +80,7 @@ interface ProfMetrics {
   avgFee: number | null;
   avgDeliveryDays: number | null;
   collaborationHistory: Array<{
+    projectId: string | null;
     projectName: string;
     completed: boolean;
     role: string;
@@ -107,7 +109,7 @@ export default function Professionals() {
 
   // Table enrichment
   const [ratingsMap, setRatingsMap] = useState<Record<string, { avg: number; count: number }>>({});
-  const [allocationsMap, setAllocationsMap] = useState<Record<string, string[]>>({});
+  const [allocationsMap, setAllocationsMap] = useState<Record<string, Array<{ id: string; name: string }>>>({});
   
 
   // Detail modal
@@ -153,16 +155,19 @@ export default function Professionals() {
       // Fetch active project allocations
       const { data: members } = await supabase
         .from("project_members")
-        .select("name, projects:project_id(name, completed)")
+        .select("name, project_id, projects:project_id(id, name, completed)")
         .eq("user_id", user?.id)
         .in("name", names);
 
-      const aMap: Record<string, string[]> = {};
+      const aMap: Record<string, Array<{ id: string; name: string }>> = {};
       (members as any[] ?? []).forEach((m: any) => {
         if (m.projects?.completed === false) {
           if (!aMap[m.name]) aMap[m.name] = [];
-          const pName = m.projects?.name;
-          if (pName && !aMap[m.name].includes(pName)) aMap[m.name].push(pName);
+          const pId = m.projects?.id as string | undefined;
+          const pName = m.projects?.name as string | undefined;
+          if (pId && pName && !aMap[m.name].some((x) => x.id === pId)) {
+            aMap[m.name].push({ id: pId, name: pName });
+          }
         }
       });
       setAllocationsMap(aMap);
@@ -184,7 +189,7 @@ export default function Professionals() {
     // Fetch project_members for this professional (matched by name — current user only)
     const { data: members } = await supabase
       .from("project_members")
-      .select("project_id, created_at, role, fee, delivery_status, delivery_due_date, projects:project_id(name, completed)")
+      .select("project_id, created_at, role, fee, delivery_status, delivery_due_date, projects:project_id(id, name, completed)")
       .eq("user_id", user?.id)
       .ilike("name", p.name)
       .order("created_at", { ascending: false });
@@ -213,6 +218,7 @@ export default function Professionals() {
     const projectNames = rows.map((m) => m.projects?.name).filter(Boolean);
     const lastActivity = rows[0]?.created_at ?? null;
     const collaborationHistory = rows.map((m: any) => ({
+      projectId: (m.projects?.id as string | undefined) ?? null,
       projectName: m.projects?.name || "—",
       completed: m.projects?.completed ?? false,
       role: m.role || "",
@@ -510,9 +516,11 @@ export default function Professionals() {
                       </TableCell>
                       <TableCell>
                         {projects.length > 0
-                          ? <div className="flex flex-wrap gap-1">
-                              {projects.slice(0, 2).map((proj, i) => (
-                                <Badge key={i} variant="secondary" className="text-[10px] px-1.5 py-0 h-4 max-w-[120px] truncate">{proj}</Badge>
+                          ? <div className="flex flex-wrap gap-1" onClick={(e) => e.stopPropagation()}>
+                              {projects.slice(0, 2).map((proj) => (
+                                <Link key={proj.id} to={`/projects/${proj.id}`} title={`Abrir ${proj.name}`}>
+                                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 max-w-[120px] truncate hover:bg-primary/15 hover:text-primary transition-colors cursor-pointer">{proj.name}</Badge>
+                                </Link>
                               ))}
                               {projects.length > 2 && (
                                 <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">+{projects.length - 2}</Badge>
@@ -644,7 +652,13 @@ export default function Professionals() {
                       {metrics.collaborationHistory.map((h, i) => (
                         <div key={i} className="flex items-center gap-2 text-xs px-2 py-1.5 rounded-md bg-muted/30 border border-border/40">
                           <div className="flex-1 min-w-0">
-                            <span className="font-medium">{h.projectName}</span>
+                            {h.projectId ? (
+                              <Link to={`/projects/${h.projectId}`} className="font-medium hover:text-primary transition-colors">
+                                {h.projectName}
+                              </Link>
+                            ) : (
+                              <span className="font-medium">{h.projectName}</span>
+                            )}
                             {h.role && <span className="text-muted-foreground"> · {h.role}</span>}
                           </div>
                           <div className="flex items-center gap-1.5 shrink-0">
