@@ -1,6 +1,7 @@
 import { format, parseISO, isToday, isTomorrow, isPast } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { MapPin, FolderKanban, Pencil, Trash2, DollarSign } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
