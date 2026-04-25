@@ -60,6 +60,7 @@ import { cn } from "@/lib/utils";
 import { useTasks } from "@/hooks/useTasks";
 import MasterAnalyzerModal from "@/components/MasterAnalyzerModal";
 import RatePartnersModal from "@/components/RatePartnersModal";
+import { MobileStickyHeader } from "@/components/ui/mobile-sticky-header";
 
 const stages = ["inicio", "gravacao", "mix", "master", "upload", "lancado"] as const;
 
