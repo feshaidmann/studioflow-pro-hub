@@ -70,6 +70,7 @@ export default function MasterAnalyzerModal({
   onConfirmUpload,
   onCancelWithTask,
 }: MasterAnalyzerModalProps) {
+  const navigate = useNavigate();
   const [file, setFile] = useState<File | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [progress, setProgress] = useState(0);
