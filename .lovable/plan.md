@@ -1,77 +1,81 @@
-## Auditoria da jornada — diagnóstico
+## Diagnóstico de CX — rodada 2
 
-Mapeei as 11 rotas principais e como o usuário transita entre elas. A espinha dorsal (Dashboard → Projetos → Detalhe do Projeto → Master Analyzer / Finanças do Projeto) está fluida e bem conectada. Os pontos de fricção estão nos **módulos satélite**, que hoje vivem isolados, sem entrada/saída clara para o resto do sistema.
+Após a primeira leva de melhorias (loop pós-DNA, Track Intelligence integrado ao projeto, deep-links Finanças→Projeto e Agenda→Projeto, chip de contexto Criativo, fix do Badge), reauditei a jornada. A espinha dorsal está sólida. Restam **5 pontos de fricção**, todos pequenos, que ainda quebram a continuidade.
 
-### Pontos fortes (manter)
-- Dashboard com `JourneyFocusCard` personalizado (CTA primário/secundário + IA) e `DailyChecklist` agrupado por origem.
-- ProjectDetail como hub real (tabs: visão, tarefas, equipe, arquivos, finanças, release) com botão voltar e atalho de IA contextual.
-- Master Analyzer corretamente embutido na etapa de Upload do projeto.
-- Editais já cruza com Projetos (botão "Ver projeto recomendado").
+### O que já está bom
+- Dashboard → Projeto → Detalhe → Master Analyzer → DNA → Track Intelligence está conectado bidirecionalmente.
+- `RecentTransactions` e `EventCard` já navegam para `/projects/:id`.
+- `ProjectReleaseTab` exibe `ReadinessCard` com CTA para Track Intelligence.
+- Criativo tem chip de contexto com "Voltar ao projeto" e clear.
+- Drawer "Mais" mobile já tem grupos com sub-labels.
 
-### Pontos de fricção identificados
+### Lacunas remanescentes
 
-1. **DNA Musical (`/music-dna`)** — página é só um wrapper do analisador. Não tem cabeçalho próprio, breadcrumb, nem CTAs de saída. Quando o usuário termina uma análise, não há ponte para ações naturais ("Gerar capa baseada neste DNA", "Criar tarefas no projeto", "Rodar Track Intelligence"). O link existente para `/criativo?dna=…` está enterrado dentro do componente.
+**1. Página Finanças (`/finance`) — tabela principal de transações sem deep-link**
+Só `RecentTransactions` (Dashboard) navega para o projeto. Na própria página de Finanças, a coluna "Projeto" da tabela não é clicável. Quem está revisando lançamentos não consegue pular direto para o projeto.
 
-2. **Track Intelligence (`/track-intelligence`)** — lista limpa, mas o módulo não aparece em lugar nenhum a partir de um projeto. Deveria estar acessível a partir do `ProjectDetail` (etapa Release) e do resultado do Master Analyzer.
+**2. Profissionais (`/professionals`) — sem ponte para projetos**
+A célula "Em N projetos" mostra badges com nomes mas não leva a lugar nenhum. No modal de detalhes existe histórico de projetos do profissional, mas também sem link clicável. Usuário fica preso.
 
-3. **Criativo (`/criativo`)** — pode ser disparado por DNA e por projeto, mas não tem chamada inversa: ao gerar um asset, não há "Anexar ao projeto" nem "Voltar ao DNA".
+**3. Master Analyzer — ausência de link reverso ao DNA salvo**
+Quando o Master Analyzer termina e salva uma análise em `music_dna_analyses`, o modal mostra os scores e o CTA para Track Intelligence (já feito), mas não oferece "Ver análise completa no DNA Musical". Isso quebra a sensação de que é o mesmo motor.
 
-4. **Profissionais (`/professionals`)** — nenhuma navegação para projetos. Falta atalho "Ver projetos com este parceiro" e "Adicionar à equipe de…".
+**4. Editais (`/editais`) — saída para projeto recomendado existe, mas sem entrada**
+A partir de um projeto, não há atalho para "Buscar editais para este projeto". Dado que o match já filtra por perfil cultural, faria sentido um botão no `ProjectOverviewTab` ou no `ProjectAISheet`.
 
-5. **Finanças (`/finance`)** — não navega para detalhe do projeto referenciado em uma transação. Já existe `?id=` em Projects, basta usar.
+**5. Agenda — criar evento a partir do projeto**
+Em `ProjectDetail` não há "Agendar evento para este projeto". O usuário precisa ir até `/agenda` e selecionar manualmente o projeto no formulário. É o oposto do fluxo natural.
 
-6. **Agenda (`/agenda`)** — eventos vinculados a projeto não levam ao projeto.
-
-7. **Drawer "Mais" no mobile** — 5 ferramentas empilhadas sem hierarquia visual de uso. Sub-labels existem (P2) mas a ordem foi otimizada por frequência sem indicador de "novo/recomendado para você".
-
-8. **Warning de console (técnico)** — `Function components cannot be given refs` em `DailyChecklist`. O `Badge` (componente função) está sendo usado dentro de algum `TooltipTrigger asChild` ou `CollapsibleTrigger asChild` no Dashboard. Preciso confirmar a cadeia exata e converter `Badge` para `forwardRef` (consertar em `src/components/ui/badge.tsx`) — fix simples e benéfico para todo o app.
+### Pontos de UX visual / micro-fricção
+- **Drawer "Mais" mobile**: grupos existem, mas não há indicador "Novo" ou destaque visual para módulos nunca acessados (recomendação anterior não implementada — ainda vale).
+- **Track Intelligence**: lista de análises antigas (`/track-intelligence`) não filtra por projeto, e não há badge visual indicando a qual projeto cada análise pertence.
 
 ---
 
-## Plano de ajustes
+## Plano de ajustes (rodada 2)
 
-### 1. DNA Musical — fechar o loop pós-análise
-- Adicionar header próprio em `MusicDNA.tsx` (título, subtítulo, link "Ver histórico").
-- No bloco de resultado do `MusicDNAAnalyzer`, adicionar barra de **Próximos passos**: 
-  - "Gerar capa com este DNA" → `/criativo?dna=…` (já existe, promover)
-  - "Analisar prontidão de release" → `/track-intelligence/new?dna=…`
-  - "Voltar ao projeto" (quando `projectId` presente) → `/projects/:id`
+### Prioridade 1 — fechar loops de navegação (alto impacto, baixo custo)
 
-### 2. Track Intelligence — entradas a partir do projeto
-- No `ProjectReleaseTab`, adicionar card "Diagnóstico de prontidão" com CTA → `/track-intelligence/new?projectId=…`.
-- No resultado do Master Analyzer (quando aprovado), adicionar botão secundário "Avaliar prontidão de release".
-- Pré-popular `track_title`/`genre` em `TrackIntelligenceNew` quando `projectId` vier na URL.
+1. **Tabela de Finanças clicável**
+   - Em `src/pages/FinancialTracker.tsx`, na coluna Projeto da tabela de transações, transformar o nome em `<Link to={`/projects/${projectId}`}>` quando houver `project_id`.
 
-### 3. Criativo — ancorar a contexto
-- Quando carregado com `?dna=` ou `?projectId=`, mostrar chip de contexto no topo ("Baseado no DNA: X" / "Para o projeto: Y") com X para limpar.
-- Adicionar botão "Anexar ao projeto" no ImagePreview/Lightbox quando houver `projectId` (salva referência em `project_files`).
+2. **Profissionais → Projetos**
+   - Em `src/pages/Professionals.tsx`, tornar cada badge de projeto na coluna "Em projeto" um link para `/projects/:id`.
+   - No modal de detalhes (histórico), tornar `project_name` clicável também.
 
-### 4. Profissionais — atalhos para projetos
-- Na linha de cada profissional, adicionar contagem clicável "Em N projetos" → abre modal/drawer com lista linkando para `/projects?id=…`.
-- No modal de detalhes, botão "Adicionar a um projeto" → seletor de projeto.
+3. **Master Analyzer Modal — link para DNA salvo**
+   - Em `src/components/MasterAnalyzerModal.tsx`, na tela de sucesso, adicionar botão secundário "Ver análise completa" → `/music-dna?analysis=:id` (ou rota equivalente já existente na página DNA para abrir uma análise específica).
 
-### 5. Finanças e Agenda — deep-link para projeto
-- Em `RecentTransactions` e na lista principal de `/finance`, tornar o nome do projeto um link → `/projects?id=…`.
-- Em `Agenda`, eventos com `project_id` ganham botão "Abrir projeto".
+4. **Editais a partir do projeto**
+   - Em `src/components/project-hub/ProjectOverviewTab.tsx`, adicionar card discreto "Buscar editais compatíveis" → `/editais?project=:id` (a página Editais já recebe esse param para destacar o projeto).
 
-### 6. Drawer "Mais" mobile — hierarquia
-- Manter ordem por frequência, mas adicionar separador visual "Análise" (DNA + Track Intelligence) vs "Operação" (Editais, Profissionais, Criativo).
-- Adicionar indicador de uso: ícone discreto quando o módulo nunca foi acessado ("Novo").
+5. **Agendar evento a partir do projeto**
+   - Em `ProjectOverviewTab` (ou Release tab), botão "Adicionar à agenda" → `/agenda?new=1&project=:id` que abre o formulário pré-populado.
 
-### 7. Fix técnico — `Badge` com forwardRef
-- Converter `src/components/ui/badge.tsx` para usar `React.forwardRef`.
-- Elimina o warning recorrente e habilita uso seguro dentro de `TooltipTrigger asChild`, `CollapsibleTrigger asChild`, etc.
+### Prioridade 2 — refino fino
+
+6. **Track Intelligence — badge de projeto na lista**
+   - Em `src/pages/TrackIntelligence.tsx`, mostrar nome do projeto vinculado em cada item da lista (já existe `project_id` na tabela).
+   - Filtro opcional "Por projeto" no header.
+
+7. **Drawer "Mais" — indicador "Novo"**
+   - Em `AppLayout.tsx`, marcar com badge discreto "Novo" itens que o usuário nunca acessou (consultar `page_views` ou usar `localStorage` para tracking client-side simples).
+
+---
+
+## Detalhes técnicos
+
+- **Padrão de URL**: continuar com `/projects/:id` (não `?id=`), que é o que já está em uso no `ProjectDetail.tsx`.
+- **Rota DNA com análise específica**: verificar se `/music-dna` já aceita `?analysis=:id` para abrir a vista detalhada; se não, adicionar esse comportamento em `MusicDNAAnalyzer.tsx` lendo `searchParams.get("analysis")`.
+- **Pré-popular Agenda**: o `EventForm` já lê `project_id` do estado; só falta adicionar leitura de `searchParams` no mount de `Agenda.tsx` e abrir o dialog automaticamente quando `?new=1`.
+- **Indicador "Novo" no drawer**: usar `localStorage` com chave `sfp_visited_routes` (Set serializado) para evitar query no banco a cada render.
 
 ---
 
 ## Ordem de implementação sugerida
 
-1. Fix do `Badge` (rápido, melhora console).
-2. DNA Musical — header + próximos passos.
-3. Track Intelligence — integração com projeto/Master.
-4. Deep-links Finanças + Agenda → Projeto.
-5. Profissionais — atalhos para projetos.
-6. Criativo — chips de contexto + anexar ao projeto.
-7. Drawer "Mais" — separadores e indicador "Novo".
+1. Itens 1, 2, 3 (deep-links — 1 commit).
+2. Itens 4, 5 (entradas a partir do projeto — 1 commit).
+3. Itens 6, 7 (refino — 1 commit, opcional).
 
-Pronto para implementar quando você aprovar. Posso também fatiar em entregas menores — me diz se prefere começar só pelos itens 1–3 (loop pós-análise + fix técnico) ou ir até o final.
+Posso fazer tudo em uma só leva, ou começar só pela Prioridade 1 (itens 1–5) que é onde está o impacto real. Me diz como prefere.
