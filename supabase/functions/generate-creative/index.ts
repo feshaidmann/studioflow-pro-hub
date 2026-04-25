@@ -451,9 +451,14 @@ serve(async (req) => {
       status: "success",
     });
 
+    // Normalize to exact target dimensions (crop + resize) to honor format spec
+    const normalized = await normalizeImageToFormat(imageData, width, height);
+
     // Return base64 only — user saves explicitly
     return new Response(JSON.stringify({
-      imageBase64: imageData,
+      imageBase64: normalized,
+      width,
+      height,
     }), {
       headers: { ...corsHeaders, ...quotaHeaders, "Content-Type": "application/json" },
     });
