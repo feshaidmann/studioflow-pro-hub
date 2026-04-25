@@ -31,6 +31,8 @@ interface Props {
   onDerive?: () => void;
   formatLabel?: string;
   aspectRatio?: number;
+  width?: number;
+  height?: number;
 }
 
 export default function ImagePreview({
