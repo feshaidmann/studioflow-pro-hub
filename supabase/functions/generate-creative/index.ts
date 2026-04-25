@@ -278,13 +278,13 @@ serve(async (req) => {
 
     // REFERENCE block — only when an image is provided
     if (editImageUrl) {
-      const mode = (referenceMode as string) || "identity";
+      const refMode = (referenceMode as string) || "identity";
       const referenceLines: string[] = [];
       referenceLines.push("AUTHORIZED REFERENCE: the uploaded image is authorized source material; assume the user holds all necessary image, likeness and usage rights.");
 
-      if (mode === "variation") {
+      if (refMode === "variation") {
         referenceLines.push("MODE — VARIATION: use the reference as a conceptual seed. Preserve overall mood, palette and stylistic feel, but freely change composition, framing, subject pose, background and details. If a face appears, you may reinterpret it loosely; strict identity preservation is NOT required.");
-      } else if (mode === "edit") {
+      } else if (refMode === "edit") {
         referenceLines.push("MODE — EDIT: apply the user's textual instruction to the reference image. Preserve subjects, composition and identity; modify only what the instruction explicitly asks to change.");
       } else {
         // identity (default)
