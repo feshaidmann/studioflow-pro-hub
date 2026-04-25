@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -79,6 +80,7 @@ interface ProfMetrics {
   avgFee: number | null;
   avgDeliveryDays: number | null;
   collaborationHistory: Array<{
+    projectId: string | null;
     projectName: string;
     completed: boolean;
     role: string;
@@ -107,7 +109,7 @@ export default function Professionals() {
 
   // Table enrichment
   const [ratingsMap, setRatingsMap] = useState<Record<string, { avg: number; count: number }>>({});
-  const [allocationsMap, setAllocationsMap] = useState<Record<string, string[]>>({});
+  const [allocationsMap, setAllocationsMap] = useState<Record<string, Array<{ id: string; name: string }>>>({});
   
 
   // Detail modal
@@ -153,16 +155,19 @@ export default function Professionals() {
       // Fetch active project allocations
       const { data: members } = await supabase
         .from("project_members")
-        .select("name, projects:project_id(name, completed)")
+        .select("name, project_id, projects:project_id(id, name, completed)")
         .eq("user_id", user?.id)
         .in("name", names);
 
-      const aMap: Record<string, string[]> = {};
+      const aMap: Record<string, Array<{ id: string; name: string }>> = {};
       (members as any[] ?? []).forEach((m: any) => {
         if (m.projects?.completed === false) {
           if (!aMap[m.name]) aMap[m.name] = [];
-          const pName = m.projects?.name;
-          if (pName && !aMap[m.name].includes(pName)) aMap[m.name].push(pName);
+          const pId = m.projects?.id as string | undefined;
+          const pName = m.projects?.name as string | undefined;
+          if (pId && pName && !aMap[m.name].some((x) => x.id === pId)) {
+            aMap[m.name].push({ id: pId, name: pName });
+          }
         }
       });
       setAllocationsMap(aMap);
@@ -213,6 +218,7 @@ export default function Professionals() {
     const projectNames = rows.map((m) => m.projects?.name).filter(Boolean);
     const lastActivity = rows[0]?.created_at ?? null;
     const collaborationHistory = rows.map((m: any) => ({
+      projectId: (m.projects?.id as string | undefined) ?? null,
       projectName: m.projects?.name || "—",
       completed: m.projects?.completed ?? false,
       role: m.role || "",
