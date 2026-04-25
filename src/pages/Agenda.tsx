@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { isToday, isThisWeek, isThisMonth, parseISO, startOfDay, addDays, format } from "date-fns";
 import { Plus, CalendarDays, Loader2, Users, AlertTriangle, Info } from "lucide-react";
@@ -75,6 +76,24 @@ export default function Agenda() {
   const [formOpen, setFormOpen] = useState(false);
   const [editEvent, setEditEvent] = useState<CalendarEvent | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const [formPrefill, setFormPrefill] = useState<Partial<NewEvent> | undefined>(undefined);
+
+  /* ── Auto-open form from URL params (?new=1&project=:id) ── */
+  const [searchParams, setSearchParams] = useSearchParams();
+  useEffect(() => {
+    if (searchParams.get("new") === "1") {
+      const projectId = searchParams.get("project");
+      setEditEvent(null);
+      setFormPrefill(projectId ? { projectId } : undefined);
+      setFormOpen(true);
+      // Clean params so refresh doesn't reopen
+      const next = new URLSearchParams(searchParams);
+      next.delete("new");
+      next.delete("project");
+      setSearchParams(next, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   /* ── Transaction from show ── */
   const [txFormOpen, setTxFormOpen] = useState(false);
@@ -334,10 +353,11 @@ export default function Agenda() {
       {/* Event Form */}
       <EventForm
         open={formOpen}
-        onOpenChange={(o) => { setFormOpen(o); if (!o) setEditEvent(null); }}
+        onOpenChange={(o) => { setFormOpen(o); if (!o) { setEditEvent(null); setFormPrefill(undefined); } }}
         editEvent={editEvent}
         onSave={handleSave}
         existingEvents={events}
+        prefill={formPrefill}
       />
 
       {/* Delete Confirmation */}
