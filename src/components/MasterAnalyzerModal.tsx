@@ -230,7 +230,7 @@ export default function MasterAnalyzerModal({
                 <div className="grid grid-cols-3 gap-2">
                   <RadialGauge label="LUFS" value={result.lufs} target={-14} unit="LUFS" min={-24} max={0} reverse />
                   <RadialGauge label="True Peak" value={result.truePeak} target={-1} unit="dBTP" min={-6} max={1} reverse />
-                  <RadialGauge label="Dynamic" value={result.dynamicRange} target={7} unit="LU" min={0} max={15} />
+                  <RadialGauge label="Dynamic" value={result.dynamicRange} target={7} unit="LU" min={0} max={15} advisory />
                 </div>
               </div>
 
