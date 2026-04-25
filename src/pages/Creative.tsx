@@ -389,6 +389,7 @@ export default function Creative() {
         width: selectedFormat.width,
         height: selectedFormat.height,
         editImageUrl: generatedBase64,
+        referenceMode: "edit",
         projectId: selectedProjectId && selectedProjectId !== "none" ? selectedProjectId : undefined,
       });
       if (result) {
