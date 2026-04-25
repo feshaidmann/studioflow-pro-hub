@@ -81,10 +81,21 @@ export default function EventCard({ event, projectName, onEdit, onDelete, onCrea
 
             {/* Project */}
             {projectName && (
-              <p className="text-xs text-muted-foreground flex items-center gap-1">
-                <FolderKanban className="h-3 w-3 shrink-0" />
-                <span className="truncate">{projectName}</span>
-              </p>
+              event.projectId ? (
+                <button
+                  type="button"
+                  onClick={() => navigate(`/projects/${event.projectId}`)}
+                  className="text-xs text-primary hover:underline flex items-center gap-1 max-w-full"
+                >
+                  <FolderKanban className="h-3 w-3 shrink-0" />
+                  <span className="truncate">{projectName}</span>
+                </button>
+              ) : (
+                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                  <FolderKanban className="h-3 w-3 shrink-0" />
+                  <span className="truncate">{projectName}</span>
+                </p>
+              )
             )}
 
             {/* Description excerpt */}
