@@ -127,7 +127,7 @@ serve(async (req) => {
       "X-Quota-Daily-Resets-At": tomorrowResetUTC.toISOString(),
     };
 
-    const { prompt, style, format, width, height, editImageUrl, projectId, channelContext, mode, dnaContext, trackName, artistName, releaseDate, additionalText, noText, platform, objective, tone, campaignPhase, length, hashtagsMode } = await req.json();
+    const { prompt, style, format, width, height, editImageUrl, referenceMode, projectId, channelContext, mode, dnaContext, trackName, artistName, releaseDate, additionalText, noText, platform, objective, tone, campaignPhase, length, hashtagsMode } = await req.json();
 
     // TEXT MODE — generate social media copy
     if (mode === "text") {
@@ -213,56 +213,91 @@ serve(async (req) => {
       });
     }
 
-    // Build system instructions (separate from user content)
-    const systemParts: string[] = [
-      "You are a visual art generator for musicians and artists.",
-      "CRITICAL TEXT RULE: The user's creative description (user message) is COMPOSITION GUIDANCE ONLY — it describes mood, style, scenery, colors, elements. You MUST NOT render any of its words, phrases or sentences as visible text, captions, labels or typography in the image. Treat the description purely as visual direction.",
-      "If the creative description comes from Music DNA, interpret it as visual direction only: composition structure, subject, scene components, ambience, camera lens, lighting, color palette, depth and texture.",
-      "When a song title is provided, use its meaning and emotional associations as conceptual inspiration for visual metaphors, setting, props, composition and palette — but do not render the title as visible text unless it is explicitly listed below as allowed/mandatory text.",
-      "Do NOT include or depict music theory, chords, chord names, sheet music, tablature, instrument lines, DAW waveforms, technical audio diagrams, BPM/LUFS/readouts, or literal instrument-arrangement references unless the user explicitly asks for a visible instrument as an object.",
-      "The ONLY text allowed in the image comes from the dedicated text fields listed below in this system prompt (track title, artist name, release date, additional text). If no such fields are provided, render NO text at all.",
-      `Target format: ${format}. Aspect ratio suitable for ${width}x${height}.`,
-      "Any allowed text rendered in the image MUST be in Brazilian Portuguese (pt-BR) for generic words. Proper names (song titles, album titles, artist names, band names) must appear in their ORIGINAL language exactly as given — never translated.",
-    ];
+    // Style id → rich visual description (English) for better model adherence
+    const STYLE_DESCRIPTIONS: Record<string, string> = {
+      minimalist: "minimalist composition, generous negative space, restrained palette, refined typography, clean geometry",
+      retro: "retro aesthetic, vintage textures, grain, faded color palette evocative of 70s-80s print media",
+      neon: "vibrant neon palette, glowing accents, high saturation, nightlife energy, electric contrast",
+      watercolor: "watercolor painting feel, soft edges, organic pigment bleeds, paper texture",
+      collage: "mixed-media collage, layered textures, paper cut-outs, hand-crafted compositional clashes",
+      photorealistic: "photorealistic rendering, natural lighting, true-to-life detail, cinematic camera lens",
+      abstract: "abstract composition, non-representational shapes, expressive forms, conceptual color blocking",
+      "lo-fi": "lo-fi analog aesthetic, film grain, light leaks, muted warm palette, intimate atmosphere",
+    };
 
-    if (style) {
-      systemParts.push(`Apply visual style: ${style}.`);
+    const styleDescription = style ? (STYLE_DESCRIPTIONS[style] || style) : null;
+
+    // Build structured system prompt with labeled blocks
+    const systemBlocks: string[] = [];
+
+    systemBlocks.push(
+      "[ROLE]\nYou are a visual art generator for musicians and artists releasing music."
+    );
+
+    systemBlocks.push(
+      `[FORMAT]\nTarget: ${format}. Aspect ratio: ${width}x${height}.`
+    );
+
+    if (styleDescription) {
+      systemBlocks.push(`[STYLE]\n${styleDescription}.`);
     }
 
     if (channelContext) {
-      systemParts.push(`Adapt for this distribution channel: ${channelContext}.`);
+      systemBlocks.push(`[CHANNEL]\nAdapt for distribution channel: ${channelContext}.`);
     }
+
+    // TEXT RULES block — always present, controls what becomes literal text in the image
+    const textRules: string[] = [];
+    textRules.push("The user's creative description is COMPOSITION GUIDANCE ONLY (mood, scene, palette). NEVER render its words as visible text in the image.");
+    textRules.push("Do NOT depict music theory, chords, sheet music, tablature, instrument lines, DAW waveforms, BPM/LUFS readouts or technical audio diagrams.");
+    textRules.push("When a song title is given, use its meaning as conceptual inspiration only — do not render the title as text unless explicitly listed below.");
+    textRules.push("Allowed text MUST be Brazilian Portuguese (pt-BR) for generic words. Proper names (titles, artists) keep their ORIGINAL spelling exactly — never translated.");
 
     if (noText) {
-      systemParts.push("ABSOLUTE TEXT BAN: Do NOT render ANY text, letters, numbers, words, logos, watermarks or typography in the image. Pure visual composition only. Ignore any track title, artist name, release date or additional text fields — render none of them.");
+      textRules.push("ABSOLUTE TEXT BAN: render NO text, letters, numbers, words, logos or watermarks. Pure visual composition only. Ignore all title/artist/date fields below.");
     } else {
       if (trackName) {
-        systemParts.push(`MANDATORY TEXT — SONG TITLE: You MUST render the exact string "${trackName}" as the most prominent, clearly legible typography in the image. This is the song title and is REQUIRED — do not omit it, do not paraphrase it, do not translate it, do not abbreviate it. Spell it character-for-character exactly as written. Choose typography, size and placement that make it the dominant text element of the composition.`);
+        textRules.push(`MANDATORY — SONG TITLE: render exactly "${trackName}" as the most prominent legible typography. Spell character-for-character; do not omit, paraphrase, translate or abbreviate.`);
       }
       if (artistName) {
-        systemParts.push(`MANDATORY TEXT — ARTIST NAME: You MUST render the exact string "${artistName}" as clearly legible secondary typography in the image (smaller than the song title but still prominent). Required — do not omit, paraphrase, translate or abbreviate. Spell it character-for-character exactly as written.`);
+        textRules.push(`MANDATORY — ARTIST NAME: render exactly "${artistName}" as clear secondary typography (smaller than title but prominent). Spell character-for-character.`);
       }
       if (releaseDate) {
-        systemParts.push(`Release date: ${releaseDate}. Include as small supporting text if it fits the composition.`);
+        textRules.push(`Release date: ${releaseDate}. Include as small supporting text if it fits the composition.`);
       }
       if (additionalText) {
-        systemParts.push(`Additional text to render in the artwork (if appropriate): "${additionalText}". This is short supporting copy such as a tagline, edition number, or featured artist mention. Render it as legible typography only when it suits the composition.`);
+        textRules.push(`Additional text (if it fits): "${additionalText}". Short supporting copy like a tagline or feature mention.`);
       }
       if (trackName || artistName) {
-        systemParts.push("CRITICAL: Verify before finalizing that every mandatory text string above appears spelled exactly as given. Misspellings, omissions, or substitutions are not acceptable.");
+        textRules.push("Verify before finalizing: every mandatory text string appears spelled exactly as given. No misspellings, omissions or substitutions.");
+      } else {
+        textRules.push("No mandatory text fields provided — render NO text at all.");
       }
     }
+    systemBlocks.push(`[TEXT_RULES]\n${textRules.join("\n")}`);
 
+    // REFERENCE block — only when an image is provided
     if (editImageUrl) {
-      systemParts.push("AUTHORIZED REFERENCE CONTEXT: The uploaded reference image is treated as authorized source material; assume the user holds the necessary image, likeness and related rights for promotional/artistic use.");
-      systemParts.push("STRICT IDENTITY PRESERVATION: If a human face or artist appears in the reference image, preserve the artist's facial identity exactly. Do NOT modify, replace, beautify, age, de-age, distort, reconstruct or reinterpret the face.");
-      systemParts.push("Do NOT change facial features, face shape, skin tone, apparent age, expression essence, distinctive marks, hairline, eye shape, nose, mouth, jawline or any identity-defining characteristic.");
-      systemParts.push("Use the reference image as the identity base, not merely as style inspiration. Only adapt non-identity elements such as composition, crop, background, scenery, lighting, color palette, clothing styling, typography, format and promotional layout.");
-      systemParts.push("If preserving identity conflicts with any requested visual style, prioritize identity preservation over style transformation.");
+      const refMode = (referenceMode as string) || "identity";
+      const referenceLines: string[] = [];
+      referenceLines.push("AUTHORIZED REFERENCE: the uploaded image is authorized source material; assume the user holds all necessary image, likeness and usage rights.");
+
+      if (refMode === "variation") {
+        referenceLines.push("MODE — VARIATION: use the reference as a conceptual seed. Preserve overall mood, palette and stylistic feel, but freely change composition, framing, subject pose, background and details. If a face appears, you may reinterpret it loosely; strict identity preservation is NOT required.");
+      } else if (refMode === "edit") {
+        referenceLines.push("MODE — EDIT: apply the user's textual instruction to the reference image. Preserve subjects, composition and identity; modify only what the instruction explicitly asks to change.");
+      } else {
+        // identity (default)
+        referenceLines.push("MODE — IDENTITY: STRICT facial identity preservation. If a human face appears, preserve the artist's facial identity exactly — do NOT modify, replace, beautify, age, de-age, distort or reinterpret the face, features, skin tone, expression essence, distinctive marks, hairline, eye shape, nose, mouth or jawline.");
+        referenceLines.push("Use the reference as the identity base. Only adapt non-identity elements: composition, crop, background, scenery, lighting, color palette, clothing styling, typography, format and promotional layout.");
+        referenceLines.push("If preserving identity conflicts with the requested visual style, prioritize identity preservation over style transformation.");
+      }
+
+      systemBlocks.push(`[REFERENCE]\n${referenceLines.join("\n")}`);
     }
 
     const messages: any[] = [
-      { role: "system", content: systemParts.join("\n") },
+      { role: "system", content: systemBlocks.join("\n\n") },
     ];
 
     // User message is purely the creative description

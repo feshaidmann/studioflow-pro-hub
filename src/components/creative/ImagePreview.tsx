@@ -55,11 +55,14 @@ export default function ImagePreview({
       ? "aspect-[9/16]"
       : "aspect-square";
 
+  // Wider previews for landscape formats; tighter for square/vertical
+  const widthClass = aspectRatio >= 1.5 ? "max-w-2xl" : "max-w-md";
+
   if (isLoading) {
     const phases = isVideoMode ? VIDEO_LOADING_PHASES : LOADING_PHASES;
     return (
       <div className="flex flex-col items-center gap-4">
-        <Skeleton className={cn("w-full max-w-md rounded-xl", aspectClass)} />
+        <Skeleton className={cn("w-full rounded-xl", widthClass, aspectClass)} />
         <p className="text-sm text-muted-foreground animate-pulse">
           {videoStatus || phases[loadingPhase]}
         </p>
@@ -82,7 +85,7 @@ export default function ImagePreview({
 
   return (
     <div className="flex flex-col items-center gap-3">
-      <div className="relative rounded-xl overflow-hidden border border-border/40 shadow-sm max-w-md w-full bg-muted/30">
+      <div className={cn("relative rounded-xl overflow-hidden border border-border/40 shadow-sm w-full bg-muted/30", widthClass)}>
         {isShowingVideo ? (
           <video
             src={videoUrl!}

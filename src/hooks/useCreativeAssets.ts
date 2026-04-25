@@ -81,6 +81,7 @@ export function useCreativeAssets() {
     width: number;
     height: number;
     editImageUrl?: string;
+    referenceMode?: "identity" | "variation" | "edit";
     projectId?: string;
     channelContext?: string;
     trackName?: string;
@@ -111,6 +112,7 @@ export function useCreativeAssets() {
           width: params.width,
           height: params.height,
           editImageUrl: params.editImageUrl,
+          referenceMode: params.referenceMode,
           projectId: params.projectId,
           channelContext: params.channelContext,
           trackName: params.trackName,
