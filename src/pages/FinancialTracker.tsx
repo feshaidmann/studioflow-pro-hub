@@ -43,7 +43,7 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip,
+  Tooltip as RechartsTooltip,
   Legend,
   PieChart,
   Pie,
@@ -68,7 +68,9 @@ import {
   Minus,
   Download,
   Sparkles,
+  HelpCircle,
 } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useProjects } from "@/contexts/ProjectContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -97,14 +99,14 @@ function pctChange(curr: number, prev: number) {
 }
 
 const CHART_COLORS = [
-  "hsl(263 70% 50%)",
-  "hsl(213 77% 60%)",
-  "hsl(142 71% 45%)",
-  "hsl(38 92% 50%)",
-  "hsl(348 83% 60%)",
-  "hsl(174 62% 47%)",
-  "hsl(291 64% 42%)",
-  "hsl(199 98% 48%)",
+  "hsl(var(--chart-1))",
+  "hsl(var(--chart-2))",
+  "hsl(var(--chart-3))",
+  "hsl(var(--chart-4))",
+  "hsl(var(--chart-5))",
+  "hsl(var(--chart-6))",
+  "hsl(var(--chart-7))",
+  "hsl(var(--chart-8))",
 ];
 
 // ─── KPI Card ───────────────────────────────────────────────────────────────
@@ -116,6 +118,7 @@ function KpiCard({
   icon: Icon,
   colorClass,
   trend,
+  tooltip,
 }: {
   label: string;
   value: string;
@@ -123,6 +126,7 @@ function KpiCard({
   icon: React.ElementType;
   colorClass: string;
   trend?: number | null;
+  tooltip?: string;
 }) {
   return (
     <Card className="glass-card gradient-border animate-fade-in">
@@ -131,7 +135,28 @@ function KpiCard({
           <Icon className={`h-5 w-5 ${colorClass}`} />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-xs text-muted-foreground leading-snug">{label}</p>
+          <div className="flex items-center gap-1">
+            <p className="text-xs text-muted-foreground leading-snug">{label}</p>
+            {tooltip && (
+              <TooltipProvider delayDuration={150}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      aria-label="Ver explicação"
+                      className="text-muted-foreground/70 hover:text-foreground"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <HelpCircle className="h-3 w-3" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="max-w-[240px] text-[11px] leading-snug">
+                    {tooltip}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+          </div>
           <p className={`text-lg font-bold font-mono-nums ${colorClass} leading-tight`}>{value}</p>
           {sub && <p className="text-[11px] text-muted-foreground mt-0.5">{sub}</p>}
           {trend !== undefined && trend !== null && (
@@ -431,6 +456,7 @@ export default function FinancialTracker() {
           value={formatCurrency(kpis.balanceAll)}
           icon={DollarSign}
           colorClass={kpis.balanceAll >= 0 ? "text-success" : "text-destructive"}
+          tooltip="Soma de todas as transações marcadas como pagas, em todos os meses. Não considera receitas/despesas pendentes nem o filtro de mês selecionado abaixo."
         />
         <KpiCard
           label={`Receitas — ${new Date(now.getFullYear(), now.getMonth(), 1).toLocaleDateString("pt-BR", { month: "long" })}`}
@@ -438,6 +464,7 @@ export default function FinancialTracker() {
           icon={TrendingUp}
           colorClass="text-success"
           trend={kpis.incomeMonthTrend}
+          tooltip="Receitas pagas neste mês corrente. A variação compara com o mês anterior, ignorando o filtro abaixo."
         />
         <KpiCard
           label={`Despesas — ${new Date(now.getFullYear(), now.getMonth(), 1).toLocaleDateString("pt-BR", { month: "long" })}`}
@@ -445,12 +472,14 @@ export default function FinancialTracker() {
           icon={TrendingDown}
           colorClass="text-destructive"
           trend={kpis.expenseMonthTrend}
+          tooltip="Despesas pagas neste mês corrente. A variação compara com o mês anterior, ignorando o filtro abaixo."
         />
         <KpiCard
           label={`Resultado — ${new Date(now.getFullYear(), now.getMonth(), 1).toLocaleDateString("pt-BR", { month: "long" })}`}
           value={formatCurrency(kpis.resultMonth)}
           icon={kpis.resultMonth >= 0 ? TrendingUp : TrendingDown}
           colorClass={kpis.resultMonth >= 0 ? "text-success" : "text-destructive"}
+          tooltip="Receitas menos despesas pagas neste mês corrente."
         />
       </div>
 
@@ -872,7 +901,7 @@ export default function FinancialTracker() {
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(260 15% 16%)" vertical={false} />
                     <XAxis dataKey="mes" tick={{ fontSize: 11, fill: "hsl(260 10% 55%)" }} tickLine={false} axisLine={false} />
                     <YAxis tick={{ fontSize: 10, fill: "hsl(260 10% 55%)" }} tickLine={false} axisLine={false} tickFormatter={(v) => `R$${(v / 1000).toFixed(0)}k`} />
-                    <Tooltip
+                    <RechartsTooltip
                       contentStyle={{ background: "hsl(260 15% 8%)", border: "1px solid hsl(260 15% 16%)", borderRadius: "8px", fontSize: "12px" }}
                       formatter={(value: number) => [formatCurrency(value)]}
                     />
@@ -963,7 +992,7 @@ export default function FinancialTracker() {
                             <Cell key={index} fill={CHART_COLORS[index % CHART_COLORS.length]} />
                           ))}
                         </Pie>
-                        <Tooltip formatter={(v: number) => formatCurrency(v)} contentStyle={{ background: "hsl(260 15% 8%)", border: "1px solid hsl(260 15% 16%)", borderRadius: "8px", fontSize: "11px" }} />
+                        <RechartsTooltip formatter={(v: number) => formatCurrency(v)} contentStyle={{ background: "hsl(260 15% 8%)", border: "1px solid hsl(260 15% 16%)", borderRadius: "8px", fontSize: "11px" }} />
                       </PieChart>
                     </ResponsiveContainer>
                     <div className="flex-1 space-y-1.5 w-full">
@@ -1002,7 +1031,7 @@ export default function FinancialTracker() {
                             <Cell key={index} fill={CHART_COLORS[index % CHART_COLORS.length]} />
                           ))}
                         </Pie>
-                        <Tooltip formatter={(v: number) => formatCurrency(v)} contentStyle={{ background: "hsl(260 15% 8%)", border: "1px solid hsl(260 15% 16%)", borderRadius: "8px", fontSize: "11px" }} />
+                        <RechartsTooltip formatter={(v: number) => formatCurrency(v)} contentStyle={{ background: "hsl(260 15% 8%)", border: "1px solid hsl(260 15% 16%)", borderRadius: "8px", fontSize: "11px" }} />
                       </PieChart>
                     </ResponsiveContainer>
                     <div className="flex-1 space-y-1.5 w-full">

@@ -202,6 +202,7 @@ export default function Creative() {
   const [generatedVideoBlob, setGeneratedVideoBlob] = useState<Blob | null>(null);
   const [videoStatus, setVideoStatus] = useState<string | null>(null);
   const [videoRendering, setVideoRendering] = useState(false);
+  const [videoProgress, setVideoProgress] = useState<number | null>(null);
 
   // Persiste preferências sempre que mudarem (debounce implícito pelo React batching)
   useEffect(() => {
@@ -346,6 +347,7 @@ export default function Creative() {
       if (selectedFormat.isVideo) {
         try {
           setVideoRendering(true);
+          setVideoProgress(0);
           setVideoStatus("Renderizando vídeo loop…");
           const blob = await generateVideoLoop({
             imageUrl: result.imageBase64,
@@ -355,6 +357,7 @@ export default function Creative() {
             preset: videoPreset,
             intensity: videoIntensity,
             spots: videoSpots,
+            onProgress: (p) => setVideoProgress(p),
           });
           const url = URL.createObjectURL(blob);
           setGeneratedVideoBlob(blob);
@@ -364,6 +367,7 @@ export default function Creative() {
           toast({ title: "Erro ao gerar vídeo", description: e?.message || "Falha na renderização", variant: "destructive" });
         } finally {
           setVideoRendering(false);
+          setVideoProgress(null);
         }
       }
 
@@ -816,6 +820,11 @@ export default function Creative() {
               {/* 7. Generate button */}
               <div className="space-y-2">
                 <QuotaIndicator />
+                {selectedFormat.isVideo && isMobile && (
+                  <p className="text-[11px] text-muted-foreground bg-muted/30 border border-border rounded-md px-2.5 py-1.5 leading-snug">
+                    💡 Renderização de vídeo é mais estável no desktop. No mobile pode levar de 30s a 2min e consumir bateria.
+                  </p>
+                )}
                 <Button
                   className="w-full"
                   onClick={handleGenerate}
@@ -825,7 +834,9 @@ export default function Creative() {
                   {generating
                     ? "Gerando…"
                     : videoRendering
-                      ? "Renderizando vídeo…"
+                      ? videoProgress != null
+                        ? `Renderizando vídeo… ${Math.round(videoProgress * 100)}%`
+                        : "Renderizando vídeo…"
                       : selectedFormat.isVideo
                         ? "Gerar Vídeo Loop"
                         : referenceImage
@@ -842,6 +853,7 @@ export default function Creative() {
                   isLoading={generating || editingLoading || videoRendering}
                   isVideoMode={selectedFormat.isVideo}
                   videoStatus={videoStatus}
+                  videoProgress={videoProgress}
                   onRegenerate={handleVariation}
                   onEdit={handleEdit}
                   onDownload={handleDownload}

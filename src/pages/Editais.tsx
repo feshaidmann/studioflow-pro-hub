@@ -43,6 +43,25 @@ function statusColor(status: string) {
   return "bg-muted text-muted-foreground border-border";
 }
 
+function StatusBadge({ status, className }: { status: string; className?: string }) {
+  const badge = (
+    <Badge variant="outline" className={(statusColor(status) + " " + (className || "")).trim()}>
+      {status}
+    </Badge>
+  );
+  if (status !== "Indefinido") return badge;
+  return (
+    <TooltipProvider delayDuration={150}>
+      <Tooltip>
+        <TooltipTrigger asChild><span className="inline-flex">{badge}</span></TooltipTrigger>
+        <TooltipContent side="top" className="max-w-[240px] text-xs">
+          Prazo não informado pela fonte. Pode estar aberto — confira o link oficial antes de se inscrever.
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
+
 const STATUS_ORDER: Record<string, number> = { Aberto: 0, Indefinido: 1, Encerrado: 2 };
 
 function sortAndFilterEditais(items: Edital[], filterStatus: string): Edital[] {
@@ -56,6 +75,8 @@ function sortAndFilterEditais(items: Edital[], filterStatus: string): Edital[] {
   } else {
     filtered = items.filter((e) => e.status === filterStatus);
   }
+  // Ordena: status (Aberto > Indefinido > Encerrado), depois prazo ASC (mais próximo primeiro),
+  // editais sem prazo vão para o final dentro do mesmo bucket de status.
   return [...filtered].sort((a, b) => {
     const oa = STATUS_ORDER[a.status] ?? 1;
     const ob = STATUS_ORDER[b.status] ?? 1;
@@ -94,7 +115,7 @@ function EditalDetailSheet({
         </SheetHeader>
         <div className="mt-4 space-y-4">
           <div className="flex flex-wrap gap-2">
-            <Badge variant="outline" className={statusColor(edital.status)}>{edital.status}</Badge>
+            <StatusBadge status={edital.status} />
             {edital.area && <Badge variant="secondary" className="text-xs">{edital.area}</Badge>}
             {edital.estado && <Badge variant="outline" className="text-xs">{edital.estado}</Badge>}
           </div>
@@ -247,7 +268,7 @@ function EditalTable({
                 {e.titulo}
                 {e.inferido && <Info className="inline h-3 w-3 text-muted-foreground ml-1" />}
               </p>
-              <Badge variant="outline" className={statusColor(e.status) + " shrink-0 text-[11px]"}>{e.status}</Badge>
+              <StatusBadge status={e.status} className="shrink-0 text-[11px]" />
             </div>
             {e.resumo && e.resumo !== "—" && e.resumo !== "" && (
               <p className="text-xs text-muted-foreground line-clamp-2">{e.resumo}</p>
@@ -355,7 +376,7 @@ function EditalTable({
                 ) : "—"}
               </TableCell>
               <TableCell className="text-xs tabular-nums">{formatDate(e.prazo)}</TableCell>
-              <TableCell><Badge variant="outline" className={statusColor(e.status)}>{e.status}</Badge></TableCell>
+              <TableCell><StatusBadge status={e.status} /></TableCell>
               <TableCell className="text-xs">{e.area || "—"}</TableCell>
               <TableCell onClick={(ev) => ev.stopPropagation()}>
                 {e.link && e.link !== "—" ? (
@@ -1236,7 +1257,7 @@ export default function Editais() {
                         {m.orgao && <span>{m.orgao}</span>}
                         {m.estado && <span>UF: {m.estado}</span>}
                         <span>Prazo: {formatDate(m.prazo)}</span>
-                        <Badge variant="outline" className={statusColor(m.status) + " text-[11px]"}>{m.status}</Badge>
+                        <StatusBadge status={m.status} className="text-[11px]" />
                       </div>
                       {m.valor && m.valor !== "" && (
                         <div className="flex items-center gap-1">

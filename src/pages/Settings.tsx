@@ -223,7 +223,7 @@ export default function Settings() {
 
   return (
     <div className="p-4 md:p-6 space-y-6 max-w-2xl mx-auto">
-      <h1 className="text-2xl md:text-3xl font-bold neon-text">{t("settings.title")}</h1>
+      <h1 className="text-2xl md:text-3xl font-bold">{t("settings.title")}</h1>
 
       {/* Meu Perfil — acesso rápido */}
       <Card
