@@ -10,7 +10,7 @@ const corsHeaders = {
     "x-quota-daily-limit, x-quota-daily-used, x-quota-weekly-limit, x-quota-weekly-used, x-quota-daily-resets-at",
 };
 
-const IMAGE_MODEL = "google/gemini-3.1-flash-image-preview";
+const IMAGE_MODEL = "google/gemini-2.5-flash-image";
 
 async function requestImage(messages: any[], lovableKey: string) {
   const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -329,7 +329,13 @@ serve(async (req) => {
       }
       const txt = await aiResp.text();
       console.error("AI error:", status, txt);
-      throw new Error("AI generation failed");
+      return new Response(JSON.stringify({
+        error: "Não foi possível gerar a imagem agora. Ajuste o prompt ou tente novamente em instantes.",
+        code: "image_generation_failed",
+        fallback: true,
+      }), {
+        status: 200, headers: { ...corsHeaders, ...quotaHeaders, "Content-Type": "application/json" },
+      });
     }
 
     let aiData = await aiResp.json();
