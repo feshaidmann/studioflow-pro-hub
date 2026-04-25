@@ -189,7 +189,7 @@ export default function Professionals() {
     // Fetch project_members for this professional (matched by name — current user only)
     const { data: members } = await supabase
       .from("project_members")
-      .select("project_id, created_at, role, fee, delivery_status, delivery_due_date, projects:project_id(name, completed)")
+      .select("project_id, created_at, role, fee, delivery_status, delivery_due_date, projects:project_id(id, name, completed)")
       .eq("user_id", user?.id)
       .ilike("name", p.name)
       .order("created_at", { ascending: false });
@@ -516,9 +516,11 @@ export default function Professionals() {
                       </TableCell>
                       <TableCell>
                         {projects.length > 0
-                          ? <div className="flex flex-wrap gap-1">
-                              {projects.slice(0, 2).map((proj, i) => (
-                                <Badge key={i} variant="secondary" className="text-[10px] px-1.5 py-0 h-4 max-w-[120px] truncate">{proj}</Badge>
+                          ? <div className="flex flex-wrap gap-1" onClick={(e) => e.stopPropagation()}>
+                              {projects.slice(0, 2).map((proj) => (
+                                <Link key={proj.id} to={`/projects/${proj.id}`} title={`Abrir ${proj.name}`}>
+                                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 max-w-[120px] truncate hover:bg-primary/15 hover:text-primary transition-colors cursor-pointer">{proj.name}</Badge>
+                                </Link>
                               ))}
                               {projects.length > 2 && (
                                 <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">+{projects.length - 2}</Badge>
@@ -650,7 +652,13 @@ export default function Professionals() {
                       {metrics.collaborationHistory.map((h, i) => (
                         <div key={i} className="flex items-center gap-2 text-xs px-2 py-1.5 rounded-md bg-muted/30 border border-border/40">
                           <div className="flex-1 min-w-0">
-                            <span className="font-medium">{h.projectName}</span>
+                            {h.projectId ? (
+                              <Link to={`/projects/${h.projectId}`} className="font-medium hover:text-primary transition-colors">
+                                {h.projectName}
+                              </Link>
+                            ) : (
+                              <span className="font-medium">{h.projectName}</span>
+                            )}
                             {h.role && <span className="text-muted-foreground"> · {h.role}</span>}
                           </div>
                           <div className="flex items-center gap-1.5 shrink-0">
