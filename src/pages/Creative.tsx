@@ -202,6 +202,7 @@ export default function Creative() {
   const [generatedVideoBlob, setGeneratedVideoBlob] = useState<Blob | null>(null);
   const [videoStatus, setVideoStatus] = useState<string | null>(null);
   const [videoRendering, setVideoRendering] = useState(false);
+  const [videoProgress, setVideoProgress] = useState<number | null>(null);
 
   // Persiste preferências sempre que mudarem (debounce implícito pelo React batching)
   useEffect(() => {
@@ -346,6 +347,7 @@ export default function Creative() {
       if (selectedFormat.isVideo) {
         try {
           setVideoRendering(true);
+          setVideoProgress(0);
           setVideoStatus("Renderizando vídeo loop…");
           const blob = await generateVideoLoop({
             imageUrl: result.imageBase64,
@@ -355,6 +357,7 @@ export default function Creative() {
             preset: videoPreset,
             intensity: videoIntensity,
             spots: videoSpots,
+            onProgress: (p) => setVideoProgress(p),
           });
           const url = URL.createObjectURL(blob);
           setGeneratedVideoBlob(blob);
@@ -364,6 +367,7 @@ export default function Creative() {
           toast({ title: "Erro ao gerar vídeo", description: e?.message || "Falha na renderização", variant: "destructive" });
         } finally {
           setVideoRendering(false);
+          setVideoProgress(null);
         }
       }
 
