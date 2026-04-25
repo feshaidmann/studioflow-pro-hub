@@ -1000,6 +1000,69 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
   );
 }
 
+// ── NEXT STEPS BAR ───────────────────────────────────────────────────────────
+
+function NextStepsBar({
+  diagnosis,
+  input,
+  isSaved,
+  savedAnalysisId,
+}: {
+  diagnosis: DiagnosisResult;
+  input: TrackInput | { name: string; notes?: string; references: string[]; projectId?: string };
+  isSaved: boolean;
+  savedAnalysisId?: string;
+}) {
+  const navigate = useNavigate();
+  const projectId = (input as { projectId?: string }).projectId;
+  const dnaParam = isSaved && savedAnalysisId ? savedAnalysisId : "session";
+  const genre = diagnosis.genero_classificado || "";
+  const trackTitle = encodeURIComponent(input.name || "");
+
+  return (
+    <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 animate-fade-in">
+      <p className="text-[10px] font-mono uppercase tracking-widest text-primary mb-2">
+        Próximos passos
+      </p>
+      <div className="flex flex-wrap gap-2">
+        <Button
+          size="sm"
+          variant="outline"
+          className="gap-1.5 text-xs bg-background"
+          onClick={() => navigate(`/criativo?dna=${dnaParam}`)}
+        >
+          <Palette className="h-3.5 w-3.5" /> Gerar capa com este DNA
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          className="gap-1.5 text-xs bg-background"
+          onClick={() => {
+            const params = new URLSearchParams();
+            if (projectId) params.set("projectId", projectId);
+            if (trackTitle) params.set("title", input.name);
+            if (genre) params.set("genre", genre);
+            navigate(`/track-intelligence/new?${params.toString()}`);
+          }}
+        >
+          <AudioWaveform className="h-3.5 w-3.5" /> Avaliar prontidão de release
+        </Button>
+        {projectId && (
+          <Button
+            size="sm"
+            variant="outline"
+            className="gap-1.5 text-xs bg-background"
+            onClick={() => navigate(`/projects/${projectId}`)}
+          >
+            <FolderKanban className="h-3.5 w-3.5" /> Voltar ao projeto
+            <ArrowRight className="h-3 w-3" />
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── CREATE ART BUTTON ────────────────────────────────────────────────────────
 
 function CreateArtButton({ isSaved, savedAnalysisId }: { isSaved: boolean; savedAnalysisId?: string }) {
