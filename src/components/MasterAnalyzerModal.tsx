@@ -12,8 +12,8 @@ import { Upload, FileAudio, Lightbulb, CheckCircle2, AlertCircle, AlertTriangle,
 import { analyzeAudio, generateSuggestions, type AnalysisResult } from "@/lib/audioAnalysis";
 import type { Project } from "@/data/mockData";
 
-function RadialGauge({ label, value, target, unit, min, max, reverse }: {
-  label: string; value: number; target: number; unit: string; min: number; max: number; reverse?: boolean;
+function RadialGauge({ label, value, target, unit, min, max, reverse, advisory }: {
+  label: string; value: number; target: number; unit: string; min: number; max: number; reverse?: boolean; advisory?: boolean;
 }) {
   const pct = Math.max(0, Math.min(100, ((value - min) / (max - min)) * 100));
   const isGood = reverse ? value <= target : value >= target;
@@ -21,9 +21,12 @@ function RadialGauge({ label, value, target, unit, min, max, reverse }: {
     ? value > target && value <= target + 2
     : value < target && value >= target - 2;
 
-  const color = isGood ? "text-success" : isWarn ? "text-warning" : "text-destructive";
-  const strokeColor = isGood ? "stroke-success" : isWarn ? "stroke-warning" : "stroke-destructive";
-  const dotColor = isGood ? "bg-success" : isWarn ? "bg-warning" : "bg-destructive";
+  // advisory metrics never show as destructive — out-of-range becomes warning (orange)
+  const tone: "good" | "warn" | "bad" = isGood ? "good" : isWarn ? "warn" : advisory ? "warn" : "bad";
+
+  const color = tone === "good" ? "text-success" : tone === "warn" ? "text-warning" : "text-destructive";
+  const strokeColor = tone === "good" ? "stroke-success" : tone === "warn" ? "stroke-warning" : "stroke-destructive";
+  const dotColor = tone === "good" ? "bg-success" : tone === "warn" ? "bg-warning" : "bg-destructive";
 
   const radius = 54;
   const circumference = Math.PI * radius;
@@ -117,9 +120,11 @@ export default function MasterAnalyzerModal({
     }
   };
 
+  // Dynamic é apenas advisory — não bloqueia o envio
   const isSpotifyReady = result
-    ? result.lufs <= -14 && result.truePeak <= -1 && result.dynamicRange >= 7
+    ? result.lufs <= -14 && result.truePeak <= -1
     : null; // null = not yet analyzed
+  const dynamicWarn = result ? result.dynamicRange < 7 : false;
 
   const handleConfirmWithoutAnalysis = () => {
     reset();
@@ -143,9 +148,14 @@ export default function MasterAnalyzerModal({
           <DialogTitle className="flex items-center gap-2 text-lg">
             <Upload className="h-5 w-5 text-primary" />
             Master Analyzer — {project.name}
-            {isSpotifyReady === true && (
+            {isSpotifyReady === true && !dynamicWarn && (
               <Badge className="bg-success/20 text-success border-success/40 gap-1 text-xs animate-confetti-pop ml-auto">
                 <CheckCircle2 className="h-3 w-3" /> Pronto para Streaming
+              </Badge>
+            )}
+            {isSpotifyReady === true && dynamicWarn && (
+              <Badge className="bg-warning/20 text-warning border-warning/40 gap-1 text-xs ml-auto">
+                <AlertTriangle className="h-3 w-3" /> Pronto com alerta
               </Badge>
             )}
             {isSpotifyReady === false && (
@@ -225,12 +235,12 @@ export default function MasterAnalyzerModal({
                 <div className="grid grid-cols-3 gap-2">
                   <RadialGauge label="LUFS" value={result.lufs} target={-14} unit="LUFS" min={-24} max={0} reverse />
                   <RadialGauge label="True Peak" value={result.truePeak} target={-1} unit="dBTP" min={-6} max={1} reverse />
-                  <RadialGauge label="Dynamic" value={result.dynamicRange} target={7} unit="LU" min={0} max={15} />
+                  <RadialGauge label="Dynamic" value={result.dynamicRange} target={7} unit="LU" min={0} max={15} advisory />
                 </div>
               </div>
 
-              {/* Suggestions (only if not ready) */}
-              {!isSpotifyReady && (
+              {/* Suggestions (if not ready or dynamic advisory) */}
+              {(!isSpotifyReady || dynamicWarn) && (
                 <div className="rounded-lg border border-warning/30 bg-warning/5 p-4 space-y-2">
                   <p className="text-sm font-medium flex items-center gap-2">
                     <Lightbulb className="h-4 w-4 text-warning" />
@@ -246,14 +256,23 @@ export default function MasterAnalyzerModal({
               )}
 
               {/* Status banner */}
-              {isSpotifyReady ? (
+              {isSpotifyReady && !dynamicWarn && (
                 <div className="flex items-center gap-2 rounded-lg bg-success/10 border border-success/30 p-3">
                   <CheckCircle2 className="h-5 w-5 text-success shrink-0" />
                   <p className="text-sm font-medium text-success">
                     Master dentro dos padrões de streaming! Pronto para envio.
                   </p>
                 </div>
-              ) : (
+              )}
+              {isSpotifyReady && dynamicWarn && (
+                <div className="flex items-center gap-2 rounded-lg bg-warning/10 border border-warning/30 p-3">
+                  <AlertTriangle className="h-5 w-5 text-warning shrink-0" />
+                  <p className="text-sm font-medium text-warning">
+                    Master aprovado para envio. Atenção: dinâmica abaixo do ideal ({result.dynamicRange.toFixed(1)} LU) — considere reduzir compressão em futuras versões.
+                  </p>
+                </div>
+              )}
+              {isSpotifyReady === false && (
                 <div className="flex items-center gap-2 rounded-lg bg-destructive/10 border border-destructive/30 p-3">
                   <AlertTriangle className="h-5 w-5 text-destructive shrink-0" />
                   <p className="text-sm font-medium text-destructive">
