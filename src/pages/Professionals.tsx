@@ -45,6 +45,7 @@ import {
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { MobileStickyHeader } from "@/components/ui/mobile-sticky-header";
 
 const schema = z.object({
   name: z.string().trim().min(2, "Nome obrigatório").max(100),
