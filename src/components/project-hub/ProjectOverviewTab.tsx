@@ -1,9 +1,11 @@
+import { Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import ProjectCulturalProfile from "@/components/project-hub/ProjectCulturalProfile";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import {
   AlertTriangle, Calendar, CheckCircle2, Clock, DollarSign, ListChecks, Users, Rocket, ArrowRight, MessageCircle,
+  FileText, CalendarPlus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useProjects } from "@/contexts/ProjectContext";
@@ -219,6 +221,34 @@ export default function ProjectOverviewTab({ project, progress, isOwner, onSwitc
             <p className="text-[10px] text-muted-foreground">Enviar resumo do projeto para contatos</p>
           </div>
         </button>
+      )}
+
+      {/* Quick links to related modules */}
+      {isOwner && (
+        <div className="grid grid-cols-2 gap-2">
+          <Link
+            to={`/editais?project=${project.id}`}
+            className="rounded-lg border border-border p-2.5 flex items-center gap-2 hover:bg-muted/30 hover:border-primary/40 transition-colors group"
+          >
+            <FileText className="h-4 w-4 text-primary shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-medium">Buscar editais</p>
+              <p className="text-[10px] text-muted-foreground">Compatíveis com este projeto</p>
+            </div>
+            <ArrowRight className="h-3 w-3 text-muted-foreground group-hover:text-primary transition-colors shrink-0" />
+          </Link>
+          <Link
+            to={`/agenda?new=1&project=${project.id}`}
+            className="rounded-lg border border-border p-2.5 flex items-center gap-2 hover:bg-muted/30 hover:border-primary/40 transition-colors group"
+          >
+            <CalendarPlus className="h-4 w-4 text-primary shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-medium">Adicionar à agenda</p>
+              <p className="text-[10px] text-muted-foreground">Show, ensaio ou prazo</p>
+            </div>
+            <ArrowRight className="h-3 w-3 text-muted-foreground group-hover:text-primary transition-colors shrink-0" />
+          </Link>
+        </div>
       )}
 
       {/* Cultural Profile */}
