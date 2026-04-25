@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { isToday, isThisWeek, isThisMonth, parseISO, startOfDay, addDays, format } from "date-fns";
-import { Plus, CalendarDays, Loader2, Users, AlertTriangle, Info } from "lucide-react";
+import { Plus, CalendarDays, Loader2, Users, AlertTriangle, Info, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -12,6 +12,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
 import { useEvents, type CalendarEvent, type NewEvent } from "@/hooks/useEvents";
