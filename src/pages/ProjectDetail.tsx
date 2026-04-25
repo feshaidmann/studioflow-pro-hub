@@ -263,7 +263,8 @@ export default function ProjectDetail() {
             onClick={() => scrollToAnchor("project-chat-section")}
           >
             <MessageSquare className="h-4 w-4 text-primary" />
-            Chat da Equipe
+            <span>Conversar com a equipe</span>
+            <span className="text-xs font-normal text-muted-foreground ml-1">— recados, decisões e tarefas do projeto</span>
           </button>
           <div id="project-chat-section" className="p-3 border-t border-border">
             <ProjectChat projectId={project.id} isOwner={true} />
