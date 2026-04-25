@@ -297,7 +297,7 @@ serve(async (req) => {
     }
 
     const messages: any[] = [
-      { role: "system", content: systemParts.join("\n") },
+      { role: "system", content: systemBlocks.join("\n\n") },
     ];
 
     // User message is purely the creative description
