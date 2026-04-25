@@ -874,7 +874,7 @@ export default function FinancialTracker() {
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(260 15% 16%)" vertical={false} />
                     <XAxis dataKey="mes" tick={{ fontSize: 11, fill: "hsl(260 10% 55%)" }} tickLine={false} axisLine={false} />
                     <YAxis tick={{ fontSize: 10, fill: "hsl(260 10% 55%)" }} tickLine={false} axisLine={false} tickFormatter={(v) => `R$${(v / 1000).toFixed(0)}k`} />
-                    <Tooltip
+                    <RechartsTooltip
                       contentStyle={{ background: "hsl(260 15% 8%)", border: "1px solid hsl(260 15% 16%)", borderRadius: "8px", fontSize: "12px" }}
                       formatter={(value: number) => [formatCurrency(value)]}
                     />
@@ -965,7 +965,7 @@ export default function FinancialTracker() {
                             <Cell key={index} fill={CHART_COLORS[index % CHART_COLORS.length]} />
                           ))}
                         </Pie>
-                        <Tooltip formatter={(v: number) => formatCurrency(v)} contentStyle={{ background: "hsl(260 15% 8%)", border: "1px solid hsl(260 15% 16%)", borderRadius: "8px", fontSize: "11px" }} />
+                        <RechartsTooltip formatter={(v: number) => formatCurrency(v)} contentStyle={{ background: "hsl(260 15% 8%)", border: "1px solid hsl(260 15% 16%)", borderRadius: "8px", fontSize: "11px" }} />
                       </PieChart>
                     </ResponsiveContainer>
                     <div className="flex-1 space-y-1.5 w-full">
@@ -1004,7 +1004,7 @@ export default function FinancialTracker() {
                             <Cell key={index} fill={CHART_COLORS[index % CHART_COLORS.length]} />
                           ))}
                         </Pie>
-                        <Tooltip formatter={(v: number) => formatCurrency(v)} contentStyle={{ background: "hsl(260 15% 8%)", border: "1px solid hsl(260 15% 16%)", borderRadius: "8px", fontSize: "11px" }} />
+                        <RechartsTooltip formatter={(v: number) => formatCurrency(v)} contentStyle={{ background: "hsl(260 15% 8%)", border: "1px solid hsl(260 15% 16%)", borderRadius: "8px", fontSize: "11px" }} />
                       </PieChart>
                     </ResponsiveContainer>
                     <div className="flex-1 space-y-1.5 w-full">
