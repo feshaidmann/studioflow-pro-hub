@@ -263,18 +263,30 @@ function EditalTable({
                 <span className="text-xs font-semibold text-green-700">{e.valor}</span>
               </div>
             )}
-            {/* Mobile: labeled CTA + secondary actions in dropdown */}
-            <div className="flex items-center gap-1.5 pt-1" onClick={(ev) => ev.stopPropagation()}>
+            {/* Mobile: CTA primário largo + ações secundárias no canto direito */}
+            <div className="flex items-center gap-2 pt-1.5" onClick={(ev) => ev.stopPropagation()}>
               {onStartApplication && e.id && (
-                <Button variant="default" size="sm" className="h-7 text-xs" onClick={() => onStartApplication(e)}>
-                  <ClipboardList className="h-3 w-3 mr-1" />
+                <Button
+                  variant="default"
+                  size="sm"
+                  className="h-9 flex-1 text-sm font-medium"
+                  onClick={() => onStartApplication(e)}
+                >
+                  <ClipboardList className="h-4 w-4 mr-1.5" />
                   Candidatar
                 </Button>
               )}
               {(onEdit || onDelete || (e.link && e.link !== "—")) && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-7 w-7"><MoreHorizontal className="h-3.5 w-3.5" /></Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-9 w-9 shrink-0"
+                      aria-label="Mais ações"
+                    >
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     {e.link && e.link !== "—" && (
