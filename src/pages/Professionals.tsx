@@ -347,15 +347,25 @@ export default function Professionals() {
 
   return (
     <div className="p-4 md:p-6 space-y-6 max-w-5xl mx-auto">
-      <header className="flex items-center justify-between animate-fade-in">
+      <MobileStickyHeader
+        title="Meus Contatos"
+        subtitle={`${professionals.length} contato${professionals.length !== 1 ? "s" : ""}`}
+        cta={
+          <Button size="sm" className="h-9 gap-1.5" onClick={openCreate}>
+            <Plus className="h-4 w-4" /> Novo
+          </Button>
+        }
+      />
+
+      <header className="hidden md:flex items-center justify-between animate-fade-in">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold neon-text flex items-center gap-2">
+          <h1 className="text-3xl font-bold flex items-center gap-2">
             <Users className="h-7 w-7" />
             Meus Contatos
           </h1>
           <p className="text-muted-foreground mt-1">Sua agenda de profissionais — músicos, engenheiros e colaboradores.</p>
         </div>
-        <Button onClick={openCreate} className="gap-2 neon-glow active:scale-95 transition-transform">
+        <Button onClick={openCreate} className="gap-2 active:scale-95 transition-transform">
           <Plus className="h-4 w-4" /> Novo Contato
         </Button>
       </header>
