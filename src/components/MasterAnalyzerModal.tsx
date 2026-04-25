@@ -120,9 +120,11 @@ export default function MasterAnalyzerModal({
     }
   };
 
+  // Dynamic é apenas advisory — não bloqueia o envio
   const isSpotifyReady = result
-    ? result.lufs <= -14 && result.truePeak <= -1 && result.dynamicRange >= 7
+    ? result.lufs <= -14 && result.truePeak <= -1
     : null; // null = not yet analyzed
+  const dynamicWarn = result ? result.dynamicRange < 7 : false;
 
   const handleConfirmWithoutAnalysis = () => {
     reset();
