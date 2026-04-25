@@ -48,6 +48,16 @@
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 0%;
 
+    /* Chart palette (use as hsl(var(--chart-N))) */
+    --chart-1: 263 70% 50%;
+    --chart-2: 213 77% 60%;
+    --chart-3: 142 71% 45%;
+    --chart-4: 38 92% 50%;
+    --chart-5: 348 83% 60%;
+    --chart-6: 174 62% 47%;
+    --chart-7: 291 64% 42%;
+    --chart-8: 199 98% 48%;
+
     /* legacy compat */
     --neon-purple: 263 60% 50%;
     --neon-pink: 348 83% 47%;

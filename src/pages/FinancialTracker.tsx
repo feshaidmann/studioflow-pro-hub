@@ -97,14 +97,14 @@ function pctChange(curr: number, prev: number) {
 }
 
 const CHART_COLORS = [
-  "hsl(263 70% 50%)",
-  "hsl(213 77% 60%)",
-  "hsl(142 71% 45%)",
-  "hsl(38 92% 50%)",
-  "hsl(348 83% 60%)",
-  "hsl(174 62% 47%)",
-  "hsl(291 64% 42%)",
-  "hsl(199 98% 48%)",
+  "hsl(var(--chart-1))",
+  "hsl(var(--chart-2))",
+  "hsl(var(--chart-3))",
+  "hsl(var(--chart-4))",
+  "hsl(var(--chart-5))",
+  "hsl(var(--chart-6))",
+  "hsl(var(--chart-7))",
+  "hsl(var(--chart-8))",
 ];
 
 // ─── KPI Card ───────────────────────────────────────────────────────────────
