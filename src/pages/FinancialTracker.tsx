@@ -231,12 +231,13 @@ export default function FinancialTracker() {
     [transactions]
   );
 
-  // Reset to page 1 whenever any filter changes
-  const resetPage = () => setPage(1);
+  // Reset to page 1 sempre que filtros/busca mudam (efeito colateral fora do useMemo)
+  useEffect(() => {
+    setPage(1);
+  }, [filterProject, filterType, filterMonth, filterStatus, search]);
 
-  // ── Filtered transactions ──
+  // ── Filtered transactions (puro, sem efeitos colaterais) ──
   const filtered = useMemo(() => {
-    resetPage();
     let list = [...transactions];
     if (filterProject !== "all") list = list.filter((t) => t.projectId === filterProject);
     if (filterType !== "all") list = list.filter((t) => t.type === filterType);
