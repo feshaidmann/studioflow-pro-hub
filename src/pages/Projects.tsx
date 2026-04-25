@@ -1125,7 +1125,6 @@ export default function Projects() {
               </>
             );
           })()}
-          </div>
 
           {/* Completed projects */}
           {projects.filter((p) => p.completed).length > 0 && (
