@@ -740,7 +740,35 @@ export default function Creative() {
                 </div>
               )}
 
-              {/* 6. Generate button */}
+              {/* 6. Text-on-art preview — transparency before generating */}
+              {!selectedFormat.isVideo && (
+                <div className="flex items-start justify-between gap-3 rounded-md border border-border/60 bg-muted/30 px-3 py-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">Texto na arte</p>
+                    {noText ? (
+                      <p className="text-xs text-foreground">Sem texto — apenas composição visual</p>
+                    ) : trackName.trim() || artistName.trim() || additionalText.trim() ? (
+                      <p className="text-xs text-foreground truncate">
+                        {[
+                          trackName.trim() && `«${trackName.trim()}»`,
+                          artistName.trim(),
+                          additionalText.trim() && `“${additionalText.trim()}”`,
+                        ].filter(Boolean).join(" · ")}
+                      </p>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">
+                        Nenhum texto definido — abra <em>Detalhes da faixa</em> para adicionar título/artista
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <span className="text-[10px] text-muted-foreground">Sem texto</span>
+                    <Switch checked={noText} onCheckedChange={setNoText} />
+                  </div>
+                </div>
+              )}
+
+              {/* 7. Generate button */}
               <div className="space-y-2">
                 <QuotaIndicator />
                 <Button
