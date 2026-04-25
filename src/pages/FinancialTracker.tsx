@@ -250,7 +250,6 @@ export default function FinancialTracker() {
       t.category.toLowerCase().includes(search.toLowerCase())
     );
     return list.sort((a, b) => b.date.localeCompare(a.date));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [transactions, filterProject, filterType, filterMonth, filterStatus, search, currentMonth]);
 
   // ── Pagination ──
