@@ -55,6 +55,9 @@ export default function ImagePreview({
       ? "aspect-[9/16]"
       : "aspect-square";
 
+  // Wider previews for landscape formats; tighter for square/vertical
+  const widthClass = aspectRatio >= 1.5 ? "max-w-2xl" : "max-w-md";
+
   if (isLoading) {
     const phases = isVideoMode ? VIDEO_LOADING_PHASES : LOADING_PHASES;
     return (
