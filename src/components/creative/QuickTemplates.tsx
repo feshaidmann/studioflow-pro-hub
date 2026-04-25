@@ -15,21 +15,21 @@ export const QUICK_TEMPLATES: QuickTemplate[] = [
     icon: Disc3,
     prompt: "Direção visual para capa de single: composição autoral, impacto em miniatura, atmosfera musical brasileira contemporânea e espaço limpo para título e artista",
     formatId: "spotify_cover",
-    style: "Minimalista",
+    style: "minimalist",
   },
   {
     label: "Post de lançamento",
     icon: Megaphone,
     prompt: "Arte de campanha para divulgar uma música nova: visual direto, memorável, com energia de lançamento e leitura forte no feed",
     formatId: "instagram_post",
-    style: "Moderno",
+    style: "neon",
   },
   {
     label: "Story de bastidores",
     icon: Camera,
     prompt: "Story vertical para bastidores de lançamento musical: clima íntimo de estúdio, textura real, proximidade com fãs e identidade autoral",
     formatId: "story",
-    style: "Lo-fi / Analógico",
+    style: "lo-fi",
   },
 ];
 
