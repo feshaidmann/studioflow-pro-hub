@@ -112,6 +112,7 @@ export function useCreativeAssets() {
           width: params.width,
           height: params.height,
           editImageUrl: params.editImageUrl,
+          referenceMode: params.referenceMode,
           projectId: params.projectId,
           channelContext: params.channelContext,
           trackName: params.trackName,
