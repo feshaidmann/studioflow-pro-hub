@@ -76,7 +76,7 @@ function AcousticRadar({ trackFeatures, refFeatures }: {
       <RadarChart data={toRadarData(trackFeatures, refFeatures)}
         margin={{ top: 16, right: 30, bottom: 16, left: 30 }}>
         <PolarAngleAxis dataKey="subject"
-          tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10, fontFamily: "monospace" }}
+          tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10 }}
         />
         <Radar name="Referência" dataKey="Referência"
           stroke="hsl(var(--primary) / 0.5)" fill="hsl(var(--primary) / 0.1)"
@@ -87,7 +87,7 @@ function AcousticRadar({ trackFeatures, refFeatures }: {
           strokeWidth={2}
         />
         <Legend iconSize={8}
-          wrapperStyle={{ fontSize: 10, fontFamily: "monospace",
+          wrapperStyle={{ fontSize: 10,
             color: "hsl(var(--muted-foreground))" }}
         />
       </RadarChart>
@@ -101,10 +101,10 @@ function FeatureBar({ label, value, refValue }: {
   return (
     <div className="space-y-1">
       <div className="flex justify-between">
-        <span className="text-[9.5px] uppercase tracking-widest font-mono text-muted-foreground">
+        <span className="text-[11px] uppercase tracking-widest font-mono text-muted-foreground">
           {label}
         </span>
-        <span className="text-[9.5px] font-mono text-primary">
+        <span className="text-[11px] font-mono text-primary">
           {Math.round(value * 100)}%
         </span>
       </div>
@@ -152,11 +152,11 @@ function BenchmarkPanel({ diagnosis, benchmark }: { diagnosis: DiagnosisResult; 
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-2">
             <div className="rounded-lg bg-muted/30 border border-border p-3">
-              <p className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground">Fonte</p>
+              <p className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground">Fonte</p>
               <p className="text-sm font-semibold">{benchmarkSource}</p>
             </div>
             <div className="rounded-lg bg-muted/30 border border-border p-3">
-              <p className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground">Benchmark</p>
+              <p className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground">Benchmark</p>
               <p className="text-sm font-semibold">{benchmarkLabel} · {benchmarkCount}</p>
             </div>
           </div>
@@ -189,7 +189,7 @@ function CompatibilityBadge({ result }: { result: DiagnosisResult }) {
     <div className="flex items-center gap-2 flex-wrap">
       <span className={cn(
         "inline-flex items-center gap-1.5 border rounded-full px-3 py-1",
-        "text-[10px] font-mono uppercase tracking-wider", genreCfg
+        "text-[11px] font-mono uppercase tracking-wider", genreCfg
       )}>
         <span className="w-1.5 h-1.5 rounded-full bg-current" />
         {score}% {genre}
@@ -197,7 +197,7 @@ function CompatibilityBadge({ result }: { result: DiagnosisResult }) {
       {topRef && (
         <span className={cn(
           "inline-flex items-center gap-1.5 border rounded-full px-3 py-1",
-          "text-[10px] font-mono uppercase tracking-wider",
+          "text-[11px] font-mono uppercase tracking-wider",
           "bg-accent/10 text-accent-foreground border-accent/30"
         )}>
           <span className="w-1.5 h-1.5 rounded-full bg-current" />
@@ -216,7 +216,7 @@ function PriorityBadge({ priority }: { priority: "Alta" | "Média" | "Baixa" }) 
   };
   return (
     <span className={cn(
-      "shrink-0 text-[9px] font-mono uppercase border rounded-full px-2 py-0.5 tracking-wider",
+      "shrink-0 text-[11px] font-mono uppercase border rounded-full px-2 py-0.5 tracking-wider",
       styles[priority]
     )}>{priority}</span>
   );
@@ -311,10 +311,10 @@ function ExecutiveSummary({ diagnosis }: { diagnosis: DiagnosisResult }) {
         <CardContent className="p-4 space-y-4">
           <div className="flex items-start justify-between gap-3 flex-wrap">
             <div>
-              <p className="text-[10px] font-mono uppercase tracking-widest text-primary mb-1">Resumo executivo</p>
+              <p className="text-[11px] font-mono uppercase tracking-widest text-primary mb-1">Resumo executivo</p>
               <p className="text-sm leading-relaxed">{diagnosis.diagnostico_resumo}</p>
             </div>
-            <Badge variant="outline" className={cn("text-[10px] font-mono uppercase tracking-wider", toneClass)}>
+            <Badge variant="outline" className={cn("text-[11px] font-mono uppercase tracking-wider", toneClass)}>
               {status.label}
             </Badge>
           </div>
@@ -325,7 +325,7 @@ function ExecutiveSummary({ diagnosis }: { diagnosis: DiagnosisResult }) {
               { label: "Próxima ação", text: nextAction },
             ].map((item) => (
               <div key={item.label} className="rounded-lg bg-muted/30 border border-border p-3">
-                <p className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground mb-1">{item.label}</p>
+                <p className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground mb-1">{item.label}</p>
                 <p className="text-xs leading-relaxed">{item.text}</p>
               </div>
             ))}
@@ -473,7 +473,7 @@ function FormView({ onSubmit, isPending, projects }: {
           <CardContent className="space-y-4">
             <FormField control={form.control} name="name" render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-[10px] uppercase tracking-widest font-mono text-muted-foreground">
+                <FormLabel className="text-[11px] uppercase tracking-widest font-mono text-muted-foreground">
                   Nome da faixa *
                 </FormLabel>
                 <FormControl>
@@ -485,7 +485,7 @@ function FormView({ onSubmit, isPending, projects }: {
 
             <FormField control={form.control} name="projectId" render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-[10px] uppercase tracking-widest font-mono text-muted-foreground">
+                <FormLabel className="text-[11px] uppercase tracking-widest font-mono text-muted-foreground">
                   Vincular a um projeto (opcional)
                 </FormLabel>
                 <Select
@@ -511,7 +511,7 @@ function FormView({ onSubmit, isPending, projects }: {
             )} />
 
             <Collapsible>
-              <CollapsibleTrigger className="text-[10px] uppercase tracking-widest font-mono text-muted-foreground hover:text-foreground transition-colors">
+              <CollapsibleTrigger className="text-[11px] uppercase tracking-widest font-mono text-muted-foreground hover:text-foreground transition-colors">
                 + Notas adicionais (opcional)
               </CollapsibleTrigger>
               <CollapsibleContent className="mt-2">
@@ -649,12 +649,12 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
       {/* Header */}
       <div className="flex items-start justify-between gap-3 flex-wrap animate-slide-up">
         <div>
-          <p className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mb-1">
+          <p className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground mb-1">
             Diagnóstico
           </p>
           <h2 className="text-xl font-bold">{input.name}</h2>
           <div className="flex items-center gap-2 mt-1 flex-wrap">
-            <Badge variant="outline" className="text-[10px] font-mono bg-primary/10 border-primary/30 text-primary">
+            <Badge variant="outline" className="text-[11px] font-mono bg-primary/10 border-primary/30 text-primary">
               {diagnosis.genero_classificado || "Gênero não classificado"}
             </Badge>
             {input.references.length > 0 && (
@@ -662,7 +662,7 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
                 {input.references.slice(0, 2).join(", ")}
               </span>
             )}
-            <Badge variant="outline" className="text-[10px] font-mono bg-muted/30 border-border text-muted-foreground">
+            <Badge variant="outline" className="text-[11px] font-mono bg-muted/30 border-border text-muted-foreground">
               Fonte: {externalLookup?.fonte ?? "web_audio"}
             </Badge>
           </div>
@@ -818,7 +818,7 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
             <div className="flex flex-wrap gap-1.5">
               {(identidade?.tags ?? []).map(tag => (
                 <Badge key={tag} variant="outline"
-                  className="text-[10px] font-mono bg-primary/10 border-primary/30 text-primary">
+                  className="text-[11px] font-mono bg-primary/10 border-primary/30 text-primary">
                   {tag}
                 </Badge>
               ))}
@@ -836,7 +836,7 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
           <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 animate-fade-in">
             {metricItems.map((m) => (
               <Card key={m.label} className="text-center py-2.5 px-1">
-                <p className="text-[8px] font-mono uppercase tracking-widest text-muted-foreground">{m.label}</p>
+                <p className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground">{m.label}</p>
                 <p className="text-base font-bold text-primary leading-tight">{m.value}</p>
                 {m.unit && <p className="text-[9px] text-muted-foreground">{m.unit}</p>}
                 <p className="mt-1 text-[8px] leading-tight text-muted-foreground">{m.help}</p>
@@ -850,7 +850,7 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
                 {technicalItems.map((item) => (
                   <div key={item.label} className="bg-muted/30 rounded-lg p-3 border-l-2 border-primary/30">
                     <div className="mb-1 flex items-center justify-between gap-2 flex-wrap">
-                      <p className="text-[9px] font-mono uppercase tracking-widest text-primary">{item.label}</p>
+                      <p className="text-[11px] font-mono uppercase tracking-widest text-primary">{item.label}</p>
                       <p className="text-[9px] text-muted-foreground">{item.help}</p>
                     </div>
                     <p className="text-xs leading-relaxed">{item.text}</p>
@@ -867,20 +867,20 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
           <DiagCard icon="📊" title="Análise de Seções" variant="default">
             <div className="space-y-3">
               <div className="bg-muted/30 rounded-lg p-3">
-                <p className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground mb-1">
+                <p className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground mb-1">
                   Contraste Verso → Refrão
                 </p>
                 <p className="text-xs leading-relaxed">{analise_seccoes.contraste_verso_refrao}</p>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <div className="bg-primary/5 rounded-lg p-3 border border-primary/20">
-                  <p className="text-[9px] font-mono uppercase tracking-widest text-primary mb-1">
+                  <p className="text-[11px] font-mono uppercase tracking-widest text-primary mb-1">
                     Seção mais forte
                   </p>
                   <p className="text-xs leading-relaxed">{analise_seccoes.secao_mais_forte}</p>
                 </div>
                 <div className="bg-destructive/5 rounded-lg p-3 border border-destructive/20">
-                  <p className="text-[9px] font-mono uppercase tracking-widest text-destructive mb-1">
+                  <p className="text-[11px] font-mono uppercase tracking-widest text-destructive mb-1">
                     Seção mais fraca
                   </p>
                   <p className="text-xs leading-relaxed">{analise_seccoes.secao_mais_fraca}</p>
@@ -957,7 +957,7 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
                   .map(l => (
                     <div key={l.label} className="flex items-center gap-1">
                       <div className={cn("w-2 h-2 rounded-sm", l.color)} />
-                      <span className="text-[8px] font-mono uppercase text-muted-foreground">{l.label}</span>
+                      <span className="text-[11px] font-mono uppercase text-muted-foreground">{l.label}</span>
                     </div>
                   ))
                 }
@@ -1021,7 +1021,7 @@ function NextStepsBar({
 
   return (
     <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 animate-fade-in">
-      <p className="text-[10px] font-mono uppercase tracking-widest text-primary mb-2">
+      <p className="text-[11px] font-mono uppercase tracking-widest text-primary mb-2">
         Próximos passos
       </p>
       <div className="flex flex-wrap gap-2">
@@ -1105,7 +1105,7 @@ function SavedAnalysesList({ onLoad }: {
             <FileAudio className="h-4 w-4 text-primary shrink-0" />
             <div className="min-w-0 flex-1">
               <p className="text-sm font-medium truncate">{a.track_name}</p>
-              <p className="text-[10px] text-muted-foreground font-mono">
+              <p className="text-[11px] text-muted-foreground font-mono">
                 {a.genre} · {new Date(a.created_at).toLocaleDateString("pt-BR")}
               </p>
             </div>
