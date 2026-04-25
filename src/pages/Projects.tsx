@@ -948,71 +948,183 @@ export default function Projects() {
         </Card>
       ) : (
         <>
-          {/* Filters */}
-          <div className="flex flex-wrap gap-2">
-            <Select value={stageFilter} onValueChange={setStageFilter}>
-              <SelectTrigger className="w-[140px] h-8 text-xs"><SelectValue placeholder="Estágio" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos os estágios</SelectItem>
-                {stages.map((s) => <SelectItem key={s} value={s}>{t(`stage.${s}`)}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[140px] h-8 text-xs"><SelectValue placeholder="Status" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos os status</SelectItem>
-                <SelectItem value="no_prazo">No prazo</SelectItem>
-                <SelectItem value="parado">Parado</SelectItem>
-                <SelectItem value="risco">Orçamento em risco</SelectItem>
-                <SelectItem value="quase">Quase lá</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          {(() => {
+            const allActive = projects.filter((p) => !p.completed);
+            const activeProjects = allActive.filter((p) => {
+              if (stageFilter !== "all" && p.stage !== stageFilter) return false;
+              if (statusFilter !== "all" && getProjectStatus(p).key !== statusFilter) return false;
+              return true;
+            });
+            const showFilters = allActive.length > 3 || stageFilter !== "all" || statusFilter !== "all";
 
-          {/* Project list */}
-          <div className="space-y-3">
-            {(() => {
-              const activeProjects = projects.filter((p) => !p.completed).filter((p) => {
-                if (stageFilter !== "all" && p.stage !== stageFilter) return false;
-                if (statusFilter !== "all" && getProjectStatus(p).key !== statusFilter) return false;
-                return true;
-              });
-              if (activeProjects.length === 0) return (
-                <div className="text-center py-12 text-muted-foreground">
-                  <Music className="h-12 w-12 mx-auto mb-3 opacity-30" />
-                  <p>{stageFilter !== "all" || statusFilter !== "all" ? "Nenhum projeto encontrado com esses filtros." : t("projects.empty")}</p>
+            // Próximo passo contextual por estágio
+            const nextStepByStage: Record<string, { label: string; route: (id: string) => string; icon: React.ReactNode }> = {
+              inicio: { label: "Convidar equipe", route: (id) => `/projects/${id}#team`, icon: <Users className="h-3.5 w-3.5" /> },
+              gravacao: { label: "Agendar sessão", route: (id) => `/agenda?new=1&project=${id}`, icon: <Calendar className="h-3.5 w-3.5" /> },
+              mix: { label: "Acompanhar mix", route: (id) => `/projects/${id}`, icon: <Sliders className="h-3.5 w-3.5" /> },
+              master: { label: "Analisar master", route: (id) => `/projects/${id}#master`, icon: <Sparkles className="h-3.5 w-3.5" /> },
+              upload: { label: "Preparar lançamento", route: (id) => `/projects/${id}#release`, icon: <Upload className="h-3.5 w-3.5" /> },
+              lancado: { label: "Ver pós-lançamento", route: (id) => `/projects/${id}#release`, icon: <Rocket className="h-3.5 w-3.5" /> },
+            };
+
+            // Projeto mais avançado para o bloco "Continue"
+            const stageOrder = ["inicio", "gravacao", "mix", "master", "upload", "lancado"];
+            const mostAdvanced = [...allActive].sort((a, b) => stageOrder.indexOf(b.stage) - stageOrder.indexOf(a.stage))[0];
+
+            return (
+              <>
+                {/* Filtros progressivos: chips horizontais */}
+                {showFilters && (
+                  <div className="-mx-1 overflow-x-auto pb-1">
+                    <div className="flex gap-1.5 px-1 min-w-min">
+                      {([
+                        { value: "all", label: "Todos" },
+                        { value: "no_prazo", label: "No prazo" },
+                        { value: "quase", label: "Quase lá" },
+                        { value: "risco", label: "Em risco" },
+                        { value: "parado", label: "Parado" },
+                      ] as const).map((f) => (
+                        <button
+                          key={f.value}
+                          onClick={() => setStatusFilter(f.value)}
+                          className={cn(
+                            "shrink-0 rounded-full border px-3 py-1 text-xs font-medium transition-all active:scale-95",
+                            statusFilter === f.value
+                              ? "border-primary bg-primary/15 text-primary"
+                              : "border-border bg-background text-muted-foreground hover:border-primary/40 hover:text-foreground"
+                          )}
+                        >
+                          {f.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Project list */}
+                <div className="space-y-3">
+                  {activeProjects.length === 0 ? (
+                    <div className="text-center py-12 text-muted-foreground">
+                      <Music className="h-12 w-12 mx-auto mb-3 opacity-30" />
+                      <p>{stageFilter !== "all" || statusFilter !== "all" ? "Nenhum projeto encontrado com esses filtros." : t("projects.empty")}</p>
+                    </div>
+                  ) : (
+                    activeProjects.map((project) => {
+                      const status = getProjectStatus(project);
+                      const stageIdx = stageOrder.indexOf(project.stage);
+                      const progressPct = Math.round(((stageIdx + 1) / stageOrder.length) * 100);
+                      const next = nextStepByStage[project.stage];
+                      return (
+                        <Card
+                          key={project.id}
+                          role="button"
+                          tabIndex={0}
+                          className="glass-card cursor-pointer hover:border-primary/40 hover:shadow-md transition-all active:scale-[0.99]"
+                          onClick={() => navigate(`/projects/${project.id}`)}
+                          onKeyDown={(e) => { if (e.key === "Enter") navigate(`/projects/${project.id}`); }}
+                        >
+                          <CardContent className="p-4 space-y-3">
+                            {/* Linha 1: título + menu kebab */}
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="min-w-0 flex-1">
+                                <h3 className="font-semibold text-sm truncate">{project.name}</h3>
+                                <p className="text-xs text-muted-foreground mt-0.5 truncate">{project.artist}</p>
+                              </div>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 -mr-1 -mt-1 shrink-0"
+                                    onClick={(e) => e.stopPropagation()}
+                                    aria-label="Mais ações"
+                                  >
+                                    <MoreVertical className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                                  <DropdownMenuItem asChild>
+                                    <Link to={`/projects/${project.id}`}><ArrowRight className="h-4 w-4 mr-2" />Abrir projeto</Link>
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem asChild>
+                                    <Link to={`/projects/${project.id}#chat`}><MessageSquare className="h-4 w-4 mr-2" />Conversar com a equipe</Link>
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openEditDialog(project); }}>
+                                    <Pencil className="h-4 w-4 mr-2" />Editar
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={(e) => { e.stopPropagation(); openDeleteDialog(project.id); }}>
+                                    <Trash2 className="h-4 w-4 mr-2" />Excluir
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
+
+                            {/* Linha 2: estágio + status */}
+                            <div className="flex items-center justify-between gap-2 flex-wrap">
+                              <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+                                <Badge variant="outline" className="text-[10px]">{t(`stage.${project.stage}`)}</Badge>
+                                {project.projectType && project.projectType !== "single" && (
+                                  <Badge variant="secondary" className="text-[10px]">{t(`projects.${project.projectType}`)}</Badge>
+                                )}
+                              </div>
+                              <Badge variant="outline" className={cn("text-[10px]", status.color)}>{status.label}</Badge>
+                            </div>
+
+                            {/* Linha 3: barra de progresso */}
+                            <div className="space-y-1">
+                              <Progress value={progressPct} className="h-1.5" />
+                              <p className="text-[10px] text-muted-foreground font-mono-nums text-right">{progressPct}%</p>
+                            </div>
+
+                            {/* Linha 4: próximo passo contextual */}
+                            {next && (
+                              <Link
+                                to={next.route(project.id)}
+                                onClick={(e) => e.stopPropagation()}
+                                className="flex items-center justify-between rounded-md bg-primary/5 border border-primary/20 px-3 py-2 text-xs text-primary hover:bg-primary/10 transition-colors"
+                              >
+                                <span className="flex items-center gap-1.5 font-medium">
+                                  {next.icon}
+                                  Próximo: {next.label}
+                                </span>
+                                <ArrowRight className="h-3.5 w-3.5" />
+                              </Link>
+                            )}
+                          </CardContent>
+                        </Card>
+                      );
+                    })
+                  )}
                 </div>
-              );
-              return activeProjects.map((project) => {
-                const status = getProjectStatus(project);
-                return (
-                  <Card key={project.id} className="glass-card cursor-pointer hover:border-primary/40 transition-all" onClick={() => setSelectedProject(project)}>
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-semibold text-sm truncate">{project.name}</span>
-                            <Badge variant="outline" className="text-[10px] shrink-0">{t(`stage.${project.stage}`)}</Badge>
-                            {project.projectType && project.projectType !== "single" && <Badge variant="secondary" className="text-[10px] shrink-0">{t(`projects.${project.projectType}`)}</Badge>}
-                            <Badge variant="outline" className={cn("text-[10px] shrink-0", status.color)}>{status.label}</Badge>
-                          </div>
-                          <p className="text-xs text-muted-foreground mt-0.5">{project.artist}</p>
-                        </div>
-                        <div className="flex items-center gap-1 shrink-0 ml-2">
-                          <Button size="sm" className="h-7 text-xs gap-1 neon-glow" asChild onClick={(e) => e.stopPropagation()}>
-                            <Link to={`/projects/${project.id}`}>
-                              <MessageSquare className="h-3.5 w-3.5" /> Chat
-                            </Link>
-                          </Button>
-                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); openEditDialog(project); }}><Pencil className="h-3.5 w-3.5" /></Button>
-                          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={(e) => { e.stopPropagation(); openDeleteDialog(project.id); }}><Trash2 className="h-3.5 w-3.5" /></Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              });
-            })()}
+
+                {/* Bloco "Continue de onde parou" */}
+                {activeProjects.length > 0 && mostAdvanced && (
+                  <div className="mt-2 space-y-2">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide px-1">
+                      Continue em <span className="text-foreground font-medium normal-case tracking-normal">{mostAdvanced.name}</span>
+                    </p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Link
+                        to={`/agenda?new=1&project=${mostAdvanced.id}`}
+                        className="rounded-lg border border-border bg-card p-3 hover:border-primary/40 hover:bg-primary/5 transition-all active:scale-[0.98]"
+                      >
+                        <Calendar className="h-4 w-4 text-primary mb-1.5" />
+                        <p className="text-xs font-medium leading-tight">Agendar sessão</p>
+                      </Link>
+                      <Link
+                        to={`/projects/${mostAdvanced.id}#master`}
+                        className="rounded-lg border border-border bg-card p-3 hover:border-primary/40 hover:bg-primary/5 transition-all active:scale-[0.98]"
+                      >
+                        <Sparkles className="h-4 w-4 text-primary mb-1.5" />
+                        <p className="text-xs font-medium leading-tight">Analisar master</p>
+                      </Link>
+                    </div>
+                  </div>
+                )}
+              </>
+            );
+          })()}
           </div>
 
           {/* Completed projects */}
