@@ -1,100 +1,83 @@
-# Melhorias de CX — Tela de Projetos (mobile)
+# Plano de Execução — Refinamento CX do Módulo Criativo
 
-## Diagnóstico da tela atual
-
-Olhando o screenshot e o código de `src/pages/Projects.tsx`, a página entrega o básico mas tem fricções claras quando o artista chega aqui no celular:
-
-1. **A ação primária errada está em destaque.** O card mostra um botão roxo grande "Chat" — mas a tarefa #1 do usuário ao tocar num projeto é **abrir o projeto**, não conversar. O chat compete com o próprio card pelo clique.
-2. **O card inteiro é clicável, mas não parece.** Não há affordance (chevron, "abrir", hover state visível em mobile). O usuário fica em dúvida se toca no nome ou no botão.
-3. **Falta sinal de progresso.** Vejo "Upload (check de áudio)" + "Quase lá", mas não vejo *o quanto* falta. Sem barra de progresso ou próximo passo, o status vira ruído.
-4. **Lápis e lixeira ocupam espaço nobre.** Editar e excluir não são ações frequentes — estão sempre visíveis competindo com o que importa.
-5. **Filtros pouco usados.** Dois selects "Todos os estágios / Todos os status" ocupam uma linha inteira mesmo quando o usuário tem 1 projeto. Em mobile com 1–3 projetos eles são puro custo visual.
-6. **Estado vazio do espaço abaixo.** O usuário com 1 projeto vê uma tela 80% vazia. Oportunidade perdida de sugerir próximo passo (analisar master, agendar gravação, convidar parceiro).
-7. **Header sem contexto.** "Projetos" + "+ Novo Projeto" é genérico. Não dá noção de quantos projetos ativos, quantos quase prontos, etc.
-8. **FAB de chat global flutuante** (canto inferior direito) sobrepõe a UI e duplica visualmente o botão "Chat" do card — confunde.
+Implementação dos achados do diagnóstico em 4 ondas, da maior à menor alavanca.
 
 ---
 
-## Plano de melhorias
+## Onda 1 — Taxonomia de estilo unificada
 
-### 1. Reorganizar o card de projeto (impacto alto)
+**Problema**: `StyleChips` envia IDs em inglês (`minimalist`), `QuickTemplates` envia rótulos em português (`Minimalista`). A IA recebe entradas inconsistentes.
 
-Card vira um **bloco navegável** óbvio, com hierarquia clara:
+**Mudanças**
+- `src/components/creative/StyleChips.tsx`: manter ID em inglês como valor canônico, exibir label PT.
+- `src/components/creative/QuickTemplates.tsx`: trocar `style: "Minimalista"` → `style: "minimalist"` (e demais templates) para casar com os IDs de `StyleChips`.
+- `supabase/functions/generate-creative/index.ts`: criar mapa `STYLE_DESCRIPTIONS` (id → instrução visual rica em inglês) e injetar no system prompt em vez do ID cru. Ex.: `minimalist` → "minimalist composition, generous negative space, restrained palette, refined typography".
 
-```text
-┌─────────────────────────────────────────────┐
-│ Herói da Estrada                       ⋮    │  ← menu kebab (editar/excluir)
-│ Antonio Barra                               │
-│                                             │
-│ Upload · check de áudio        ● Quase lá   │
-│ ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░░░  83%             │  ← progresso por estágio
-│                                             │
-│ Próximo passo: Analisar master       →      │  ← CTA contextual
-└─────────────────────────────────────────────┘
-```
+---
 
-- Card inteiro clicável → vai para `/projects/:id` (fluxo principal).
-- "Chat" deixa de ser botão primário; vira ícone secundário no canto, ou some do card e fica acessível dentro do projeto (já temos "Conversar com a equipe" lá).
-- Editar/Excluir ficam atrás de um menu kebab (`⋮`) → reduz ruído, mantém acesso.
-- Barra de progresso usa o estágio (`inicio→gravacao→mix→master→upload→lancado` = 6 passos).
-- "Próximo passo" muda conforme o estágio (ex.: estágio `master` → "Analisar master"; `upload` → "Configurar lançamento"; `inicio` → "Convidar equipe").
+## Onda 2 — Modos de referência (identity / variation / edit)
 
-### 2. Header com contexto real
+**Problema**: `editImageUrl` aciona "STRICT IDENTITY PRESERVATION" para qualquer caso — variações ficam travadas, edits abstratos perdem liberdade.
 
-Substituir "Projetos" puro por um sumário de uma linha:
+**Mudanças no edge function `generate-creative`**
+- Aceitar novo campo `referenceMode: "identity" | "variation" | "edit"` (default `"identity"`).
+- Bloco de instruções condicional:
+  - `identity`: mantém regras atuais de preservação facial.
+  - `variation`: "Use the reference as conceptual seed; preserve overall mood and palette but freely change composition, framing, subject pose. If a face appears, you may reinterpret it loosely."
+  - `edit`: "Apply the textual edit instruction to the reference image; preserve subjects and composition, change only what the user describes."
 
-```text
-Projetos
-2 ativos · 1 quase pronto                      [+ Novo]
-```
+**Mudanças no client**
+- `src/hooks/useCreativeAssets.ts`: adicionar `referenceMode?` no payload de `generate`.
+- `src/pages/Creative.tsx`:
+  - `handleGenerate` (com `referenceImage` upload): passa `"identity"`.
+  - `handleVariation`: passa `"variation"`.
+  - `handleEditSubmit`: passa `"edit"`.
 
-Botão "+ Novo Projeto" encolhe para "+ Novo" em telas estreitas (já cabe e libera espaço).
+---
 
-### 3. Filtros progressivos
+## Onda 3 — Transparência de texto antes de gerar
 
-- Esconder a barra de filtros quando o usuário tem **≤ 3 projetos ativos** (não há o que filtrar).
-- Quando aparecer, virar **chips horizontais roláveis** em vez de dois selects largos: `Todos · No prazo · Quase lá · Em risco · Parado`. Mais rápido de tocar, mais legível.
+**Problema**: Switch "Arte sem nenhum texto" e campos de texto ficam dentro do collapsible "Detalhes da faixa". Usuário gera arte com título indesejado e queima cota.
 
-### 4. Aproveitar o espaço vazio: "Continue de onde parou"
+**Mudanças em `src/pages/Creative.tsx`**
+- Adicionar pequeno bloco "Texto na arte" **fora do collapsible**, logo acima do botão Gerar:
+  - Se `noText` → badge "Sem texto na arte".
+  - Senão → linha enxuta: "Texto na arte: «{trackName}» · {artistName}" (ou "Nenhum texto definido — adicione título/artista nos Detalhes da faixa").
+  - Toggle inline rápido para "Sem texto" sem precisar abrir collapsible.
+- Tornar o campo "Texto adicional" e o switch "noText" visualmente agrupados dentro do collapsible com separator claro.
 
-Abaixo da lista de projetos, um bloco contextual com **1–2 sugestões acionáveis** baseadas no projeto mais avançado:
+---
 
-```text
-Continue em Herói da Estrada
-┌───────────────────┐ ┌───────────────────┐
-│ 🎚 Analisar       │ 📅 Agendar         │
-│ master             │ próxima sessão     │
-└───────────────────┘ └───────────────────┘
-```
+## Onda 4 — Refinos de layout e prompt
 
-Reusa rotas que já existem (`/master-analyzer`, `/agenda?new=1&project=:id`).
+**4a. Prompt mais limpo (edge function)**
+- Refatorar `systemParts` em `generate-creative` para formato estruturado por blocos rotulados (`[FORMAT]`, `[STYLE]`, `[TEXT_RULES]`, `[REFERENCE]`) em inglês — modelos de imagem performam melhor com tags explícitas que com parágrafos longos.
+- Sem mudança de comportamento, só estrutura.
 
-### 5. Resolver o conflito do FAB de chat
+**4b. Layout do preview**
+- `src/components/creative/ImagePreview.tsx`: remover `max-w-md` rígido; usar `max-w-md` apenas para formatos quadrados/verticais e `max-w-2xl` para `aspect-video` (YouTube/banner). Em desktop usa melhor a largura.
 
-O botão flutuante roxo no canto inferior duplica o "Chat" do card e atrapalha. Duas opções:
-
-- **A (preferida):** esconder o FAB nas páginas onde já há entrada explícita de chat (Projetos, ProjectDetail). Mantém ele em Dashboard, Finanças, Agenda.
-- **B:** mover para canto superior do header, longe da área de polegar onde o usuário está lendo cards.
-
-### 6. Estado de projetos concluídos
-
-A seção colapsada já existe e está OK. Pequeno ajuste: mostrar o contador no header em vez de no botão para o usuário não precisar rolar — ex.: subtítulo do header vira "2 ativos · 5 concluídos".
+**4c. Botão Gerar sticky no mobile**
+- Em `src/pages/Creative.tsx` (aba Criar), envolver o botão Gerar em wrapper `sticky bottom-16 md:static` com fundo `bg-background/95 backdrop-blur` no mobile, para evitar scroll até o final em formulários longos.
 
 ---
 
 ## Detalhes técnicos
 
-- **Arquivo principal:** `src/pages/Projects.tsx` (linhas ~935–1029 — bloco da listagem).
-- **Card:** trocar layout `flex justify-between` por estrutura em duas linhas + barra de progresso. Calcular progresso pelo índice em `stages` (`stages.indexOf(project.stage) / 5 * 100`).
-- **Próximo passo contextual:** mapa estático `nextStepByStage: Record<Stage, { label, route }>`.
-- **Menu kebab:** usar `DropdownMenu` do shadcn (já presente no projeto) com itens Editar/Excluir; remover botões soltos.
-- **Header summary:** computar `activeCount`, `quasePromptoCount`, `completedCount` a partir de `projects` + `getProjectStatus`.
-- **Filtros condicionais:** `{activeProjects.length > 3 && <FilterChips />}`. Trocar `Select` por `<button>`s estilizados como `Badge` clicáveis com `variant` ativa.
-- **Bloco "Continue":** identificar `mostAdvanced = projects.filter(!completed).sort(by stage index desc)[0]`; renderizar 2 cards de atalho (reaproveitar padrão de "Quick Links" já implementado em `ProjectOverviewTab.tsx`).
-- **FAB:** localizar componente do chat global flutuante (provavelmente em layout); adicionar prop/condição para esconder em rotas `/projects` e `/projects/:id`.
+**Arquivos editados**
+- `src/components/creative/StyleChips.tsx`
+- `src/components/creative/QuickTemplates.tsx`
+- `src/components/creative/ImagePreview.tsx`
+- `src/pages/Creative.tsx`
+- `src/hooks/useCreativeAssets.ts`
+- `supabase/functions/generate-creative/index.ts`
 
-## Fora de escopo
+**Compatibilidade**
+- `referenceMode` é opcional no edge function (default `identity`) — chamadas antigas continuam funcionando.
+- Mapa `STYLE_DESCRIPTIONS` faz fallback para o valor cru se o ID não estiver mapeado, então estilos legados em registros antigos não quebram.
 
-- Mudanças no fluxo de criação de projeto (wizard).
-- Reordenar estágios ou alterar lógica de status.
-- Internacionalização das novas strings (mantenho PT, seguindo o que está hoje no arquivo).
+**Sem migrações de banco**. Sem novos secrets. Edge function `generate-creative` será re-deployada automaticamente.
+
+---
+
+Aprove para eu executar todas as 4 ondas em sequência.
