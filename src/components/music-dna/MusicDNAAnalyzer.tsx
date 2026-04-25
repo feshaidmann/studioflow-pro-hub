@@ -76,7 +76,7 @@ function AcousticRadar({ trackFeatures, refFeatures }: {
       <RadarChart data={toRadarData(trackFeatures, refFeatures)}
         margin={{ top: 16, right: 30, bottom: 16, left: 30 }}>
         <PolarAngleAxis dataKey="subject"
-          tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10 }}
+          tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
         />
         <Radar name="Referência" dataKey="Referência"
           stroke="hsl(var(--primary) / 0.5)" fill="hsl(var(--primary) / 0.1)"
@@ -87,7 +87,7 @@ function AcousticRadar({ trackFeatures, refFeatures }: {
           strokeWidth={2}
         />
         <Legend iconSize={8}
-          wrapperStyle={{ fontSize: 10,
+          wrapperStyle={{ fontSize: 11,
             color: "hsl(var(--muted-foreground))" }}
         />
       </RadarChart>
@@ -838,8 +838,8 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
               <Card key={m.label} className="text-center py-2.5 px-1">
                 <p className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground">{m.label}</p>
                 <p className="text-base font-bold text-primary leading-tight">{m.value}</p>
-                {m.unit && <p className="text-[9px] text-muted-foreground">{m.unit}</p>}
-                <p className="mt-1 text-[8px] leading-tight text-muted-foreground">{m.help}</p>
+                {m.unit && <p className="text-[11px] text-muted-foreground">{m.unit}</p>}
+                <p className="mt-1 text-[11px] leading-tight text-muted-foreground">{m.help}</p>
               </Card>
             ))}
           </div>
@@ -851,7 +851,7 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
                   <div key={item.label} className="bg-muted/30 rounded-lg p-3 border-l-2 border-primary/30">
                     <div className="mb-1 flex items-center justify-between gap-2 flex-wrap">
                       <p className="text-[11px] font-mono uppercase tracking-widest text-primary">{item.label}</p>
-                      <p className="text-[9px] text-muted-foreground">{item.help}</p>
+                      <p className="text-[11px] text-muted-foreground">{item.help}</p>
                     </div>
                     <p className="text-xs leading-relaxed">{item.text}</p>
                   </div>
