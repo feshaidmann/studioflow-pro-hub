@@ -302,8 +302,9 @@ serve(async (req) => {
       "[ROLE]\nYou are a visual art generator for musicians and artists releasing music."
     );
 
+    const aspectStr = aspectLabel(width, height);
     systemBlocks.push(
-      `[FORMAT]\nTarget: ${format}. Aspect ratio: ${width}x${height}.`
+      `[FORMAT]\nTarget format: ${format}. Output MUST be a ${aspectStr} composition. Frame the entire scene to fit this aspect ratio — do NOT crop subjects awkwardly. Final delivery resolution: ${width}×${height} pixels.`
     );
 
     if (styleDescription) {
