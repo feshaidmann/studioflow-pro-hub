@@ -168,7 +168,7 @@ export default function ProjectDetail() {
         </Button>
         <div className="flex-1 min-w-0">
           <div className="flex flex-wrap items-center gap-2 mb-1">
-            <h1 className="text-xl font-bold truncate neon-text">{project.name}</h1>
+            <h1 className="text-xl font-bold truncate">{project.name}</h1>
             {project.completed && <Badge className="bg-success/20 text-success border-success/30 text-xs">Concluído</Badge>}
             <Badge variant="secondary" className="text-xs">{TYPE_LABEL[project.projectType] ?? project.projectType}</Badge>
             {!isOwner && <Badge className="bg-primary/15 text-primary border-primary/30 text-xs">Colaborador</Badge>}

@@ -221,7 +221,7 @@ export default function FreelancerProfile() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold neon-text">Meu Perfil</h1>
+          <h1 className="text-2xl md:text-3xl font-bold">Meu Perfil</h1>
           <p className="text-sm text-muted-foreground mt-1">Como você aparece para artistas e produtores</p>
         </div>
         <Badge variant={isPro ? "default" : "secondary"} className="uppercase text-xs font-semibold tracking-wide">
