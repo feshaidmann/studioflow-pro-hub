@@ -22,6 +22,8 @@ export default function TrackIntelligence() {
   const navigate = useNavigate();
   const { items, loading, remove } = useTrackIntelligenceList();
 
+  const [confirmDelete, setConfirmDelete] = useState<{ id: string; title: string } | null>(null);
+
   return (
     <div className="container max-w-5xl mx-auto px-4 py-6 space-y-6">
       <MobileStickyHeader
@@ -72,7 +74,7 @@ export default function TrackIntelligence() {
               className="p-4 hover:border-primary/40 transition-colors cursor-pointer group"
               onClick={() => navigate(`/track-intelligence/${it.id}`)}
             >
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3">
                 <div className={`text-3xl font-light tabular-nums ${scoreColor(it.consolidated_score)} w-16 text-center`}>
                   {it.status === "pending" ? <Loader2 className="h-6 w-6 animate-spin mx-auto" /> :
                    it.status === "error" ? <AlertCircle className="h-6 w-6 text-destructive mx-auto" /> :
@@ -89,18 +91,38 @@ export default function TrackIntelligence() {
                   </p>
                 </div>
                 <button
-                  onClick={(e) => { e.stopPropagation(); remove(it.id); }}
-                  className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
+                  onClick={(e) => { e.stopPropagation(); setConfirmDelete({ id: it.id, title: it.track_title }); }}
+                  className="h-11 w-11 inline-flex items-center justify-center rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
                   aria-label="Excluir análise"
                 >
-                  <Trash2 className="h-3.5 w-3.5" />
+                  <Trash2 className="h-4 w-4" />
                 </button>
-                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
               </div>
             </Card>
           ))}
         </div>
       )}
+
+      <AlertDialog open={!!confirmDelete} onOpenChange={(o) => !o && setConfirmDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir análise?</AlertDialogTitle>
+            <AlertDialogDescription>
+              "{confirmDelete?.title}" será removida permanentemente. Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => { if (confirmDelete) { remove(confirmDelete.id); setConfirmDelete(null); } }}
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
