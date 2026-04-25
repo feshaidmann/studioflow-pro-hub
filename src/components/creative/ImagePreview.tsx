@@ -38,7 +38,7 @@ interface Props {
 export default function ImagePreview({
   imageUrl, videoUrl, isLoading, isVideoMode, videoStatus,
   onRegenerate, onEdit, onDownload, onSave, isSaved,
-  onDerive, formatLabel, aspectRatio = 1,
+  onDerive, formatLabel, aspectRatio = 1, width, height,
 }: Props) {
   const [loadingPhase, setLoadingPhase] = useState(0);
 
