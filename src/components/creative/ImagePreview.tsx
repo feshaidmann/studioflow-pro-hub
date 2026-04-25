@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Download, RefreshCw, Pencil, Layers, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 
 const LOADING_PHASES = [
@@ -23,6 +24,7 @@ interface Props {
   isLoading: boolean;
   isVideoMode?: boolean;
   videoStatus?: string | null;
+  videoProgress?: number | null;
   onRegenerate: () => void;
   onEdit: () => void;
   onDownload: () => void;
@@ -36,7 +38,7 @@ interface Props {
 }
 
 export default function ImagePreview({
-  imageUrl, videoUrl, isLoading, isVideoMode, videoStatus,
+  imageUrl, videoUrl, isLoading, isVideoMode, videoStatus, videoProgress,
   onRegenerate, onEdit, onDownload, onSave, isSaved,
   onDerive, formatLabel, aspectRatio = 1, width, height,
 }: Props) {
@@ -62,12 +64,21 @@ export default function ImagePreview({
 
   if (isLoading) {
     const phases = isVideoMode ? VIDEO_LOADING_PHASES : LOADING_PHASES;
+    const showProgress = typeof videoProgress === "number" && videoProgress >= 0 && videoProgress <= 1;
     return (
-      <div className="flex flex-col items-center gap-4">
+      <div className="flex flex-col items-center gap-3">
         <Skeleton className={cn("w-full rounded-xl", widthClass, aspectClass)} />
         <p className="text-sm text-muted-foreground animate-pulse">
           {videoStatus || phases[loadingPhase]}
         </p>
+        {showProgress && (
+          <div className={cn("w-full space-y-1", widthClass)}>
+            <Progress value={Math.round(videoProgress! * 100)} className="h-1.5" />
+            <p className="text-[11px] text-muted-foreground text-right tabular-nums">
+              {Math.round(videoProgress! * 100)}%
+            </p>
+          </div>
+        )}
       </div>
     );
   }
