@@ -820,6 +820,11 @@ export default function Creative() {
               {/* 7. Generate button */}
               <div className="space-y-2">
                 <QuotaIndicator />
+                {selectedFormat.isVideo && isMobile && (
+                  <p className="text-[11px] text-muted-foreground bg-muted/30 border border-border rounded-md px-2.5 py-1.5 leading-snug">
+                    💡 Renderização de vídeo é mais estável no desktop. No mobile pode levar de 30s a 2min e consumir bateria.
+                  </p>
+                )}
                 <Button
                   className="w-full"
                   onClick={handleGenerate}
@@ -829,7 +834,9 @@ export default function Creative() {
                   {generating
                     ? "Gerando…"
                     : videoRendering
-                      ? "Renderizando vídeo…"
+                      ? videoProgress != null
+                        ? `Renderizando vídeo… ${Math.round(videoProgress * 100)}%`
+                        : "Renderizando vídeo…"
                       : selectedFormat.isVideo
                         ? "Gerar Vídeo Loop"
                         : referenceImage
@@ -846,6 +853,7 @@ export default function Creative() {
                   isLoading={generating || editingLoading || videoRendering}
                   isVideoMode={selectedFormat.isVideo}
                   videoStatus={videoStatus}
+                  videoProgress={videoProgress}
                   onRegenerate={handleVariation}
                   onEdit={handleEdit}
                   onDownload={handleDownload}
