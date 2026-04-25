@@ -805,6 +805,8 @@ export default function Creative() {
                   onDerive={generatedImage && !generatedVideoUrl ? () => handleDerive(generatedImage) : undefined}
                   formatLabel={selectedFormat.label}
                   aspectRatio={selectedFormat.width / selectedFormat.height}
+                  width={selectedFormat.width}
+                  height={selectedFormat.height}
                 />
               </div>
 
