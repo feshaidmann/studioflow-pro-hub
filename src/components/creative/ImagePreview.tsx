@@ -31,12 +31,14 @@ interface Props {
   onDerive?: () => void;
   formatLabel?: string;
   aspectRatio?: number;
+  width?: number;
+  height?: number;
 }
 
 export default function ImagePreview({
   imageUrl, videoUrl, isLoading, isVideoMode, videoStatus,
   onRegenerate, onEdit, onDownload, onSave, isSaved,
-  onDerive, formatLabel, aspectRatio = 1,
+  onDerive, formatLabel, aspectRatio = 1, width, height,
 }: Props) {
   const [loadingPhase, setLoadingPhase] = useState(0);
 
@@ -101,9 +103,12 @@ export default function ImagePreview({
         )}
       </div>
 
-      {(formatLabel || isShowingVideo) && (
+      {(formatLabel || isShowingVideo || (width && height)) && (
         <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap justify-center">
           {formatLabel && <span className="bg-muted px-2 py-0.5 rounded-full">{formatLabel}</span>}
+          {width && height && !isShowingVideo && (
+            <span className="bg-muted px-2 py-0.5 rounded-full font-mono">{width}×{height}px</span>
+          )}
           {isShowingVideo && (
             <span className="bg-primary/10 text-primary px-2 py-0.5 rounded-full">loop animado</span>
           )}

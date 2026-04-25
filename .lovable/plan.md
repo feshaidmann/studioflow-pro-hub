@@ -1,83 +1,81 @@
-# Plano de Execução — Refinamento CX do Módulo Criativo
+# Plano — Conformidade dos formatos do Criativo
 
-Implementação dos achados do diagnóstico em 4 ondas, da maior à menor alavanca.
+## Diagnóstico
 
----
+O modelo de imagem (`gemini-2.5-flash-image` / Nano Banana) **não aceita largura/altura como parâmetro de saída** — ele retorna sempre uma imagem ~1024px no aspect ratio que conseguir inferir do prompt. Hoje:
 
-## Onda 1 — Taxonomia de estilo unificada
+- `FormatSelector` declara, por exemplo, "Capa Spotify 1920×1920", mas a IA devolve algo próximo de 1024×1024 e o app salva como está.
+- O system prompt diz `Aspect ratio: 1920x1920`, o que o modelo pode interpretar como referência mas não garante o pixel-perfect.
+- Resultado: o usuário escolhe "Capa Spotify" e recebe arquivo bem menor que o anunciado, fora do spec real do Spotify (3000×3000 mínimo).
 
-**Problema**: `StyleChips` envia IDs em inglês (`minimalist`), `QuickTemplates` envia rótulos em português (`Minimalista`). A IA recebe entradas inconsistentes.
+## Mudanças propostas
 
-**Mudanças**
-- `src/components/creative/StyleChips.tsx`: manter ID em inglês como valor canônico, exibir label PT.
-- `src/components/creative/QuickTemplates.tsx`: trocar `style: "Minimalista"` → `style: "minimalist"` (e demais templates) para casar com os IDs de `StyleChips`.
-- `supabase/functions/generate-creative/index.ts`: criar mapa `STYLE_DESCRIPTIONS` (id → instrução visual rica em inglês) e injetar no system prompt em vez do ID cru. Ex.: `minimalist` → "minimalist composition, generous negative space, restrained palette, refined typography".
+### 1. Atualizar specs reais das plataformas (`FormatSelector.tsx`)
 
----
+Alinhar com requisitos oficiais:
 
-## Onda 2 — Modos de referência (identity / variation / edit)
+| Formato         | Atual       | Correto              |
+|-----------------|-------------|----------------------|
+| Capa Spotify    | 1920×1920   | **3000×3000**        |
+| Capa Deezer     | 1920×1920   | **3000×3000**        |
+| Capa Tidal      | 1920×1920   | **3000×3000**        |
+| Capa YouTube    | 1280×720    | **1920×1080**        |
+| Banner Spotify  | 1280×720    | 2560×1440            |
+| Twitter/X       | 1600×900    | 1600×900 (ok)        |
+| Post IG / Story / Reels | 1080×… | (ok)              |
 
-**Problema**: `editImageUrl` aciona "STRICT IDENTITY PRESERVATION" para qualquer caso — variações ficam travadas, edits abstratos perdem liberdade.
+Atualizar `description` para refletir os novos números.
 
-**Mudanças no edge function `generate-creative`**
-- Aceitar novo campo `referenceMode: "identity" | "variation" | "edit"` (default `"identity"`).
-- Bloco de instruções condicional:
-  - `identity`: mantém regras atuais de preservação facial.
-  - `variation`: "Use the reference as conceptual seed; preserve overall mood and palette but freely change composition, framing, subject pose. If a face appears, you may reinterpret it loosely."
-  - `edit`: "Apply the textual edit instruction to the reference image; preserve subjects and composition, change only what the user describes."
+### 2. Garantir aspect ratio correto na IA
 
-**Mudanças no client**
-- `src/hooks/useCreativeAssets.ts`: adicionar `referenceMode?` no payload de `generate`.
-- `src/pages/Creative.tsx`:
-  - `handleGenerate` (com `referenceImage` upload): passa `"identity"`.
-  - `handleVariation`: passa `"variation"`.
-  - `handleEditSubmit`: passa `"edit"`.
+No edge function `generate-creative`, trocar a instrução de "Aspect ratio: WxH" por uma orientação semântica que o modelo respeita melhor:
+- Calcular `gcd(width, height)` → `aspect ratio: 1:1` / `9:16` / `16:9` / `4:5`.
+- Reforçar com texto: `Output MUST be a [1:1 square / 9:16 vertical / 16:9 horizontal] composition.`
 
----
+### 3. Upscale server-side para resolução final
 
-## Onda 3 — Transparência de texto antes de gerar
+Adicionar etapa de pós-processamento no edge function usando `ImageScript` (Deno-native, sem deps nativas):
 
-**Problema**: Switch "Arte sem nenhum texto" e campos de texto ficam dentro do collapsible "Detalhes da faixa". Usuário gera arte com título indesejado e queima cota.
+```ts
+import { Image } from "https://deno.land/x/imagescript@1.2.17/mod.ts";
 
-**Mudanças em `src/pages/Creative.tsx`**
-- Adicionar pequeno bloco "Texto na arte" **fora do collapsible**, logo acima do botão Gerar:
-  - Se `noText` → badge "Sem texto na arte".
-  - Senão → linha enxuta: "Texto na arte: «{trackName}» · {artistName}" (ou "Nenhum texto definido — adicione título/artista nos Detalhes da faixa").
-  - Toggle inline rápido para "Sem texto" sem precisar abrir collapsible.
-- Tornar o campo "Texto adicional" e o switch "noText" visualmente agrupados dentro do collapsible com separator claro.
+// Após receber imageData base64:
+const raw = imageData.replace(/^data:image\/\w+;base64,/, "");
+const bytes = Uint8Array.from(atob(raw), c => c.charCodeAt(0));
+const img = await Image.decode(bytes);
 
----
+// Crop para o aspect ratio exato (caso a IA tenha desviado)
+const targetRatio = width / height;
+const currentRatio = img.width / img.height;
+if (Math.abs(targetRatio - currentRatio) > 0.02) {
+  // center-crop para o aspect alvo
+  ...
+}
 
-## Onda 4 — Refinos de layout e prompt
+// Resize para a resolução nominal
+const resized = img.resize(width, height);
+const out = await resized.encode(); // PNG
+imageData = `data:image/png;base64,${btoa(String.fromCharCode(...new Uint8Array(out)))}`;
+```
 
-**4a. Prompt mais limpo (edge function)**
-- Refatorar `systemParts` em `generate-creative` para formato estruturado por blocos rotulados (`[FORMAT]`, `[STYLE]`, `[TEXT_RULES]`, `[REFERENCE]`) em inglês — modelos de imagem performam melhor com tags explícitas que com parágrafos longos.
-- Sem mudança de comportamento, só estrutura.
+Isso garante que **o arquivo entregue tenha exatamente as dimensões prometidas** (ex.: 3000×3000 para Spotify), independentemente do que a IA produziu.
 
-**4b. Layout do preview**
-- `src/components/creative/ImagePreview.tsx`: remover `max-w-md` rígido; usar `max-w-md` apenas para formatos quadrados/verticais e `max-w-2xl` para `aspect-video` (YouTube/banner). Em desktop usa melhor a largura.
+### 4. UI de transparência
 
-**4c. Botão Gerar sticky no mobile**
-- Em `src/pages/Creative.tsx` (aba Criar), envolver o botão Gerar em wrapper `sticky bottom-16 md:static` com fundo `bg-background/95 backdrop-blur` no mobile, para evitar scroll até o final em formulários longos.
+- Em `ImagePreview.tsx`, mostrar badge com a resolução real do arquivo gerado (`{width}×{height} px`).
+- No `FormatChips`, manter dimensões na descrição secundária para reforçar a expectativa.
 
----
+## Arquivos editados
 
-## Detalhes técnicos
+- `src/components/creative/FormatSelector.tsx` — specs corretas
+- `supabase/functions/generate-creative/index.ts` — aspect-ratio semântico + upscale com ImageScript
+- `src/components/creative/ImagePreview.tsx` — badge de resolução
 
-**Arquivos editados**
-- `src/components/creative/StyleChips.tsx`
-- `src/components/creative/QuickTemplates.tsx`
-- `src/components/creative/ImagePreview.tsx`
-- `src/pages/Creative.tsx`
-- `src/hooks/useCreativeAssets.ts`
-- `supabase/functions/generate-creative/index.ts`
+## Notas técnicas
 
-**Compatibilidade**
-- `referenceMode` é opcional no edge function (default `identity`) — chamadas antigas continuam funcionando.
-- Mapa `STYLE_DESCRIPTIONS` faz fallback para o valor cru se o ID não estiver mapeado, então estilos legados em registros antigos não quebram.
+- **ImageScript** é puro TypeScript, roda no edge runtime sem binários nativos.
+- Upscale 1024 → 3000 com Lanczos é qualidade aceitável para capas de streaming (e é o que apps como Distrokid já fazem internamente). Para qualidade máxima, futuramente trocar pelo modelo `google/gemini-3-pro-image-preview` que pode entregar resolução nativa maior.
+- Tempo extra de processamento: ~1–2s por imagem.
+- Sem mudança de schema, sem novos secrets.
 
-**Sem migrações de banco**. Sem novos secrets. Edge function `generate-creative` será re-deployada automaticamente.
-
----
-
-Aprove para eu executar todas as 4 ondas em sequência.
+Aprove para executar.
