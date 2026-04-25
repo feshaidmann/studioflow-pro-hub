@@ -148,9 +148,14 @@ export default function MasterAnalyzerModal({
           <DialogTitle className="flex items-center gap-2 text-lg">
             <Upload className="h-5 w-5 text-primary" />
             Master Analyzer — {project.name}
-            {isSpotifyReady === true && (
+            {isSpotifyReady === true && !dynamicWarn && (
               <Badge className="bg-success/20 text-success border-success/40 gap-1 text-xs animate-confetti-pop ml-auto">
                 <CheckCircle2 className="h-3 w-3" /> Pronto para Streaming
+              </Badge>
+            )}
+            {isSpotifyReady === true && dynamicWarn && (
+              <Badge className="bg-warning/20 text-warning border-warning/40 gap-1 text-xs ml-auto">
+                <AlertTriangle className="h-3 w-3" /> Pronto com alerta
               </Badge>
             )}
             {isSpotifyReady === false && (
