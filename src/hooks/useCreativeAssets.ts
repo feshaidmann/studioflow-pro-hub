@@ -81,6 +81,7 @@ export function useCreativeAssets() {
     width: number;
     height: number;
     editImageUrl?: string;
+    referenceMode?: "identity" | "variation" | "edit";
     projectId?: string;
     channelContext?: string;
     trackName?: string;
