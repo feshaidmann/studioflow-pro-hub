@@ -1,81 +1,100 @@
-## Diagnóstico de CX — rodada 2
+# Melhorias de CX — Tela de Projetos (mobile)
 
-Após a primeira leva de melhorias (loop pós-DNA, Track Intelligence integrado ao projeto, deep-links Finanças→Projeto e Agenda→Projeto, chip de contexto Criativo, fix do Badge), reauditei a jornada. A espinha dorsal está sólida. Restam **5 pontos de fricção**, todos pequenos, que ainda quebram a continuidade.
+## Diagnóstico da tela atual
 
-### O que já está bom
-- Dashboard → Projeto → Detalhe → Master Analyzer → DNA → Track Intelligence está conectado bidirecionalmente.
-- `RecentTransactions` e `EventCard` já navegam para `/projects/:id`.
-- `ProjectReleaseTab` exibe `ReadinessCard` com CTA para Track Intelligence.
-- Criativo tem chip de contexto com "Voltar ao projeto" e clear.
-- Drawer "Mais" mobile já tem grupos com sub-labels.
+Olhando o screenshot e o código de `src/pages/Projects.tsx`, a página entrega o básico mas tem fricções claras quando o artista chega aqui no celular:
 
-### Lacunas remanescentes
-
-**1. Página Finanças (`/finance`) — tabela principal de transações sem deep-link**
-Só `RecentTransactions` (Dashboard) navega para o projeto. Na própria página de Finanças, a coluna "Projeto" da tabela não é clicável. Quem está revisando lançamentos não consegue pular direto para o projeto.
-
-**2. Profissionais (`/professionals`) — sem ponte para projetos**
-A célula "Em N projetos" mostra badges com nomes mas não leva a lugar nenhum. No modal de detalhes existe histórico de projetos do profissional, mas também sem link clicável. Usuário fica preso.
-
-**3. Master Analyzer — ausência de link reverso ao DNA salvo**
-Quando o Master Analyzer termina e salva uma análise em `music_dna_analyses`, o modal mostra os scores e o CTA para Track Intelligence (já feito), mas não oferece "Ver análise completa no DNA Musical". Isso quebra a sensação de que é o mesmo motor.
-
-**4. Editais (`/editais`) — saída para projeto recomendado existe, mas sem entrada**
-A partir de um projeto, não há atalho para "Buscar editais para este projeto". Dado que o match já filtra por perfil cultural, faria sentido um botão no `ProjectOverviewTab` ou no `ProjectAISheet`.
-
-**5. Agenda — criar evento a partir do projeto**
-Em `ProjectDetail` não há "Agendar evento para este projeto". O usuário precisa ir até `/agenda` e selecionar manualmente o projeto no formulário. É o oposto do fluxo natural.
-
-### Pontos de UX visual / micro-fricção
-- **Drawer "Mais" mobile**: grupos existem, mas não há indicador "Novo" ou destaque visual para módulos nunca acessados (recomendação anterior não implementada — ainda vale).
-- **Track Intelligence**: lista de análises antigas (`/track-intelligence`) não filtra por projeto, e não há badge visual indicando a qual projeto cada análise pertence.
+1. **A ação primária errada está em destaque.** O card mostra um botão roxo grande "Chat" — mas a tarefa #1 do usuário ao tocar num projeto é **abrir o projeto**, não conversar. O chat compete com o próprio card pelo clique.
+2. **O card inteiro é clicável, mas não parece.** Não há affordance (chevron, "abrir", hover state visível em mobile). O usuário fica em dúvida se toca no nome ou no botão.
+3. **Falta sinal de progresso.** Vejo "Upload (check de áudio)" + "Quase lá", mas não vejo *o quanto* falta. Sem barra de progresso ou próximo passo, o status vira ruído.
+4. **Lápis e lixeira ocupam espaço nobre.** Editar e excluir não são ações frequentes — estão sempre visíveis competindo com o que importa.
+5. **Filtros pouco usados.** Dois selects "Todos os estágios / Todos os status" ocupam uma linha inteira mesmo quando o usuário tem 1 projeto. Em mobile com 1–3 projetos eles são puro custo visual.
+6. **Estado vazio do espaço abaixo.** O usuário com 1 projeto vê uma tela 80% vazia. Oportunidade perdida de sugerir próximo passo (analisar master, agendar gravação, convidar parceiro).
+7. **Header sem contexto.** "Projetos" + "+ Novo Projeto" é genérico. Não dá noção de quantos projetos ativos, quantos quase prontos, etc.
+8. **FAB de chat global flutuante** (canto inferior direito) sobrepõe a UI e duplica visualmente o botão "Chat" do card — confunde.
 
 ---
 
-## Plano de ajustes (rodada 2)
+## Plano de melhorias
 
-### Prioridade 1 — fechar loops de navegação (alto impacto, baixo custo)
+### 1. Reorganizar o card de projeto (impacto alto)
 
-1. **Tabela de Finanças clicável**
-   - Em `src/pages/FinancialTracker.tsx`, na coluna Projeto da tabela de transações, transformar o nome em `<Link to={`/projects/${projectId}`}>` quando houver `project_id`.
+Card vira um **bloco navegável** óbvio, com hierarquia clara:
 
-2. **Profissionais → Projetos**
-   - Em `src/pages/Professionals.tsx`, tornar cada badge de projeto na coluna "Em projeto" um link para `/projects/:id`.
-   - No modal de detalhes (histórico), tornar `project_name` clicável também.
+```text
+┌─────────────────────────────────────────────┐
+│ Herói da Estrada                       ⋮    │  ← menu kebab (editar/excluir)
+│ Antonio Barra                               │
+│                                             │
+│ Upload · check de áudio        ● Quase lá   │
+│ ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░░░  83%             │  ← progresso por estágio
+│                                             │
+│ Próximo passo: Analisar master       →      │  ← CTA contextual
+└─────────────────────────────────────────────┘
+```
 
-3. **Master Analyzer Modal — link para DNA salvo**
-   - Em `src/components/MasterAnalyzerModal.tsx`, na tela de sucesso, adicionar botão secundário "Ver análise completa" → `/music-dna?analysis=:id` (ou rota equivalente já existente na página DNA para abrir uma análise específica).
+- Card inteiro clicável → vai para `/projects/:id` (fluxo principal).
+- "Chat" deixa de ser botão primário; vira ícone secundário no canto, ou some do card e fica acessível dentro do projeto (já temos "Conversar com a equipe" lá).
+- Editar/Excluir ficam atrás de um menu kebab (`⋮`) → reduz ruído, mantém acesso.
+- Barra de progresso usa o estágio (`inicio→gravacao→mix→master→upload→lancado` = 6 passos).
+- "Próximo passo" muda conforme o estágio (ex.: estágio `master` → "Analisar master"; `upload` → "Configurar lançamento"; `inicio` → "Convidar equipe").
 
-4. **Editais a partir do projeto**
-   - Em `src/components/project-hub/ProjectOverviewTab.tsx`, adicionar card discreto "Buscar editais compatíveis" → `/editais?project=:id` (a página Editais já recebe esse param para destacar o projeto).
+### 2. Header com contexto real
 
-5. **Agendar evento a partir do projeto**
-   - Em `ProjectOverviewTab` (ou Release tab), botão "Adicionar à agenda" → `/agenda?new=1&project=:id` que abre o formulário pré-populado.
+Substituir "Projetos" puro por um sumário de uma linha:
 
-### Prioridade 2 — refino fino
+```text
+Projetos
+2 ativos · 1 quase pronto                      [+ Novo]
+```
 
-6. **Track Intelligence — badge de projeto na lista**
-   - Em `src/pages/TrackIntelligence.tsx`, mostrar nome do projeto vinculado em cada item da lista (já existe `project_id` na tabela).
-   - Filtro opcional "Por projeto" no header.
+Botão "+ Novo Projeto" encolhe para "+ Novo" em telas estreitas (já cabe e libera espaço).
 
-7. **Drawer "Mais" — indicador "Novo"**
-   - Em `AppLayout.tsx`, marcar com badge discreto "Novo" itens que o usuário nunca acessou (consultar `page_views` ou usar `localStorage` para tracking client-side simples).
+### 3. Filtros progressivos
+
+- Esconder a barra de filtros quando o usuário tem **≤ 3 projetos ativos** (não há o que filtrar).
+- Quando aparecer, virar **chips horizontais roláveis** em vez de dois selects largos: `Todos · No prazo · Quase lá · Em risco · Parado`. Mais rápido de tocar, mais legível.
+
+### 4. Aproveitar o espaço vazio: "Continue de onde parou"
+
+Abaixo da lista de projetos, um bloco contextual com **1–2 sugestões acionáveis** baseadas no projeto mais avançado:
+
+```text
+Continue em Herói da Estrada
+┌───────────────────┐ ┌───────────────────┐
+│ 🎚 Analisar       │ 📅 Agendar         │
+│ master             │ próxima sessão     │
+└───────────────────┘ └───────────────────┘
+```
+
+Reusa rotas que já existem (`/master-analyzer`, `/agenda?new=1&project=:id`).
+
+### 5. Resolver o conflito do FAB de chat
+
+O botão flutuante roxo no canto inferior duplica o "Chat" do card e atrapalha. Duas opções:
+
+- **A (preferida):** esconder o FAB nas páginas onde já há entrada explícita de chat (Projetos, ProjectDetail). Mantém ele em Dashboard, Finanças, Agenda.
+- **B:** mover para canto superior do header, longe da área de polegar onde o usuário está lendo cards.
+
+### 6. Estado de projetos concluídos
+
+A seção colapsada já existe e está OK. Pequeno ajuste: mostrar o contador no header em vez de no botão para o usuário não precisar rolar — ex.: subtítulo do header vira "2 ativos · 5 concluídos".
 
 ---
 
 ## Detalhes técnicos
 
-- **Padrão de URL**: continuar com `/projects/:id` (não `?id=`), que é o que já está em uso no `ProjectDetail.tsx`.
-- **Rota DNA com análise específica**: verificar se `/music-dna` já aceita `?analysis=:id` para abrir a vista detalhada; se não, adicionar esse comportamento em `MusicDNAAnalyzer.tsx` lendo `searchParams.get("analysis")`.
-- **Pré-popular Agenda**: o `EventForm` já lê `project_id` do estado; só falta adicionar leitura de `searchParams` no mount de `Agenda.tsx` e abrir o dialog automaticamente quando `?new=1`.
-- **Indicador "Novo" no drawer**: usar `localStorage` com chave `sfp_visited_routes` (Set serializado) para evitar query no banco a cada render.
+- **Arquivo principal:** `src/pages/Projects.tsx` (linhas ~935–1029 — bloco da listagem).
+- **Card:** trocar layout `flex justify-between` por estrutura em duas linhas + barra de progresso. Calcular progresso pelo índice em `stages` (`stages.indexOf(project.stage) / 5 * 100`).
+- **Próximo passo contextual:** mapa estático `nextStepByStage: Record<Stage, { label, route }>`.
+- **Menu kebab:** usar `DropdownMenu` do shadcn (já presente no projeto) com itens Editar/Excluir; remover botões soltos.
+- **Header summary:** computar `activeCount`, `quasePromptoCount`, `completedCount` a partir de `projects` + `getProjectStatus`.
+- **Filtros condicionais:** `{activeProjects.length > 3 && <FilterChips />}`. Trocar `Select` por `<button>`s estilizados como `Badge` clicáveis com `variant` ativa.
+- **Bloco "Continue":** identificar `mostAdvanced = projects.filter(!completed).sort(by stage index desc)[0]`; renderizar 2 cards de atalho (reaproveitar padrão de "Quick Links" já implementado em `ProjectOverviewTab.tsx`).
+- **FAB:** localizar componente do chat global flutuante (provavelmente em layout); adicionar prop/condição para esconder em rotas `/projects` e `/projects/:id`.
 
----
+## Fora de escopo
 
-## Ordem de implementação sugerida
-
-1. Itens 1, 2, 3 (deep-links — 1 commit).
-2. Itens 4, 5 (entradas a partir do projeto — 1 commit).
-3. Itens 6, 7 (refino — 1 commit, opcional).
-
-Posso fazer tudo em uma só leva, ou começar só pela Prioridade 1 (itens 1–5) que é onde está o impacto real. Me diz como prefere.
+- Mudanças no fluxo de criação de projeto (wizard).
+- Reordenar estágios ou alterar lógica de status.
+- Internacionalização das novas strings (mantenho PT, seguindo o que está hoje no arquivo).
