@@ -56,6 +56,8 @@ function sortAndFilterEditais(items: Edital[], filterStatus: string): Edital[] {
   } else {
     filtered = items.filter((e) => e.status === filterStatus);
   }
+  // Ordena: status (Aberto > Indefinido > Encerrado), depois prazo ASC (mais próximo primeiro),
+  // editais sem prazo vão para o final dentro do mesmo bucket de status.
   return [...filtered].sort((a, b) => {
     const oa = STATUS_ORDER[a.status] ?? 1;
     const ob = STATUS_ORDER[b.status] ?? 1;
