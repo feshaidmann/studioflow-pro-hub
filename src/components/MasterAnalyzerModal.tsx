@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { AudioWaveform } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -68,6 +70,7 @@ export default function MasterAnalyzerModal({
   onConfirmUpload,
   onCancelWithTask,
 }: MasterAnalyzerModalProps) {
+  const navigate = useNavigate();
   const [file, setFile] = useState<File | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -302,15 +305,30 @@ export default function MasterAnalyzerModal({
 
           {/* Analysis done — metrics OK */}
           {isSpotifyReady === true && (
-            <div className="flex gap-2">
-              <Button variant="outline" className="flex-1" onClick={() => handleOpenChange(false)}>
-                Voltar
+            <>
+              <div className="flex gap-2">
+                <Button variant="outline" className="flex-1" onClick={() => handleOpenChange(false)}>
+                  Voltar
+                </Button>
+                <Button className="flex-1 neon-glow active:scale-95 transition-transform gap-2" onClick={handleConfirmOk}>
+                  <Trophy className="h-4 w-4" />
+                  Confirmar Upload
+                </Button>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-xs gap-1.5 mx-auto text-muted-foreground hover:text-primary"
+                onClick={() => {
+                  reset();
+                  onOpenChange(false);
+                  navigate(`/track-intelligence/new?project=${project.id}`);
+                }}
+              >
+                <AudioWaveform className="h-3.5 w-3.5" />
+                Avaliar prontidão de release
               </Button>
-              <Button className="flex-1 neon-glow active:scale-95 transition-transform gap-2" onClick={handleConfirmOk}>
-                <Trophy className="h-4 w-4" />
-                Confirmar Upload
-              </Button>
-            </div>
+            </>
           )}
 
           {/* Analysis done — metrics FAIL */}

@@ -2,7 +2,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { DollarSign, ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useProjects } from "@/contexts/ProjectContext";
 import type { Transaction } from "@/data/mockData";
+import { cn } from "@/lib/utils";
 
 interface RecentTransactionsProps {
   transactions: Transaction[];
@@ -10,6 +12,8 @@ interface RecentTransactionsProps {
 
 export default function RecentTransactions({ transactions }: RecentTransactionsProps) {
   const navigate = useNavigate();
+  const { projects } = useProjects();
+  const projectMap = Object.fromEntries(projects.map((p) => [p.id, p.name]));
 
   if (transactions.length === 0) return null;
 
@@ -37,10 +41,29 @@ export default function RecentTransactions({ transactions }: RecentTransactionsP
             .map((tx) => {
               const dateStr = new Date(tx.date + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
               const isIncome = tx.type === "income";
+              const projectName = tx.projectId ? projectMap[tx.projectId] : null;
+              const handleClick = () => {
+                if (tx.projectId) navigate(`/projects/${tx.projectId}`);
+              };
               return (
-                <div key={tx.id} className="flex items-center gap-3 px-4 py-2.5 hover:bg-secondary/20 transition-colors">
+                <div
+                  key={tx.id}
+                  className={cn(
+                    "flex items-center gap-3 px-4 py-2.5 hover:bg-secondary/20 transition-colors",
+                    tx.projectId && "cursor-pointer",
+                  )}
+                  onClick={handleClick}
+                  role={tx.projectId ? "button" : undefined}
+                  tabIndex={tx.projectId ? 0 : undefined}
+                  onKeyDown={(e) => { if (tx.projectId && (e.key === "Enter" || e.key === " ")) handleClick(); }}
+                >
                   <span className="text-xs text-muted-foreground font-mono-nums w-11 shrink-0">{dateStr}</span>
-                  <span className="flex-1 text-sm truncate">{tx.description}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm truncate">{tx.description}</div>
+                    {projectName && (
+                      <div className="text-[10px] text-muted-foreground truncate">{projectName}</div>
+                    )}
+                  </div>
                   <span className={`text-sm font-bold font-mono-nums shrink-0 ${isIncome ? "text-success" : "text-destructive"}`}>
                     {isIncome ? "+" : "-"}R$ {tx.amount.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                   </span>

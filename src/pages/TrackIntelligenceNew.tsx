@@ -53,9 +53,9 @@ export default function TrackIntelligenceNew() {
   const { user } = useAuth();
   const { open: openRateLimit } = useRateLimitDialog();
 
-  const [projectId, setProjectId] = useState<string>(searchParams.get("project") || "");
-  const [trackTitle, setTrackTitle] = useState("");
-  const [genre, setGenre] = useState("");
+  const [projectId, setProjectId] = useState<string>(searchParams.get("project") || searchParams.get("projectId") || "");
+  const [trackTitle, setTrackTitle] = useState(searchParams.get("title") || "");
+  const [genre, setGenre] = useState(searchParams.get("genre") || "");
   const [audience, setAudience] = useState("");
   const [date, setDate] = useState("");
   const [platforms, setPlatforms] = useState<string[]>(["Spotify"]);

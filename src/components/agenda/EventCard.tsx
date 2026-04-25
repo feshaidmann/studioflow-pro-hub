@@ -1,6 +1,7 @@
 import { format, parseISO, isToday, isTomorrow, isPast } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { MapPin, FolderKanban, Pencil, Trash2, DollarSign } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -27,6 +28,7 @@ function formatEventDate(iso: string, allDay: boolean) {
 }
 
 export default function EventCard({ event, projectName, onEdit, onDelete, onCreateTransaction }: EventCardProps) {
+  const navigate = useNavigate();
   const typeConfig = getEventType(event.eventType);
   const statusConfig = getEventStatus(event.status);
   const TypeIcon = typeConfig.icon;
@@ -79,10 +81,21 @@ export default function EventCard({ event, projectName, onEdit, onDelete, onCrea
 
             {/* Project */}
             {projectName && (
-              <p className="text-xs text-muted-foreground flex items-center gap-1">
-                <FolderKanban className="h-3 w-3 shrink-0" />
-                <span className="truncate">{projectName}</span>
-              </p>
+              event.projectId ? (
+                <button
+                  type="button"
+                  onClick={() => navigate(`/projects/${event.projectId}`)}
+                  className="text-xs text-primary hover:underline flex items-center gap-1 max-w-full"
+                >
+                  <FolderKanban className="h-3 w-3 shrink-0" />
+                  <span className="truncate">{projectName}</span>
+                </button>
+              ) : (
+                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                  <FolderKanban className="h-3 w-3 shrink-0" />
+                  <span className="truncate">{projectName}</span>
+                </p>
+              )
             )}
 
             {/* Description excerpt */}
