@@ -28,6 +28,7 @@ function formatEventDate(iso: string, allDay: boolean) {
 }
 
 export default function EventCard({ event, projectName, onEdit, onDelete, onCreateTransaction }: EventCardProps) {
+  const navigate = useNavigate();
   const typeConfig = getEventType(event.eventType);
   const statusConfig = getEventStatus(event.status);
   const TypeIcon = typeConfig.icon;
