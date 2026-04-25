@@ -115,7 +115,7 @@ export default function DailyChecklist({
           {activeTasks.length > 0 && <Badge variant="secondary" className="text-xs">{activeTasks.length}</Badge>}
           <div className="ml-auto flex items-center gap-1.5">
             {lastRefreshed && !refreshing && (
-              <span className="text-[10px] text-muted-foreground font-mono-nums">
+              <span className="text-[11px] text-muted-foreground font-mono-nums">
                 {lastRefreshed.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
               </span>
             )}
@@ -156,7 +156,7 @@ export default function DailyChecklist({
                     key={key}
                     onClick={() => setSourceFilter(active ? "all" : key)}
                     className={cn(
-                      "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border transition-all",
+                      "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium border transition-all",
                       active ? "bg-primary/20 border-primary/50 text-primary" : "bg-secondary/50 border-border/40 text-muted-foreground hover:border-border hover:text-foreground",
                     )}
                   >
@@ -171,7 +171,7 @@ export default function DailyChecklist({
             {/* Project filter */}
             {projectsWithTasks.length > 1 && (
               <Select value={projectFilter} onValueChange={setProjectFilter}>
-                <SelectTrigger className="h-6 w-[110px] text-[10px] border-border/40">
+                <SelectTrigger className="h-6 w-[110px] text-[11px] border-border/40">
                   <SelectValue placeholder="Projeto" />
                 </SelectTrigger>
                 <SelectContent>
@@ -189,7 +189,7 @@ export default function DailyChecklist({
               if (assignees.length < 2) return null;
               return (
                 <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
-                  <SelectTrigger className="h-6 w-[110px] text-[10px] border-border/40">
+                  <SelectTrigger className="h-6 w-[110px] text-[11px] border-border/40">
                     <SelectValue placeholder="Responsável" />
                   </SelectTrigger>
                   <SelectContent>
@@ -220,8 +220,8 @@ export default function DailyChecklist({
                 <div key={section}>
                   <div className="flex items-center gap-1.5 mb-1 px-1">
                     <SectionIcon className={cn("h-3 w-3", meta.color)} />
-                    <span className={cn("text-[10px] font-semibold uppercase tracking-wider", meta.color)}>{meta.label}</span>
-                    <Badge variant="outline" className="text-[9px] h-4 px-1">{sectionTasks.length}</Badge>
+                    <span className={cn("text-[11px] font-semibold uppercase tracking-wider", meta.color)}>{meta.label}</span>
+                    <Badge variant="outline" className="text-[11px] h-4 px-1">{sectionTasks.length}</Badge>
                   </div>
                   <div className="space-y-0.5">
                     {sectionTasks.map((task) => {
@@ -241,22 +241,22 @@ export default function DailyChecklist({
                             <span className="text-xs leading-snug block">{task.description}</span>
                             {(task.assignedTo || task.blockedReason) && (
                               <div className="flex items-center gap-2 mt-0.5">
-                                {task.assignedTo && <span className="text-[9px] text-muted-foreground">→ {task.assignedTo}</span>}
-                                {task.blockedReason && <span className="text-[9px] text-orange-400">⚠ {task.blockedReason}</span>}
+                                {task.assignedTo && <span className="text-[11px] text-muted-foreground">→ {task.assignedTo}</span>}
+                                {task.blockedReason && <span className="text-[11px] text-orange-400">⚠ {task.blockedReason}</span>}
                               </div>
                             )}
                           </div>
                           <div className="flex items-center gap-1 shrink-0">
                             {sevBadge && (
-                              <Badge variant="outline" className={cn("text-[8px] h-3.5 px-1", sevBadge.cls)}>{sevBadge.label}</Badge>
+                              <Badge variant="outline" className={cn("text-[11px] h-3.5 px-1", sevBadge.cls)}>{sevBadge.label}</Badge>
                             )}
                             {dueBadge && (
-                              <span className={cn("text-[10px] font-mono-nums flex items-center gap-0.5", dueBadge.color)}>
+                              <span className={cn("text-[11px] font-mono-nums flex items-center gap-0.5", dueBadge.color)}>
                                 <CalendarClock className="h-3 w-3" /> {dueBadge.label}
                               </span>
                             )}
                             {task.autoGenerated && (
-                              <Badge variant="outline" className={cn("text-[9px] h-4 px-1 border-border/40", sourceMeta.color)}>{sourceMeta.label}</Badge>
+                              <Badge variant="outline" className={cn("text-[11px] h-4 px-1 border-border/40", sourceMeta.color)}>{sourceMeta.label}</Badge>
                             )}
                             {/* Block toggle */}
                             {onUpdateTask && !task.blocked && (

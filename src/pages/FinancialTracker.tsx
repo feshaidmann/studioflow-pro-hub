@@ -527,7 +527,7 @@ export default function FinancialTracker() {
             <CardTitle className="text-sm flex items-center gap-2">
               <Clock className="h-4 w-4 text-warning" />
               Pagamentos pendentes por colaborador
-              <Badge variant="secondary" className="text-[10px]">{pendingFees.length}</Badge>
+              <Badge variant="secondary" className="text-[11px]">{pendingFees.length}</Badge>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-1.5">
