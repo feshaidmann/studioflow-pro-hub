@@ -85,7 +85,7 @@ export default function ImagePreview({
 
   return (
     <div className="flex flex-col items-center gap-3">
-      <div className="relative rounded-xl overflow-hidden border border-border/40 shadow-sm max-w-md w-full bg-muted/30">
+      <div className={cn("relative rounded-xl overflow-hidden border border-border/40 shadow-sm w-full bg-muted/30", widthClass)}>
         {isShowingVideo ? (
           <video
             src={videoUrl!}
