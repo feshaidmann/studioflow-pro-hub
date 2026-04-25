@@ -495,11 +495,23 @@ export default function Projects() {
 
   return (
     <div className="p-4 md:p-6 space-y-6 max-w-6xl mx-auto">
-      <div className="flex items-center justify-between flex-wrap gap-2">
-        <h1 className="text-2xl md:text-3xl font-bold neon-text">{t("projects.title")}</h1>
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div className="min-w-0">
+          <h1 className="text-2xl md:text-3xl font-bold neon-text">{t("projects.title")}</h1>
+          {(() => {
+            const activos = projects.filter((p) => !p.completed);
+            const quase = activos.filter((p) => getProjectStatus(p).key === "quase").length;
+            const concluidos = projects.length - activos.length;
+            const parts: string[] = [];
+            parts.push(`${activos.length} ${activos.length === 1 ? "ativo" : "ativos"}`);
+            if (quase > 0) parts.push(`${quase} quase pronto${quase > 1 ? "s" : ""}`);
+            if (concluidos > 0) parts.push(`${concluidos} concluído${concluidos > 1 ? "s" : ""}`);
+            return <p className="text-xs text-muted-foreground mt-1">{parts.join(" · ")}</p>;
+          })()}
+        </div>
         <Dialog open={dialogOpen} onOpenChange={(open) => { if (open) setForm((prev) => ({ ...prev, artist: prev.artist || displayName })); setDialogOpen(open); }}>
           <DialogTrigger asChild>
-            <Button className="neon-glow active:scale-95 transition-transform"><Plus className="h-4 w-4 mr-1" /> {t("projects.addProject")}</Button>
+            <Button className="neon-glow active:scale-95 transition-transform shrink-0"><Plus className="h-4 w-4 mr-1" /> <span className="hidden sm:inline">{t("projects.addProject")}</span><span className="sm:hidden">Novo</span></Button>
           </DialogTrigger>
           <DialogContent className="glass-card border-border">
             <DialogHeader>
