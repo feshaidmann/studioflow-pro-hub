@@ -1298,7 +1298,8 @@ export default function Editais() {
                         </div>
                       )}
                     </div>
-                  ))}
+                  );
+                  })}
                 </div>
               )}
             </CardContent>
