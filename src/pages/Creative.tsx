@@ -32,23 +32,9 @@ import type { DiagnosisResult } from "@/hooks/useMusicDNA";
 import { generateVideoLoop, type VideoPreset } from "@/components/creative/VideoLoopGenerator";
 import { VideoEffectPicker } from "@/components/creative/VideoEffectPicker";
 import type { Intensity, SpotEffect } from "@/components/creative/videoLayers";
-import { useRateLimitDialog } from "@/hooks/useRateLimitDialog";
 import { cleanTrackName } from "@/lib/trackName";
 
-function QuotaIndicator() {
-  const { quota } = useRateLimitDialog();
-  if (!quota) return null;
-  const dailyRemaining = Math.max(0, quota.daily_limit - quota.daily_used);
-  // Only show when 5 or fewer remaining
-  if (dailyRemaining > 5) return null;
-  return (
-    <div className="text-[11px] text-muted-foreground text-center">
-      {dailyRemaining === 0
-        ? "Limite diário atingido"
-        : `${dailyRemaining} ${dailyRemaining === 1 ? "geração restante" : "gerações restantes"} hoje`}
-    </div>
-  );
-}
+import { AIQuotaBadge } from "@/components/ui/ai-quota-badge";
 
 async function downloadFile(url: string, filename: string) {
   try {
@@ -183,6 +169,7 @@ export default function Creative() {
   // Gallery
   const [filterFormat, setFilterFormat] = useState<string>("all");
   const [filterProject, setFilterProject] = useState<string>("all");
+  const [gallerySearch, setGallerySearch] = useState<string>("");
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; path: string } | null>(null);
   const [lightboxIndex, setLightboxIndex] = useState<number>(-1);
   const [dnaSource, setDnaSource] = useState<DiagnosisResult | null>(null);
@@ -496,11 +483,18 @@ export default function Creative() {
   };
 
   // Filtered gallery
+  const galleryQuery = gallerySearch.trim().toLowerCase();
   const filteredAssets = assets.filter((a) => {
     if (filterFormat !== "all" && a.format !== filterFormat) return false;
     if (filterProject !== "all" && (a.project_id || "") !== filterProject) return false;
+    if (galleryQuery) {
+      const haystack = `${a.prompt || ""} ${a.style || ""}`.toLowerCase();
+      if (!haystack.includes(galleryQuery)) return false;
+    }
     return true;
   });
+  const hasGalleryFilters = filterFormat !== "all" || filterProject !== "all" || galleryQuery !== "";
+  const clearGalleryFilters = () => { setFilterFormat("all"); setFilterProject("all"); setGallerySearch(""); };
 
   const assetFormats = [...new Set(assets.map((a) => a.format))];
   const assetProjectIds = [...new Set(assets.filter((a) => a.project_id).map((a) => a.project_id!))];
@@ -819,7 +813,7 @@ export default function Creative() {
 
               {/* 7. Generate button */}
               <div className="space-y-2">
-                <QuotaIndicator />
+                <div className="flex justify-center"><AIQuotaBadge variant="text" /></div>
                 {selectedFormat.isVideo && isMobile && (
                   <p className="text-[11px] text-muted-foreground bg-muted/30 border border-border rounded-md px-2.5 py-1.5 leading-snug">
                     💡 Renderização de vídeo é mais estável no desktop. No mobile pode levar de 30s a 2min e consumir bateria.
@@ -888,34 +882,57 @@ export default function Creative() {
         <TabsContent value="gallery" className="mt-4 space-y-4">
           {/* Gallery filters */}
           {assets.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              <Select value={filterFormat} onValueChange={setFilterFormat}>
-                <SelectTrigger className="h-8 w-[160px] text-xs">
-                  <SelectValue placeholder="Formato" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos os formatos</SelectItem>
-                  {assetFormats.map((f) => {
-                    const opt = FORMAT_OPTIONS.find((fo) => fo.id === f);
-                    return <SelectItem key={f} value={f}>{opt?.label || f}</SelectItem>;
-                  })}
-                </SelectContent>
-              </Select>
-
-              {assetProjectIds.length > 0 && (
-                <Select value={filterProject} onValueChange={setFilterProject}>
-                  <SelectTrigger className="h-8 w-[180px] text-xs">
-                    <SelectValue placeholder="Projeto" />
+            <div className="flex flex-col gap-2">
+              <div className="relative">
+                <Input
+                  value={gallerySearch}
+                  onChange={(e) => setGallerySearch(e.target.value)}
+                  placeholder="Buscar por prompt ou estilo…"
+                  className="h-9 text-sm pr-8"
+                />
+                {gallerySearch && (
+                  <button
+                    onClick={() => setGallerySearch("")}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    aria-label="Limpar busca"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-2 items-center">
+                <Select value={filterFormat} onValueChange={setFilterFormat}>
+                  <SelectTrigger className="h-8 w-[160px] text-xs">
+                    <SelectValue placeholder="Formato" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">Todos os projetos</SelectItem>
-                    {assetProjectIds.map((pid) => {
-                      const proj = projects.find((p) => p.id === pid);
-                      return <SelectItem key={pid} value={pid}>{proj?.name || "Projeto"}</SelectItem>;
+                    <SelectItem value="all">Todos os formatos</SelectItem>
+                    {assetFormats.map((f) => {
+                      const opt = FORMAT_OPTIONS.find((fo) => fo.id === f);
+                      return <SelectItem key={f} value={f}>{opt?.label || f}</SelectItem>;
                     })}
                   </SelectContent>
                 </Select>
-              )}
+
+                {assetProjectIds.length > 0 && (
+                  <Select value={filterProject} onValueChange={setFilterProject}>
+                    <SelectTrigger className="h-8 w-[180px] text-xs">
+                      <SelectValue placeholder="Projeto" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos os projetos</SelectItem>
+                      {assetProjectIds.map((pid) => {
+                        const proj = projects.find((p) => p.id === pid);
+                        return <SelectItem key={pid} value={pid}>{proj?.name || "Projeto"}</SelectItem>;
+                      })}
+                    </SelectContent>
+                  </Select>
+                )}
+
+                <span className="text-[11px] text-muted-foreground ml-auto">
+                  {filteredAssets.length} de {assets.length}
+                </span>
+              </div>
             </div>
           )}
 
@@ -928,8 +945,13 @@ export default function Creative() {
               <p className="text-xs mt-1">Gere sua primeira imagem na aba Criar.</p>
             </div>
           ) : filteredAssets.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
+            <div className="text-center py-8 text-muted-foreground space-y-2">
               <p className="text-sm">Nenhuma arte encontrada com esses filtros.</p>
+              {hasGalleryFilters && (
+                <Button variant="outline" size="sm" onClick={clearGalleryFilters} className="h-8">
+                  <X className="h-3.5 w-3.5 mr-1" /> Limpar filtros
+                </Button>
+              )}
             </div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">

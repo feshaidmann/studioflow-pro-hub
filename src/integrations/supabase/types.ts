@@ -656,6 +656,7 @@ export type Database = {
           musician_id: string
           name: string
           position: number
+          professional_id: string | null
           project_id: string
           sidechain_trigger: string
           track_source: string
@@ -675,6 +676,7 @@ export type Database = {
           musician_id?: string
           name?: string
           position?: number
+          professional_id?: string | null
           project_id: string
           sidechain_trigger?: string
           track_source?: string
@@ -694,6 +696,7 @@ export type Database = {
           musician_id?: string
           name?: string
           position?: number
+          professional_id?: string | null
           project_id?: string
           sidechain_trigger?: string
           track_source?: string
@@ -1004,6 +1007,7 @@ export type Database = {
           id: string
           notes: string
           professional_email: string
+          professional_id: string | null
           professional_name: string
           project_id: string
           stars: number
@@ -1014,6 +1018,7 @@ export type Database = {
           id?: string
           notes?: string
           professional_email?: string
+          professional_id?: string | null
           professional_name?: string
           project_id: string
           stars: number
@@ -1024,6 +1029,7 @@ export type Database = {
           id?: string
           notes?: string
           professional_email?: string
+          professional_id?: string | null
           professional_name?: string
           project_id?: string
           stars?: number

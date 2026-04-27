@@ -91,8 +91,15 @@ function sortAndFilterEditais(items: Edital[], filterStatus: string): Edital[] {
 function formatDate(d: string | null) {
   if (!d) return "—";
   try {
-    const date = new Date(d + "T00:00:00");
-    return date.toLocaleDateString("pt-BR");
+    // Datas vêm como YYYY-MM-DD (date-only) — fixamos timezone para evitar
+    // off-by-one entre fusos diferentes do Brasil.
+    const date = new Date(d + "T12:00:00-03:00");
+    return new Intl.DateTimeFormat("pt-BR", {
+      timeZone: "America/Sao_Paulo",
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    }).format(date);
   } catch { return d; }
 }
 
@@ -1233,7 +1240,15 @@ export default function Editais() {
 
               {recoProjectId && hasCulturalProfile && !loadingMatches && matches.length > 0 && (
                 <div className="space-y-2">
-                  {matches.slice(0, 10).map((m) => (
+                  {[...matches].sort((a, b) => b.score - a.score).slice(0, 10).map((m) => {
+                    const scoreClass =
+                      m.score >= 70 ? "bg-green-500/15 text-green-700 border-green-200" :
+                      m.score >= 40 ? "bg-amber-500/15 text-amber-700 border-amber-200" :
+                                      "bg-muted text-muted-foreground border-border";
+                    const scoreLabel =
+                      m.score >= 70 ? "Forte compatibilidade" :
+                      m.score >= 40 ? "Compatibilidade média" : "Compatibilidade baixa";
+                    return (
                     <div
                       key={m.id}
                       className="rounded-lg border border-border p-3 space-y-1.5 cursor-pointer hover:bg-muted/30 transition-colors"
@@ -1249,9 +1264,26 @@ export default function Editais() {
                     >
                       <div className="flex items-start justify-between gap-2">
                         <p className="text-sm font-medium leading-snug flex-1">{m.titulo}</p>
-                        <Badge variant="secondary" className="shrink-0 text-[11px]">
-                          Score {m.score}
-                        </Badge>
+                        <TooltipProvider delayDuration={150}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Badge variant="outline" className={`shrink-0 text-[11px] ${scoreClass}`}>
+                                Match {m.score}%
+                              </Badge>
+                            </TooltipTrigger>
+                            <TooltipContent side="left" className="text-xs">{scoreLabel}</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
+                      {/* Barra de progresso visual do match */}
+                      <div className="h-1 w-full rounded-full bg-muted overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all ${
+                            m.score >= 70 ? "bg-green-500" :
+                            m.score >= 40 ? "bg-amber-500" : "bg-muted-foreground/40"
+                          }`}
+                          style={{ width: `${Math.min(100, Math.max(0, m.score))}%` }}
+                        />
                       </div>
                       <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
                         {m.orgao && <span>{m.orgao}</span>}
@@ -1266,7 +1298,8 @@ export default function Editais() {
                         </div>
                       )}
                     </div>
-                  ))}
+                  );
+                  })}
                 </div>
               )}
             </CardContent>
