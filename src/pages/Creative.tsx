@@ -35,20 +35,7 @@ import type { Intensity, SpotEffect } from "@/components/creative/videoLayers";
 import { useRateLimitDialog } from "@/hooks/useRateLimitDialog";
 import { cleanTrackName } from "@/lib/trackName";
 
-function QuotaIndicator() {
-  const { quota } = useRateLimitDialog();
-  if (!quota) return null;
-  const dailyRemaining = Math.max(0, quota.daily_limit - quota.daily_used);
-  // Only show when 5 or fewer remaining
-  if (dailyRemaining > 5) return null;
-  return (
-    <div className="text-[11px] text-muted-foreground text-center">
-      {dailyRemaining === 0
-        ? "Limite diário atingido"
-        : `${dailyRemaining} ${dailyRemaining === 1 ? "geração restante" : "gerações restantes"} hoje`}
-    </div>
-  );
-}
+import { AIQuotaBadge } from "@/components/ui/ai-quota-badge";
 
 async function downloadFile(url: string, filename: string) {
   try {
