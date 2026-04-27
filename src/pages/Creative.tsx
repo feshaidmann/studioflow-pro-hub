@@ -814,7 +814,7 @@ export default function Creative() {
 
               {/* 7. Generate button */}
               <div className="space-y-2">
-                <QuotaIndicator />
+                <div className="flex justify-center"><AIQuotaBadge variant="text" /></div>
                 {selectedFormat.isVideo && isMobile && (
                   <p className="text-[11px] text-muted-foreground bg-muted/30 border border-border rounded-md px-2.5 py-1.5 leading-snug">
                     💡 Renderização de vídeo é mais estável no desktop. No mobile pode levar de 30s a 2min e consumir bateria.
