@@ -32,7 +32,6 @@ import type { DiagnosisResult } from "@/hooks/useMusicDNA";
 import { generateVideoLoop, type VideoPreset } from "@/components/creative/VideoLoopGenerator";
 import { VideoEffectPicker } from "@/components/creative/VideoEffectPicker";
 import type { Intensity, SpotEffect } from "@/components/creative/videoLayers";
-import { useRateLimitDialog } from "@/hooks/useRateLimitDialog";
 import { cleanTrackName } from "@/lib/trackName";
 
 import { AIQuotaBadge } from "@/components/ui/ai-quota-badge";
