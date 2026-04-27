@@ -294,75 +294,77 @@ serve(async (req) => {
     };
 
     const styleDescription = style ? (STYLE_DESCRIPTIONS[style] || style) : null;
+    const aspectStr = aspectLabel(width, height);
 
-    // Build structured system prompt with labeled blocks
+    // Build briefing as art direction (positive tone, pt-BR, focused on craft)
     const systemBlocks: string[] = [];
 
     systemBlocks.push(
-      "[ROLE]\nYou are a visual art generator for musicians and artists releasing music."
+      [
+        "Você é diretor de arte para artistas independentes brasileiros lançando música.",
+        "Sua missão é traduzir o briefing do usuário em uma composição visual autoral, com identidade forte, hierarquia clara e potencial de destaque em feed e capas de streaming.",
+        "",
+        "Princípios de execução:",
+        "- Composição com intenção: ponto focal claro, hierarquia visual, uso ousado de cor, luz, textura e profundidade. Evite simetria preguiçosa, centralização padrão e estética stock.",
+        "- Direção autoral: cada arte deve parecer feita à mão por um diretor de arte, não montada por template. Varie ângulo, enquadramento, escala e atmosfera.",
+        "- Sensibilidade brasileira: estética coerente com o cenário musical contemporâneo do Brasil quando o briefing sugerir.",
+        "- O briefing do usuário (mensagem do usuário) é a INSTRUÇÃO PRIMÁRIA de composição: cena, sujeitos, ambiente, atmosfera e elementos visuais descritos devem aparecer na imagem. Interprete com liberdade artística, mas não ignore.",
+      ].join("\n")
     );
 
-    const aspectStr = aspectLabel(width, height);
     systemBlocks.push(
-      `[FORMAT]\nTarget format: ${format}. Output MUST be a ${aspectStr} composition. Frame the entire scene to fit this aspect ratio — do NOT crop subjects awkwardly. Final delivery resolution: ${width}×${height} pixels.`
+      `Formato: ${format}, composição ${aspectStr}, entrega final em ${width}×${height} pixels. Enquadre a cena inteira respeitando esse aspecto, sem cortes amadores nos sujeitos.`
     );
 
     if (styleDescription) {
-      systemBlocks.push(`[STYLE]\n${styleDescription}.`);
+      systemBlocks.push(`Estilo visual de referência: ${styleDescription}.`);
     }
 
     if (channelContext) {
-      systemBlocks.push(`[CHANNEL]\nAdapt for distribution channel: ${channelContext}.`);
+      systemBlocks.push(`Canal de distribuição: ${channelContext}. Adapte legibilidade e impacto para esse contexto.`);
     }
 
-    // TEXT RULES block — always present, controls what becomes literal text in the image
-    const textRules: string[] = [];
-    textRules.push("The user's creative description is COMPOSITION GUIDANCE ONLY (mood, scene, palette). NEVER render its words as visible text in the image.");
-    textRules.push("Do NOT depict music theory, chords, sheet music, tablature, instrument lines, DAW waveforms, BPM/LUFS readouts or technical audio diagrams.");
-    textRules.push("When a song title is given, use its meaning as conceptual inspiration only — do not render the title as text unless explicitly listed below.");
-    textRules.push("Allowed text MUST be Brazilian Portuguese (pt-BR) for generic words. Proper names (titles, artists) keep their ORIGINAL spelling exactly — never translated.");
-
-    if (noText) {
-      textRules.push("ABSOLUTE TEXT BAN: render NO text, letters, numbers, words, logos or watermarks. Pure visual composition only. Ignore all title/artist/date fields below.");
-    } else {
-      if (trackName) {
-        textRules.push(`MANDATORY — SONG TITLE: render exactly "${trackName}" as the most prominent legible typography. Spell character-for-character; do not omit, paraphrase, translate or abbreviate.`);
-      }
-      if (artistName) {
-        textRules.push(`MANDATORY — ARTIST NAME: render exactly "${artistName}" as clear secondary typography (smaller than title but prominent). Spell character-for-character.`);
-      }
-      if (releaseDate) {
-        textRules.push(`Release date: ${releaseDate}. Include as small supporting text if it fits the composition.`);
-      }
-      if (additionalText) {
-        textRules.push(`Additional text (if it fits): "${additionalText}". Short supporting copy like a tagline or feature mention.`);
-      }
-      if (trackName || artistName) {
-        textRules.push("Verify before finalizing: every mandatory text string appears spelled exactly as given. No misspellings, omissions or substitutions.");
-      } else {
-        textRules.push("No mandatory text fields provided — render NO text at all.");
-      }
+    // Typography rules — surgical, only when needed
+    const wantsText = !noText && (trackName || artistName || additionalText);
+    if (noText || (!trackName && !artistName && !additionalText)) {
+      systemBlocks.push(
+        "Composição puramente visual: NÃO renderize texto, letras, números, palavras, logos, marcas d'água, partituras, BPM ou diagramas técnicos. Sem tipografia de qualquer tipo na imagem."
+      );
+    } else if (wantsText) {
+      const lines: string[] = [];
+      lines.push("Tipografia integrada à composição (parte do design, não etiqueta colada):");
+      if (trackName) lines.push(`- Título da faixa: "${trackName}" — tipografia mais destacada da arte.`);
+      if (artistName) lines.push(`- Nome do artista: "${artistName}" — tipografia secundária, menor que o título mas legível.`);
+      if (releaseDate) lines.push(`- Data de lançamento: ${releaseDate} — apenas se couber elegantemente, em tamanho pequeno.`);
+      if (additionalText) lines.push(`- Texto adicional: "${additionalText}" — apoio curto, se couber.`);
+      lines.push(
+        "Use APENAS os textos listados acima. NÃO invente subtítulos, taglines, créditos, datas, hashtags, números, slogans ou qualquer palavra extra. Se uma string não foi fornecida, não a substitua por nada — deixe a área vazia."
+      );
+      lines.push("Mantenha a grafia exata, caractere por caractere. Nomes próprios não são traduzidos.");
+      systemBlocks.push(lines.join("\n"));
     }
-    systemBlocks.push(`[TEXT_RULES]\n${textRules.join("\n")}`);
 
-    // REFERENCE block — only when an image is provided
+    // Reference image handling — translated, simplified, kept rigorous on identity
     if (editImageUrl) {
       const refMode = (referenceMode as string) || "identity";
-      const referenceLines: string[] = [];
-      referenceLines.push("AUTHORIZED REFERENCE: the uploaded image is authorized source material; assume the user holds all necessary image, likeness and usage rights.");
+      const refLines: string[] = [];
+      refLines.push("Imagem de referência autorizada anexada pelo usuário (direitos de uso garantidos).");
 
       if (refMode === "variation") {
-        referenceLines.push("MODE — VARIATION: use the reference as a conceptual seed. Preserve overall mood, palette and stylistic feel, but freely change composition, framing, subject pose, background and details. If a face appears, you may reinterpret it loosely; strict identity preservation is NOT required.");
+        refLines.push(
+          "Modo VARIAÇÃO: use a referência como semente conceitual. Preserve clima geral, paleta e sensibilidade estética, mas mude livremente composição, enquadramento, pose, cenário e detalhes. Se houver rosto, pode reinterpretá-lo livremente."
+        );
       } else if (refMode === "edit") {
-        referenceLines.push("MODE — EDIT: apply the user's textual instruction to the reference image. Preserve subjects, composition and identity; modify only what the instruction explicitly asks to change.");
+        refLines.push(
+          "Modo EDIÇÃO: aplique a instrução textual do usuário sobre a imagem de referência. Preserve sujeitos, composição e identidade; modifique somente o que a instrução pede explicitamente."
+        );
       } else {
-        // identity (default)
-        referenceLines.push("MODE — IDENTITY: STRICT facial identity preservation. If a human face appears, preserve the artist's facial identity exactly — do NOT modify, replace, beautify, age, de-age, distort or reinterpret the face, features, skin tone, expression essence, distinctive marks, hairline, eye shape, nose, mouth or jawline.");
-        referenceLines.push("Use the reference as the identity base. Only adapt non-identity elements: composition, crop, background, scenery, lighting, color palette, clothing styling, typography, format and promotional layout.");
-        referenceLines.push("If preserving identity conflicts with the requested visual style, prioritize identity preservation over style transformation.");
+        refLines.push(
+          "Modo IDENTIDADE: preservação ESTRITA da identidade facial. Se houver rosto humano, mantenha-o exatamente como na referência — não modifique, embeleze, envelheça, rejuvenesça ou reinterprete traços, tom de pele, formato dos olhos, nariz, boca, mandíbula, linha do cabelo ou marcas distintivas. Adapte apenas elementos NÃO-identitários: composição, recorte, cenário, iluminação, paleta, figurino, tipografia e layout. Se preservar a identidade conflitar com o estilo pedido, priorize a identidade."
+        );
       }
 
-      systemBlocks.push(`[REFERENCE]\n${referenceLines.join("\n")}`);
+      systemBlocks.push(refLines.join("\n"));
     }
 
     const messages: any[] = [
