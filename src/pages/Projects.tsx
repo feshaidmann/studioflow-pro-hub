@@ -883,29 +883,41 @@ export default function Projects() {
                       </div>
 
                       {/* Collapsible optional details */}
-                      <Collapsible open={optionalOpen} onOpenChange={setOptionalOpen}>
-                        <CollapsibleTrigger className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors w-full">
-                          <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", optionalOpen && "rotate-180")} />
-                          Detalhes opcionais
-                        </CollapsibleTrigger>
-                        <CollapsibleContent className="space-y-3 pt-3 animate-fade-in">
-                          <div className="grid grid-cols-2 gap-3">
-                            <div className="space-y-1.5">
-                              <Label>Cachê (R$)</Label>
-                              <Input type="number" placeholder="0" value={proposalForm.fee} onChange={(e) => setProposalForm((f) => ({ ...f, fee: e.target.value }))} className="font-mono-nums" />
-                            </div>
-                            <div className="space-y-1.5">
-                              <Label>Prazo de entrega</Label>
-                              <DatePickerField value={proposalForm.deadline} onChange={(v) => { setProposalForm((f) => ({ ...f, deadline: v })); setDeadlineWarningConfirmed(false); }} disablePast />
-                            </div>
-                          </div>
-                          <div className="space-y-1.5">
-                            <Label>Notas / Observações</Label>
-                            <Textarea placeholder="Dias disponíveis, horário de gravação…" value={proposalForm.scheduleNotes} onChange={(e) => setProposalForm((f) => ({ ...f, scheduleNotes: e.target.value }))} className="h-20 resize-none" />
-                          </div>
-                        </CollapsibleContent>
-                      </Collapsible>
-
+                      {(() => {
+                        const optionalCount = [proposalForm.fee, proposalForm.deadline, proposalForm.scheduleNotes]
+                          .filter((v) => v && String(v).trim() !== "" && String(v) !== "0").length;
+                        return (
+                          <Collapsible open={optionalOpen} onOpenChange={setOptionalOpen}>
+                            <CollapsibleTrigger className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors w-full">
+                              <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", optionalOpen && "rotate-180")} />
+                              <span>Detalhes opcionais</span>
+                              {optionalCount > 0 ? (
+                                <Badge variant="secondary" className="ml-auto text-[10px] px-1.5 py-0 h-4">
+                                  {optionalCount} preenchido{optionalCount !== 1 ? "s" : ""}
+                                </Badge>
+                              ) : (
+                                <span className="ml-auto text-[10px] text-muted-foreground/70">3 campos</span>
+                              )}
+                            </CollapsibleTrigger>
+                            <CollapsibleContent className="space-y-3 pt-3 animate-fade-in">
+                              <div className="grid grid-cols-2 gap-3">
+                                <div className="space-y-1.5">
+                                  <Label>Cachê (R$)</Label>
+                                  <Input type="number" placeholder="0" value={proposalForm.fee} onChange={(e) => setProposalForm((f) => ({ ...f, fee: e.target.value }))} className="font-mono-nums" />
+                                </div>
+                                <div className="space-y-1.5">
+                                  <Label>Prazo de entrega</Label>
+                                  <DatePickerField value={proposalForm.deadline} onChange={(v) => { setProposalForm((f) => ({ ...f, deadline: v })); setDeadlineWarningConfirmed(false); }} disablePast />
+                                </div>
+                              </div>
+                              <div className="space-y-1.5">
+                                <Label>Notas / Observações</Label>
+                                <Textarea placeholder="Dias disponíveis, horário de gravação…" value={proposalForm.scheduleNotes} onChange={(e) => setProposalForm((f) => ({ ...f, scheduleNotes: e.target.value }))} className="h-20 resize-none" />
+                              </div>
+                            </CollapsibleContent>
+                          </Collapsible>
+                        );
+                      })()}
                       {/* Deadline warning */}
                       {proposalHasDeadlineWarning && (
                         <div className="flex flex-col gap-2 rounded-lg bg-warning/10 border border-warning/30 p-3 animate-fade-in">
