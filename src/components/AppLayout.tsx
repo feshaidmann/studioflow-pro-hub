@@ -19,7 +19,6 @@ import {
   HelpCircle,
   MoreHorizontal,
   Palette,
-  AudioWaveform,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -46,7 +45,6 @@ const gestaoItems = [
   { labelKey: "nav.musicdna",      path: "/music-dna",     icon: Dna,          proOnly: false, mobileLabel: "nav.musicdna.short" },
   { labelKey: "nav.editais",      path: "/editais",       icon: FileText,     proOnly: false, mobileLabel: "" },
   { labelKey: "nav.creative",     path: "/criativo",      icon: Palette,      proOnly: false, mobileLabel: "" },
-  { labelKey: "nav.trackintel",   path: "/track-intelligence", icon: AudioWaveform, proOnly: false, mobileLabel: "" },
   { labelKey: "nav.professionals", path: "/professionals", icon: Users,        proOnly: false, mobileLabel: "" },
 ];
 
@@ -55,7 +53,6 @@ const drawerSubLabels: Record<string, string> = {
   "/editais":            "Chamadas e inscrições",
   "/professionals":      "Equipe e parceiros",
   "/criativo":           "Arte com IA",
-  "/track-intelligence": "Está pronto para lançar?",
   "/music-dna":          "Análise técnica de mix/master",
 };
 
@@ -102,9 +99,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   // Drawer "Mais" — apenas FERRAMENTAS, reordenadas por frequência (P1)
   const toolDrawerItems = [
     gestaoItems[3], // Editais
-    gestaoItems[6], // Profissionais
+    gestaoItems[5], // Profissionais
     gestaoItems[4], // Criativo
-    gestaoItems[5], // Track Intelligence
     gestaoItems[2], // DNA Musical
   ];
 
@@ -113,7 +109,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const prefetchRoute = (path: string) => {
     switch (path) {
       case "/criativo":     import("@/pages/Creative");      break;
-      case "/track-intelligence": import("@/pages/TrackIntelligence"); break;
       case "/editais":      import("@/pages/Editais");       break;
       case "/professionals": import("@/pages/Professionals"); break;
       case "/music-dna":    import("@/pages/MusicDNA");      break;
@@ -142,7 +137,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   const isItemActive = (item: { path: string }) => location.pathname === item.path;
 
-  const ROOT_ROUTES = ["/dashboard", "/projects", "/finance", "/agenda", "/professionals", "/settings", "/admin", "/tutorial", "/music-dna", "/editais", "/criativo", "/track-intelligence", "/"];
+  const ROOT_ROUTES = ["/dashboard", "/projects", "/finance", "/agenda", "/professionals", "/settings", "/admin", "/tutorial", "/music-dna", "/editais", "/criativo", "/"];
   const isRootRoute = ROOT_ROUTES.includes(location.pathname);
 
   // ── Mobile ─────────────────────────────────────────────────────────────────
