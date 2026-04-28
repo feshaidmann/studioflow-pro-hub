@@ -323,20 +323,6 @@ export default function MasterAnalyzerModal({
                   onClick={() => {
                     reset();
                     onOpenChange(false);
-                    navigate(`/track-intelligence/new?project=${project.id}`);
-                  }}
-                >
-                  <AudioWaveform className="h-3.5 w-3.5" />
-                  Avaliar prontidão de release
-                </Button>
-                <span className="text-muted-foreground/40 text-xs">·</span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-xs gap-1.5 text-muted-foreground hover:text-primary"
-                  onClick={() => {
-                    reset();
-                    onOpenChange(false);
                     navigate(`/music-dna`);
                   }}
                 >

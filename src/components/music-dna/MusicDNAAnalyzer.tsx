@@ -1033,20 +1033,6 @@ function NextStepsBar({
         >
           <Palette className="h-3.5 w-3.5" /> Gerar capa com este DNA
         </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          className="gap-1.5 text-xs bg-background"
-          onClick={() => {
-            const params = new URLSearchParams();
-            if (projectId) params.set("projectId", projectId);
-            if (trackTitle) params.set("title", input.name);
-            if (genre) params.set("genre", genre);
-            navigate(`/track-intelligence/new?${params.toString()}`);
-          }}
-        >
-          <AudioWaveform className="h-3.5 w-3.5" /> Avaliar prontidão de release
-        </Button>
         {projectId && (
           <Button
             size="sm"
