@@ -384,9 +384,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               </div>
             )}
             {renderNavItem(gestaoItems[3])}
-            {renderNavItem(gestaoItems[6])}
-            {renderNavItem(gestaoItems[4])}
             {renderNavItem(gestaoItems[5])}
+            {renderNavItem(gestaoItems[4])}
             {renderNavItem(gestaoItems[2])}
 
             {/* Conta */}
