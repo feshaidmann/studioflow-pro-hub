@@ -7,7 +7,7 @@ import {
   Radar, RadarChart, PolarAngleAxis,
   ResponsiveContainer, Legend,
 } from "recharts";
-import { Upload, X, FileAudio, Music, MessageSquare, ListPlus, Check, Save, Trash2, History, Palette, AudioWaveform, ArrowRight, FolderKanban } from "lucide-react";
+import { Upload, X, FileAudio, Music, MessageSquare, ListPlus, Check, Save, Trash2, History, Palette, ArrowRight, FolderKanban } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useProjects } from "@/contexts/ProjectContext";
 import { useTasks } from "@/hooks/useTasks";
