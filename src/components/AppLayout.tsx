@@ -19,7 +19,6 @@ import {
   HelpCircle,
   MoreHorizontal,
   Palette,
-  AudioWaveform,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
