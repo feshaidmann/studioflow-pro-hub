@@ -192,12 +192,12 @@ function buildPrompt(
   const hz = (v: number) => `${Math.round(v)} Hz`;
   const sec = (s: number, e: number) => `${s.toFixed(0)}s–${e.toFixed(0)}s`;
 
-  // True Peak diagnostic
+  // True Peak diagnostic — alvo -1 dBTP com tolerância de ±1 dB (aceitável até 0 dBTP)
   const tpStatus = analysis.true_peak_dbtp > 0
-    ? `CRÍTICO: ${db(analysis.true_peak_dbtp)} dBTP — acima de 0 dBTP, haverá clipagem pós-normalização. O Spotify aplicará ganho de ${db(-1 * (analysis.lufs_integrated + 14))} dB, levando o True Peak a ${db(analysis.true_peak_dbtp + (-1 * (analysis.lufs_integrated + 14)))} dBTP.`
+    ? `CRÍTICO: ${db(analysis.true_peak_dbtp)} dBTP — acima de 0 dBTP (alvo −1 dBTP ± 1 dB de tolerância). Haverá clipagem pós-normalização. O Spotify aplicará ganho de ${db(-1 * (analysis.lufs_integrated + 14))} dB, levando o True Peak a ${db(analysis.true_peak_dbtp + (-1 * (analysis.lufs_integrated + 14)))} dBTP.`
     : analysis.true_peak_dbtp > -1
-    ? `ATENÇÃO: ${db(analysis.true_peak_dbtp)} dBTP — acima do limite seguro de −1 dBTP. Risco de artefatos nos codecs de streaming.`
-    : `OK: ${db(analysis.true_peak_dbtp)} dBTP — dentro do limite seguro (≤ −1 dBTP).`;
+    ? `TOLERÂNCIA: ${db(analysis.true_peak_dbtp)} dBTP — acima do alvo (−1 dBTP) mas dentro da tolerância de ±1 dB. Seguro para a maioria dos codecs de streaming; monitore o ceiling do limiter.`
+    : `OK: ${db(analysis.true_peak_dbtp)} dBTP — dentro do alvo (≤ −1 dBTP).`;
 
   const lufsStatus = (() => {
     const target = -14;
