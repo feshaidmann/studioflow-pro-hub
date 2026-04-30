@@ -23,13 +23,38 @@ function estimateCost(inputTokens = 0, outputTokens = 0) {
   return Number(((inputTokens / 1_000_000) * TOKEN_INPUT_USD_PER_M + (outputTokens / 1_000_000) * TOKEN_OUTPUT_USD_PER_M).toFixed(8));
 }
 
-function buildStructuredPrompt(prompt: string, payload: Record<string, unknown>, benchmark: unknown, examples: unknown) {
+function buildStructuredPrompt(
+  prompt: string,
+  payload: Record<string, unknown>,
+  benchmark: unknown,
+  genreExamples: unknown,
+  nearestNeighbors: unknown,
+) {
   const features = payload.features ? JSON.stringify(payload.features, null, 2) : "{}";
   const benchmarkCtx = benchmark ? JSON.stringify(benchmark, null, 2) : "Sem benchmark público disponível para este gênero.";
-  const examplesCtx = Array.isArray(examples) && examples.length
-    ? JSON.stringify(examples, null, 2)
+  const genreCtx = Array.isArray(genreExamples) && genreExamples.length
+    ? JSON.stringify(genreExamples, null, 2)
     : "Sem faixas de referência cadastradas para este gênero.";
-  return `${prompt}\n\n════════════════════════════════════════════════\nATRIBUTOS ESTILO SPOTIFY — FONTE CONSOLIDADA\n════════════════════════════════════════════════\n${features}\n\nBenchmark do gênero:\n${benchmarkCtx}\n\nFaixas de referência reais do gênero (ground truth):\n${examplesCtx}`;
+  const neighborsCtx = Array.isArray(nearestNeighbors) && nearestNeighbors.length
+    ? JSON.stringify(nearestNeighbors, null, 2)
+    : "Catálogo de referências vazio — sem vizinhos próximos.";
+  return `${prompt}
+
+════════════════════════════════════════════════
+ATRIBUTOS ESTILO SPOTIFY — FONTE CONSOLIDADA
+════════════════════════════════════════════════
+${features}
+
+Benchmark estatístico do gênero (médias):
+${benchmarkCtx}
+
+Faixas de referência típicas do gênero (medianas — ground truth):
+${genreCtx}
+
+VIZINHOS MAIS PRÓXIMOS NO CATÁLOGO REAL (faixas analisadas tecnicamente mais semelhantes à do usuário, ordenadas por similarity_score 0–1):
+${neighborsCtx}
+
+INSTRUÇÃO ADICIONAL: Use os "vizinhos mais próximos" acima para fundamentar o campo "referencias_proximas" do JSON, citando band+filename reais quando fizer sentido, e explicando QUAL nuance técnica (BPM, LUFS, energia, range dinâmico, centroide espectral, dançabilidade) aproxima a faixa do usuário de cada referência. Não invente artistas que não estejam nesta lista ou no pool de comparação fornecido pelo usuário.`;
 }
 
 async function logInvocation(adminClient: ReturnType<typeof createClient>, userId: string | null, status: "success" | "error", usage?: { prompt_tokens?: number; completion_tokens?: number }) {
