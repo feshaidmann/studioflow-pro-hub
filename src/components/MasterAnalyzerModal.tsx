@@ -242,6 +242,12 @@ export default function MasterAnalyzerModal({
                   <RadialGauge label="True Peak" value={result.truePeak} target={-1} unit="dBTP" min={-6} max={1} reverse />
                   <RadialGauge label="Dynamic" value={result.dynamicRange} target={7} unit="LU" min={0} max={15} advisory />
                 </div>
+                {truePeakStatus === "tolerance" && (
+                  <p className="mt-2 text-[11px] text-warning flex items-center gap-1.5">
+                    <Info className="h-3 w-3 shrink-0" />
+                    True Peak {result.truePeak.toFixed(1)} dBTP — dentro da tolerância de ±1 dB sobre o alvo (−1 dBTP). Aceitável para envio.
+                  </p>
+                )}
               </div>
 
               {/* Suggestions (if not ready or dynamic advisory) */}
