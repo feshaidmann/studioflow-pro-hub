@@ -159,7 +159,10 @@ serve(async (req: Request) => {
 
     let benchmark: unknown = null;
     let referenceExamples: unknown = null;
+    let nearestNeighbors: unknown = null;
     const targetGenre = (payload.genero ?? payload.genre) as string | undefined;
+    const trackFeatures = (payload.track_features ?? payload.features ?? {}) as Record<string, unknown>;
+
     if (targetGenre) {
       const { data: bm } = await adminClient
         .from("music_dna_benchmarks")
@@ -174,6 +177,25 @@ serve(async (req: Request) => {
       });
       referenceExamples = refs;
     }
+
+    // Always look for nearest neighbors in the full reference catalog using the user's actual track features
+    const num = (v: unknown): number | null => (typeof v === "number" && Number.isFinite(v) ? v : null);
+    const { data: neighbors, error: nnError } = await adminClient.rpc("find_nearest_reference_tracks", {
+      p_tempo_bpm: num(trackFeatures.tempo) ?? num(trackFeatures.tempo_bpm) ?? num(trackFeatures.bpm),
+      p_lufs_integrated: num(trackFeatures.lufs_integrated) ?? num(trackFeatures.lufs),
+      p_energy: num(trackFeatures.energy),
+      p_danceability: num(trackFeatures.danceability),
+      p_valence: num(trackFeatures.valence),
+      p_acousticness: num(trackFeatures.acousticness),
+      p_instrumentalness: num(trackFeatures.instrumentalness),
+      p_dynamic_range_db: num(trackFeatures.dynamic_range_db) ?? num(trackFeatures.dynamic_range_lu),
+      p_spectral_centroid: num(trackFeatures.spectral_centroid_hz) ?? num(trackFeatures.spectral_centroid),
+      p_genre: targetGenre ?? null,
+      p_limit: 6,
+      p_strict_genre: false,
+    });
+    if (nnError) console.error("[music-dna-analyze] nearest neighbors error:", nnError);
+    nearestNeighbors = neighbors;
 
     const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
     if (!lovableApiKey) {
@@ -199,7 +221,7 @@ serve(async (req: Request) => {
               "exceto no campo diagnostico_resumo onde adota tom de crítico musical acolhedor com toques técnicos. " +
               "Responda sempre em JSON válido, sem markdown e sem texto externo ao JSON.",
           },
-          { role: "user", content: action === "generate_diagnosis" ? buildStructuredPrompt(prompt, payload, benchmark, referenceExamples) : prompt },
+          { role: "user", content: action === "generate_diagnosis" ? buildStructuredPrompt(prompt, payload, benchmark, referenceExamples, nearestNeighbors) : prompt },
         ],
       }),
     });
