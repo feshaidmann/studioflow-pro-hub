@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Upload, FileAudio, Lightbulb, CheckCircle2, AlertCircle, AlertTriangle, Info, Trophy, X } from "lucide-react";
-import { analyzeAudio, generateSuggestions, type AnalysisResult } from "@/lib/audioAnalysis";
+import { analyzeAudio, generateSuggestions, evaluateTruePeak, TRUE_PEAK_MAX_DBTP, type AnalysisResult } from "@/lib/audioAnalysis";
 import type { Project } from "@/data/mockData";
 
 function RadialGauge({ label, value, target, unit, min, max, reverse, advisory }: {
@@ -124,10 +124,12 @@ export default function MasterAnalyzerModal({
   };
 
   // Dynamic é apenas advisory — não bloqueia o envio
+  // True Peak aceita ±1 dB de tolerância sobre o alvo (-1 dBTP), reprovando apenas acima de 0 dBTP
   const isSpotifyReady = result
-    ? result.lufs <= -14 && result.truePeak <= -1
+    ? result.lufs <= -14 && result.truePeak <= TRUE_PEAK_MAX_DBTP
     : null; // null = not yet analyzed
   const dynamicWarn = result ? result.dynamicRange < 7 : false;
+  const truePeakStatus = result ? evaluateTruePeak(result.truePeak) : null;
 
   const handleConfirmWithoutAnalysis = () => {
     reset();
