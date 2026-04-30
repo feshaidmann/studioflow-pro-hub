@@ -7,6 +7,25 @@
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
+/**
+ * True Peak evaluation thresholds (dBTP).
+ * Target is −1 dBTP (industry standard for streaming codecs).
+ * A ±1 dB tolerance is applied: values up to 0 dBTP are accepted with a warning,
+ * values above 0 dBTP are considered critical (clipping after normalization).
+ */
+export const TRUE_PEAK_TARGET_DBTP = -1;
+export const TRUE_PEAK_TOLERANCE_DB = 1;
+export const TRUE_PEAK_MAX_DBTP = TRUE_PEAK_TARGET_DBTP + TRUE_PEAK_TOLERANCE_DB; // 0 dBTP
+
+export type TruePeakStatus = "ok" | "tolerance" | "critical";
+
+/** Classify a True Peak measurement (dBTP) using the ±1 dB tolerance rule. */
+export function evaluateTruePeak(dbtp: number): TruePeakStatus {
+  if (dbtp > TRUE_PEAK_MAX_DBTP) return "critical";
+  if (dbtp > TRUE_PEAK_TARGET_DBTP) return "tolerance";
+  return "ok";
+}
+
 export interface AnalysisResult {
   lufs: number;
   truePeak: number;
