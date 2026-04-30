@@ -19,6 +19,7 @@ import {
   HelpCircle,
   MoreHorizontal,
   Palette,
+  Database,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -87,6 +88,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   };
 
   const adminNavItem = { labelKey: "nav.admin", path: "/admin", icon: Shield, proOnly: false, mobileLabel: "" };
+  const adminReferenceTracksItem = { labelKey: "Faixas de Referência", path: "/admin/reference-tracks", icon: Database, proOnly: false, mobileLabel: "" };
   const settingsNavItem = { labelKey: "nav.settings", path: "/settings", icon: Settings, proOnly: false, mobileLabel: "nav.settings.short" };
   const tutorialNavItem = { labelKey: "nav.tutorial", path: "/tutorial", icon: HelpCircle, proOnly: false, mobileLabel: "" };
 
@@ -398,6 +400,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             {renderNavItem(settingsNavItem)}
             {renderNavItem(tutorialNavItem)}
             {isAdmin && renderNavItem(adminNavItem)}
+            {isAdmin && renderNavItem(adminReferenceTracksItem)}
           </TooltipProvider>
         </nav>
 
