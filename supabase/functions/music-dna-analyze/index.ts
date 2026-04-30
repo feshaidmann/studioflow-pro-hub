@@ -23,10 +23,13 @@ function estimateCost(inputTokens = 0, outputTokens = 0) {
   return Number(((inputTokens / 1_000_000) * TOKEN_INPUT_USD_PER_M + (outputTokens / 1_000_000) * TOKEN_OUTPUT_USD_PER_M).toFixed(8));
 }
 
-function buildStructuredPrompt(prompt: string, payload: Record<string, unknown>, benchmark: unknown) {
+function buildStructuredPrompt(prompt: string, payload: Record<string, unknown>, benchmark: unknown, examples: unknown) {
   const features = payload.features ? JSON.stringify(payload.features, null, 2) : "{}";
   const benchmarkCtx = benchmark ? JSON.stringify(benchmark, null, 2) : "Sem benchmark público disponível para este gênero.";
-  return `${prompt}\n\n════════════════════════════════════════════════\nATRIBUTOS ESTILO SPOTIFY — FONTE CONSOLIDADA\n════════════════════════════════════════════════\n${features}\n\nBenchmark do gênero:\n${benchmarkCtx}`;
+  const examplesCtx = Array.isArray(examples) && examples.length
+    ? JSON.stringify(examples, null, 2)
+    : "Sem faixas de referência cadastradas para este gênero.";
+  return `${prompt}\n\n════════════════════════════════════════════════\nATRIBUTOS ESTILO SPOTIFY — FONTE CONSOLIDADA\n════════════════════════════════════════════════\n${features}\n\nBenchmark do gênero:\n${benchmarkCtx}\n\nFaixas de referência reais do gênero (ground truth):\n${examplesCtx}`;
 }
 
 async function logInvocation(adminClient: ReturnType<typeof createClient>, userId: string | null, status: "success" | "error", usage?: { prompt_tokens?: number; completion_tokens?: number }) {
