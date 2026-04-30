@@ -1,119 +1,73 @@
-# Pipeline de ingestão de análises musicais
+# Tolerância de ±1 dB no True Peak
 
 ## Contexto
 
-Você vai enviar múltiplos CSVs no formato do `music_analysis_full.csv` (61 colunas, schema fixo: features tipo Spotify + métricas técnicas LUFS/DR + MFCC/chroma/spectral). Esses dados servirão para:
+Hoje o True Peak é avaliado de forma rígida em `−1 dBTP`:
+- `≤ −1 dBTP` → OK
+- `> −1 dBTP` → reprovado / sugere ajuste
+- `> 0 dBTP` → crítico (clipping)
 
-1. **Alimentar `music_dna_benchmarks`** (médias por gênero — hoje populadas só com seeds editoriais e poucas análises reais).
-2. **Treinar/refinar a classificação de gênero** da edge function `music-dna-analyze` (ground truth para prompts e few-shot).
+A regra nova introduz uma **zona de tolerância de ±1 dB** em torno do alvo de `−1 dBTP`, ou seja, valores entre `−2 dBTP` e `0 dBTP` são considerados aceitáveis (com aviso quando passam de `−1`), e só viram reprovação acima de `0 dBTP`.
 
-A coluna `file_path` (caminhos pessoais do seu HD) é descartada na ingestão. Volume previsto: vários lotes — precisa de fluxo reutilizável.
+## Nova régua de avaliação
 
-## Decisões de arquitetura
+| Faixa de True Peak (dBTP) | Status | Mensagem |
+|---|---|---|
+| `≤ −1` | OK ✓ | Dentro do alvo seguro (≤ −1 dBTP). |
+| `> −1` e `≤ 0` | OK com ressalva (tolerância ±1 dB) | Acima do alvo, mas dentro da tolerância de ±1 dB. Monitore o limiter. |
+| `> 0` | Crítico | Clipping após normalização. Reduzir ceiling do limiter. |
 
-- **Nova tabela `music_reference_tracks`** (separada de `music_dna_analyses`, que é por usuário) — guarda o catálogo de referência curado, sem `user_id`, leitura pública, escrita só admin.
-- **Reuso do `recalcular_benchmark_genero(genero)`** existente — mas adaptado para também considerar a nova tabela de referência (via UNION ALL no cálculo de médias).
-- **Edge function `import-reference-tracks`** — recebe upload de CSV, valida schema, faz dedupe por `(band, filename)`, ignora `file_path`, insere em lote e dispara recálculo dos benchmarks dos gêneros afetados.
-- **Tela admin `/admin/reference-tracks`** — protegida por `has_role('admin')`, com upload de CSV, preview das primeiras linhas, contadores por gênero/banda e botão "Recalcular benchmarks".
-- **Few-shot para a IA**: nova RPC `get_genre_reference_examples(p_genero, p_limit)` retorna 3-5 faixas representativas (medianas) por gênero, consumida pelo `music-dna-analyze` para enriquecer o contexto do prompt.
-
-## Etapas
-
-### 1. Schema (migration)
-- Tabela `music_reference_tracks` com todas as 60 colunas relevantes (descarta `file_path`):
-  - Identificação: `id`, `band`, `filename`, `genre`, `analysis_date`, `source_batch` (text — nome do CSV importado), `created_at`.
-  - Features Spotify-style: `tempo_bpm`, `tempo_confidence`, `key_index`, `key_name`, `mode`, `danceability`, `energy`, `loudness_rms_db`, `lufs_integrated`, `lufs_method`, `dynamic_range_db`, `speechiness`, `acousticness`, `instrumentalness`, `liveness`, `valence`, `duration_sec`.
-  - Engenharia: `spectral_centroid`, `spectral_bandwidth`, `spectral_rolloff`, `spectral_flatness`, `zero_crossing_rate`.
-  - Vetores como `numeric[]`: `spectral_contrast` (7), `mfcc` (13), `chroma_cens` (12).
-  - Outros: `segments_count`, `beat_times` (jsonb).
-  - **UNIQUE(band, filename)** para dedupe.
-- RLS: `SELECT` público autenticado; `INSERT/UPDATE/DELETE` apenas `has_role('admin')`.
-- Atualizar `recalcular_benchmark_genero` para fazer `UNION ALL` entre `music_dna_analyses` e `music_reference_tracks` no cálculo das médias e top_keys.
-- Nova RPC `get_genre_reference_examples(p_genero text, p_limit int default 5)` — retorna faixas mais próximas da mediana do gênero (band, filename, tempo, lufs, danceability, energy, valence).
-
-### 2. Edge function `import-reference-tracks`
-- Aceita `multipart/form-data` com campo `file` (CSV).
-- Auth obrigatório + verifica `has_role(uid, 'admin')`.
-- Parse CSV (papaparse), valida headers obrigatórios, mapeia colunas, **descarta `file_path`**.
-- Achata `spectral_contrast_1..7`, `mfcc_1..13`, `chroma_cens_1..12` em arrays numéricos.
-- `INSERT ... ON CONFLICT (band, filename) DO UPDATE` (idempotente — reimportar mesmo CSV não duplica).
-- Após insert, agrupa gêneros únicos do lote e chama `recalcular_benchmark_genero` para cada.
-- Retorna `{ inserted, updated, skipped, genres_updated, errors[] }`.
-- Loga em `function_logs` e `ai_invocations` (function_name).
-
-### 3. Tela admin `/admin/reference-tracks`
-- Acesso restrito via `useAdminRole`. Redireciona não-admin.
-- **Upload zone** (drag & drop CSV, max 20MB).
-- **Preview**: parse client-side das 5 primeiras linhas + contadores (linhas, gêneros únicos, bandas únicas).
-- **Botão "Importar"**: chama edge function, mostra progresso e resultado (inserted/updated/skipped + erros por linha).
-- **Tabela de batches importados**: agrupa por `source_batch`, mostra data, total faixas, gêneros.
-- **Card "Cobertura de benchmarks"**: lista gêneros em `music_reference_tracks` com nº faixas reais vs nº seed do `music_dna_benchmarks`, e botão "Recalcular tudo".
-
-### 4. Integração na IA (`music-dna-analyze`)
-- Antes de montar o prompt, se houver `genero` informado, busca `get_genre_reference_examples(genero, 5)`.
-- Injeta no system/user prompt como bloco "Faixas de referência reais do gênero" com features médias — dá ground truth e melhora classificação.
-- Se gênero estiver ambíguo, busca top-3 gêneros mais próximos em `music_reference_tracks` por distância euclidiana (BPM + LUFS + danceability + energy + valence) e oferece como sugestões.
-
-### 5. Link no menu admin
-- Adicionar "Faixas de Referência" na sidebar admin (só visível para `has_role('admin')`).
-
-## Detalhes técnicos
-
-**Mapeamento CSV → DB** (descartando `file_path`):
-```text
-CSV column          → DB column                  (tipo)
-genre               → genre                       text
-band                → band                        text
-filename            → filename                    text
-duration_sec        → duration_sec                numeric
-tempo_bpm           → tempo_bpm                   numeric
-key_index           → key_index                   int
-key_name            → key_name                    text
-mode                → mode                        text
-danceability..valence → mesmas colunas            numeric
-spectral_contrast_1..7 → spectral_contrast        numeric[7]
-mfcc_1..13           → mfcc                        numeric[13]
-chroma_cens_1..12    → chroma_cens                 numeric[12]
-beat_times           → beat_times                  jsonb
-analysis_date        → analysis_date               timestamptz
-file_path            → DESCARTADO
-```
-
-**Dedup**: `ON CONFLICT (band, filename) DO UPDATE` — reimportar mesmo CSV sobrescreve dados (útil para correções) sem duplicar linhas. `source_batch` armazena o último batch que tocou a linha.
-
-**Recalculo de benchmarks**: a função `recalcular_benchmark_genero` passa a usar:
-```sql
-WITH all_tracks AS (
-  SELECT genre, danceability, energy, ... FROM music_dna_analyses WHERE genre = p_genero
-  UNION ALL
-  SELECT genre, danceability, energy, ... FROM music_reference_tracks WHERE genre = p_genero
-)
-SELECT AVG(...) FROM all_tracks;
-```
-
-**Validação de schema** na edge function: header esperado é fixo; se faltar coluna obrigatória, retorna 400 com lista de campos ausentes.
-
-**Performance**: insert em batches de 500 linhas via `.insert([...])`. Para CSVs grandes (>10k linhas), processar em chunks.
+A constante `TRUE_PEAK_TOLERANCE_DB = 1` será centralizada em `src/lib/audioAnalysis.ts` e reutilizada em todos os pontos abaixo.
 
 ## Arquivos afetados
 
-- `supabase/migrations/<ts>_music_reference_tracks.sql` (novo)
-- `supabase/functions/import-reference-tracks/index.ts` (novo)
-- `src/pages/admin/ReferenceTracks.tsx` (novo)
-- `src/hooks/useReferenceTracksImport.ts` (novo)
-- `src/App.tsx` (rota `/admin/reference-tracks`)
-- `src/components/AppLayout.tsx` (item de menu admin)
-- `supabase/functions/music-dna-analyze/index.ts` (injetar exemplos de referência no prompt)
+1. **`src/lib/audioAnalysis.ts`** (≈ linha 700)
+   - Substituir o `if/else` binário por três faixas (OK / tolerância / crítico) usando a constante.
 
-## Fora de escopo (rodadas futuras)
+2. **`src/components/MasterAnalyzerModal.tsx`** (linhas 127-130 e 240)
+   - `isSpotifyReady`: aceitar `truePeak ≤ 0` (alvo `−1` + tolerância `1`) em vez de `≤ −1`.
+   - Quando `truePeak` estiver em `(−1, 0]`, mostrar badge "Dentro da tolerância" (sem bloquear o upload), mantendo crítico apenas para `> 0`.
+   - Ajustar `RadialGauge` do True Peak para refletir a zona de tolerância visualmente (target continua `−1`, mas o "limite vermelho" passa a ser `0`).
 
-- UI pública para o artista navegar no catálogo de referências.
-- Treinamento de modelo próprio (clustering por MFCC/chroma) — por ora só usamos médias e exemplos no prompt.
-- Importação automática direta da sua máquina (manter upload manual via UI admin).
+3. **`src/components/music-dna/MusicDNAAnalyzer.tsx`** (linhas 296-300)
+   - `status` "Pronta para streaming" passa a aceitar `truePeak ≤ 0` (em vez de `≤ −1`).
+   - "Precisa revisão técnica" continua disparando apenas com `truePeak > 0` (já era o caso) ou `dynamicRange < 5`.
 
-## Como você usará
+4. **`src/hooks/useMusicDNA.ts`** (linhas 196-200)
+   - Reescrever `tpStatus` em três níveis:
+     - `> 0` → CRÍTICO (mantém texto atual sobre clipping pós-normalização)
+     - `> −1` e `≤ 0` → "Dentro da tolerância de ±1 dB. Acima do alvo (−1 dBTP) mas seguro para a maioria dos codecs. Monitore o ceiling do limiter."
+     - `≤ −1` → OK (texto atual)
 
-1. Eu implemento tudo acima.
-2. Você acessa `/admin/reference-tracks`, faz upload do `music_analysis_full.csv` — popula 107 faixas em 5 gêneros.
-3. Próximos lotes: mesmo fluxo, basta arrastar o CSV.
-4. A IA do DNA Musical passa automaticamente a usar essas faixas como referência ao classificar gêneros.
+5. **`src/pages/Projects.tsx`** (linha 755)
+   - Cor do valor do Peak: `success` quando `≤ −1`, `warning` quando `> −1` e `≤ 0`, `destructive` quando `> 0`.
+
+## Detalhe técnico
+
+```ts
+// src/lib/audioAnalysis.ts
+export const TRUE_PEAK_TARGET_DBTP = -1;
+export const TRUE_PEAK_TOLERANCE_DB = 1;
+export const TRUE_PEAK_MAX_DBTP = TRUE_PEAK_TARGET_DBTP + TRUE_PEAK_TOLERANCE_DB; // 0
+
+export type TruePeakStatus = "ok" | "tolerance" | "critical";
+export function evaluateTruePeak(dbtp: number): TruePeakStatus {
+  if (dbtp > TRUE_PEAK_MAX_DBTP) return "critical";
+  if (dbtp > TRUE_PEAK_TARGET_DBTP) return "tolerance";
+  return "ok";
+}
+```
+
+Todos os pontos acima passam a importar `evaluateTruePeak` em vez de duplicar comparações com literais `-1` / `0`.
+
+## Fora do escopo
+
+- Não altera a medição de True Peak no edge function `audio-analyze` (apenas a interpretação do valor).
+- Não muda a tolerância de LUFS nem de Dynamic Range.
+- Não toca em benchmarks históricos nem em `music_reference_tracks`.
+
+## Plano de validação
+
+- Mock manual de três valores no `MasterAnalyzerModal`: `−1.5` (OK verde), `−0.4` (warning amarelo, upload liberado), `+0.6` (crítico vermelho, upload bloqueado/aviso).
+- Conferir que o resumo executivo do `MusicDNAAnalyzer` muda de "Pronta para streaming" para o estado intermediário e não mais para "Precisa revisão técnica" no caso de `−0.4 dBTP`.
+- Conferir cor do badge na lista de projetos (`Projects.tsx`).
