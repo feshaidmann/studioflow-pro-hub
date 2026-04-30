@@ -902,6 +902,120 @@ export type Database = {
         }
         Relationships: []
       }
+      music_reference_tracks: {
+        Row: {
+          acousticness: number | null
+          analysis_date: string | null
+          band: string
+          beat_times: Json | null
+          chroma_cens: number[] | null
+          created_at: string
+          danceability: number | null
+          duration_sec: number | null
+          dynamic_range_db: number | null
+          energy: number | null
+          filename: string
+          genre: string
+          id: string
+          instrumentalness: number | null
+          key_index: number | null
+          key_name: string | null
+          liveness: number | null
+          loudness_rms_db: number | null
+          lufs_integrated: number | null
+          lufs_method: string | null
+          mfcc: number[] | null
+          mode: string | null
+          segments_count: number | null
+          source_batch: string
+          spectral_bandwidth: number | null
+          spectral_centroid: number | null
+          spectral_contrast: number[] | null
+          spectral_flatness: number | null
+          spectral_rolloff: number | null
+          speechiness: number | null
+          tempo_bpm: number | null
+          tempo_confidence: number | null
+          updated_at: string
+          valence: number | null
+          zero_crossing_rate: number | null
+        }
+        Insert: {
+          acousticness?: number | null
+          analysis_date?: string | null
+          band: string
+          beat_times?: Json | null
+          chroma_cens?: number[] | null
+          created_at?: string
+          danceability?: number | null
+          duration_sec?: number | null
+          dynamic_range_db?: number | null
+          energy?: number | null
+          filename: string
+          genre?: string
+          id?: string
+          instrumentalness?: number | null
+          key_index?: number | null
+          key_name?: string | null
+          liveness?: number | null
+          loudness_rms_db?: number | null
+          lufs_integrated?: number | null
+          lufs_method?: string | null
+          mfcc?: number[] | null
+          mode?: string | null
+          segments_count?: number | null
+          source_batch?: string
+          spectral_bandwidth?: number | null
+          spectral_centroid?: number | null
+          spectral_contrast?: number[] | null
+          spectral_flatness?: number | null
+          spectral_rolloff?: number | null
+          speechiness?: number | null
+          tempo_bpm?: number | null
+          tempo_confidence?: number | null
+          updated_at?: string
+          valence?: number | null
+          zero_crossing_rate?: number | null
+        }
+        Update: {
+          acousticness?: number | null
+          analysis_date?: string | null
+          band?: string
+          beat_times?: Json | null
+          chroma_cens?: number[] | null
+          created_at?: string
+          danceability?: number | null
+          duration_sec?: number | null
+          dynamic_range_db?: number | null
+          energy?: number | null
+          filename?: string
+          genre?: string
+          id?: string
+          instrumentalness?: number | null
+          key_index?: number | null
+          key_name?: string | null
+          liveness?: number | null
+          loudness_rms_db?: number | null
+          lufs_integrated?: number | null
+          lufs_method?: string | null
+          mfcc?: number[] | null
+          mode?: string | null
+          segments_count?: number | null
+          source_batch?: string
+          spectral_bandwidth?: number | null
+          spectral_centroid?: number | null
+          spectral_contrast?: number[] | null
+          spectral_flatness?: number | null
+          spectral_rolloff?: number | null
+          speechiness?: number | null
+          tempo_bpm?: number | null
+          tempo_confidence?: number | null
+          updated_at?: string
+          valence?: number | null
+          zero_crossing_rate?: number | null
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           created_at: string
@@ -1936,6 +2050,21 @@ export type Database = {
     Functions: {
       get_auth_email: { Args: never; Returns: string }
       get_file_download_url: { Args: { p_file_id: string }; Returns: string }
+      get_genre_reference_examples: {
+        Args: { p_genero: string; p_limit?: number }
+        Returns: {
+          band: string
+          danceability: number
+          dynamic_range_db: number
+          energy: number
+          filename: string
+          key_name: string
+          lufs_integrated: number
+          mode: string
+          tempo_bpm: number
+          valence: number
+        }[]
+      }
       get_member_projects: {
         Args: never
         Returns: {
@@ -2007,6 +2136,14 @@ export type Database = {
       recalcular_benchmark_genero: {
         Args: { p_genero: string }
         Returns: undefined
+      }
+      upsert_reference_tracks: {
+        Args: { p_rows: Json }
+        Returns: {
+          genres_updated: string[]
+          inserted_count: number
+          updated_count: number
+        }[]
       }
     }
     Enums: {

@@ -23,10 +23,13 @@ function estimateCost(inputTokens = 0, outputTokens = 0) {
   return Number(((inputTokens / 1_000_000) * TOKEN_INPUT_USD_PER_M + (outputTokens / 1_000_000) * TOKEN_OUTPUT_USD_PER_M).toFixed(8));
 }
 
-function buildStructuredPrompt(prompt: string, payload: Record<string, unknown>, benchmark: unknown) {
+function buildStructuredPrompt(prompt: string, payload: Record<string, unknown>, benchmark: unknown, examples: unknown) {
   const features = payload.features ? JSON.stringify(payload.features, null, 2) : "{}";
   const benchmarkCtx = benchmark ? JSON.stringify(benchmark, null, 2) : "Sem benchmark público disponível para este gênero.";
-  return `${prompt}\n\n════════════════════════════════════════════════\nATRIBUTOS ESTILO SPOTIFY — FONTE CONSOLIDADA\n════════════════════════════════════════════════\n${features}\n\nBenchmark do gênero:\n${benchmarkCtx}`;
+  const examplesCtx = Array.isArray(examples) && examples.length
+    ? JSON.stringify(examples, null, 2)
+    : "Sem faixas de referência cadastradas para este gênero.";
+  return `${prompt}\n\n════════════════════════════════════════════════\nATRIBUTOS ESTILO SPOTIFY — FONTE CONSOLIDADA\n════════════════════════════════════════════════\n${features}\n\nBenchmark do gênero:\n${benchmarkCtx}\n\nFaixas de referência reais do gênero (ground truth):\n${examplesCtx}`;
 }
 
 async function logInvocation(adminClient: ReturnType<typeof createClient>, userId: string | null, status: "success" | "error", usage?: { prompt_tokens?: number; completion_tokens?: number }) {
@@ -130,13 +133,21 @@ serve(async (req: Request) => {
     }
 
     let benchmark: unknown = null;
-    if (payload.genero || payload.genre) {
+    let referenceExamples: unknown = null;
+    const targetGenre = (payload.genero ?? payload.genre) as string | undefined;
+    if (targetGenre) {
       const { data: bm } = await adminClient
         .from("music_dna_benchmarks")
         .select("*")
-        .eq("genero", payload.genero ?? payload.genre)
+        .eq("genero", targetGenre)
         .maybeSingle();
       benchmark = bm;
+
+      const { data: refs } = await adminClient.rpc("get_genre_reference_examples", {
+        p_genero: targetGenre,
+        p_limit: 5,
+      });
+      referenceExamples = refs;
     }
 
     const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
@@ -163,7 +174,7 @@ serve(async (req: Request) => {
               "exceto no campo diagnostico_resumo onde adota tom de crítico musical acolhedor com toques técnicos. " +
               "Responda sempre em JSON válido, sem markdown e sem texto externo ao JSON.",
           },
-          { role: "user", content: action === "generate_diagnosis" ? buildStructuredPrompt(prompt, payload, benchmark) : prompt },
+          { role: "user", content: action === "generate_diagnosis" ? buildStructuredPrompt(prompt, payload, benchmark, referenceExamples) : prompt },
         ],
       }),
     });
