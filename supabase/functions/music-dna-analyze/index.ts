@@ -133,13 +133,21 @@ serve(async (req: Request) => {
     }
 
     let benchmark: unknown = null;
-    if (payload.genero || payload.genre) {
+    let referenceExamples: unknown = null;
+    const targetGenre = (payload.genero ?? payload.genre) as string | undefined;
+    if (targetGenre) {
       const { data: bm } = await adminClient
         .from("music_dna_benchmarks")
         .select("*")
-        .eq("genero", payload.genero ?? payload.genre)
+        .eq("genero", targetGenre)
         .maybeSingle();
       benchmark = bm;
+
+      const { data: refs } = await adminClient.rpc("get_genre_reference_examples", {
+        p_genero: targetGenre,
+        p_limit: 5,
+      });
+      referenceExamples = refs;
     }
 
     const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
@@ -166,7 +174,7 @@ serve(async (req: Request) => {
               "exceto no campo diagnostico_resumo onde adota tom de crítico musical acolhedor com toques técnicos. " +
               "Responda sempre em JSON válido, sem markdown e sem texto externo ao JSON.",
           },
-          { role: "user", content: action === "generate_diagnosis" ? buildStructuredPrompt(prompt, payload, benchmark) : prompt },
+          { role: "user", content: action === "generate_diagnosis" ? buildStructuredPrompt(prompt, payload, benchmark, referenceExamples) : prompt },
         ],
       }),
     });
