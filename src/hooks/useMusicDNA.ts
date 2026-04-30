@@ -438,6 +438,17 @@ export function useMusicDNA(): UseMusicDNAReturn {
         features: externalLookup?.features,
         genero: input.genre,
         track_name: input.name,
+        track_features: {
+          tempo_bpm: realAnalysis.bpm,
+          lufs_integrated: realAnalysis.lufs_integrated,
+          energy: realAnalysis.energy,
+          danceability: realAnalysis.danceability,
+          valence: realAnalysis.valence,
+          acousticness: realAnalysis.acousticness,
+          instrumentalness: realAnalysis.instrumentalness,
+          dynamic_range_db: realAnalysis.dynamic_range_lu,
+          spectral_centroid_hz: realAnalysis.spectral_centroid_hz,
+        },
       });
       const clean = rawText.replace(/```json|```/g, "").trim();
       const parsed = JSON.parse(clean);
