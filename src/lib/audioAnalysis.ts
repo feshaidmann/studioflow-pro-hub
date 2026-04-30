@@ -7,6 +7,25 @@
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
+/**
+ * True Peak evaluation thresholds (dBTP).
+ * Target is −1 dBTP (industry standard for streaming codecs).
+ * A ±1 dB tolerance is applied: values up to 0 dBTP are accepted with a warning,
+ * values above 0 dBTP are considered critical (clipping after normalization).
+ */
+export const TRUE_PEAK_TARGET_DBTP = -1;
+export const TRUE_PEAK_TOLERANCE_DB = 1;
+export const TRUE_PEAK_MAX_DBTP = TRUE_PEAK_TARGET_DBTP + TRUE_PEAK_TOLERANCE_DB; // 0 dBTP
+
+export type TruePeakStatus = "ok" | "tolerance" | "critical";
+
+/** Classify a True Peak measurement (dBTP) using the ±1 dB tolerance rule. */
+export function evaluateTruePeak(dbtp: number): TruePeakStatus {
+  if (dbtp > TRUE_PEAK_MAX_DBTP) return "critical";
+  if (dbtp > TRUE_PEAK_TARGET_DBTP) return "tolerance";
+  return "ok";
+}
+
 export interface AnalysisResult {
   lufs: number;
   truePeak: number;
@@ -697,10 +716,13 @@ export function generateSuggestions(result: AnalysisResult): string[] {
     suggestions.push("Loudness dentro da faixa ideal para streaming (-14 a -16 LUFS) ✓");
   }
 
-  if (result.truePeak > -1) {
-    suggestions.push(`True Peak em ${result.truePeak} dBTP — adicione um offset de ceiling de ${(result.truePeak + 1).toFixed(1)} dB no limiter para evitar clipping nos codecs`);
+  const tpStatus = evaluateTruePeak(result.truePeak);
+  if (tpStatus === "critical") {
+    suggestions.push(`True Peak em ${result.truePeak} dBTP — acima do limite máximo de ${TRUE_PEAK_MAX_DBTP} dBTP (alvo ${TRUE_PEAK_TARGET_DBTP} dBTP ± ${TRUE_PEAK_TOLERANCE_DB} dB). Reduza o ceiling do limiter em ${(result.truePeak - TRUE_PEAK_TARGET_DBTP).toFixed(1)} dB para evitar clipping nos codecs`);
+  } else if (tpStatus === "tolerance") {
+    suggestions.push(`True Peak em ${result.truePeak} dBTP — dentro da tolerância de ±${TRUE_PEAK_TOLERANCE_DB} dB sobre o alvo ${TRUE_PEAK_TARGET_DBTP} dBTP. Aceitável, mas monitore o limiter ✓`);
   } else {
-    suggestions.push("True Peak dentro do limite seguro (≤ -1 dBTP) ✓");
+    suggestions.push(`True Peak dentro do alvo (≤ ${TRUE_PEAK_TARGET_DBTP} dBTP) ✓`);
   }
 
   if (result.dynamicRange < 5) {

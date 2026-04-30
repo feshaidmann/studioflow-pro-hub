@@ -752,7 +752,7 @@ export default function Projects() {
                 </div>
                 <div className="flex gap-4 text-sm">
                   <div><span className="text-muted-foreground">LUFS: </span><span className={cn("font-mono-nums font-bold", masterForSelected.lufs <= -14 ? "text-success" : "text-destructive")}>{masterForSelected.lufs.toFixed(1)}</span></div>
-                  <div><span className="text-muted-foreground">Peak: </span><span className={cn("font-mono-nums font-bold", masterForSelected.truePeak <= -1 ? "text-success" : "text-destructive")}>{masterForSelected.truePeak.toFixed(1)} dBTP</span></div>
+                  <div><span className="text-muted-foreground">Peak: </span><span className={cn("font-mono-nums font-bold", masterForSelected.truePeak <= -1 ? "text-success" : masterForSelected.truePeak <= 0 ? "text-warning" : "text-destructive")}>{masterForSelected.truePeak.toFixed(1)} dBTP</span></div>
                   <div><span className="text-muted-foreground">DR: </span><span className={cn("font-mono-nums font-bold", masterForSelected.dynamicRange >= 7 ? "text-success" : "text-warning")}>{masterForSelected.dynamicRange.toFixed(1)} LU</span></div>
                 </div>
               </div>

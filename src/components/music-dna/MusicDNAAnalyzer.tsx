@@ -293,7 +293,8 @@ function ExecutiveSummary({ diagnosis }: { diagnosis: DiagnosisResult }) {
   const mainBottleneck = diagnosis.gargalos_criativos?.[0] ?? "Vale refinar o contraste entre seções antes da finalização.";
   const nextAction = diagnosis.proximos_passos?.[0]?.acao ?? diagnosis.sugestoes_arranjo?.[0] ?? "Revisar mix e arranjo com foco no ponto mais sensível do diagnóstico.";
 
-  const status = truePeak <= -1 && lufs >= -16 && lufs <= -10 && dynamicRange >= 7
+  // True Peak: alvo -1 dBTP com tolerância de ±1 dB → aceitável até 0 dBTP
+  const status = truePeak <= 0 && lufs >= -16 && lufs <= -10 && dynamicRange >= 7
     ? { label: "Pronta para streaming", tone: "success" as const }
     : truePeak > 0 || dynamicRange < 5
     ? { label: "Precisa revisão técnica", tone: "destructive" as const }
