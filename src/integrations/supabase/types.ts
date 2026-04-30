@@ -2048,6 +2048,39 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      find_nearest_reference_tracks: {
+        Args: {
+          p_acousticness?: number
+          p_danceability?: number
+          p_dynamic_range_db?: number
+          p_energy?: number
+          p_genre?: string
+          p_instrumentalness?: number
+          p_limit?: number
+          p_lufs_integrated?: number
+          p_spectral_centroid?: number
+          p_strict_genre?: boolean
+          p_tempo_bpm?: number
+          p_valence?: number
+        }
+        Returns: {
+          acousticness: number
+          band: string
+          danceability: number
+          dynamic_range_db: number
+          energy: number
+          filename: string
+          genre: string
+          instrumentalness: number
+          key_name: string
+          lufs_integrated: number
+          mode: string
+          similarity_score: number
+          spectral_centroid: number
+          tempo_bpm: number
+          valence: number
+        }[]
+      }
       get_auth_email: { Args: never; Returns: string }
       get_file_download_url: { Args: { p_file_id: string }; Returns: string }
       get_genre_reference_examples: {
