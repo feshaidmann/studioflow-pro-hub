@@ -625,7 +625,7 @@ serve(async (req) => {
     await supabase.from("ai_invocations").insert({
       user_id: user.id,
       function_name: "generate-creative",
-        model: IMAGE_MODEL,
+        model: imageModel,
       status: "success",
     });
 
