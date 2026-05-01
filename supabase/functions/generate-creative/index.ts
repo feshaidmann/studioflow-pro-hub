@@ -78,9 +78,11 @@ const corsHeaders = {
     "x-quota-daily-limit, x-quota-daily-used, x-quota-weekly-limit, x-quota-weekly-used, x-quota-daily-resets-at",
 };
 
-const IMAGE_MODEL = "google/gemini-2.5-flash-image";
+const IMAGE_MODEL_DEFAULT = "google/gemini-2.5-flash-image";
+// Nano Banana 2 — better legibility for integrated typography (track/artist names).
+const IMAGE_MODEL_TYPOGRAPHY = "google/gemini-3.1-flash-image-preview";
 
-async function requestImage(messages: any[], lovableKey: string) {
+async function requestImage(messages: any[], lovableKey: string, model: string = IMAGE_MODEL_DEFAULT) {
   const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -88,7 +90,7 @@ async function requestImage(messages: any[], lovableKey: string) {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: IMAGE_MODEL,
+      model,
       messages,
       modalities: ["image", "text"],
     }),
@@ -503,16 +505,16 @@ serve(async (req) => {
       );
     } else if (wantsText) {
       const lines: string[] = [];
-      lines.push("Tipografia integrada à composição (parte do design, não etiqueta colada):");
-      if (trackName) lines.push(`- Título da faixa: "${trackName}" — tipografia mais destacada da arte.`);
-      if (artistName) lines.push(`- Nome do artista: "${artistName}" — tipografia secundária, menor que o título mas legível.`);
+      lines.push("TIPOGRAFIA OBRIGATÓRIA — esta arte DEVE conter os textos abaixo renderizados de forma legível, integrados ao design (parte da composição, não etiqueta colada). NÃO entregue uma imagem sem esses textos.");
+      if (trackName) lines.push(`- TÍTULO DA FAIXA (texto principal, tipografia mais destacada da arte): «${trackName}»`);
+      if (artistName) lines.push(`- NOME DO ARTISTA (texto secundário, menor que o título mas claramente legível): «${artistName}»`);
       if (releaseDate) lines.push(`- Data de lançamento: ${releaseDate} — apenas se couber elegantemente, em tamanho pequeno.`);
-      if (additionalText) lines.push(`- Texto adicional: "${additionalText}" — apoio curto, se couber.`);
+      if (additionalText) lines.push(`- Texto adicional: «${additionalText}» — apoio curto, se couber.`);
       lines.push(
-        "Use APENAS os textos listados acima. NÃO invente subtítulos, taglines, créditos, datas, hashtags, números, slogans ou qualquer palavra extra. Se uma string não foi fornecida, não a substitua por nada — deixe a área vazia."
+        "Use APENAS os textos listados acima — caractere por caractere, sem traduzir, sem abreviar, sem alterar grafia, acentuação ou pontuação. NÃO invente subtítulos, taglines, créditos extras, datas, hashtags, números, slogans ou qualquer palavra adicional. Se uma string não foi fornecida acima, não a substitua por nada."
       );
-      lines.push("Mesmo que o prompt do usuário mencione outros nomes (música, artista, projeto, banda, álbum) entre aspas ou não, NÃO os renderize como texto — apenas os textos listados acima podem aparecer na imagem.");
-      lines.push("Mantenha a grafia exata, caractere por caractere. Nomes próprios não são traduzidos.");
+      lines.push("Se o prompt do usuário mencionar OUTROS nomes (de música, artista, projeto, banda, álbum) entre aspas ou não, NÃO os renderize como texto — apenas os textos listados acima podem aparecer escritos na imagem.");
+      lines.push("Posicione a tipografia em zona de alta legibilidade (contraste suficiente com o fundo, sem cortes, sem cobrir o sujeito principal). Tratamento tipográfico coerente com o estilo visual escolhido.");
       systemBlocks.push(lines.join("\n"));
     }
 
@@ -556,7 +558,9 @@ serve(async (req) => {
       messages.push({ role: "user", content: prompt });
     }
 
-    let aiResp = await requestImage(messages, lovableKey);
+    // Use Nano Banana 2 when typography is required — significantly better text legibility.
+    const imageModel = wantsText ? IMAGE_MODEL_TYPOGRAPHY : IMAGE_MODEL_DEFAULT;
+    let aiResp = await requestImage(messages, lovableKey, imageModel);
 
     if (!aiResp.ok) {
       const status = aiResp.status;
@@ -597,7 +601,7 @@ serve(async (req) => {
           content: "Gere a imagem agora. Responda obrigatoriamente com uma imagem renderizada no campo images; não responda apenas com texto.",
         },
       ];
-      aiResp = await requestImage(retryMessages, lovableKey);
+      aiResp = await requestImage(retryMessages, lovableKey, imageModel);
 
       if (!aiResp.ok) {
         const txt = await aiResp.text();
@@ -621,7 +625,7 @@ serve(async (req) => {
     await supabase.from("ai_invocations").insert({
       user_id: user.id,
       function_name: "generate-creative",
-        model: IMAGE_MODEL,
+        model: imageModel,
       status: "success",
     });
 
