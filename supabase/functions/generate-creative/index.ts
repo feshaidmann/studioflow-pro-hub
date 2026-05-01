@@ -558,7 +558,9 @@ serve(async (req) => {
       messages.push({ role: "user", content: prompt });
     }
 
-    let aiResp = await requestImage(messages, lovableKey);
+    // Use Nano Banana 2 when typography is required — significantly better text legibility.
+    const imageModel = wantsText ? IMAGE_MODEL_TYPOGRAPHY : IMAGE_MODEL_DEFAULT;
+    let aiResp = await requestImage(messages, lovableKey, imageModel);
 
     if (!aiResp.ok) {
       const status = aiResp.status;
