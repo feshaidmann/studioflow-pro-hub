@@ -205,27 +205,130 @@ serve(async (req) => {
         });
       }
 
+      // ── LEGENDA: contexto do mercado fonográfico brasileiro ──────────────
+      //
+      // O mercado fonográfico brasileiro tem especificidades que impactam
+      // diretamente como uma legenda de lançamento deve ser escrita:
+      //
+      // 1. STREAMING DOMINANTE: Brasil é o 9º mercado global de streaming
+      //    (IFPI 2024). Spotify, YouTube Music e Deezer são os canais primários.
+      //    O pré-save no Spotify é o principal CTA de pré-lançamento — gera
+      //    dados de audience para o algoritmo e ativa notificação automática.
+      //
+      // 2. FRAGMENTAÇÃO DE GÊNERO: o mercado é verticalmente segmentado.
+      //    Sertanejo/Funk/Forró têm bases de fãs que consomem de formas muito
+      //    diferentes de Indie BR/MPB/R&B. A linguagem, os emojis, o ritmo
+      //    da legenda e os CTA preferidos variam radicalmente por gênero.
+      //
+      // 3. WHATSAPP COMO HUB: no Brasil, WhatsApp é o canal de distribuição
+      //    orgânica mais eficiente para artistas independentes — listas de
+      //    transmissão e comunidades convertem melhor que story ou feed para
+      //    fãs próximos. Tom comunitário e link direto são obrigatórios.
+      //
+      // 4. ALGORITMO DO INSTAGRAM: os primeiros 125 caracteres aparecem antes
+      //    do "ver mais". O gancho precisa estar nessa janela. Reels têm texto
+      //    sobreposto limitado — a legenda é lida depois, fora do contexto visual.
+      //
+      // 5. TIKTOK / REELS BR: o gancho precisa ser uma frase que funcione
+      //    como hook de áudio-texto simultâneo. Artistas BR de maior tração
+      //    usam frases que funcionam como letra da música ("a linha que resume
+      //    a faixa"), não descrições da música.
+      //
+      // 6. HASHTAGS NO BRASIL: as hashtags de maior alcance para artistas
+      //    independentes BR são de gênero específico (#mpb, #sertanejo,
+      //    #funkbrasil, #indiebrasileiro), de contexto (#novamusica,
+      //    #lancamento, #presave) e de comunidade (#artistaindependente).
+      //    Hashtags genéricas internacionais (#music, #newmusic, #artist)
+      //    têm alcance irrelevante no Brasil.
+      //
+      // 7. CICLO DE CAMPANHA: o padrão do mercado BR independente é
+      //    teaser (D-14 a D-7) → pré-save (D-7 a D-1) → lançamento (D0) →
+      //    pós-lançamento/playlist pitch (D+3 a D+14). Cada fase tem um
+      //    objetivo algorítmico diferente: o pré-save alimenta dados de
+      //    audience; o lançamento maximiza streams nas primeiras 24h (peso
+      //    no algoritmo); o pós-lançamento sustenta o velocity para o Radar
+      //    de Lançamentos e New Music Friday.
+
+      // Mapeia canal → comportamento específico do mercado BR
+      const CHANNEL_CONTEXT: Record<string, string> = {
+        "Instagram Feed": "Os primeiros 125 caracteres aparecem antes do 'ver mais' — o gancho precisa estar nessa janela. Máximo 2200 caracteres totais. Instagram Feed BR performa melhor com storytelling curto + CTA explícito. Sem exclamações excessivas — o algoritmo do Instagram desfavorece engajamento artificial.",
+        "Reels / Shorts": "Primeira linha funciona como hook de áudio-texto simultâneo. No Brasil, frases que funcionam como linha da música convertem melhor que descrição. Máximo 2200 caracteres, mas legenda funcional em até 150. CTA precisa aparecer antes do 'ver mais'. Evite descrever o visual do Reel.",
+        "TikTok": "Texto aparece sobreposto ao vídeo em fonte pequena. Legenda é lida depois, fora do contexto visual. Primeira frase precisa funcionar como gancho standalone. Máximo 2200 caracteres. No Brasil, TikTok responde bem a frases com cadência de letra de música — sonoridade textual importa.",
+        "Spotify / streaming": "Descrição de artista no Spotify Fo Artists ou nota de lançamento para distribuidoras (DistroKid, TuneCore, Tratore, Believe). Tom editorial, sem gírias. Descreve o universo da música, os temas, a produção e o contexto do artista. Sem CTA de rede social — o streaming já é o destino.",
+        "WhatsApp / comunidade": "Lista de transmissão ou comunidade — fãs próximos que optaram por receber. Tom pessoal e direto, como se o artista estivesse mandando mensagem de voz transcrita. Link clicável é obrigatório. Sem emojis excessivos — WhatsApp penaliza spam visual. Uma mensagem, um pedido.",
+      };
+
+      // Mapeia fase → objetivo algorítmico e instrução de CTA
+      const PHASE_CONTEXT: Record<string, string> = {
+        "Teaser": "Fase de antecipação — NÃO revelar tudo. O objetivo é gerar curiosidade e primeiros dados de audience. CTA ideal: salvar para não perder, ativar notificação, comentar o que espera da faixa. Evite o nome da música se ainda não foi revelado.",
+        "Pré-save": "Fase mais crítica para o algoritmo. Pré-saves no Spotify geram dados de audience que alimentam o Radar de Lançamentos e o Release Radar. CTA deve ser explícito e único: salvar/ativar lembrete. Link do pré-save precisa estar acessível (bio ou sticker). Senso de urgência real: a janela fecha no lançamento.",
+        "Lançamento": "As primeiras 24-72h determinam o peso algorítmico da faixa. O objetivo é maximizar streams e saves imediatos. CTA duplo funciona: ouvir agora + salvar na biblioteca. Mencionar onde está disponível (Spotify, YouTube, todas as plataformas). Momento de maior energia na comunicação.",
+        "Pós-lançamento": "Fase de sustentação de velocity para playlist pitch. O objetivo é manter streams consistentes. CTA pode ser mais leve: compartilhar com alguém que vai gostar, adicionar a playlist, comentar o trecho favorito. Tom de gratidão + convite para aprofundar o relacionamento com a faixa.",
+        "Bastidores": "Conteúdo de bastidor tem função de humanização — aproxima artista do fã. Não é legenda de lançamento, é legenda de relacionamento. CTA leve: comentar, perguntar, mostrar curiosidade. Sem vender a música diretamente — deixar a conexão acontecer.",
+        "Show / agenda": "CTA de conversão direta: comprar ingresso, confirmar presença, contato para contratação. Incluir data, cidade, venue e link de ingresso quando disponível. Tom de convite pessoal. No Brasil, compartilhamento via WhatsApp é o principal canal de venda de ingressos para shows independentes.",
+      };
+
+      // Mapeia objetivo → instrução de CTA precisa
+      const OBJECTIVE_CTA: Record<string, string> = {
+        "Ouvir agora": "CTA principal: ouvir agora em [plataforma]. Botão/link na bio ou no sticker do story. Senso de novidade — 'saiu agora', 'disponível em todas as plataformas'.",
+        "Salvar / pré-save": "CTA único e claro: salvar/pré-salvar. Explicar o que o pré-save faz (recebe notificação + adiciona automaticamente quando sair). No Brasil, muitos fãs não sabem o que é pré-save — vale uma frase de contexto rápido.",
+        "Comentar": "Terminar com uma pergunta aberta que o fã consegue responder em 5 palavras. Evite perguntas genéricas ('o que acharam?'). Pergunte algo específico da faixa ou da experiência pessoal do ouvinte.",
+        "Compartilhar": "CTA de propagação: pedir para marcar alguém que precisa ouvir isso, compartilhar no story, mandar no WhatsApp para uma pessoa específica. No Brasil, 'manda pra aquela pessoa' converte melhor que 'compartilhe'.",
+        "Seguir o artista": "CTA para novos seguidores — só faz sentido em conteúdo de descoberta (Reels, TikTok, colaboração). Não usar em post para fãs existentes. Mencionar o que o seguidor vai encontrar ao seguir.",
+        "Chamar para show": "Incluir todas as informações de conversão: data, cidade, venue, faixa de preço se possível, link para ingresso ou contato. WhatsApp é o canal preferido de contratação no mercado BR independente.",
+      };
+
+      // DNA como vocabulário emocional — instrução de uso explícita
+      const dnaInstruction = dnaContext
+        ? `DNA Musical da faixa (use como vocabulário emocional e cultural — nunca descreva tecnicamente nem mencione termos como LUFS, BPM, espectro ou frequência na legenda): ${dnaContext}`
+        : "";
+
+      const channelInstruction = platform ? (CHANNEL_CONTEXT[platform] || `Canal: ${platform}`) : "";
+      const phaseInstruction = campaignPhase ? (PHASE_CONTEXT[campaignPhase] || `Fase: ${campaignPhase}`) : "";
+      const objectiveInstruction = objective ? (OBJECTIVE_CTA[objective] || `Objetivo: ${objective}`) : "";
+
+      // Regra de hierarquia: canal prevalece sobre tamanho quando há conflito
+      const lengthInstruction = length
+        ? `Tamanho desejado: ${length === "short" ? "até 220 caracteres" : length === "medium" ? "1-2 parágrafos curtos (até 400 caracteres)" : "storytelling com arco emocional em até 4 parágrafos curtos"}. Se o canal impuser limite menor, o canal prevalece.`
+        : "";
+
+      // Hashtags: critério concreto por gênero e contexto
+      const hashtagInstruction = (() => {
+        if (!hashtagsMode || hashtagsMode === "none") return "Sem hashtags.";
+        const count = hashtagsMode === "few" ? "2-3" : "5-8";
+        return `Hashtags: ${count}. Use hashtags de gênero específico (ex: #mpb, #sertanejo, #funkbrasil, #indiebrasileiro), de campanha (#novamusica, #lancamento, #presave) ou de comunidade (#artistaindependente, #musicabrasileira). NUNCA use hashtags genéricas internacionais como #music, #artist, #newmusic, #song — têm alcance irrelevante no Brasil e sinalizam conteúdo automatizado.`;
+      })();
+
       const textSystemPrompt = [
-        "Você é um copywriter de lançamento musical para artistas independentes no Brasil.",
-        "A legenda deve vender/divulgar a música primeiro: destacar faixa, artista, momento de campanha, convite para ouvir/salvar/compartilhar e conexão emocional com o público.",
-        "Use estética e DNA Musical apenas para vocabulário, clima e sensibilidade cultural; nunca transforme a legenda em descrição da capa ou análise técnica.",
-        "Adapte estrutura e tamanho ao canal: TikTok/Reels/Shorts pedem gancho forte na primeira linha e CTA curto; Instagram aceita storytelling breve; Spotify/streaming pede chamada direta para ouvir/salvar; WhatsApp pede tom comunitário e íntimo.",
-        "Adapte o CTA ao objetivo informado. Se for pré-save/salvar, o pedido principal deve ser salvar/ativar lembrete; se for comentário, faça uma pergunta; se for show, direcione para agenda/contratação.",
-        "Tamanho: curto = até 220 caracteres; médio = 1-2 parágrafos curtos; storytelling = até 4 parágrafos curtos com arco emocional.",
-        "Hashtags: sem hashtags = nenhuma; poucas = 2-3; moderadas = 5-8. Use hashtags relevantes, não genéricas demais.",
-        "Sempre escreva em pt-BR natural, sem explicar decisões e sem aspas envolvendo a legenda.",
-        "Responda APENAS com a legenda, sem explicações adicionais.",
-        trackName ? `Música: ${trackName}` : "",
+        "Você é um especialista em marketing musical para o mercado fonográfico brasileiro independente, com domínio de estratégia de lançamento, algoritmos de streaming e comportamento de fãs por gênero.",
+        "",
+        "MISSÃO: escrever uma legenda que converta — gere o comportamento específico pedido (stream, save, comentário, compartilhamento) alinhado ao momento da campanha e ao canal de publicação.",
+        "",
+        "PRINCÍPIOS DO MERCADO BR:",
+        "- O pré-save é o CTA de maior impacto para o algoritmo do Spotify: feeds o Radar de Lançamentos e o Release Radar com dados reais de audience.",
+        "- As primeiras 24-72h de um lançamento determinam o peso algorítmico da faixa nas semanas seguintes. Velocidade de streams e saves importa mais que volume total.",
+        "- WhatsApp é o canal de distribuição orgânica mais eficiente para artistas independentes brasileiros — fãs próximos convertem mais via lista de transmissão que via feed.",
+        "- Cada gênero tem uma voz e um vocabulário próprios: o fã de Funk Carioca, de MPB Contemporânea e de Sertanejo Universitário lê e responde de formas completamente diferentes.",
+        "- Emojis têm função estética e de escansão — usá-los com intenção, não como preenchimento.",
+        "",
+        "REGRAS DE ESCRITA:",
+        "- Escreva em pt-BR natural e fluente, no registro do gênero da faixa.",
+        "- Nunca mencione aspectos técnicos da produção (mixagem, masterização, BPM, frequências, LUFS).",
+        "- Nunca descreva a capa ou o clipe — a imagem fala por si.",
+        "- Nunca use linguagem de press release ('anuncia', 'lança', 'apresenta') em posts de redes sociais — é lido como marketing corporativo.",
+        "- Nunca inclua aspas em torno da legenda, nem explique as escolhas feitas.",
+        "- Responda APENAS com a legenda, sem preâmbulo, sem explicação, sem alternativas.",
+        "",
+        trackName ? `Música: "${trackName}"` : "",
         artistName ? `Artista: ${artistName}` : "",
         releaseDate ? `Data de lançamento: ${releaseDate}` : "",
-        platform ? `Canal principal: ${platform}` : "",
-        campaignPhase ? `Fase da campanha: ${campaignPhase}` : "",
-        objective ? `Objetivo da legenda: ${objective}` : "",
-        tone ? `Tom de voz: ${tone}` : "",
-        length ? `Tamanho desejado: ${length}` : "",
-        hashtagsMode ? `Uso de hashtags: ${hashtagsMode}` : "",
-        format ? `Formato criativo relacionado: ${format}` : "",
-        dnaContext ? `Contexto do DNA Musical: ${dnaContext}` : "",
+        channelInstruction ? `\nCANAL — ${channelInstruction}` : "",
+        phaseInstruction ? `\nFASE DA CAMPANHA — ${phaseInstruction}` : "",
+        objectiveInstruction ? `\nOBJETIVO — ${objectiveInstruction}` : "",
+        tone ? `\nTom de voz: ${tone}` : "",
+        lengthInstruction ? `\n${lengthInstruction}` : "",
+        hashtagInstruction ? `\n${hashtagInstruction}` : "",
+        dnaInstruction ? `\n${dnaInstruction}` : "",
       ].filter(Boolean).join("\n");
 
       const textResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -281,47 +384,112 @@ serve(async (req) => {
       });
     }
 
-    // Style id → rich visual description (English) for better model adherence
+    // ── IMAGEM: contexto do mercado fonográfico brasileiro ───────────────
+    //
+    // Cada formato de arte tem requisitos técnicos e estéticos específicos
+    // ditados pelas plataformas de streaming e redes sociais brasileiras:
+    //
+    // CAPA DE SINGLE/ÁLBUM (3000×3000 / 1:1):
+    //   - Renderizada em miniaturas de 40×40px no Spotify mobile — o elemento
+    //     mais importante (rosto, símbolo, palavra) precisa ler em escala mínima.
+    //   - No feed do Spotify, a capa compete com centenas de outras em grade:
+    //     contraste alto e ponto focal único vencem composições cheias.
+    //   - Capas de MPB/Indie BR tendem a linguagem fotográfica ou ilustração
+    //     com paleta contida. Funk/Sertanejo tendem a cores saturadas e rosto
+    //     do artista em primeiro plano. Pop BR segue estética internacional.
+    //   - Evitar: fundos brancos puros (some na interface do Spotify em modo
+    //     claro), texto menor que 1/8 da largura (ilegível em thumbnail).
+    //
+    // POST INSTAGRAM (1080×1080 / 1:1):
+    //   - Aparece no feed em grade de 3 colunas — precisa funcionar como
+    //     miniatura de ~300px antes de ser clicado.
+    //   - O olhar do algoritmo BR prioriza imagens com rosto humano visível.
+    //   - Área segura para texto: evitar bordas — 10% de margem mínima.
+    //
+    // STORY / CANVAS SPOTIFY (1080×1920 / 9:16):
+    //   - Formato de tela cheia imersivo. A zona superior e inferior têm
+    //     sobreposições de UI (nome de usuário no topo, CTA no fundo) —
+    //     elementos-chave devem ficar entre 15% e 85% da altura.
+    //   - No Canvas Spotify, a arte fica em loop atrás do player — deve ser
+    //     abstrata o suficiente para não competir com a UI do player.
+    //   - Stories BR: movimento visual percebido (mesmo em arte estática)
+    //     converte melhor — composições diagonais, profundidade, blur seletivo.
+    //
+    // REELS / SHORTS (1080×1920 vídeo):
+    //   - Thumbnail do Reel aparece como frame congelado — o primeiro frame
+    //     precisa funcionar como composição estática autossuficiente.
+    //
+    // BANNER SPOTIFY (2560×1440 / 16:9):
+    //   - Aparece no perfil do artista no Spotify. Zona central segura:
+    //     entre 20% e 80% horizontal, entre 25% e 75% vertical (o restante
+    //     é cortado em mobile). Nome do artista e elementos-chave no centro.
+    //
+    // THUMBNAIL YOUTUBE (1920×1080 / 16:9):
+    //   - Aparece em lista ao lado do título do vídeo. Rosto em close +
+    //     texto grande + contraste alto é o padrão de maior CTR no Brasil.
+    //   - Texto deve ser legível em 120×67px (tamanho de thumbnail em mobile).
+
+    // Style id → rich visual description (English for model adherence)
+    // Descriptions anchored in Brazilian phonographic aesthetics per genre context
     const STYLE_DESCRIPTIONS: Record<string, string> = {
-      minimalist: "minimalist composition, generous negative space, restrained palette, refined typography, clean geometry",
-      retro: "retro aesthetic, vintage textures, grain, faded color palette evocative of 70s-80s print media",
-      neon: "vibrant neon palette, glowing accents, high saturation, nightlife energy, electric contrast",
-      watercolor: "watercolor painting feel, soft edges, organic pigment bleeds, paper texture",
-      collage: "mixed-media collage, layered textures, paper cut-outs, hand-crafted compositional clashes",
-      photorealistic: "photorealistic rendering, natural lighting, true-to-life detail, cinematic camera lens",
-      abstract: "abstract composition, non-representational shapes, expressive forms, conceptual color blocking",
-      "lo-fi": "lo-fi analog aesthetic, film grain, light leaks, muted warm palette, intimate atmosphere",
+      minimalist: "minimalist composition, generous negative space, restrained palette of 2-3 colors maximum, refined typographic hierarchy, clean geometry — the visual language of Brazilian MPB and Indie BR contemporary releases",
+      retro: "retro aesthetic with Brazilian roots — vintage textures, faded chromogenic film palette, grain reminiscent of 70s-80s Brazilian LP cover art, warm analog tones, slight vignette",
+      neon: "vibrant neon palette with high saturation, glowing color edges, deep shadow contrast — the visual energy of Brazilian Funk, Trap BR and nightlife electronic releases",
+      watercolor: "watercolor painting technique, soft organic edges, pigment bloom on wet paper, translucent layering, natural imperfections — intimate and handmade quality",
+      collage: "mixed-media collage aesthetic, layered textures combining photography and illustration, paper cut-out edges, tactile materiality, compositional tension between elements",
+      photorealistic: "photorealistic rendering with cinematic intent — natural directional lighting, shallow depth of field, true-to-life skin tones and material surfaces, professional portrait or location photography quality",
+      abstract: "abstract non-representational composition using expressive gestural forms, bold color blocking, dynamic tension between geometric and organic shapes, conceptual visual language",
+      "lo-fi": "lo-fi analog aesthetic, film grain, light leaks, muted warm palette with faded greens and yellows, soft focus, intimate hand-held camera energy — the visual texture of Brazilian indie bedroom recordings",
+    };
+
+    // Format-specific composition requirements for the Brazilian phonographic market
+    const FORMAT_SPECS: Record<string, string> = {
+      spotify_cover: `Single/album cover for streaming. Renders as a 40×40px thumbnail on Spotify mobile — the primary focal element (face, symbol, key word) MUST read clearly at that scale. Use high contrast between subject and background. Compose for a single dominant element. Avoid pure white backgrounds (disappears in Spotify light mode interface).`,
+      deezer_cover: `Single/album cover for Deezer. Same technical requirements as Spotify: readable at 40×40px thumbnail, single dominant focal element, high contrast. Deezer's interface uses dark backgrounds — light-toned artwork stands out more.`,
+      tidal_cover: `Single/album cover for Tidal. High-fidelity streaming platform with audiophile audience. Artwork can afford more visual complexity than Spotify — Tidal's larger thumbnail presentation supports detail. Still maintain a clear focal hierarchy.`,
+      instagram_post: `Instagram feed post. Appears in a 3-column grid at ~300px before being tapped. The image must work as a small grid thumbnail AND as a full-screen expanded view. Safe text area: keep all text elements at least 10% from all edges. Human faces with visible eyes perform better in the Brazilian Instagram algorithm.`,
+      story: `Instagram Story / static vertical. Full-screen immersive format. Critical safe zones: the top 15% has username overlay, the bottom 15% has CTA/link sticker area — place no key visual elements there. Composition lives between 15% and 85% of height. Diagonal compositions and depth create implied motion that performs well on Stories.`,
+      spotify_canvas: `Spotify Canvas — looping abstract video background behind the player UI. The music player controls overlay the center of the image. Design for the periphery: strong visual texture and movement at edges, neutral or abstract center to avoid competing with player controls. Avoid faces centered — they get covered by the player.`,
+      spotify_banner: `Spotify artist profile banner (2560×1440). Critical safe zone: center 60% horizontal × center 50% vertical — this is the only area visible on all screen sizes. Content outside this zone is cropped on mobile. Place artist name and key visuals strictly within the safe zone.`,
+      reels_loop: `Reels / Shorts video loop thumbnail frame. The first frame of the video is the thumbnail shown in the feed. Compose as a strong static image that also implies motion — diagonal tension, implied trajectory, kinetic energy in pose or elements.`,
+      youtube_cover: `YouTube video thumbnail. Appears in list view next to the title. High CTR thumbnails on Brazilian YouTube combine: close-up face with expressive eyes + large readable text + high contrast background. Text must be legible at 120×67px (mobile list thumbnail size). Avoid more than 3 visual elements.`,
+      twitter_post: `Twitter/X post image. Appears cropped to ~2:1 aspect in timeline — compose the most important element within the center horizontal band. Full image only visible when tapped.`,
+      custom: `Custom format. Compose with full artistic freedom within the specified dimensions.`,
     };
 
     const styleDescription = style ? (STYLE_DESCRIPTIONS[style] || style) : null;
+    const formatSpec = FORMAT_SPECS[format] || null;
     const aspectStr = aspectLabel(width, height);
 
-    // Build briefing as art direction (positive tone, pt-BR, focused on craft)
+    // Build system prompt as art direction briefing
     const systemBlocks: string[] = [];
 
     systemBlocks.push(
       [
-        "Você é diretor de arte para artistas independentes brasileiros lançando música.",
-        "Sua missão é traduzir o briefing do usuário em uma composição visual autoral, com identidade forte, hierarquia clara e potencial de destaque em feed e capas de streaming.",
+        "You are an art director specializing in visual identity for independent Brazilian music artists.",
+        "Your work appears on streaming platforms (Spotify, Deezer, YouTube Music), Brazilian social media (Instagram, TikTok), and physical formats.",
         "",
-        "Princípios de execução:",
-        "- Composição com intenção: ponto focal claro, hierarquia visual, uso ousado de cor, luz, textura e profundidade. Evite simetria preguiçosa, centralização padrão e estética stock.",
-        "- Direção autoral: cada arte deve parecer feita à mão por um diretor de arte, não montada por template. Varie ângulo, enquadramento, escala e atmosfera.",
-        "- Sensibilidade brasileira: estética coerente com o cenário musical contemporâneo do Brasil quando o briefing sugerir.",
-        "- O briefing do usuário (mensagem do usuário) é a INSTRUÇÃO PRIMÁRIA de composição: cena, sujeitos, ambiente, atmosfera e elementos visuais descritos devem aparecer na imagem. Interprete com liberdade artística, mas não ignore.",
+        "Execution principles:",
+        "- Intentional composition: clear focal point, deliberate visual hierarchy, bold use of color, light, texture and depth. Reject lazy symmetry, default centering and stock-photo aesthetics.",
+        "- Authorial direction: every artwork must feel designed by a human art director, not assembled from a template. Vary angle, framing, scale and atmosphere.",
+        "- Platform-aware craft: the artwork must perform in its specific context — thumbnail legibility, safe zone compliance, feed competition. Technical requirements are not constraints, they are the brief.",
+        "- The user's creative description is the PRIMARY composition instruction. Execute it with artistic interpretation but do not ignore its scene, subjects, atmosphere or visual elements.",
       ].join("\n")
     );
 
-    systemBlocks.push(
-      `Formato: ${format}, composição ${aspectStr}, entrega final em ${width}×${height} pixels. Enquadre a cena inteira respeitando esse aspecto, sem cortes amadores nos sujeitos.`
-    );
+    // Format spec — platform-specific technical requirements
+    if (formatSpec) {
+      systemBlocks.push(`Platform requirements for this format:\n${formatSpec}\n\nFinal dimensions: ${width}×${height}px (${aspectStr}). Frame the complete scene within these proportions — no amateur cropping of subjects.`);
+    } else {
+      systemBlocks.push(`Composition: ${aspectStr}, final delivery at ${width}×${height}px. Frame the complete scene within these proportions.`);
+    }
 
     if (styleDescription) {
-      systemBlocks.push(`Estilo visual de referência: ${styleDescription}.`);
+      systemBlocks.push(`Visual style direction: ${styleDescription}.`);
     }
 
     if (channelContext) {
-      systemBlocks.push(`Canal de distribuição: ${channelContext}. Adapte legibilidade e impacto para esse contexto.`);
+      systemBlocks.push(`Distribution channel context: ${channelContext}. Adapt legibility and visual impact for this specific context.`);
     }
 
     // Typography rules — surgical, only when needed
@@ -360,7 +528,7 @@ serve(async (req) => {
         );
       } else {
         refLines.push(
-          "Modo IDENTIDADE: preservação ESTRITA da identidade facial. Se houver rosto humano, mantenha-o exatamente como na referência — não modifique, embeleze, envelheça, rejuvenesça ou reinterprete traços, tom de pele, formato dos olhos, nariz, boca, mandíbula, linha do cabelo ou marcas distintivas. Adapte apenas elementos NÃO-identitários: composição, recorte, cenário, iluminação, paleta, figurino, tipografia e layout. Se preservar a identidade conflitar com o estilo pedido, priorize a identidade."
+          "IDENTITY mode: the face in the reference image is the artist — preserve their exact likeness as you would a high-end fashion or music editorial retouching brief. What to preserve with absolute fidelity: facial identity, skin tone, distinctive physical features. What you may and should transform freely: composition, framing, crop, background, lighting, color palette, wardrobe, set design, typography and graphic layout. If artistic style conflicts with facial identity, facial identity always wins — execute the style everywhere except on the face."
         );
       }
 
