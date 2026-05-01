@@ -227,7 +227,11 @@ export default function ProjectDetail() {
               <ProjectFinanceTab projectId={project.id} />
             </TabsContent>
             <TabsContent value="release">
-              <ProjectReleaseTab projectId={project.id} />
+              <ProjectReleaseTab
+                projectId={project.id}
+                projectName={project.name}
+                artistName={project.artist}
+              />
             </TabsContent>
           </>
         )}
