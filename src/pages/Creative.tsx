@@ -354,13 +354,10 @@ export default function Creative() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dnaParam]);
 
-  // ── Auto-preenche artista quando o projeto muda ───────────────────────
-  useEffect(() => {
-    if (linkedProject?.artist && !artistName) {
-      setArtistName(linkedProject.artist);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [linkedProject?.artist]);
+  // ── Não auto-preenchemos artistName a partir do projeto vinculado ──────
+  // Os campos "Nome do artista" e "Título da faixa" são gatilhos explícitos
+  // de tipografia: só devem ser preenchidos quando o usuário decide que o
+  // nome deve aparecer renderizado dentro da arte.
 
   // ── Recalcula prompt quando o formato muda (e há DNA ativo) ──────────
   useEffect(() => {
@@ -378,9 +375,11 @@ export default function Creative() {
   }, [materialType, step]);
 
   // ── Helpers de geração ────────────────────────────────────────────────
-  const contextPrompt = linkedProject
-    ? `Para o projeto "${linkedProject.name}" do artista "${linkedProject.artist}". ${prompt}`
-    : prompt;
+  // Não injetamos "Para o projeto X do artista Y" no prompt textual — a IA
+  // de imagem renderiza essas strings literalmente como texto na arte.
+  // O contexto vai apenas pelos campos estruturados (projectId, dnaContext,
+  // trackName, artistName), que controlam tipografia de forma explícita.
+  const contextPrompt = prompt;
 
   const handleGenerate = useCallback(async () => {
     if (materialType === "legenda") {
@@ -1060,7 +1059,7 @@ export default function Creative() {
                 prompt={captionPrompt || prompt}
                 dnaContext={dnaCaptionContext}
                 trackName={trackName.trim() || dnaTrackName || undefined}
-                artistName={artistName.trim() || linkedProject?.artist || undefined}
+                artistName={artistName.trim() || undefined}
                 releaseDate={releaseDate || undefined}
                 projectId={selectedProjectId !== "none" ? selectedProjectId : undefined}
                 formatLabel={selectedFormat.label}

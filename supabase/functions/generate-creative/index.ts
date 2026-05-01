@@ -496,7 +496,10 @@ serve(async (req) => {
     const wantsText = !noText && (trackName || artistName || additionalText);
     if (noText || (!trackName && !artistName && !additionalText)) {
       systemBlocks.push(
-        "Composição puramente visual: NÃO renderize texto, letras, números, palavras, logos, marcas d'água, partituras, BPM ou diagramas técnicos. Sem tipografia de qualquer tipo na imagem."
+        [
+          "Composição puramente visual: NÃO renderize texto, letras, números, palavras, logos, marcas d'água, partituras, BPM ou diagramas técnicos. Sem tipografia de qualquer tipo na imagem.",
+          "REGRA CRÍTICA: mesmo se o prompt do usuário mencionar nomes de música, artista, projeto, gênero, banda ou álbum (entre aspas ou não), trate essas menções como CONTEXTO CONCEITUAL para inspirar a cena visual — NUNCA as escreva dentro da imagem. Nenhum texto pode aparecer.",
+        ].join("\n")
       );
     } else if (wantsText) {
       const lines: string[] = [];
@@ -508,6 +511,7 @@ serve(async (req) => {
       lines.push(
         "Use APENAS os textos listados acima. NÃO invente subtítulos, taglines, créditos, datas, hashtags, números, slogans ou qualquer palavra extra. Se uma string não foi fornecida, não a substitua por nada — deixe a área vazia."
       );
+      lines.push("Mesmo que o prompt do usuário mencione outros nomes (música, artista, projeto, banda, álbum) entre aspas ou não, NÃO os renderize como texto — apenas os textos listados acima podem aparecer na imagem.");
       lines.push("Mantenha a grafia exata, caractere por caractere. Nomes próprios não são traduzidos.");
       systemBlocks.push(lines.join("\n"));
     }
