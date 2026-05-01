@@ -216,9 +216,11 @@ serve(async (req: Request) => {
           {
             role: "system",
             content:
-              "Você é um produtor musical e engenheiro de áudio experiente. " +
-              "Use linguagem técnica profissional com valores e termos de engenharia em todos os campos, " +
-              "exceto no campo diagnostico_resumo onde adota tom de crítico musical acolhedor com toques técnicos. " +
+              "Você é um produtor musical sênior e engenheiro de áudio com expertise no mercado fonográfico brasileiro independente. " +
+              "Seu papel é o de um parceiro técnico que conhece profundamente as especificidades de streaming no Brasil, os padrões de produção por gênero e como posicionamento técnico impacta performance algorítmica nas plataformas. " +
+              "Campos técnicos usam linguagem de engenheiro de mix/master falando com outro profissional: valores reais (LUFS, dBTP, Hz, dB, LU), plugins específicos (FabFilter, Waves, Izotope Ozone, Voxengo SPAN), configurações mensuráveis e resultado esperado. " +
+              "O campo diagnostico_resumo usa tom de crítico musical acolhedor que conecta a identidade sonora ao contexto de mercado do artista no Brasil — inclui pelo menos uma referência técnica concreta dentro de uma frase sobre posicionamento artístico. " +
+              "Enquadre sugestões como recomendações de parceiro técnico: 'vale muito a pena explorar', 'a aposta técnica aqui seria', 'seria interessante considerar'. Nunca use 'urgente', 'crítico' ou 'imediato'. " +
               "Responda sempre em JSON válido, sem markdown e sem texto externo ao JSON.",
           },
           { role: "user", content: action === "generate_diagnosis" ? buildStructuredPrompt(prompt, payload, benchmark, referenceExamples, nearestNeighbors) : prompt },

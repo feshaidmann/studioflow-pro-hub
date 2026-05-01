@@ -251,30 +251,73 @@ function buildPrompt(
     time_signature: externalFeatures.time_signature ?? 4,
   };
 
-  return `
-Você é um produtor musical e engenheiro de áudio experiente, com domínio técnico profundo e paixão por ajudar artistas a evoluírem.
-Analise os dados técnicos REAIS da faixa abaixo e gere um diagnóstico musical completo, específico e acionável.
-Cada afirmação DEVE ser ancorada em pelo menos um dado da análise. Proibido julgamentos vagos.
+  // Contexto de streaming por gênero — targets específicos do mercado BR
+  // Fontes: Spotify Loudness Normalization docs, LUFS Meter industry reports,
+  // análise empírica de catálogos por gênero no mercado fonográfico brasileiro.
+  const GENRE_STREAMING_CONTEXT: Record<string, string> = {
+    "Funk Carioca":           "Funk BR: loudness médio do gênero ~−9 a −11 LUFS integrado. Spotify normaliza para −14 LUFS, então faixas de Funk são atenuadas em 3-5 dB — o sub precisa estar limpo para sobreviver à normalização. Batida eletrônica densa exige atenção ao true peak (<−1 dBTP) para evitar distorção pós-codec. Transientes do tamborzão devem ter punch sem estourar o limiter.",
+    "Sertanejo Universitário":"Sertanejo Universitário: loudness médio ~−10 a −12 LUFS. Produção moderna com baixo elétrico proeminente — verificar colisão sub/kick. Voz feminina/masculina dupla é padrão do gênero; separação estéreo das vozes é diferencial de produção. Streaming BR penaliza voz abafada no mix.",
+    "Sertanejo Raiz":         "Sertanejo Raiz: faixas mais dinâmicas (~−13 a −16 LUFS), timbre acústico dominante. Violão e viola caipira no centroide espectral entre 1.8–2.8 kHz. Reverb de sala pequena é estética do gênero — não corrigir demais.",
+    "MPB Contemporânea":      "MPB Contemporânea: loudness típico −13 a −16 LUFS. Dinâmica ampla é estética do gênero — hiperlimitar destrói identidade sonora. Voz deve ter presença sem sibilância excessiva (de-esser em 6–8 kHz). Público do Spotify BR de MPB ouve em headphone — imagem estéreo e detalhes espaciais são percebidos.",
+    "Pagode":                 "Pagode: loudness médio ~−11 a −13 LUFS. Percussão acústica (pandeiro, tantã, repique) com transientes vivos é característica definidora. Cavaquinho e violão de 7 cordas competem na região 2–4 kHz com a voz — EQ cirúrgico necessário. Liveness alta (~0.24) é estética ao vivo esperada do gênero.",
+    "Forró / Piseiro":        "Forró/Piseiro: loudness agressivo ~−9 a −11 LUFS. Bumbo eletrônico do piseiro exige sub limpo sem distorção. Sanfona e triângulo vivem em regiões espectrais distintas — clareza em 1–4 kHz crítica para definição da harmonia. Produção BR de piseiro tende a ser mid-heavy.",
+    "Trap BR":                "Trap BR: loudness agressivo ~−8 a −10 LUFS. Sub 808 é o elemento central — deve ser tunado ao tom da faixa. Hi-hats de trap (24ths) criam densidade spectral no topo — verificar acúmulo em 8–16 kHz. Voz trap BR frequentemente processada (autotune, vocal fry, distorção leve) — verificar true peak da voz individualmente.",
+    "Rap BR":                 "Rap BR: loudness médio ~−11 a −13 LUFS. Inteligibilidade vocal é tudo — voz precisa cortar o beat em 2–4 kHz sem esforço. Sample-based beats frequentemente têm artefatos de MP3 no material de origem — verificar aliasing em altas frequências.",
+    "Pop Brasileiro":         "Pop BR: loudness médio ~−10 a −12 LUFS, alinhado com pop internacional. Produção competitiva com pop global no Spotify — reference tracks de mercado são internacionais (Dua Lipa, Bad Bunny). Tonal balance deve ser verificado em speakers de referência e AirPods (perfil EQ boosted em 1–4 kHz).",
+    "R&B / Soul":             "R&B/Soul BR: loudness médio ~−12 a −14 LUFS. Dinâmica ampla é identidade do gênero. Graves profundos (40–80 Hz) e médios-altos suaves (2–5 kHz). Vocal run e melisma requerem compressão multi-banda cuidadosa — evitar pumping em notas longas.",
+    "Indie BR":               "Indie BR: loudness variado −13 a −16 LUFS. Estética de produção DIY/bedroom aceitável e muitas vezes intencional no gênero. Ruído de fundo, tape hiss e imperfeições de timing são características, não defeitos. Não 'corrigir' o que é identidade estética do gênero.",
+    "Rock Alternativo BR":    "Rock Alt BR: loudness médio ~−11 a −13 LUFS. Distorção de guitarra ocupa 500 Hz–4 kHz — verificar mascaramento da voz. Bateria acústica exige coerência de fase entre microfones close e overhead. Baixo deve ter presença em 100–250 Hz para cortar em mono (rádio FM, Bluetooth).",
+    "Axé / Pop Bahia":        "Axé/Pop Bahia: loudness agressivo ~−9 a −11 LUFS para impacto ao vivo. Metais (trumpete, sax) e percussão baiana definem o centroide espectral alto (3–5 kHz). Produção de axé moderno usa sub eletrônico sob percussão acústica — garantir que coexistam sem cancelamento de fase.",
+    "Eletrônica / House":     "Eletrônica/House BR: loudness de clube ~−9 a −11 LUFS. Sub kick deve estar mono e centrado abaixo de 100 Hz — verificar em mono absoluto. Sidechain de compressor no kick→synth é padrão funcional do gênero. Hi-hat e percs no topo devem ter espaço no estéreo sem fatigue em faixas de 6+ minutos.",
+    "Lo-Fi Hip Hop":          "Lo-Fi Hip Hop: loudness intencional mais baixo −14 a −16 LUFS — o gênero é ouvido em contexto de estudo/trabalho, não em modo de impacto. Grain de vinil (crackle/hiss) é estética, não problema. Equalização vintage com rolloff em altas frequências (>12 kHz) é marca do gênero.",
+    "Bossa Nova":             "Bossa Nova: loudness baixo −14 a −18 LUFS — dinâmica ampla é alma do gênero. Violão clássico de Bossa requer atenção à resposta de sala — small room ambience é estético. Voz deve ter presença delicada sem sibilância. Verificar que o arranjo respira — Bossa Nova não suporta compressão pesada.",
+    "Reggae BR":              "Reggae BR: loudness médio −12 a −14 LUFS. Skank de guitarra no contratempo e bass roots são estrutura harmônica central — EQ em 200–400 Hz define o weight do bass roots. Dub delay no vocal é técnica estética, não erro. Verificar que o sub do baixo está limpo abaixo de 60 Hz.",
+    "Indie Folk":             "Indie Folk: loudness baixo −14 a −16 LUFS. Instrumentos acústicos em espaço natural são a estética — reverb de sala grande, coerência espacial. Voz folk não deve ter compressão agressiva — o vibrato natural e as inflexões são identidade. Não 'limpar' o que é textura intencional.",
+    "Samba":                  "Samba: loudness médio −12 a −14 LUFS. Percussão de samba (surdo, caixa, agogô, pandeiro) é densa espectralmente — verificar acúmulo em 800 Hz–2 kHz. Cavaquinho e violão 7 cordas precisam de espaço na região 2–4 kHz. Pandeiro deve ter presença em 5–8 kHz para brilho.",
+    "Pop Internacional":      "Pop Internacional: loudness competitivo −10 a −11 LUFS, alinhado com padrão global. Referências de mercado são internacionais. Verificar LUFS em playlists do Spotify usando 'Stats for Spotify' para posicionamento competitivo. Tonal balance em Genelec ou nearfields é obrigatório.",
+  };
 
-REGRAS DE LINGUAGEM:
-- Use linguagem TÉCNICA e profissional em TODOS os campos, como um engenheiro de mix/master falando com outro profissional.
-- Cite valores reais (LUFS, dBTP, Hz, dB, LU) e termos técnicos sem simplificação (headroom, transientes, sidechain, spectral rolloff, etc.).
-- Sugestões ultra-específicas: QUAL técnica, QUAL plugin/ferramenta, QUAL configuração, ONDE aplicar, QUAL resultado mensurável esperado.
-- Seja direto e preciso. Reconheça o que funciona tecnicamente antes de sugerir ajustes.
-- EXCEÇÃO — o campo "diagnostico_resumo": aqui, adote o tom de um crítico musical experiente e acolhedor. Misture percepções musicais com referências técnicas pontuais (ex: "o peso dos graves é bem resolvido, com o sub concentrado em 60 Hz"). Linguagem acessível mas não superficial.
-- NUNCA use palavras como "urgente", "crítico" ou "imediato". Use "é altamente recomendável", "vale muito a pena considerar", "seria interessante explorar".
-- Enquadre sugestões como recomendações profissionais, não como alertas de emergência.
+  const genreStreamingNote = input.genre ? (GENRE_STREAMING_CONTEXT[input.genre] || "") : "";
+
+  // Seção de análise só inclui contraste verso/refrão se os dados existem de fato
+  const hasVerseChorus = !!(verse && chorus);
+
+  return `
+Você é um produtor musical sênior e engenheiro de áudio com expertise no mercado fonográfico brasileiro independente.
+Seu papel é o de um parceiro técnico que conhece profundamente as especificidades do streaming BR, os padrões de produção por gênero e as expectativas do público de cada segmento.
+
+Analise os dados técnicos REAIS abaixo e gere um diagnóstico musical completo, específico e acionável.
+Cada afirmação DEVE ser ancorada em pelo menos um valor medido. Proibido julgamentos vagos ou genéricos.
+
+════════════════════════════════════════════════
+CONTEXTO DO MERCADO FONOGRÁFICO BRASILEIRO
+════════════════════════════════════════════════
+O Brasil é o 9º mercado global de streaming (IFPI 2024). Spotify, YouTube Music e Deezer são os canais primários de consumo.
+O Spotify aplica normalização de loudness para −14 LUFS integrado — faixas acima desse target são atenuadas; abaixo, soam quietas em playlists.
+A janela de 24-72h pós-lançamento é crítica: streams e saves nessa janela determinam o peso algorítmico da faixa nas semanas seguintes (Radar de Lançamentos, Release Radar, algorithmic playlists).
+A qualidade técnica impacta diretamente o placement em playlists editoriais — curadoria humana da Spotify BR avalia qualidade de produção como critério de seleção.
+${genreStreamingNote ? `\nEspecificidades técnicas do gênero detectado:\n${genreStreamingNote}` : ""}
+
+════════════════════════════════════════════════
+REGRAS DE LINGUAGEM
+════════════════════════════════════════════════
+- Todos os campos técnicos: linguagem de engenheiro de mix/master falando com outro profissional. Cite valores reais (LUFS, dBTP, Hz, dB, LU). Sugestões com técnica específica + plugin/ferramenta + configuração + resultado mensurável.
+- Reconheça o que funciona tecnicamente antes de sugerir ajustes — o diagnóstico deve equilibrar pontos fortes reais com áreas de melhoria.
+- EXCEÇÃO — campo "diagnostico_resumo": tom de crítico musical experiente e acolhedor. Conecte a identidade sonora ao contexto de mercado do artista. Ex: "a dinâmica ampla da faixa é uma escolha estética que funciona bem para o público de MPB no Spotify, onde ouvintes usam headphone e percebem detalhes espaciais — e os ${analysis.dynamic_range_lu.toFixed(1)} LU medidos estão dentro do range ideal para esse posicionamento."
+- Enquadre sugestões como recomendações de parceiro técnico: "vale muito a pena explorar", "seria interessante considerar", "a aposta técnica aqui seria". Nunca use "urgente", "crítico" ou "imediato".
+- Quando mencionar plugins, priorize opções disponíveis no ecossistema BR independente: Waves, FabFilter, Izotope Ozone, Voxengo SPAN, DMGAudio — além de alternativas gratuitas quando existirem (TDR Nova, Youlean Loudness Meter).
 
 ════════════════════════════════════════════════
 DADOS DA FAIXA
 ════════════════════════════════════════════════
 Nome:    "${input.name}"
+Gênero:  ${input.genre || "não especificado"}
 BPM:     ${analysis.bpm.toFixed(1)}
 Tom:     ${analysis.key}
 Duração: ${Math.floor(analysis.duration_sec / 60)}:${String(Math.round(analysis.duration_sec % 60)).padStart(2, "0")}
-Referências: ${input.references.length ? input.references.join(", ") : "nenhuma"}
-Pool técnico de comparação sugerido: ${selectedReferences.length ? selectedReferences.join(", ") : "nenhum"}
-Descrição: ${input.notes || "não fornecida"}
+Referências do artista: ${input.references.length ? input.references.join(", ") : "nenhuma fornecida"}
+Pool técnico de comparação: ${selectedReferences.length ? selectedReferences.join(", ") : "nenhum"}
+Notas do artista: ${input.notes || "não fornecidas"}
 
 ════════════════════════════════════════════════
 ANÁLISE TÉCNICA — NÍVEL GLOBAL
@@ -282,20 +325,20 @@ ANÁLISE TÉCNICA — NÍVEL GLOBAL
 LUFS INTEGRADO:    ${lufsStatus}
 LUFS SHORT-TERM:   ${analysis.lufs_short_term} LUFS (pico de loudness momentâneo)
 TRUE PEAK:         ${tpStatus}
-DYNAMIC RANGE:     ${analysis.dynamic_range_lu.toFixed(1)} LU (DR < 7 = hiperlimitado; DR > 14 = muito dinâmico)
+DYNAMIC RANGE:     ${analysis.dynamic_range_lu.toFixed(1)} LU (DR < 7 = hiperlimitado; 7–12 = range comercial; > 12 = alta dinâmica)
 RMS GLOBAL:        ${analysis.rms_dbfs.toFixed(1)} dBFS
-CENTROIDE ESPECT.: ${hz(analysis.spectral_centroid_hz)} (ref. típico: 1.500–2.500 Hz)
-SPECTRAL ROLLOFF:  ${hz(analysis.spectral_rolloff_hz)} (85% da energia abaixo desta freq)
-SPECTRAL FLATNESS: ${analysis.spectral_flatness.toFixed(3)} (0 = tonal; 1 = ruído)
+CENTROIDE ESPECT.: ${hz(analysis.spectral_centroid_hz)} (ref. típico do gênero: consultar benchmark)
+SPECTRAL ROLLOFF:  ${hz(analysis.spectral_rolloff_hz)} (85% da energia espectral abaixo desta frequência)
+SPECTRAL FLATNESS: ${analysis.spectral_flatness.toFixed(3)} (0 = sinal tonal puro; 1 = ruído branco)
 
-ATRIBUTOS MEDIDOS:
-  Energia:          ${pct(analysis.energy)}
-  Dançabilidade:    ${pct(analysis.danceability)}
-  Acústica:         ${pct(analysis.acousticness)}
-  Valência:         ${pct(analysis.valence)}
-  Instrumentalidade:${pct(analysis.instrumentalness)}
-  Liveness:         ${pct(analysis.liveness)}
-  Speechiness:      ${pct(analysis.speechiness)}
+ATRIBUTOS MEDIDOS (escala 0–100%):
+  Energia:           ${pct(analysis.energy)} — intensidade percebida / nível de ativação
+  Dançabilidade:     ${pct(analysis.danceability)} — adequação rítmica para dança
+  Acústica:          ${pct(analysis.acousticness)} — presença de timbre acústico vs eletrônico
+  Valência:          ${pct(analysis.valence)} — positividade / valência emocional
+  Instrumentalidade: ${pct(analysis.instrumentalness)} — proporção instrumental vs vocal
+  Liveness:          ${pct(analysis.liveness)} — presença de audiência / caráter ao vivo
+  Speechiness:       ${pct(analysis.speechiness)} — densidade de fala / spoken word
 
 ATRIBUTOS ESTILO SPOTIFY — FONTE CONSOLIDADA:
 ${JSON.stringify(spotifyAttrs, null, 2)}
@@ -305,18 +348,29 @@ Fonte externa complementar: ${externalLookup?.fonte ?? "web_audio"}
 ANÁLISE POR SEÇÃO
 ════════════════════════════════════════════════
 ${sectionAnalysis}
-${contrastNote}
+${hasVerseChorus ? contrastNote : "(segmentação verso/refrão não identificada — pular campo analise_seccoes.contraste_verso_refrao)"}
 ${instrSection}
 
 ════════════════════════════════════════════════
 FORMATO DE RESPOSTA
 ════════════════════════════════════════════════
 Responda SOMENTE com JSON válido, sem markdown, sem texto externo ao JSON.
-Nenhum campo deve conter instruções, meta-texto ou placeholders. Apenas o conteúdo real do diagnóstico.
-Todos os campos usam linguagem técnica profissional com valores e termos de engenharia de áudio, EXCETO "diagnostico_resumo" que usa tom de crítico musical com toques técnicos.
-Use "é altamente recomendável", "vale a pena explorar", "seria interessante considerar" — nunca "urgente", "crítico" ou "imediato".
+Nenhum campo deve conter instruções, meta-texto ou placeholders — apenas conteúdo real do diagnóstico.
 
-No "diagnostico_tecnico", inclua em cada campo: avaliação técnica com valores medidos + dica prática acionável (plugin, configuração, técnica específica na DAW).
+Instruções por campo:
+- "genero_classificado": gênero principal identificado pelos dados, com sub-gênero quando aplicável.
+- "identidade.mood_principal": adjetivo composto que capture a valência emocional + energia da faixa (ex: "melancólico-contemplativo", "exuberante-dançante", "tenso-introspectivo").
+- "identidade.territorio_sonoro": onde e como esta música é ouvida — contexto de escuta real no mercado BR (ex: "headphone em trânsito urbano", "carro em rodovia no interior", "festa em casa com caixa bluetooth", "academia").
+- "identidade.tags": 5-8 palavras que um curador de playlist usaria para categorizar esta faixa — gênero, sub-gênero, mood, contexto, instrumentação característica. Sem termos de engenharia.
+- "identidade.persona_ouvinte": perfil do ouvinte típico no mercado BR — faixa etária, contexto de vida, plataforma preferida de consumo, outros artistas que esse ouvinte consome.
+- "diagnostico_tecnico.*": avaliação técnica com valores medidos + recomendação prática com plugin/técnica/configuração específica. Mencionar impacto no posicionamento em streaming quando relevante.
+- "analise_seccoes.contraste_verso_refrao": preencher apenas se verso e refrão foram identificados. Caso contrário: "segmentação não identificada nos dados analisados".
+- "referencias_proximas": usar apenas artistas dos vizinhos mais próximos fornecidos ou das referências do artista. Explicar a similaridade em termos técnicos mensuráveis (BPM, LUFS, energia, centroide espectral). Máximo 3 referências.
+- "pontos_fortes": aspectos técnicos que já funcionam bem e são competitivos no gênero — ancorados em valores medidos.
+- "gargalos_criativos": aspectos que limitam o potencial de performance em streaming ou playlists — específicos, mensuráveis, acionáveis.
+- "sugestoes_arranjo": sugestões de produção/arranjo com técnica específica, não generalidades.
+- "proximos_passos": ordenados por impacto esperado no posicionamento em streaming. Prioridade Alta = impacto direto no resultado de lançamento; Média = melhoria de identidade; Baixa = refinamento opcional.
+- "diagnostico_resumo": 3-5 frases no tom de crítico musical acolhedor. Conecte a identidade sonora ao contexto de mercado. Inclua pelo menos uma referência técnica concreta (ex: valor de LUFS, BPM, instrumento dominante) dentro de uma frase sobre o posicionamento artístico.
 
 {
   "genero_classificado": "",

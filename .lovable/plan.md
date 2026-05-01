@@ -1,73 +1,72 @@
-# Tolerância de ±1 dB no True Peak
 
-## Contexto
+## Objetivo
 
-Hoje o True Peak é avaliado de forma rígida em `−1 dBTP`:
-- `≤ −1 dBTP` → OK
-- `> −1 dBTP` → reprovado / sugere ajuste
-- `> 0 dBTP` → crítico (clipping)
+Aplicar as 5 versões de arquivo enviadas, que juntas entregam:
 
-A regra nova introduz uma **zona de tolerância de ±1 dB** em torno do alvo de `−1 dBTP`, ou seja, valores entre `−2 dBTP` e `0 dBTP` são considerados aceitáveis (com aviso quando passam de `−1`), e só viram reprovação acima de `0 dBTP`.
+1. **Ponte Projeto → Criativo** com pré-seleção automática do DNA Musical da faixa.
+2. **Persona da IA refinada** (engenheiro/produtor BR independente, com vocabulário de plugins e tom de parceiro técnico — sem "urgente/crítico").
+3. **Contexto de streaming por gênero** injetado no prompt do DNA Musical (LUFS-alvo, especificidades de mix por gênero BR).
+4. **Refino do prompt do DNA** (instruções por campo, segmentação verso/refrão opcional, nova régua de Dynamic Range).
+5. **Atualizações no `Creative.tsx` e na edge function `generate-creative`** para consumir contexto de projeto + DNA na geração de artes/legendas.
 
-## Nova régua de avaliação
+## Mudanças por arquivo
 
-| Faixa de True Peak (dBTP) | Status | Mensagem |
-|---|---|---|
-| `≤ −1` | OK ✓ | Dentro do alvo seguro (≤ −1 dBTP). |
-| `> −1` e `≤ 0` | OK com ressalva (tolerância ±1 dB) | Acima do alvo, mas dentro da tolerância de ±1 dB. Monitore o limiter. |
-| `> 0` | Crítico | Clipping após normalização. Reduzir ceiling do limiter. |
+### 1. `src/components/project-hub/ProjectReleaseTab.tsx`
+- Aceita props novas: `projectName`, `artistName`.
+- Adiciona componente `CreativeEntryCard` no topo da aba: botão "Criar materiais" que navega para `/criativo?project=<id>&dna=<id>` (DNA injetado quando há análise salva vinculada ao projeto via `useSavedAnalyses`).
+- Mostra badge "DNA Musical disponível — <faixa>" quando há análise.
+- Exibe alerta âmbar quando há itens visuais pendentes (capa, thumbnail, teaser, reels, stories).
+- Importa `useNavigate`, `useSavedAnalyses`, `Button`, ícones `Palette` e `Dna`.
 
-A constante `TRUE_PEAK_TOLERANCE_DB = 1` será centralizada em `src/lib/audioAnalysis.ts` e reutilizada em todos os pontos abaixo.
+> Observação: o componente pai (`ProjectDetail.tsx` / Project Hub) já passa `projectId`. Vou verificar e passar também `projectName` e `artistName` para que o card mostre o contexto correto. Se as props não forem passadas, o card cai nos defaults `"este projeto"` / `""` sem quebrar.
 
-## Arquivos afetados
+### 2. `src/hooks/useMusicDNA.ts` (~+54 linhas líquidas)
+- Novo dicionário `GENRE_STREAMING_CONTEXT` com nota técnica específica para 19 gêneros BR (Funk Carioca, Sertanejo, MPB, Pagode, Forró/Piseiro, Trap BR, Rap BR, Pop BR, R&B, Indie BR, Rock Alt BR, Axé, Eletrônica/House, Lo-Fi, Bossa Nova, Reggae BR, Indie Folk, Samba, Pop Internacional) — cada nota cita LUFS-alvo, instrumentação característica e implicações de mix para streaming no Brasil.
+- Injeção dessa nota no prompt enviado ao edge function.
+- Régua de Dynamic Range atualizada: `< 7 = hiperlimitado; 7–12 = comercial; > 12 = alta dinâmica` (antes era `< 7` / `> 14`).
+- Bloco de "REGRAS DE LINGUAGEM" reescrito: tom de parceiro técnico ("vale muito a pena explorar", "seria interessante considerar") + priorização de plugins do ecossistema BR (Waves, FabFilter, Ozone, Voxengo SPAN, DMGAudio, TDR Nova, Youlean).
+- Segmentação verso/refrão fica opcional: se não detectada, instrui IA a pular `analise_seccoes.contraste_verso_refrao`.
+- Bloco "Instruções por campo" detalhando o que cada chave do JSON deve conter (`mood_principal`, `territorio_sonoro`, `tags`, `persona_ouvinte`, `referencias_proximas`, etc.) com foco em mercado BR.
 
-1. **`src/lib/audioAnalysis.ts`** (≈ linha 700)
-   - Substituir o `if/else` binário por três faixas (OK / tolerância / crítico) usando a constante.
+### 3. `supabase/functions/music-dna-analyze/index.ts`
+- Apenas o `system message` da chamada ao Lovable AI é reescrito: persona "produtor sênior + engenheiro de áudio com expertise no mercado fonográfico brasileiro independente", linguagem de parceiro técnico, vocabulário de plugins reais, regras de tom para `diagnostico_resumo` (crítico musical acolhedor com referência técnica concreta).
+- Resto da função (CORS, auth, lookup de benchmark, nearest-neighbors, logging) permanece igual.
 
-2. **`src/components/MasterAnalyzerModal.tsx`** (linhas 127-130 e 240)
-   - `isSpotifyReady`: aceitar `truePeak ≤ 0` (alvo `−1` + tolerância `1`) em vez de `≤ −1`.
-   - Quando `truePeak` estiver em `(−1, 0]`, mostrar badge "Dentro da tolerância" (sem bloquear o upload), mantendo crítico apenas para `> 0`.
-   - Ajustar `RadialGauge` do True Peak para refletir a zona de tolerância visualmente (target continua `−1`, mas o "limite vermelho" passa a ser `0`).
+### 4. `supabase/functions/generate-creative/index.ts` (+168 linhas)
+- Pipeline expandido para receber e usar contexto de **projeto + DNA Musical** (gênero, mood, persona-ouvinte, paleta) na construção do prompt de imagem/legenda.
+- Mantém helpers existentes (`normalizeImageToFormat`, `aspectLabel`, etc.).
+- Acrescenta lógica de derivação coerente quando há DNA presente (palette, mood, território sonoro influenciam o prompt de geração).
 
-3. **`src/components/music-dna/MusicDNAAnalyzer.tsx`** (linhas 296-300)
-   - `status` "Pronta para streaming" passa a aceitar `truePeak ≤ 0` (em vez de `≤ −1`).
-   - "Precisa revisão técnica" continua disparando apenas com `truePeak > 0` (já era o caso) ou `dynamicRange < 5`.
+### 5. `src/pages/Creative.tsx` (+190 linhas)
+- Lê `?project=<id>` e `?dna=<id>` da URL e pré-carrega:
+  - dados do projeto via `useProjects()`,
+  - análise de DNA via `getCachedAnalysis()` / `useSavedAnalyses`.
+- Mostra cabeçalho "voltando para o projeto" (botão `ArrowLeft` para `/projetos?id=...`).
+- Pré-popula nome da faixa, gênero/mood/paleta a partir do DNA quando disponível.
+- Novo cartão visual mostrando vínculo ativo com projeto + DNA (ícones `FolderKanban`, `Dna`, `Music`).
+- Ajustes em `FormatSelector`, `StyleChips`, `CaptionGeneratorCard` para consumir o contexto.
+- Mantém todos os recursos atuais (geração de imagem, vídeo loop, legendas, batch derive, lightbox).
 
-4. **`src/hooks/useMusicDNA.ts`** (linhas 196-200)
-   - Reescrever `tpStatus` em três níveis:
-     - `> 0` → CRÍTICO (mantém texto atual sobre clipping pós-normalização)
-     - `> −1` e `≤ 0` → "Dentro da tolerância de ±1 dB. Acima do alvo (−1 dBTP) mas seguro para a maioria dos codecs. Monitore o ceiling do limiter."
-     - `≤ −1` → OK (texto atual)
+## Arquivos não tocados (intencional)
+- `src/lib/audioAnalysis.ts`, `MasterAnalyzerModal.tsx`, `Projects.tsx` — tolerância de True Peak ±1 dB já aplicada em iteração anterior.
+- Migrações de banco — `music_reference_tracks` e RPCs já estão atualizadas.
+- `src/integrations/supabase/{client,types}.ts` — não editar.
 
-5. **`src/pages/Projects.tsx`** (linha 755)
-   - Cor do valor do Peak: `success` quando `≤ −1`, `warning` quando `> −1` e `≤ 0`, `destructive` quando `> 0`.
+## Plano de execução
 
-## Detalhe técnico
-
-```ts
-// src/lib/audioAnalysis.ts
-export const TRUE_PEAK_TARGET_DBTP = -1;
-export const TRUE_PEAK_TOLERANCE_DB = 1;
-export const TRUE_PEAK_MAX_DBTP = TRUE_PEAK_TARGET_DBTP + TRUE_PEAK_TOLERANCE_DB; // 0
-
-export type TruePeakStatus = "ok" | "tolerance" | "critical";
-export function evaluateTruePeak(dbtp: number): TruePeakStatus {
-  if (dbtp > TRUE_PEAK_MAX_DBTP) return "critical";
-  if (dbtp > TRUE_PEAK_TARGET_DBTP) return "tolerance";
-  return "ok";
-}
+```text
+1. Substituir ProjectReleaseTab.tsx pela versão enviada
+2. Verificar ProjectDetail.tsx / Project Hub e passar projectName + artistName para a aba
+3. Substituir useMusicDNA.ts pela versão enviada
+4. Substituir music-dna-analyze/index.ts pela versão enviada
+5. Substituir generate-creative/index.ts pela versão enviada
+6. Substituir Creative.tsx pela versão enviada
+7. Validar: build/typecheck automático do harness
 ```
 
-Todos os pontos acima passam a importar `evaluateTruePeak` em vez de duplicar comparações com literais `-1` / `0`.
+## Validação manual após o deploy
 
-## Fora do escopo
-
-- Não altera a medição de True Peak no edge function `audio-analyze` (apenas a interpretação do valor).
-- Não muda a tolerância de LUFS nem de Dynamic Range.
-- Não toca em benchmarks históricos nem em `music_reference_tracks`.
-
-## Plano de validação
-
-- Mock manual de três valores no `MasterAnalyzerModal`: `−1.5` (OK verde), `−0.4` (warning amarelo, upload liberado), `+0.6` (crítico vermelho, upload bloqueado/aviso).
-- Conferir que o resumo executivo do `MusicDNAAnalyzer` muda de "Pronta para streaming" para o estado intermediário e não mais para "Precisa revisão técnica" no caso de `−0.4 dBTP`.
-- Conferir cor do badge na lista de projetos (`Projects.tsx`).
+- Abrir um projeto na etapa "Lançado" → aba Lançamento → ver card "Materiais de divulgação" com badge de DNA quando aplicável.
+- Clicar "Criar materiais" → confirmar query `?project=...&dna=...` no `/criativo` e contexto carregado.
+- Rodar uma análise de DNA em uma faixa de gênero conhecido (ex: Sertanejo Universitário) → conferir que a nota de streaming do gênero aparece refletida no diagnóstico técnico e que o resumo usa tom de parceiro ("vale muito a pena explorar"), nunca "urgente".
+- Gerar uma capa no `/criativo` com DNA carregado → confirmar que o prompt de imagem incorpora mood/território sonoro do DNA.
