@@ -78,9 +78,11 @@ const corsHeaders = {
     "x-quota-daily-limit, x-quota-daily-used, x-quota-weekly-limit, x-quota-weekly-used, x-quota-daily-resets-at",
 };
 
-const IMAGE_MODEL = "google/gemini-2.5-flash-image";
+const IMAGE_MODEL_DEFAULT = "google/gemini-2.5-flash-image";
+// Nano Banana 2 — better legibility for integrated typography (track/artist names).
+const IMAGE_MODEL_TYPOGRAPHY = "google/gemini-3.1-flash-image-preview";
 
-async function requestImage(messages: any[], lovableKey: string) {
+async function requestImage(messages: any[], lovableKey: string, model: string = IMAGE_MODEL_DEFAULT) {
   const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -88,7 +90,7 @@ async function requestImage(messages: any[], lovableKey: string) {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: IMAGE_MODEL,
+      model,
       messages,
       modalities: ["image", "text"],
     }),
