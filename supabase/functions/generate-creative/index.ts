@@ -601,7 +601,7 @@ serve(async (req) => {
           content: "Gere a imagem agora. Responda obrigatoriamente com uma imagem renderizada no campo images; não responda apenas com texto.",
         },
       ];
-      aiResp = await requestImage(retryMessages, lovableKey);
+      aiResp = await requestImage(retryMessages, lovableKey, imageModel);
 
       if (!aiResp.ok) {
         const txt = await aiResp.text();
