@@ -34,6 +34,7 @@ import NotificationsBell from "@/components/NotificationsPanel";
 import { useAdminRole } from "@/hooks/useAdminRole";
 import { useProfile } from "@/contexts/ProfileContext";
 import { useProjects } from "@/contexts/ProjectContext";
+import BetaBanner from "@/components/BetaBanner";
 
 const principalItems = [
   { labelKey: "nav.home",     path: "/dashboard", icon: Home,         proOnly: false, mobileLabel: "" },
