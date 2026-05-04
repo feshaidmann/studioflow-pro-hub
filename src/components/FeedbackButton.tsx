@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { MessageSquarePlus, X, Send, Star, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -32,6 +32,12 @@ export default function FeedbackButton() {
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
   const location = useLocation();
+
+  useEffect(() => {
+    const handler = () => setOpen(true);
+    window.addEventListener("open-feedback", handler);
+    return () => window.removeEventListener("open-feedback", handler);
+  }, []);
 
   if (!user) return null;
 
