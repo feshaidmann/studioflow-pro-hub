@@ -35,6 +35,7 @@ import { useAdminRole } from "@/hooks/useAdminRole";
 import { useProfile } from "@/contexts/ProfileContext";
 import { useProjects } from "@/contexts/ProjectContext";
 import BetaBanner from "@/components/BetaBanner";
+import { useBetaBannerVisible } from "@/hooks/useBetaBanner";
 
 const principalItems = [
   { labelKey: "nav.home",     path: "/dashboard", icon: Home,         proOnly: false, mobileLabel: "" },
@@ -74,6 +75,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { isAdmin } = useAdminRole();
   const { isPro, displayName } = useProfile();
   const { projects } = useProjects();
+  const betaVisible = useBetaBannerVisible();
+  const betaOffset = betaVisible ? "pt-7" : "";
 
   const activeProjects = projects.filter((p) => !p.completed).length;
 
