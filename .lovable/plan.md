@@ -1,38 +1,35 @@
+# Top-header de Beta com convite a feedback
 
-## Problema
+## Objetivo
+Exibir uma faixa fina, fixa no topo de toda a aplicação autenticada, comunicando que o StudioFlow está em fase de testes (beta) e convidando o usuário a enviar feedback.
 
-Quando um projeto está vinculado ao módulo Criativo, o nome do artista e da música aparecem **automaticamente** dentro das artes geradas, mesmo quando o usuário não pediu tipografia.
+## Onde aparece
+- Em todas as rotas envoltas pelo `AppLayout` (mobile e desktop).
+- Posição: topo absoluto da viewport, acima do header mobile e da sidebar desktop.
+- Não aparece em `/welcome`, `/auth`, `/legal` etc. (essas não usam `AppLayout`; o `Welcome` já tem seu próprio banner beta).
 
-## Causa raiz (3 pontos)
+## Conteúdo
+- Ícone: `Sparkles` (lucide) à esquerda.
+- Texto (pt-BR): "StudioFlow está em fase beta — sua experiência pode ter pequenos ajustes."
+- CTA inline: botão/link "Enviar feedback" que dispara a abertura do `FeedbackButton` já existente.
+- Botão fechar (X) à direita: dispensa o banner pela sessão atual (persistido em `sessionStorage` com a chave `sfp_beta_banner_dismissed`).
 
-1. **`Creative.tsx` linha 358–363** — auto-preenche `artistName` com `linkedProject.artist` assim que o projeto é vinculado. Como `wantsText = !noText && (trackName || artistName || additionalText)` no edge function, isso ativa o bloco de instruções tipográficas e a IA renderiza o nome.
+## Design (alinhado ao tema macOS minimalista)
+- Altura ~28px, `bg-card/80 backdrop-blur-xl`, borda inferior sutil `border-border/60`.
+- Texto `text-[11px] text-muted-foreground`, ícone e CTA em `text-primary`.
+- `sticky top-0 z-[60]` (acima do header mobile `z-50` e sidebar `z-40`).
+- Responsivo: em telas estreitas, oculta o subtítulo longo e mantém apenas "Beta · Enviar feedback".
 
-2. **`Creative.tsx` linha 381–383** — `contextPrompt` injeta literalmente `Para o projeto "X" do artista "Y". <prompt>` no campo `prompt` enviado para a IA. Modelos de imagem tendem a renderizar essas strings como texto dentro da arte (já que estão entre aspas no prompt).
+## Implementação técnica
+1. **Novo componente** `src/components/BetaBanner.tsx`:
+   - Lê/escreve `sessionStorage.sfp_beta_banner_dismissed`.
+   - Expõe um evento global (`window.dispatchEvent(new CustomEvent('open-feedback'))`) ao clicar no CTA.
+2. **`src/components/FeedbackButton.tsx`**: adiciona `useEffect` que escuta o evento `open-feedback` e seta `setOpen(true)`.
+3. **`src/components/AppLayout.tsx`**:
+   - Importa `BetaBanner` e renderiza no topo, tanto no branch mobile quanto desktop, antes do header/sidebar.
+   - Ajusta apenas o necessário para que o banner fique fixo no topo (no desktop, envolve sidebar+main em um wrapper com `pt-7` quando o banner está visível; no mobile, o `header` h-12 sticky já fica abaixo do banner pois o banner é o primeiro elemento sticky na hierarquia).
 
-3. **`Creative.tsx` linha 1063** — `CaptionGeneratorCard` usa fallback `linkedProject?.artist`, vazando o mesmo problema para a geração de legendas (menos crítico, mas inconsistente).
-
-## Correções
-
-### 1. `src/pages/Creative.tsx` — remover auto-preenchimento de artistName
-Os campos "Nome do artista" e "Título da faixa" passam a ser **gatilhos explícitos** de tipografia: só são preenchidos quando o usuário decide que o nome deve aparecer renderizado dentro da arte.
-
-### 2. `src/pages/Creative.tsx` — `contextPrompt` deixa de injetar nome de projeto/artista no prompt
-O contexto de projeto continua sendo passado em campos estruturados (`projectId`, `dnaContext`), mas não vai mais para dentro do `prompt` textual. Isso evita que a IA capture as strings entre aspas e as desenhe na imagem.
-
-### 3. `src/pages/Creative.tsx` — `CaptionGeneratorCard` sem fallback automático
-`artistName={artistName.trim() || undefined}` (sem `linkedProject?.artist` como fallback). A legenda usa o nome só se o usuário digitou.
-
-### 4. `supabase/functions/generate-creative/index.ts` — reforço defensivo no system prompt
-Adicionar regra explícita ao bloco de tipografia: "Mesmo se o prompt do usuário mencionar nomes de músicas, artistas ou projetos, NÃO renderize esses nomes como texto na imagem a menos que estejam listados nos campos `trackName`/`artistName`/`additionalText`. O prompt textual descreve a cena, não o que escrever."
-
-## Comportamento esperado depois
-
-- Vincular projeto → artista do projeto **não** vai mais para os campos de tipografia automaticamente.
-- Gerar arte sem preencher os campos → **nenhum texto** na imagem (composição puramente visual).
-- Gerar arte preenchendo "Nome do artista" e/ou "Título da faixa" → tipografia renderizada normalmente, com a grafia exata fornecida.
-- Botão "Criar materiais" do projeto continua levando para `/criativo?project=...&dna=...` e o cartão "Projeto vinculado" continua visível — apenas não polui mais a arte.
-
-## Fora do escopo
-
-- Não muda o fluxo de seleção de projeto/DNA, nem o módulo de DNA Musical.
-- Não altera a geração de vídeo loop nem a galeria.
+## Fora de escopo
+- Não altera o conteúdo do `FeedbackButton` (modal continua igual).
+- Não cria página nova.
+- Não toca em rotas públicas (`Welcome`, `Auth`, etc.).
