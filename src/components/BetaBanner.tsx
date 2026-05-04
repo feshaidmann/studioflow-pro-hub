@@ -1,24 +1,9 @@
-import { useEffect, useState } from "react";
 import { Sparkles, X } from "lucide-react";
-import { cn } from "@/lib/utils";
-
-const STORAGE_KEY = "sfp_beta_banner_dismissed";
+import { useBetaBannerVisible, dismissBetaBanner } from "@/hooks/useBetaBanner";
 
 export default function BetaBanner() {
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const dismissed = sessionStorage.getItem(STORAGE_KEY) === "true";
-    setVisible(!dismissed);
-  }, []);
-
+  const visible = useBetaBannerVisible();
   if (!visible) return null;
-
-  const handleDismiss = () => {
-    sessionStorage.setItem(STORAGE_KEY, "true");
-    setVisible(false);
-  };
 
   const handleOpenFeedback = () => {
     window.dispatchEvent(new CustomEvent("open-feedback"));
@@ -26,9 +11,7 @@ export default function BetaBanner() {
 
   return (
     <div
-      className={cn(
-        "sticky top-0 z-[60] flex items-center gap-2 border-b border-border/60 bg-card/80 backdrop-blur-xl px-3 py-1.5",
-      )}
+      className="fixed top-0 inset-x-0 z-[60] flex items-center gap-2 border-b border-border/60 bg-card/85 backdrop-blur-xl px-3 h-7"
       role="status"
     >
       <Sparkles className="h-3 w-3 text-primary shrink-0" />
@@ -43,7 +26,7 @@ export default function BetaBanner() {
         Enviar feedback
       </button>
       <button
-        onClick={handleDismiss}
+        onClick={dismissBetaBanner}
         className="text-muted-foreground hover:text-foreground shrink-0 p-0.5"
         aria-label="Fechar aviso de beta"
       >
