@@ -151,7 +151,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   if (isMobile) {
     return (
-      <div className="flex min-h-screen flex-col">
+      <div className={cn("flex min-h-screen flex-col", betaOffset)}>
+        <BetaBanner />
         <header className="flex h-12 items-center justify-between border-b border-border/60 bg-background/70 backdrop-blur-xl px-4">
           <div className="flex items-center gap-1">
             {!isRootRoute && (
@@ -338,9 +339,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-screen">
+      <BetaBanner />
       <aside
         className={cn(
-          "fixed left-0 top-0 z-40 flex h-full flex-col border-r border-border/60 bg-background/60 backdrop-blur-xl transition-all duration-300",
+          "fixed left-0 z-40 flex h-full flex-col border-r border-border/60 bg-background/60 backdrop-blur-xl transition-all duration-300",
+          betaVisible ? "top-7" : "top-0",
           sidebarOpen ? "w-52" : "w-14"
         )}
       >
@@ -430,7 +433,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
-      <main className={cn("flex-1 transition-all duration-300", sidebarOpen ? "ml-52" : "ml-14")}>
+      <main className={cn("flex-1 transition-all duration-300", sidebarOpen ? "ml-52" : "ml-14", betaOffset)}>
         <div className="animate-slide-up">{children}</div>
       </main>
     </div>
