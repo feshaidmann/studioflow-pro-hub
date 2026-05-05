@@ -33,14 +33,28 @@ export default function FeedbackButton() {
   const [rating, setRating] = useState<number | null>(null);
   const [hoveredStar, setHoveredStar] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
+  const sourceRef = useRef<FeedbackSource>("floating_button");
   const { user } = useAuth();
   const location = useLocation();
 
   useEffect(() => {
-    const handler = () => setOpen(true);
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<{ source?: FeedbackSource }>).detail;
+      sourceRef.current = detail?.source ?? "event";
+      setOpen(true);
+    };
     window.addEventListener("open-feedback", handler);
     return () => window.removeEventListener("open-feedback", handler);
   }, []);
+
+  useEffect(() => {
+    if (open) {
+      trackEvent("feedback_modal_opened", {
+        path: location.pathname,
+        source: sourceRef.current,
+      });
+    }
+  }, [open, location.pathname]);
 
   if (!user) return null;
 
