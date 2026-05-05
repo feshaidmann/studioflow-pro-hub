@@ -697,7 +697,10 @@ export default function Creative() {
               </div>
               <div className="flex items-center gap-1 shrink-0">
                 <Button asChild variant="ghost" size="sm" className="h-7 px-2 text-[12px]">
-                  <Link to={`/projects/${linkedProject.id}`}>
+                  <Link
+                    to={`/projects/${linkedProject.id}`}
+                    onClick={() => trackEvent("creative_returned_to_project", { from: "context_chip" })}
+                  >
                     <ArrowLeft className="h-3.5 w-3.5 mr-1" />
                     Voltar ao projeto
                   </Link>
@@ -1081,7 +1084,10 @@ export default function Creative() {
                     {savedToGallery ? "✓ Salvo na galeria do projeto" : "Ainda não salvo na galeria"}
                   </span>
                   <Button asChild variant="ghost" size="sm" className="h-8 text-xs gap-1.5">
-                    <Link to={`/projects/${linkedProject.id}`}>
+                    <Link
+                      to={`/projects/${linkedProject.id}`}
+                      onClick={() => trackEvent("creative_returned_to_project", { from: "result_step" })}
+                    >
                       <ArrowLeft className="h-3.5 w-3.5" />
                       Voltar ao projeto
                     </Link>
@@ -1150,7 +1156,10 @@ export default function Creative() {
                 </Button>
                 {linkedProject && (
                   <Button asChild variant="ghost" size="sm" className="h-8 text-xs gap-1.5">
-                    <Link to={`/projects/${linkedProject.id}`}>
+                    <Link
+                      to={`/projects/${linkedProject.id}`}
+                      onClick={() => trackEvent("creative_returned_to_project", { from: "caption_step" })}
+                    >
                       <ArrowLeft className="h-3.5 w-3.5" />
                       Voltar ao projeto
                     </Link>
