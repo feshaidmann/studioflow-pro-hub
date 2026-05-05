@@ -13,9 +13,9 @@ export const APPLICATION_STATUS_LABELS: Record<ApplicationStatus, string> = {
 };
 
 export const APPLICATION_STATUS_COLORS: Record<ApplicationStatus, string> = {
-  interesse: "bg-blue-500/15 text-blue-700 border-blue-200",
-  preparando: "bg-amber-500/15 text-amber-700 border-amber-200",
-  inscrito: "bg-green-500/15 text-green-700 border-green-200",
+  interesse: "bg-blue-500/25 text-blue-900 border-blue-500/50 font-semibold",
+  preparando: "bg-amber-500/25 text-amber-900 border-amber-500/50 font-semibold",
+  inscrito: "bg-green-500/25 text-green-900 border-green-500/50 font-semibold",
   resultado: "bg-purple-500/15 text-purple-700 border-purple-200",
 };
 
@@ -29,9 +29,9 @@ export const RESULTADO_LABELS: Record<ResultadoType, string> = {
 };
 
 export const RESULTADO_COLORS: Record<ResultadoType, string> = {
-  aprovado: "bg-green-500/15 text-green-700 border-green-200",
-  reprovado: "bg-red-500/15 text-red-700 border-red-200",
-  lista_espera: "bg-amber-500/15 text-amber-700 border-amber-200",
+  aprovado: "bg-green-500/25 text-green-900 border-green-500/50 font-semibold",
+  reprovado: "bg-red-500/25 text-red-900 border-red-500/50 font-semibold",
+  lista_espera: "bg-amber-500/25 text-amber-900 border-amber-500/50 font-semibold",
   desistencia: "bg-muted text-muted-foreground border-border",
 };
 

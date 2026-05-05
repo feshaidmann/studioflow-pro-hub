@@ -328,7 +328,7 @@ export default function Welcome() {
                         {task.label}
                       </span>
                       {!task.done && task.urgent && (
-                        <span className="ml-auto text-[9px] rounded-full bg-amber-500/15 text-amber-700 px-1.5 py-0.5">
+                        <span className="ml-auto text-[9px] rounded-full bg-amber-500/25 text-amber-900 font-semibold px-1.5 py-0.5">
                           urgente
                         </span>
                       )}

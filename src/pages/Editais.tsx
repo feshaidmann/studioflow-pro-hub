@@ -38,8 +38,8 @@ const AREA_OPTIONS = ["Música", "Audiovisual", "Ambos", "Outra"];
 const ITEMS_PER_PAGE = 20;
 
 function statusColor(status: string) {
-  if (status === "Aberto") return "bg-green-500/15 text-green-700 border-green-200";
-  if (status === "Encerrado") return "bg-red-500/15 text-red-700 border-red-200";
+  if (status === "Aberto") return "bg-green-500/25 text-green-900 border-green-500/50 font-semibold";
+  if (status === "Encerrado") return "bg-red-500/25 text-red-900 border-red-500/50 font-semibold";
   return "bg-muted text-muted-foreground border-border";
 }
 
@@ -1253,8 +1253,8 @@ export default function Editais() {
                 <div className="space-y-2">
                   {[...matches].sort((a, b) => b.score - a.score).slice(0, 10).map((m) => {
                     const scoreClass =
-                      m.score >= 70 ? "bg-green-500/15 text-green-700 border-green-200" :
-                      m.score >= 40 ? "bg-amber-500/15 text-amber-700 border-amber-200" :
+                      m.score >= 70 ? "bg-green-500/25 text-green-900 border-green-500/50 font-semibold" :
+                      m.score >= 40 ? "bg-amber-500/25 text-amber-900 border-amber-500/50 font-semibold" :
                                       "bg-muted text-muted-foreground border-border";
                     const scoreLabel =
                       m.score >= 70 ? "Forte compatibilidade" :
