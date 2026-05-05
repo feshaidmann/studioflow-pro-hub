@@ -13,7 +13,7 @@ export const APPLICATION_STATUS_LABELS: Record<ApplicationStatus, string> = {
 };
 
 export const APPLICATION_STATUS_COLORS: Record<ApplicationStatus, string> = {
-  interesse: "bg-blue-500/15 text-blue-700 border-blue-200",
+  interesse: "XXXX",
   preparando: "bg-amber-500/15 text-amber-700 border-amber-200",
   inscrito: "bg-green-500/15 text-green-700 border-green-200",
   resultado: "bg-purple-500/15 text-purple-700 border-purple-200",
