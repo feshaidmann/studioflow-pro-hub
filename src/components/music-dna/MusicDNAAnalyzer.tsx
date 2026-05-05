@@ -416,6 +416,91 @@ function buildAnalysisMarkdown(input: { name: string; references: string[]; note
   return lines.join("\n");
 }
 
+interface GaugeConfig {
+  label: string;
+  value: number | null | undefined;
+  unit: string;
+  min: number;
+  max: number;
+  ideal: [number, number]; // faixa ideal
+  format?: (v: number) => string;
+}
+
+function renderGaugeCanvas(cfg: GaugeConfig): string {
+  const W = 360, H = 220;
+  const canvas = document.createElement("canvas");
+  canvas.width = W * 2; canvas.height = H * 2; // retina
+  const ctx = canvas.getContext("2d")!;
+  ctx.scale(2, 2);
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, W, H);
+
+  const cx = W / 2, cy = H - 40, radius = 110;
+  const startAngle = Math.PI, endAngle = 2 * Math.PI;
+  const range = cfg.max - cfg.min;
+
+  // arco base cinza
+  ctx.lineWidth = 18;
+  ctx.lineCap = "butt";
+  ctx.strokeStyle = "#e5e7eb";
+  ctx.beginPath();
+  ctx.arc(cx, cy, radius, startAngle, endAngle);
+  ctx.stroke();
+
+  // faixa ideal (verde)
+  const idealStart = startAngle + ((cfg.ideal[0] - cfg.min) / range) * Math.PI;
+  const idealEnd = startAngle + ((cfg.ideal[1] - cfg.min) / range) * Math.PI;
+  ctx.strokeStyle = "#86efac";
+  ctx.beginPath();
+  ctx.arc(cx, cy, radius, Math.max(idealStart, startAngle), Math.min(idealEnd, endAngle));
+  ctx.stroke();
+
+  // ponteiro
+  if (cfg.value != null && Number.isFinite(cfg.value)) {
+    const clamped = Math.max(cfg.min, Math.min(cfg.max, cfg.value));
+    const angle = startAngle + ((clamped - cfg.min) / range) * Math.PI;
+    const inIdeal = clamped >= cfg.ideal[0] && clamped <= cfg.ideal[1];
+    const color = inIdeal ? "#16a34a" : (clamped < cfg.ideal[0] ? "#f59e0b" : "#dc2626");
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx + Math.cos(angle) * (radius - 4), cy + Math.sin(angle) * (radius - 4));
+    ctx.stroke();
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 6, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // labels min/max
+  ctx.fillStyle = "#9ca3af";
+  ctx.font = "11px Helvetica, Arial, sans-serif";
+  ctx.textAlign = "center";
+  ctx.fillText(String(cfg.min), cx - radius, cy + 16);
+  ctx.fillText(String(cfg.max), cx + radius, cy + 16);
+
+  // valor central
+  ctx.fillStyle = "#111827";
+  ctx.font = "bold 28px Helvetica, Arial, sans-serif";
+  const valTxt = cfg.value != null && Number.isFinite(cfg.value)
+    ? (cfg.format ? cfg.format(cfg.value) : cfg.value.toFixed(1))
+    : "—";
+  ctx.fillText(`${valTxt} ${cfg.unit}`.trim(), cx, cy - 14);
+
+  // título
+  ctx.fillStyle = "#374151";
+  ctx.font = "bold 13px Helvetica, Arial, sans-serif";
+  ctx.fillText(cfg.label, cx, 24);
+
+  // faixa ideal label
+  ctx.fillStyle = "#6b7280";
+  ctx.font = "10px Helvetica, Arial, sans-serif";
+  ctx.fillText(`ideal: ${cfg.ideal[0]} a ${cfg.ideal[1]} ${cfg.unit}`.trim(), cx, cy + 32);
+
+  return canvas.toDataURL("image/png");
+}
+
 async function downloadAnalysisReport(input: { name: string; references: string[]; notes?: string }, diagnosis: DiagnosisResult) {
   const { jsPDF } = await import("jspdf");
   const doc = new jsPDF({ unit: "pt", format: "a4" });
