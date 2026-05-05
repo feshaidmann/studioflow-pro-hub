@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import {
   Mic2, Search, Save, ExternalLink, Star, MapPin, Users,
   Music2, ChevronDown, Filter, X, Sparkles, ArrowRight,
-  Calendar, DollarSign, Info, ClipboardList,
+  Calendar, DollarSign, Info, ClipboardList, AlertCircle, RefreshCw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -359,8 +359,8 @@ export default function Palcos() {
   const { projects } = useProjects();
   const {
     palcosCurados, loadingCurados,
-    searching, searchResult,
-    search, saveResults, matchByPerfil,
+    searching, searchResult, searchError, lastQuery,
+    search, retryLastSearch, saveResults, matchByPerfil,
   } = usePalcos();
   const createApplication = useCreateApplication();
 
@@ -542,14 +542,39 @@ export default function Palcos() {
 
           {/* Grid de palcos */}
           {loadingCurados ? (
-            <div className="space-y-2">
-              {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-32 w-full" />)}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <Skeleton key={i} className="h-32 w-full rounded-lg" />
+              ))}
             </div>
+          ) : palcosCurados.length === 0 ? (
+            <Card>
+              <CardContent className="py-12 flex flex-col items-center text-center text-muted-foreground gap-3">
+                <Mic2 className="h-10 w-10 opacity-40" />
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-foreground">Banco curado vazio</p>
+                  <p className="text-xs">
+                    Ainda não há oportunidades cadastradas. Tente buscar com IA na aba ao lado.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
           ) : palcosFiltrados.length === 0 ? (
             <Card>
-              <CardContent className="py-12 flex flex-col items-center text-center text-muted-foreground">
-                <Mic2 className="h-10 w-10 mb-3 opacity-40" />
-                <p className="text-sm">Nenhuma oportunidade encontrada com esses filtros.</p>
+              <CardContent className="py-12 flex flex-col items-center text-center text-muted-foreground gap-3">
+                <Filter className="h-10 w-10 opacity-40" />
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-foreground">Nenhum resultado para esses filtros</p>
+                  <p className="text-xs">Tente ampliar os critérios ou limpar os filtros.</p>
+                </div>
+                {hasFilters && (
+                  <Button
+                    size="sm" variant="outline"
+                    onClick={() => { setFilterTipo("todos"); setFilterEstado("todos"); setFilterPorte("todos"); setFilterApenasAbertos(false); }}
+                  >
+                    <X className="h-3.5 w-3.5 mr-1.5" /> Limpar filtros
+                  </Button>
+                )}
               </CardContent>
             </Card>
           ) : (
@@ -589,15 +614,41 @@ export default function Palcos() {
             </CardContent>
           </Card>
 
-          {/* Loading */}
+          {/* Loading — skeleton em grid (mesma forma dos resultados) */}
           {searching && (
-            <Card><CardContent className="pt-5 space-y-2">
-              {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
-            </CardContent></Card>
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Sparkles className="h-3.5 w-3.5 animate-pulse text-primary" />
+                Buscando oportunidades em portais culturais…
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <Skeleton key={i} className="h-32 w-full rounded-lg" />
+                ))}
+              </div>
+            </div>
           )}
 
-          {/* Estado vazio — calendário */}
-          {!searching && !searchResult && (
+          {/* Erro — busca IA falhou */}
+          {!searching && searchError && (
+            <Card className="border-destructive/40 bg-destructive/5">
+              <CardContent className="py-6 flex flex-col items-center text-center gap-3">
+                <AlertCircle className="h-9 w-9 text-destructive opacity-70" />
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-foreground">Não foi possível buscar agora</p>
+                  <p className="text-xs text-muted-foreground max-w-md">{searchError}</p>
+                </div>
+                {lastQuery && (
+                  <Button size="sm" variant="outline" onClick={retryLastSearch}>
+                    <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Tentar novamente
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Estado vazio — calendário (sem resultado e sem erro) */}
+          {!searching && !searchResult && !searchError && (
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm flex items-center gap-2">
@@ -626,7 +677,7 @@ export default function Palcos() {
           )}
 
           {/* Exemplos de busca */}
-          {!searching && !searchResult && (
+          {!searching && !searchResult && !searchError && (
             <div className="flex flex-wrap gap-2">
               {SEARCH_EXAMPLES.map((ex) => (
                 <button
@@ -653,7 +704,7 @@ export default function Palcos() {
                 </Card>
               )}
 
-              {searchResult.palcos.length > 0 && (
+              {searchResult.palcos.length > 0 ? (
                 <Card>
                   <CardHeader className="pb-3">
                     <div className="flex items-center justify-between">
@@ -679,6 +730,24 @@ export default function Palcos() {
                         />
                       ))}
                     </div>
+                  </CardContent>
+                </Card>
+              ) : (
+                <Card>
+                  <CardContent className="py-10 flex flex-col items-center text-center text-muted-foreground gap-3">
+                    <Search className="h-9 w-9 opacity-40" />
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium text-foreground">Nenhuma oportunidade estruturada encontrada</p>
+                      <p className="text-xs max-w-md">
+                        A IA não retornou palcos no formato esperado para esta busca.
+                        Tente reformular com termos mais específicos (gênero, estado, ano).
+                      </p>
+                    </div>
+                    {lastQuery && (
+                      <Button size="sm" variant="outline" onClick={retryLastSearch}>
+                        <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Buscar novamente
+                      </Button>
+                    )}
                   </CardContent>
                 </Card>
               )}
@@ -724,18 +793,32 @@ export default function Palcos() {
                 </div>
               )}
 
-              {loadingProfile && (
-                <div className="space-y-2">
-                  <Skeleton className="h-16 w-full" />
-                  <Skeleton className="h-16 w-full" />
+              {(loadingProfile || (selectedProjectId && loadingCurados)) && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <Skeleton key={i} className="h-32 w-full rounded-lg" />
+                  ))}
                 </div>
               )}
 
-              {selectedProjectId && recoProfile && !loadingProfile && palcosComScore.length === 0 && (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  Nenhuma oportunidade compatível no banco curado.
-                  Tente buscar com IA na aba "Buscar com IA".
-                </p>
+              {selectedProjectId && recoProfile && !loadingProfile && !loadingCurados && palcosComScore.length === 0 && (
+                <div className="rounded-lg border border-border p-6 text-center space-y-3">
+                  <Sparkles className="h-8 w-8 mx-auto text-muted-foreground opacity-40" />
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-foreground">Nenhuma oportunidade compatível</p>
+                    <p className="text-xs text-muted-foreground">
+                      {palcosCurados.length === 0
+                        ? "O banco curado ainda está vazio."
+                        : "Os palcos do banco curado não combinam com o perfil cultural deste projeto."}
+                    </p>
+                  </div>
+                  <Button size="sm" variant="outline" onClick={() => {
+                    const tab = document.querySelector<HTMLButtonElement>('[role="tab"][value="buscar"]');
+                    tab?.click();
+                  }}>
+                    <Search className="h-3.5 w-3.5 mr-1.5" /> Buscar com IA
+                  </Button>
+                </div>
               )}
 
               {selectedProjectId && recoProfile && !loadingProfile && palcosComScore.length > 0 && (

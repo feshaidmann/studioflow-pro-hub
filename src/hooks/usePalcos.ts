@@ -65,6 +65,9 @@ export function usePalcos() {
   const [loadingCurados, setLoadingCurados] = useState(true);
   const [searching, setSearching] = useState(false);
   const [searchResult, setSearchResult] = useState<PalcoSearchResult | null>(null);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const [lastQuery, setLastQuery] = useState<string | null>(null);
+  const [lastProjectId, setLastProjectId] = useState<string | null>(null);
 
   // ── Banco curado ─────────────────────────────────────────────────────────
   const fetchCurados = useCallback(async () => {
@@ -92,6 +95,9 @@ export function usePalcos() {
     if (!user) return;
     setSearching(true);
     setSearchResult(null);
+    setSearchError(null);
+    setLastQuery(query);
+    setLastProjectId(projectId || null);
     try {
       const { data, error } = await supabase.functions.invoke("palco-search", {
         body: { query, project_id: projectId || null },
@@ -100,15 +106,21 @@ export function usePalcos() {
       setSearchResult(data as PalcoSearchResult);
     } catch (err: any) {
       console.error("Palco search error:", err);
+      const msg = err?.message || "Não foi possível buscar agora. Tente novamente em instantes.";
+      setSearchError(msg);
       toast({
         title: "Erro na busca",
-        description: err.message || "Tente novamente.",
+        description: msg,
         variant: "destructive",
       });
     } finally {
       setSearching(false);
     }
   }, [user, toast]);
+
+  const retryLastSearch = useCallback(() => {
+    if (lastQuery) void search(lastQuery, lastProjectId);
+  }, [lastQuery, lastProjectId, search]);
 
   // ── Salvar resultado de busca no pipeline ────────────────────────────────
   const saveResults = useCallback(async (
@@ -223,7 +235,10 @@ export function usePalcos() {
     loadingCurados,
     searching,
     searchResult,
+    searchError,
+    lastQuery,
     search,
+    retryLastSearch,
     saveResults,
     matchByPerfil,
     refreshCurados: fetchCurados,
