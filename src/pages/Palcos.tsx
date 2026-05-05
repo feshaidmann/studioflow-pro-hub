@@ -359,8 +359,8 @@ export default function Palcos() {
   const { projects } = useProjects();
   const {
     palcosCurados, loadingCurados,
-    searching, searchResult,
-    search, saveResults, matchByPerfil,
+    searching, searchResult, searchError, lastQuery,
+    search, retryLastSearch, saveResults, matchByPerfil,
   } = usePalcos();
   const createApplication = useCreateApplication();
 
