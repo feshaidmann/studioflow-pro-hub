@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import {
   Palette, Sparkles, ImageIcon, FileText, Dna, X, Music, User,
@@ -36,6 +36,19 @@ import { VideoEffectPicker } from "@/components/creative/VideoEffectPicker";
 import type { Intensity, SpotEffect } from "@/components/creative/videoLayers";
 import { cleanTrackName } from "@/lib/trackName";
 import { AIQuotaBadge } from "@/components/ui/ai-quota-badge";
+import { trackEvent } from "@/lib/analytics";
+import { markChecklistItem } from "@/hooks/useReleaseChecklist";
+import { useAuth } from "@/contexts/AuthContext";
+
+// Mapeia formato gerado → chave do Checklist de Lançamento
+const FORMAT_TO_CHECKLIST_KEY: Record<string, string> = {
+  spotify_cover: "capa",
+  deezer_cover: "capa",
+  tidal_cover: "capa",
+  youtube_cover: "thumbnail",
+  reels_loop: "reels",
+  story: "stories",
+};
 
 // ── Tipos de material — define formato implicitamente ─────────────────────
 type MaterialType = "capa" | "post" | "story" | "reels" | "legenda";
