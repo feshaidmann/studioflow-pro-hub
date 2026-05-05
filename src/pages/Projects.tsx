@@ -146,7 +146,7 @@ export default function Projects() {
   const [showTeam, setShowTeam] = useState(false);
   const [teamDialogOpen, setTeamDialogOpen] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [form, setForm] = useState({ name: "", artist: "", bpm: "120", key: "C", stage: "inicio" as Project["stage"], projectType: "single" as ProjectType, trackCount: "", uploadDate: "", template: "none" as ProjectTemplate });
+  const [form, setForm] = useState({ name: "", artist: "", bpm: "120", key: "C", stage: "inicio" as Project["stage"], projectType: "single" as ProjectType, trackCount: "", uploadDate: "", template: "none" as ProjectTemplate, genre: "", audienceSize: "" });
 
   /* ── Wizard state (single-step) ── */
   const [wizardSource, setWizardSource] = useState<WizardSource>("new");
@@ -352,7 +352,7 @@ export default function Projects() {
 
   /* ── Edit/Delete state ── */
   const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [editForm, setEditForm] = useState({ id: "", name: "", artist: "", bpm: "120", key: "C", stage: "inicio" as Project["stage"], projectType: "single" as ProjectType, trackCount: "", uploadDate: "" });
+  const [editForm, setEditForm] = useState({ id: "", name: "", artist: "", bpm: "120", key: "C", stage: "inicio" as Project["stage"], projectType: "single" as ProjectType, trackCount: "", uploadDate: "", genre: "", audienceSize: "" });
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const [confirmUploadOpen, setConfirmUploadOpen] = useState(false);
@@ -399,6 +399,7 @@ export default function Projects() {
   };
 
   const handleAddProject = async () => {
+    if (!form.genre) { toast.error("Selecione o gênero principal"); return; }
     if ((form.projectType === "ep" || form.projectType === "album") && (!form.trackCount || Number(form.trackCount) < 1)) { toast.error(t("projects.trackCount") + " é obrigatório para EP/Álbum"); return; }
     let uploadDateStr = "";
     if (form.uploadDate) {
@@ -423,12 +424,15 @@ export default function Projects() {
         estimatedMonths: null,
         uploadDate: uploadDateStr,
         templateTracks: templateTracks,
+        genre: form.genre || null,
+        audienceSizeAtStart: form.audienceSize || null,
+        artistState: (profile as any)?.state ?? null,
       });
       if (!newProj) {
         toast.error("Erro ao criar projeto. Verifique sua conexão e tente novamente.");
         return;
       }
-      setForm({ name: "", artist: "", bpm: "120", key: "C", stage: "inicio", projectType: "single", trackCount: "", uploadDate: "", template: "none" });
+      setForm({ name: "", artist: "", bpm: "120", key: "C", stage: "inicio", projectType: "single", trackCount: "", uploadDate: "", template: "none", genre: "", audienceSize: "" });
       setDialogOpen(false);
       addNotification({ title: "Novo projeto criado", message: `${newProj.name} foi adicionado aos seus projetos`, link: "/projects", type: "stage" });
       toast.success(`Projeto "${newProj.name}" criado! Adicione sua equipe para começar. 🎵`);
