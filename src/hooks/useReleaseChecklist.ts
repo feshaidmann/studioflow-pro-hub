@@ -223,8 +223,16 @@ export function useReleaseChecklist(projectId: string) {
         persist(next);
         return next;
       });
+      // Mirror to projects table for market intelligence
+      if (projectId && value.trim()) {
+        if (key === "distribuidora") {
+          supabase.from("projects").update({ distributor: value }).eq("id", projectId);
+        } else if (key === "genero") {
+          supabase.from("projects").update({ genre: value }).eq("id", projectId);
+        }
+      }
     },
-    [persist],
+    [persist, projectId],
   );
 
   // Stats
