@@ -409,7 +409,7 @@ function buildAnalysisMarkdown(input: { name: string; references: string[]; note
   if (diagnosis.referencias_proximas?.length) {
     lines.push("## Referências próximas");
     diagnosis.referencias_proximas.forEach(ref => {
-      lines.push(`- **${ref.artista}** — ${ref.similaridade}${ref.justificativa ? ` — ${ref.justificativa}` : ""}`);
+      lines.push(`- **${ref.artista}** — ${ref.similaridade}${ref.motivo ? ` — ${ref.motivo}` : ""}`);
     });
     lines.push("");
   }
