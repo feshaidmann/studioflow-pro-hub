@@ -793,18 +793,32 @@ export default function Palcos() {
                 </div>
               )}
 
-              {loadingProfile && (
-                <div className="space-y-2">
-                  <Skeleton className="h-16 w-full" />
-                  <Skeleton className="h-16 w-full" />
+              {(loadingProfile || (selectedProjectId && loadingCurados)) && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <Skeleton key={i} className="h-32 w-full rounded-lg" />
+                  ))}
                 </div>
               )}
 
-              {selectedProjectId && recoProfile && !loadingProfile && palcosComScore.length === 0 && (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  Nenhuma oportunidade compatível no banco curado.
-                  Tente buscar com IA na aba "Buscar com IA".
-                </p>
+              {selectedProjectId && recoProfile && !loadingProfile && !loadingCurados && palcosComScore.length === 0 && (
+                <div className="rounded-lg border border-border p-6 text-center space-y-3">
+                  <Sparkles className="h-8 w-8 mx-auto text-muted-foreground opacity-40" />
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-foreground">Nenhuma oportunidade compatível</p>
+                    <p className="text-xs text-muted-foreground">
+                      {palcosCurados.length === 0
+                        ? "O banco curado ainda está vazio."
+                        : "Os palcos do banco curado não combinam com o perfil cultural deste projeto."}
+                    </p>
+                  </div>
+                  <Button size="sm" variant="outline" onClick={() => {
+                    const tab = document.querySelector<HTMLButtonElement>('[role="tab"][value="buscar"]');
+                    tab?.click();
+                  }}>
+                    <Search className="h-3.5 w-3.5 mr-1.5" /> Buscar com IA
+                  </Button>
+                </div>
               )}
 
               {selectedProjectId && recoProfile && !loadingProfile && palcosComScore.length > 0 && (
