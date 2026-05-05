@@ -706,6 +706,7 @@ export default function Palcos() {
                 <PalcoCard
                   key={p.id}
                   palco={p}
+                  score={recoProfile ? scoreById.get(p.id) : undefined}
                   onViewDetail={(p) => { setDetailPalco(p); setDetailOpen(true); }}
                   onCandidatar={handleCandidatar}
                 />
