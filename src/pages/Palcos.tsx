@@ -4,6 +4,7 @@ import {
   Mic2, Search, Save, ExternalLink, Star, MapPin, Users,
   Music2, ChevronDown, Filter, X, Sparkles, ArrowRight,
   Calendar, DollarSign, Info, ClipboardList, AlertCircle, RefreshCw,
+  MoreHorizontal, Trophy, Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +18,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { MobileStickyHeader } from "@/components/ui/mobile-sticky-header";
 import {
@@ -24,9 +26,50 @@ import {
   TIPO_PALCO_LABELS, TIPO_PALCO_COLORS, PORTE_LABELS,
 } from "@/hooks/usePalcos";
 import { useProjects } from "@/contexts/ProjectContext";
-import { useCreateApplication } from "@/hooks/useEditalApplications";
+import {
+  useCreateApplication, useEditalApplications, useUpdateApplication, useDeleteApplication,
+  APPLICATION_STATUS_LABELS, APPLICATION_STATUS_COLORS,
+  type ApplicationStatus, type EditalApplication,
+} from "@/hooks/useEditalApplications";
+import { useTasks } from "@/hooks/useTasks";
+import ApplicationChecklist from "@/components/editais/ApplicationChecklist";
+import EditalResultModal from "@/components/editais/EditalResultModal";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+
+// ── Templates de checklist por tipo de palco ─────────────────────────────
+const PALCO_CHECKLIST_TEMPLATES: Record<TipoPalco, { label: string; type: string; required: boolean }[]> = {
+  festival: [
+    { label: "Press kit completo (bio + fotos)",  type: "portfolio_links", required: true },
+    { label: "Rider técnico (equipamentos)",       type: "outro",           required: true },
+    { label: "Links de streaming atualizados",     type: "portfolio_links", required: true },
+    { label: "Foto profissional (alta resolução)", type: "outro",           required: false },
+    { label: "Vídeo ao vivo recente",              type: "outro",           required: false },
+  ],
+  showcase: [
+    { label: "Demo gravado (3 a 5 faixas)",  type: "portfolio_links", required: true },
+    { label: "Bio curta (até 100 palavras)", type: "bio_curta",       required: true },
+    { label: "Links de redes sociais",        type: "portfolio_links", required: true },
+    { label: "EPK (Electronic Press Kit)",    type: "outro",           required: false },
+  ],
+  circuito: [
+    { label: "Bio artística completa",            type: "bio_media",       required: true },
+    { label: "Portfólio de shows anteriores",     type: "portfolio_links", required: true },
+    { label: "Rider técnico",                      type: "outro",           required: true },
+    { label: "Cachê e condições de apresentação", type: "outro",           required: false },
+  ],
+  residencia: [
+    { label: "Proposta artística / memorial", type: "memorial",        required: true },
+    { label: "Currículo artístico",            type: "curriculo",       required: true },
+    { label: "Amostras de trabalho",           type: "portfolio_links", required: true },
+    { label: "Plano de execução",              type: "plano_execucao",  required: false },
+  ],
+  abertura: [
+    { label: "Demo ou EP recente", type: "portfolio_links", required: true },
+    { label: "Links de streaming", type: "portfolio_links", required: true },
+    { label: "Bio curta",          type: "bio_curta",       required: false },
+  ],
+};
 
 // ── Exemplos de busca ─────────────────────────────────────────────────────
 const SEARCH_EXAMPLES = [
@@ -170,10 +213,11 @@ function StartCandidaturaDialog({
   open: boolean;
   onOpenChange: (o: boolean) => void;
   projects: { id: string; name: string }[];
-  onConfirm: (params: { edital_id: string; project_id?: string | null; notas?: string; tipo: "palco" }) => void;
+  onConfirm: (params: { edital_id: string; project_id?: string | null; notas?: string; tipo: "palco"; data_inscricao?: string }) => void;
 }) {
   const [projectId, setProjectId] = useState("none");
   const [notas, setNotas] = useState("");
+  const [dataInscricao, setDataInscricao] = useState("");
 
   if (!palco) return null;
 
@@ -199,12 +243,14 @@ function StartCandidaturaDialog({
             <Label className="text-xs">Nota (opcional)</Label>
             <Input value={notas} onChange={(e) => setNotas(e.target.value)} placeholder="Ex: Prazo apertado, prioridade alta" />
           </div>
+          <div>
+            <Label className="text-xs">Data prevista de inscrição <span className="text-muted-foreground/60">(opcional)</span></Label>
+            <Input type="date" value={dataInscricao} onChange={(e) => setDataInscricao(e.target.value)} className="text-sm" />
+          </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
           <Button onClick={async () => {
-            // Precisamos do ID no banco de editais para criar candidatura
-            // Buscamos ou criamos o registro
             const { data: { session } } = await supabase.auth.getSession();
             if (!session) return;
 
@@ -212,7 +258,6 @@ function StartCandidaturaDialog({
               .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
               .replace(/[^a-z0-9_]/g, "_").replace(/_+/g, "_");
 
-            // Upsert no banco de editais (tipo=palco)
             const { data: upserted } = await supabase
               .from("editais")
               .upsert({
@@ -243,10 +288,12 @@ function StartCandidaturaDialog({
                 project_id: projectId !== "none" ? projectId : null,
                 notas: notas.trim() || undefined,
                 tipo: "palco",
+                data_inscricao: dataInscricao || undefined,
               });
             }
             setProjectId("none");
             setNotas("");
+            setDataInscricao("");
             onOpenChange(false);
           }}>
             <ClipboardList className="h-3.5 w-3.5 mr-1.5" />Iniciar
@@ -259,12 +306,14 @@ function StartCandidaturaDialog({
 
 // ── Card de palco ─────────────────────────────────────────────────────────
 function PalcoCard({
-  palco, score, onViewDetail, onCandidatar,
+  palco, score, onViewDetail, onCandidatar, existingApplication, onViewCandidatura,
 }: {
   palco: PalcoCurado;
   score?: number;
   onViewDetail: (p: PalcoCurado) => void;
   onCandidatar: (p: PalcoCurado) => void;
+  existingApplication?: EditalApplication | null;
+  onViewCandidatura?: (app: EditalApplication) => void;
 }) {
   return (
     <div
@@ -296,6 +345,21 @@ function PalcoCard({
                 <TooltipContent side="left" className="text-xs">
                   {score >= 15 ? "Alta compatibilidade com seu perfil" :
                    score >= 8  ? "Compatibilidade média" : "Compatibilidade baixa"}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+          {existingApplication && (
+            <TooltipProvider delayDuration={150}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Badge variant="outline" className={`text-[10px] ${APPLICATION_STATUS_COLORS[existingApplication.status]}`}>
+                    <ClipboardList className="h-2.5 w-2.5 mr-0.5" />
+                    {APPLICATION_STATUS_LABELS[existingApplication.status]}
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent side="left" className="text-xs">
+                  Você já está acompanhando este palco
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -340,14 +404,194 @@ function PalcoCard({
         <Badge variant="outline" className={`text-[10px] ${TIPO_PALCO_COLORS[palco.tipo_palco]}`}>
           {TIPO_PALCO_LABELS[palco.tipo_palco]}
         </Badge>
-        <Button
-          size="sm" variant="default"
-          className="h-7 ml-auto text-xs gap-1"
-          onClick={() => onCandidatar(palco)}
-        >
-          <ClipboardList className="h-3 w-3" />
-          Candidatar
-        </Button>
+        {existingApplication ? (
+          <Button
+            size="sm" variant="outline"
+            className="h-7 ml-auto text-xs gap-1"
+            onClick={() => onViewCandidatura?.(existingApplication)}
+          >
+            <ArrowRight className="h-3 w-3" />
+            Ver status
+          </Button>
+        ) : (
+          <Button
+            size="sm" variant="default"
+            className="h-7 ml-auto text-xs gap-1"
+            onClick={() => onCandidatar(palco)}
+          >
+            <ClipboardList className="h-3 w-3" />
+            Candidatar
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Pipeline (4 colunas) — Minhas candidaturas de palco ───────────────────
+function PalcoPipelineCard({
+  app, nextStatus, statuses, onUpdate, onDelete, onOpenChecklist, onOpenResult,
+}: {
+  app: EditalApplication;
+  nextStatus: ApplicationStatus | null;
+  statuses: ApplicationStatus[];
+  onUpdate: (p: { id: string; status?: ApplicationStatus; notas?: string }) => void;
+  onDelete: (id: string) => void;
+  onOpenChecklist: (id: string) => void;
+  onOpenResult: (id: string) => void;
+}) {
+  return (
+    <Card className="border shadow-sm">
+      <CardContent className="p-3 space-y-2">
+        <div className="flex items-start justify-between gap-2">
+          <p className="text-sm font-medium leading-snug flex-1">
+            {app.edital?.titulo || "Palco"}
+          </p>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0">
+                <MoreHorizontal className="h-3.5 w-3.5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {nextStatus && (
+                <DropdownMenuItem onClick={() => onUpdate({ id: app.id, status: nextStatus })}>
+                  <ArrowRight className="h-3.5 w-3.5 mr-2" />
+                  Mover → {APPLICATION_STATUS_LABELS[nextStatus]}
+                </DropdownMenuItem>
+              )}
+              {statuses.filter((s) => s !== app.status && s !== nextStatus).map((s) => (
+                <DropdownMenuItem key={s} onClick={() => onUpdate({ id: app.id, status: s })}>
+                  Mover → {APPLICATION_STATUS_LABELS[s]}
+                </DropdownMenuItem>
+              ))}
+              <DropdownMenuItem onClick={() => onOpenChecklist(app.id)}>
+                <ClipboardList className="h-3.5 w-3.5 mr-2" />
+                Checklist de documentos
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onOpenResult(app.id)}>
+                <Trophy className="h-3.5 w-3.5 mr-2" />
+                Registrar resultado
+              </DropdownMenuItem>
+              {app.edital?.link && (
+                <DropdownMenuItem asChild>
+                  <a href={app.edital.link} target="_blank" rel="noopener noreferrer">
+                    <ExternalLink className="h-3.5 w-3.5 mr-2" />
+                    Abrir inscrição
+                  </a>
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem className="text-destructive" onClick={() => onDelete(app.id)}>
+                <Trash2 className="h-3.5 w-3.5 mr-2" />
+                Remover
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+        {app.edital?.orgao && (
+          <p className="text-xs text-muted-foreground">{app.edital.orgao}</p>
+        )}
+        {app.edital?.prazo && (
+          <p className="text-xs text-muted-foreground flex items-center gap-1">
+            <Calendar className="h-3 w-3" />
+            Prazo: {new Date(app.edital.prazo + "T12:00:00-03:00").toLocaleDateString("pt-BR")}
+          </p>
+        )}
+        {app.notas && (
+          <p className="text-xs text-muted-foreground italic line-clamp-2">{app.notas}</p>
+        )}
+        {nextStatus && (
+          <Button
+            size="sm"
+            variant={app.status === "interesse" ? "outline" : "default"}
+            className="h-7 text-xs w-full"
+            onClick={() => onUpdate({ id: app.id, status: nextStatus })}
+          >
+            <ArrowRight className="h-3 w-3 mr-1" />
+            Mover para {APPLICATION_STATUS_LABELS[nextStatus]}
+          </Button>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function PalcoPipelineView({
+  applications, onUpdate, onDelete, onOpenChecklist, onOpenResult,
+}: {
+  applications: EditalApplication[];
+  onUpdate: (p: { id: string; status?: ApplicationStatus; notas?: string }) => void;
+  onDelete: (id: string) => void;
+  onOpenChecklist: (id: string) => void;
+  onOpenResult: (id: string) => void;
+}) {
+  const statuses: ApplicationStatus[] = ["interesse", "preparando", "inscrito", "resultado"];
+  const grouped = useMemo(() => {
+    const map: Record<ApplicationStatus, EditalApplication[]> = {
+      interesse: [], preparando: [], inscrito: [], resultado: [],
+    };
+    applications.forEach((a) => { if (map[a.status]) map[a.status].push(a); });
+    return map;
+  }, [applications]);
+  const nextStatus = (s: ApplicationStatus): ApplicationStatus | null => {
+    const idx = statuses.indexOf(s);
+    return idx < statuses.length - 1 ? statuses[idx + 1] : null;
+  };
+  return (
+    <div className="space-y-4">
+      <div className="hidden md:grid grid-cols-4 gap-3">
+        {statuses.map((status) => (
+          <div key={status} className="space-y-2">
+            <div className="flex items-center justify-between px-1">
+              <Badge variant="outline" className={APPLICATION_STATUS_COLORS[status] + " text-xs"}>
+                {APPLICATION_STATUS_LABELS[status]}
+              </Badge>
+              <span className="text-xs text-muted-foreground">{grouped[status].length}</span>
+            </div>
+            <div className="space-y-2 min-h-[80px]">
+              {grouped[status].length === 0 ? (
+                <div className="rounded-lg border border-dashed border-border/50 p-3 text-center">
+                  <p className="text-xs text-muted-foreground/60">Vazio</p>
+                </div>
+              ) : (
+                grouped[status].map((app) => (
+                  <PalcoPipelineCard
+                    key={app.id} app={app}
+                    nextStatus={nextStatus(app.status)} statuses={statuses}
+                    onUpdate={onUpdate} onDelete={onDelete}
+                    onOpenChecklist={onOpenChecklist} onOpenResult={onOpenResult}
+                  />
+                ))
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="md:hidden space-y-4">
+        {statuses.map((status) => (
+          <div key={status}>
+            <div className="flex items-center gap-2 mb-2">
+              <Badge variant="outline" className={APPLICATION_STATUS_COLORS[status] + " text-xs"}>
+                {APPLICATION_STATUS_LABELS[status]}
+              </Badge>
+              <span className="text-xs text-muted-foreground">({grouped[status].length})</span>
+            </div>
+            {grouped[status].length === 0 ? (
+              <p className="text-xs text-muted-foreground pl-2 py-2">Nenhuma candidatura</p>
+            ) : (
+              <div className="space-y-2">
+                {grouped[status].map((app) => (
+                  <PalcoPipelineCard
+                    key={app.id} app={app}
+                    nextStatus={nextStatus(app.status)} statuses={statuses}
+                    onUpdate={onUpdate} onDelete={onDelete}
+                    onOpenChecklist={onOpenChecklist} onOpenResult={onOpenResult}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -363,6 +607,24 @@ export default function Palcos() {
     search, retryLastSearch, saveResults, matchByPerfil,
   } = usePalcos();
   const createApplication = useCreateApplication();
+  const { data: allApplications = [] } = useEditalApplications();
+  const updateApplication = useUpdateApplication();
+  const deleteApplication = useDeleteApplication();
+  const { ensureAutoTask } = useTasks();
+
+  const palcoApplications = useMemo(
+    () => (allApplications as EditalApplication[]).filter((a) => (a as any).tipo === "palco"),
+    [allApplications]
+  );
+  const applicationByEditalId = useMemo(() => {
+    const map = new Map<string, EditalApplication>();
+    palcoApplications.forEach((a) => map.set(a.edital_id, a));
+    return map;
+  }, [palcoApplications]);
+
+  const [activeTab, setActiveTab] = useState("descobrir");
+  const [selectedAppId, setSelectedAppId] = useState<string | null>(null);
+  const [resultAppId, setResultAppId] = useState<string | null>(null);
 
   const [query, setQuery] = useState("");
   const [filterTipo, setFilterTipo] = useState<TipoPalco | "todos">("todos");
@@ -467,16 +729,54 @@ export default function Palcos() {
   };
 
   const handleConfirmCandidatura = (params: {
-    edital_id: string; project_id?: string | null; notas?: string; tipo: "palco"
+    edital_id: string; project_id?: string | null; notas?: string; tipo: "palco"; data_inscricao?: string;
   }) => {
+    const target = candidaturaTarget;
     createApplication.mutate(
-      { edital_id: params.edital_id, project_id: params.project_id, notas: params.notas },
       {
-        onSuccess: () => {
+        edital_id: params.edital_id,
+        project_id: params.project_id,
+        notas: params.notas,
+        data_inscricao: params.data_inscricao || null,
+      },
+      {
+        onSuccess: async (newApp: any) => {
+          // Checklist automático por tipo de palco
+          if (target && newApp?.id) {
+            const template = PALCO_CHECKLIST_TEMPLATES[target.tipo_palco] || [];
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session && template.length > 0) {
+              await supabase.from("edital_application_docs").insert(
+                template.map((item) => ({
+                  user_id: session.user.id,
+                  application_id: newApp.id,
+                  doc_label: item.label,
+                  doc_type: item.type,
+                  is_required: item.required,
+                }))
+              );
+            }
+          }
+          // Tarefa automática no projeto vinculado
+          if (params.project_id && target) {
+            const prazoText = target.prazo
+              ? ` — prazo ${new Date(target.prazo + "T12:00:00-03:00").toLocaleDateString("pt-BR")}`
+              : "";
+            await ensureAutoTask(`palco:${params.edital_id}:${params.project_id}`, {
+              description: `Preparar candidatura para ${target.nome}${prazoText}`,
+              source: "palco_candidatura",
+              sourceModule: "palcos",
+              taskArea: "lancamento",
+              severity: target.prazo ? "high" : "medium",
+              projectId: params.project_id,
+              dueDate: target.prazo || undefined,
+            });
+          }
           toast.success("Candidatura iniciada!", {
+            description: "Checklist de documentos criado automaticamente.",
             action: {
-              label: "Ver pipeline →",
-              onClick: () => navigate("/editais?tab=meus"),
+              label: "Ver candidaturas →",
+              onClick: () => setActiveTab("candidaturas"),
             },
           });
         },
@@ -500,7 +800,7 @@ export default function Palcos() {
         </p>
       </div>
 
-      <Tabs defaultValue="descobrir">
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="w-full overflow-x-auto flex justify-start gap-0.5 no-scrollbar">
           <TabsTrigger value="descobrir" className="text-xs px-2.5 md:px-3 shrink-0">
             <Star className="h-3.5 w-3.5 mr-1" />
@@ -513,6 +813,15 @@ export default function Palcos() {
           <TabsTrigger value="recomendacoes" className="text-xs px-2.5 md:px-3 shrink-0">
             <Sparkles className="h-3.5 w-3.5 mr-1" />
             Para meu projeto
+          </TabsTrigger>
+          <TabsTrigger value="candidaturas" className="text-xs px-2.5 md:px-3 shrink-0">
+            <ClipboardList className="h-3.5 w-3.5 mr-1" />
+            Minhas Candidaturas
+            {palcoApplications.length > 0 && (
+              <span className="ml-1.5 inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-medium">
+                {palcoApplications.length}
+              </span>
+            )}
           </TabsTrigger>
         </TabsList>
 
@@ -709,6 +1018,8 @@ export default function Palcos() {
                   score={recoProfile ? scoreById.get(p.id) : undefined}
                   onViewDetail={(p) => { setDetailPalco(p); setDetailOpen(true); }}
                   onCandidatar={handleCandidatar}
+                  existingApplication={applicationByEditalId.get(p.id) ?? null}
+                  onViewCandidatura={() => setActiveTab("candidaturas")}
                 />
               ))}
             </div>
@@ -851,6 +1162,8 @@ export default function Palcos() {
                           palco={p as any}
                           onViewDetail={(p) => { setDetailPalco(p); setDetailOpen(true); }}
                           onCandidatar={handleCandidatar}
+                          existingApplication={applicationByEditalId.get((p as any).id) ?? null}
+                          onViewCandidatura={() => setActiveTab("candidaturas")}
                         />
                       ))}
                     </div>
@@ -958,6 +1271,8 @@ export default function Palcos() {
                         score={p.score}
                         onViewDetail={(p) => { setDetailPalco(p); setDetailOpen(true); }}
                         onCandidatar={handleCandidatar}
+                        existingApplication={applicationByEditalId.get(p.id) ?? null}
+                        onViewCandidatura={() => setActiveTab("candidaturas")}
                       />
                     ))}
                   </div>
@@ -965,6 +1280,31 @@ export default function Palcos() {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* ── ABA: Minhas Candidaturas ─────────────────────────────── */}
+        <TabsContent value="candidaturas" className="space-y-4 mt-4">
+          {palcoApplications.length === 0 ? (
+            <Card>
+              <CardContent className="py-12 flex flex-col items-center text-center text-muted-foreground gap-3">
+                <ClipboardList className="h-10 w-10 opacity-40" />
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-foreground">Nenhuma candidatura ainda</p>
+                  <p className="text-xs max-w-sm">
+                    Encontre uma oportunidade nas abas acima e clique em "Candidatar" para começar a acompanhar.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <PalcoPipelineView
+              applications={palcoApplications}
+              onUpdate={(p) => updateApplication.mutate(p)}
+              onDelete={(id) => deleteApplication.mutate(id)}
+              onOpenChecklist={(id) => setSelectedAppId(id)}
+              onOpenResult={(id) => setResultAppId(id)}
+            />
+          )}
         </TabsContent>
       </Tabs>
 
@@ -984,6 +1324,33 @@ export default function Palcos() {
         projects={projectList}
         onConfirm={handleConfirmCandidatura}
       />
+
+      {/* Checklist de documentos */}
+      {selectedAppId && (
+        <Sheet open={!!selectedAppId} onOpenChange={(o) => { if (!o) setSelectedAppId(null); }}>
+          <SheetContent side="right" className="w-full sm:max-w-lg overflow-y-auto">
+            <SheetHeader>
+              <SheetTitle>Checklist de documentos</SheetTitle>
+            </SheetHeader>
+            <div className="mt-4">
+              <ApplicationChecklist applicationId={selectedAppId} projects={projectList} />
+            </div>
+          </SheetContent>
+        </Sheet>
+      )}
+
+      {/* Registrar resultado */}
+      {resultAppId && (() => {
+        const app = palcoApplications.find((a) => a.id === resultAppId);
+        if (!app) return null;
+        return (
+          <EditalResultModal
+            application={app}
+            open={!!resultAppId}
+            onOpenChange={(o) => { if (!o) setResultAppId(null); }}
+          />
+        );
+      })()}
     </div>
   );
 }

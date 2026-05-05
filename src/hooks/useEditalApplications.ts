@@ -86,7 +86,7 @@ export function useCreateApplication() {
   const { user } = useAuth();
 
   return useMutation({
-    mutationFn: async (params: { edital_id: string; project_id?: string | null; notas?: string }) => {
+    mutationFn: async (params: { edital_id: string; project_id?: string | null; notas?: string; data_inscricao?: string | null }) => {
       if (!user) throw new Error("Not authenticated");
       const { data, error } = await supabase
         .from("edital_applications")
@@ -96,6 +96,7 @@ export function useCreateApplication() {
           project_id: params.project_id || null,
           notas: params.notas || "",
           status: "interesse",
+          data_inscricao: params.data_inscricao || null,
         } as any)
         .select()
         .single();
