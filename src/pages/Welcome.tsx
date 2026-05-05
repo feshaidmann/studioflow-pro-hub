@@ -115,7 +115,6 @@ const MODULES = [
 
 // ── Credenciais de credibilidade ─────────────────────────────────────────
 const CREDENTIALS = [
-  { label: "Pré-incubado", sub: "INCAMP / Unicamp 2026" },
   { label: "Parceiro estratégico", sub: "ABMI · Associação Brasileira da Música Independente" },
   { label: "Desenvolvido com", sub: "artistas do mercado fonográfico BR" },
 ];
@@ -170,7 +169,7 @@ export default function Welcome() {
           style={{ animationDelay: "0ms" }}
         >
           <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
-          Pré-incubado no INCAMP · Unicamp 2026
+          Feito para o artista independente brasileiro
         </div>
 
         {/* ══════════════════════════════════════════════════════════════
