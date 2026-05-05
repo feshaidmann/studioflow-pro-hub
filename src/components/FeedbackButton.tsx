@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { MessageSquarePlus, X, Send, Star, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -14,6 +14,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useLocation } from "react-router-dom";
+import { trackEvent } from "@/lib/analytics";
+
+type FeedbackSource = "floating_button" | "beta_banner" | "event";
 
 const CATEGORIES = [
   { value: "bug", label: "🐛 Bug / Erro" },
