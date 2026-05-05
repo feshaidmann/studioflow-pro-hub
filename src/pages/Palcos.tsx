@@ -369,6 +369,8 @@ export default function Palcos() {
   const [filterEstado, setFilterEstado] = useState("todos");
   const [filterPorte, setFilterPorte] = useState<"todos" | "iniciante" | "medio" | "grande">("todos");
   const [filterApenasAbertos, setFilterApenasAbertos] = useState(false);
+  const [sortBy, setSortBy] = useState<"status" | "prazo" | "match" | "nome">("status");
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [selectedProjectId, setSelectedProjectId] = useState("");
 
   const [detailPalco, setDetailPalco] = useState<PalcoCurado | null>(null);
