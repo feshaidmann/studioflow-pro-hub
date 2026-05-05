@@ -95,7 +95,7 @@ interface ProjectContextType {
   transactions: Transaction[];
   loading: boolean;
 
-  addProject: (data: { name: string; artist: string; bpm: number; key: string; stage: Project["stage"]; projectType?: ProjectType; trackCount?: number | null; totalContractValue?: number | null; amountPaid?: number | null; estimatedMonths?: number | null; uploadDate?: string; templateTracks?: string[] | null }) => Promise<Project | null>;
+  addProject: (data: { name: string; artist: string; bpm: number; key: string; stage: Project["stage"]; projectType?: ProjectType; trackCount?: number | null; totalContractValue?: number | null; amountPaid?: number | null; estimatedMonths?: number | null; uploadDate?: string; templateTracks?: string[] | null; genre?: string | null; audienceSizeAtStart?: string | null; artistState?: string | null }) => Promise<Project | null>;
   updateProject: (id: string, data: Partial<Project>) => Promise<void>;
   deleteProject: (id: string) => Promise<void>;
 
@@ -263,7 +263,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
 
   /* ── Projects (Supabase) ── */
   const addProject = useCallback(
-    async (data: { name: string; artist: string; bpm: number; key: string; stage: Project["stage"]; projectType?: ProjectType; trackCount?: number | null; totalContractValue?: number | null; amountPaid?: number | null; estimatedMonths?: number | null; uploadDate?: string; templateTracks?: string[] | null }): Promise<Project | null> => {
+    async (data: { name: string; artist: string; bpm: number; key: string; stage: Project["stage"]; projectType?: ProjectType; trackCount?: number | null; totalContractValue?: number | null; amountPaid?: number | null; estimatedMonths?: number | null; uploadDate?: string; templateTracks?: string[] | null; genre?: string | null; audienceSizeAtStart?: string | null; artistState?: string | null }): Promise<Project | null> => {
       if (!user) {
         console.error("addProject: user not authenticated");
         return null;
@@ -281,6 +281,10 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         amount_paid: data.amountPaid ?? null,
         estimated_months: data.estimatedMonths ?? null,
         upload_date: data.uploadDate ?? "",
+        genre: data.genre ?? null,
+        audience_size_at_start: data.audienceSizeAtStart ?? null,
+        artist_state: data.artistState ?? null,
+        production_start_date: new Date().toISOString(),
       }).select().single();
       if (error || !row) {
         console.error("addProject DB error:", error);
@@ -336,6 +340,11 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     if (data.estimatedMonths !== undefined) dbData.estimated_months = data.estimatedMonths;
     if (data.completed !== undefined) dbData.completed = data.completed;
     if (data.notes !== undefined) dbData.notes = data.notes;
+    if (data.genre !== undefined) dbData.genre = data.genre;
+    if (data.subgenre !== undefined) dbData.subgenre = data.subgenre;
+    if (data.audienceSizeAtStart !== undefined) dbData.audience_size_at_start = data.audienceSizeAtStart;
+    if (data.distributor !== undefined) dbData.distributor = data.distributor;
+    if (data.artistState !== undefined) dbData.artist_state = data.artistState;
 
     await supabase.from("projects").update(dbData).eq("id", id);
 
