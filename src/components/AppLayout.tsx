@@ -20,6 +20,7 @@ import {
   MoreHorizontal,
   Palette,
   Database,
+  Mic2,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -47,6 +48,7 @@ const gestaoItems = [
   { labelKey: "nav.agenda",        path: "/agenda",        icon: CalendarDays, proOnly: false, mobileLabel: "" },
   { labelKey: "nav.musicdna",      path: "/music-dna",     icon: Dna,          proOnly: false, mobileLabel: "nav.musicdna.short" },
   { labelKey: "nav.editais",      path: "/editais",       icon: FileText,     proOnly: false, mobileLabel: "" },
+  { labelKey: "nav.palcos",       path: "/palcos",        icon: Mic2,         proOnly: false, mobileLabel: "" },
   { labelKey: "nav.creative",     path: "/criativo",      icon: Palette,      proOnly: false, mobileLabel: "" },
   { labelKey: "nav.professionals", path: "/professionals", icon: Users,        proOnly: false, mobileLabel: "" },
 ];
@@ -54,6 +56,7 @@ const gestaoItems = [
 // Sub-labels descritivos curtos (P2) — apenas para itens do drawer "Mais"
 const drawerSubLabels: Record<string, string> = {
   "/editais":            "Chamadas e inscrições",
+  "/palcos":             "Festivais e shows",
   "/professionals":      "Equipe e parceiros",
   "/criativo":           "Arte com IA",
   "/music-dna":          "Análise técnica de mix/master",
@@ -116,6 +119,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     switch (path) {
       case "/criativo":     import("@/pages/Creative");      break;
       case "/editais":      import("@/pages/Editais");       break;
+      case "/palcos":       import("@/pages/Palcos");        break;
       case "/professionals": import("@/pages/Professionals"); break;
       case "/music-dna":    import("@/pages/MusicDNA");      break;
       case "/agenda":       import("@/pages/Agenda");        break;
@@ -143,7 +147,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   const isItemActive = (item: { path: string }) => location.pathname === item.path;
 
-  const ROOT_ROUTES = ["/dashboard", "/projects", "/finance", "/agenda", "/professionals", "/settings", "/admin", "/tutorial", "/music-dna", "/editais", "/criativo", "/"];
+  const ROOT_ROUTES = ["/dashboard", "/projects", "/finance", "/agenda", "/professionals", "/settings", "/admin", "/tutorial", "/music-dna", "/editais", "/palcos", "/criativo", "/"];
   const isRootRoute = ROOT_ROUTES.includes(location.pathname);
 
   // ── Mobile ─────────────────────────────────────────────────────────────────
