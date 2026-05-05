@@ -1,27 +1,57 @@
-# Analytics: Beta Banner & Feedback Modal
+# Melhorias de CX — Módulo Criativo no Fluxo do Projeto
 
-Add two PostHog events using the existing `trackEvent` helper in `src/lib/analytics.ts`.
+Implementar as 4 melhorias de maior impacto identificadas na auditoria, ligando melhor o módulo Criativo ao Hub do Projeto e ao Checklist de Lançamento.
 
-## Events
+## 1. Pré-popular detalhes da faixa quando vier do projeto
 
-- `beta_banner_dismissed` — fired when the user clicks the X on the top BetaBanner.
-  - props: `{ path: window.location.pathname }`
-- `feedback_modal_opened` — fired when the FeedbackButton modal opens.
-  - props: `{ path: location.pathname, source: "floating_button" | "beta_banner" | "event" }`
+**Arquivo:** `src/pages/Creative.tsx`
 
-## Changes
+Quando o usuário entra com `?project=<id>`:
+- Preencher `trackName` com `linkedProject.name` (via `cleanTrackName`)
+- Preencher `artistName` com `linkedProject.artist`
+- Abrir o `Collapsible` de "Detalhes da faixa" (`setTrackDetailsOpen(true)`)
+- Disparar apenas uma vez (guard via `useRef`) para não sobrescrever edições do usuário
 
-### `src/hooks/useBetaBanner.ts`
-In `dismissBetaBanner()`, call `trackEvent("beta_banner_dismissed", { path: window.location.pathname })` before setting sessionStorage.
+## 2. Auto-filtrar a Galeria pelo projeto vinculado
 
-### `src/components/BetaBanner.tsx`
-In `handleOpenFeedback`, dispatch the existing `open-feedback` event with `detail: { source: "beta_banner" }`.
+**Arquivo:** `src/pages/Creative.tsx`
 
-### `src/components/FeedbackButton.tsx`
-- Update the `open-feedback` listener to read `e.detail?.source` (default `"event"`) and store it in state.
-- Wrap the floating button `onClick` to call `setOpen(true)` with source `"floating_button"`.
-- Add a `useEffect` that fires `trackEvent("feedback_modal_opened", { path: location.pathname, source })` whenever `open` transitions to `true`.
+- Ao detectar `?project=<id>`, setar `filterProject = projectIdParam` por padrão
+- Mostrar um chip removível ("Filtrando: <Nome do projeto> ✕") acima da grid quando o filtro vier do contexto
 
-## Notes
-- `trackEvent` is a no-op until PostHog is initialized (placeholder key), so this is safe to ship now and starts emitting once the key is set.
-- No new dependencies, no schema changes.
+## 3. Auto-marcar itens do Checklist de Lançamento ao salvar arte do projeto
+
+**Arquivos:**
+- `src/hooks/useReleaseChecklist.ts` — exportar helper `markChecklistItem(projectId, key)` que faz upsert direto via `supabase` (sem depender da instância do hook)
+- `src/pages/Creative.tsx` — após `saveAsset` bem-sucedido com `projectId`, mapear formato → chave de checklist e chamar o helper:
+  - `spotify_cover` → `capa`
+  - `youtube_cover` → `thumbnail`
+  - `reels_loop` → `reels`
+  - `story` → `stories`
+  - `instagram_post` → (nenhum, ignorar)
+- Mostrar toast: "Item '<label>' marcado no checklist do projeto"
+
+Helper faz `select` da row, faz merge de `items[key] = { checked: true, value: "" }` e `update`/`insert`. Se já estava marcado, no-op silencioso.
+
+## 4. Analytics do módulo Criativo
+
+**Arquivo:** `src/pages/Creative.tsx`
+
+Adicionar `trackEvent` (de `@/lib/analytics`) em pontos-chave:
+- `creative_opened` — no mount, com `{ from_project: !!projectIdParam, has_dna: !!dnaParam }`
+- `creative_generated` — após geração de imagem com sucesso, `{ format, has_dna, has_reference, project_linked }`
+- `creative_saved_to_gallery` — após `saveAsset`, `{ format, project_linked, media_type }`
+- `creative_caption_generated` — em `CaptionGeneratorCard.tsx` ao gerar legenda
+- `creative_returned_to_project` — no clique do botão "Voltar ao projeto"
+
+## Detalhes técnicos
+
+- Não há mudanças de schema; `release_checklists` já suporta o upsert.
+- O helper `markChecklistItem` precisa do `user_id` (vem de `useAuth`).
+- `trackEvent` é no-op até PostHog ser inicializado, então é seguro para shipar agora.
+- Nenhum item é desmarcado automaticamente — somente marcação aditiva, para não atropelar o controle manual do usuário.
+
+## Fora de escopo (deixar para depois)
+- Contagem de materiais já criados no `CreativeEntryCard`
+- Botão "desfazer" no toast de auto-save
+- Refatoração do listener `open-feedback` (já implementado)
