@@ -29,6 +29,8 @@ const PROJECT_TYPES = [
   { value: "single", label: "Single", icon: FileMusic, desc: "1 faixa" },
   { value: "ep", label: "EP", icon: ListMusic, desc: "2–6 faixas" },
   { value: "album", label: "Álbum", icon: Album, desc: "7+ faixas" },
+  { value: "beat", label: "Beat", icon: Mic2, desc: "Produção instrumental" },
+  { value: "feat", label: "Feat", icon: Users, desc: "Colaboração com outro artista" },
 ] as const;
 
 const MODES = [
@@ -37,23 +39,27 @@ const MODES = [
 ];
 
 const PAINS = [
-  { value: "organization", label: "Organização", icon: FolderKanban, impact: "Dashboard com checklist e progresso em primeiro plano." },
-  { value: "team", label: "Equipe", icon: Users, impact: "Vamos destacar convites, parceiros e responsáveis." },
-  { value: "deadlines", label: "Prazos", icon: Clock, impact: "Alertas e próximas datas ganham prioridade." },
-  { value: "finance", label: "Financeiro", icon: DollarSign, impact: "Receitas, custos e margem sobem no dashboard." },
-  { value: "launch", label: "Lançamento", icon: Upload, impact: "Checklist de lançamento e análise técnica vêm primeiro." },
+  { value: "organization", label: "Organização", icon: FolderKanban, impact: "Não sei por onde começar — tenho muita coisa ao mesmo tempo." },
+  { value: "team", label: "Equipe", icon: Users, impact: "Perco o controle de quem deve entregar o quê e quando." },
+  { value: "deadlines", label: "Prazos", icon: Clock, impact: "As datas aparecem de surpresa e sempre tem coisa atrasada." },
+  { value: "finance", label: "Financeiro", icon: DollarSign, impact: "Não sei quanto já gastei nem o que ainda vai custar." },
+  { value: "launch", label: "Lançamento", icon: Upload, impact: "Tenho música pronta mas não sei como lançar do jeito certo." },
 ] as const;
 
 const PROJECT_NAME_MAP: Record<string, string> = {
   single: "Meu Single",
   ep: "Meu EP",
   album: "Meu Álbum",
+  beat: "Meu Beat",
+  feat: "Meu Feat",
 };
 
 const TRACK_TEMPLATES: Record<string, string[]> = {
   single: ["Voz Principal", "Instrumental / Beat", "Referência", "Master Bus"],
   ep: ["Faixa 1", "Faixa 2", "Faixa 3", "Master Bus"],
   album: ["Pré-produção", "Faixas principais", "Interlúdios / versões", "Master Bus"],
+  beat: ["Melodia Principal", "Drums / Batida", "Bass", "Master Bus"],
+  feat: ["Voz Principal", "Voz Feat", "Instrumental", "Master Bus"],
 };
 
 const PAIN_TASKS: Record<string, { description: string; task_area: string; severity?: string }[]> = {
@@ -105,6 +111,7 @@ export default function Onboarding() {
   // Step data
   const [moment, setMoment] = useState("");
   const [projectType, setProjectType] = useState("");
+  const [projectName, setProjectName] = useState("");
   const [viewMode, setViewMode] = useState<"basic" | "advanced">("basic");
   const [pain, setPain] = useState("");
   const [artistName, setArtistName] = useState("");
@@ -113,12 +120,7 @@ export default function Onboarding() {
   const nameRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (user?.email && !artistName) setArtistName(user.email.split("@")[0]);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id]);
-
-  useEffect(() => {
-    if (step === 5) setTimeout(() => nameRef.current?.focus(), 300);
+    if (step === 1) setTimeout(() => nameRef.current?.focus(), 300);
   }, [step]);
 
   /* ── guards ─────────────────────────────────────────────── */
@@ -133,12 +135,13 @@ export default function Onboarding() {
   if (profile?.onboarding_completed) return <Navigate to="/dashboard" replace />;
 
   /* ── navigation ─────────────────────────────────────────── */
+  // Order: 1 Identidade → 2 Momento → 3 Tipo → 4 Dor → 5 Modo → 6 Confirmação
   const canAdvance: Record<number, boolean> = {
-    1: !!moment,
-    2: !!projectType,
-    3: true,
+    1: !!artistName.trim(),
+    2: !!moment,
+    3: !!projectType,
     4: !!pain,
-    5: !!artistName.trim(),
+    5: true,
     6: true,
   };
 
@@ -148,20 +151,21 @@ export default function Onboarding() {
   /* ── confirm ────────────────────────────────────────────── */
   const handleConfirm = async () => {
     setSubmitting(true);
-    const name = artistName.trim() || user.email?.split("@")[0] || "Artista";
+    const name = artistName.trim() || "Artista";
     const selectedMoment = MOMENTS.find((m) => m.value === moment);
     const stage = selectedMoment?.stage || "inicio";
+    const finalProjectName = projectName.trim() || PROJECT_NAME_MAP[projectType] || "Meu Projeto";
 
     // Create project
     let projectId: string | null = null;
     try {
       const project = await addProject({
-        name: PROJECT_NAME_MAP[projectType] || "Meu Projeto",
+        name: finalProjectName,
         artist: name,
         bpm: 120,
         key: "C",
         stage,
-        projectType: projectType as "single" | "ep" | "album",
+        projectType: projectType as "single" | "ep" | "album" | "beat" | "feat",
         templateTracks: TRACK_TEMPLATES[projectType] ?? TRACK_TEMPLATES.single,
       });
       projectId = project?.id ?? null;
@@ -186,6 +190,11 @@ export default function Onboarding() {
         { onConflict: "user_id,source_key", ignoreDuplicates: true }
       );
       localStorage.setItem("sfp_recent_onboarding_project", projectId);
+      // Persist cross-device
+      await supabase
+        .from("profiles")
+        .update({ last_onboarding_project_id: projectId })
+        .eq("id", user.id);
     }
 
     // Update profile
@@ -204,8 +213,7 @@ export default function Onboarding() {
   };
 
   /* ── step labels ────────────────────────────────────────── */
-  const TOTAL_STEPS = 6;
-  const stepLabels = ["Momento", "Tipo", "Modo", "Desafio", "Identidade", "Pronto"];
+  const stepLabels = ["Identidade", "Momento", "Tipo", "Desafio", "Modo", "Pronto"];
   const selectedMoment = MOMENTS.find((m) => m.value === moment);
   const selectedPain = PAINS.find((p) => p.value === pain);
   const selectedProjectType = PROJECT_TYPES.find((t) => t.value === projectType);
@@ -292,14 +300,38 @@ export default function Onboarding() {
         {/* Card */}
         <div className="glass-card rounded-2xl p-6 space-y-5 border border-border">
 
-          {/* STEP 1 — Momento */}
+          {/* STEP 1 — Identidade */}
           {step === 1 && (
             <div className="space-y-4">
-              <p className="text-sm font-semibold text-foreground">Onde você está agora?</p>
-              <div className="space-y-2.5">
-                {MOMENTS.map((m) => (
-                  <OptionCard key={m.value} selected={moment === m.value} onClick={() => setMoment(m.value)} icon={m.icon} label={m.label} desc={m.impact} />
-                ))}
+              <div className="flex items-center gap-2">
+                <Mic2 className="h-4 w-4 text-primary" />
+                <p className="text-sm font-semibold text-foreground">Como você quer ser chamado?</p>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="artistName" className="text-xs text-muted-foreground">Nome artístico ou apelido *</Label>
+                <Input
+                  ref={nameRef}
+                  id="artistName"
+                  value={artistName}
+                  onChange={(e) => setArtistName(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter" && canAdvance[1]) handleNext(); }}
+                  placeholder="Ex: Mc João, Ana Castela, Seu Jorge…"
+                  className="text-base"
+                  maxLength={60}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="city" className="text-xs text-muted-foreground flex items-center gap-1">
+                  <MapPin className="h-3 w-3" /> Cidade <span className="text-muted-foreground/50">(opcional)</span>
+                </Label>
+                <Input
+                  id="city"
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter" && canAdvance[1]) handleNext(); }}
+                  placeholder="Ex: São Paulo, Rio de Janeiro…"
+                  maxLength={60}
+                />
               </div>
               <Button onClick={handleNext} disabled={!canAdvance[1]} className="w-full gap-2" size="lg">
                 Próximo <ArrowRight className="h-4 w-4" />
@@ -307,13 +339,13 @@ export default function Onboarding() {
             </div>
           )}
 
-          {/* STEP 2 — Tipo de projeto */}
+          {/* STEP 2 — Momento */}
           {step === 2 && (
             <div className="space-y-4">
-              <p className="text-sm font-semibold text-foreground">Que tipo de projeto?</p>
+              <p className="text-sm font-semibold text-foreground">Onde você está agora?</p>
               <div className="space-y-2.5">
-                {PROJECT_TYPES.map((t) => (
-                  <OptionCard key={t.value} selected={projectType === t.value} onClick={() => setProjectType(t.value)} icon={t.icon} label={t.label} desc={t.desc} />
+                {MOMENTS.map((m) => (
+                  <OptionCard key={m.value} selected={moment === m.value} onClick={() => setMoment(m.value)} icon={m.icon} label={m.label} desc={m.impact} />
                 ))}
               </div>
               <div className="flex gap-2">
@@ -325,22 +357,33 @@ export default function Onboarding() {
             </div>
           )}
 
-          {/* STEP 3 — Modo */}
+          {/* STEP 3 — Tipo de projeto */}
           {step === 3 && (
             <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <Layers className="h-4 w-4 text-primary" />
-                <p className="text-sm font-semibold text-foreground">Como quer usar o StudioFlow?</p>
-              </div>
-              <p className="text-xs text-muted-foreground">Você pode mudar a qualquer momento em Configurações.</p>
+              <p className="text-sm font-semibold text-foreground">Que tipo de projeto?</p>
               <div className="space-y-2.5">
-                {MODES.map((m) => (
-                  <OptionCard key={m.value} selected={viewMode === m.value} onClick={() => setViewMode(m.value)} emoji={m.emoji} label={m.label} desc={m.desc} />
+                {PROJECT_TYPES.map((t) => (
+                  <OptionCard key={t.value} selected={projectType === t.value} onClick={() => setProjectType(t.value)} icon={t.icon} label={t.label} desc={t.desc} />
                 ))}
               </div>
+              {projectType && (
+                <div className="space-y-1.5 animate-fade-in">
+                  <Label htmlFor="proj-name" className="text-xs text-muted-foreground">
+                    Nome do projeto <span className="text-muted-foreground/50">(opcional)</span>
+                  </Label>
+                  <Input
+                    id="proj-name"
+                    value={projectName}
+                    onChange={(e) => setProjectName(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") handleNext(); }}
+                    placeholder={PROJECT_NAME_MAP[projectType] ?? "Meu Projeto"}
+                    maxLength={60}
+                  />
+                </div>
+              )}
               <div className="flex gap-2">
                 <Button variant="outline" onClick={handleBack} className="flex-1" size="lg">Voltar</Button>
-                <Button onClick={handleNext} className="flex-1 gap-2" size="lg">
+                <Button onClick={handleNext} disabled={!canAdvance[3]} className="flex-1 gap-2" size="lg">
                   Próximo <ArrowRight className="h-4 w-4" />
                 </Button>
               </div>
@@ -350,8 +393,8 @@ export default function Onboarding() {
           {/* STEP 4 — Maior dor */}
           {step === 4 && (
             <div className="space-y-4">
-              <p className="text-sm font-semibold text-foreground">Sua maior dificuldade hoje?</p>
-              <p className="text-xs text-muted-foreground">Isso nos ajuda a priorizar o que mostrar pra você.</p>
+              <p className="text-sm font-semibold text-foreground">O que mais te trava hoje?</p>
+              <p className="text-xs text-muted-foreground">Seu dashboard vai priorizar exatamente isso.</p>
               <div className="space-y-2.5">
                 {PAINS.map((p) => (
                   <OptionCard key={p.value} selected={pain === p.value} onClick={() => setPain(p.value)} icon={p.icon} label={p.label} desc={p.impact} />
@@ -366,42 +409,24 @@ export default function Onboarding() {
             </div>
           )}
 
-          {/* STEP 5 — Identidade */}
+          {/* STEP 5 — Modo */}
           {step === 5 && (
             <div className="space-y-4">
               <div className="flex items-center gap-2">
-                <Mic2 className="h-4 w-4 text-primary" />
-                <p className="text-sm font-semibold text-foreground">Como você quer ser chamado?</p>
+                <Layers className="h-4 w-4 text-primary" />
+                <p className="text-sm font-semibold text-foreground">Como quer usar o StudioFlow?</p>
               </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="artistName" className="text-xs text-muted-foreground">Nome artístico ou apelido *</Label>
-                <Input
-                  ref={nameRef}
-                  id="artistName"
-                  value={artistName}
-                  onChange={(e) => setArtistName(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter" && canAdvance[5]) handleNext(); }}
-                  placeholder="Ex: DJ Marquinhos, Ana Silva..."
-                  className="text-base"
-                  maxLength={60}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="city" className="text-xs text-muted-foreground flex items-center gap-1">
-                  <MapPin className="h-3 w-3" /> Cidade <span className="text-muted-foreground/50">(opcional)</span>
-                </Label>
-                <Input
-                  id="city"
-                  value={city}
-                  onChange={(e) => setCity(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter" && canAdvance[5]) handleNext(); }}
-                  placeholder="Ex: São Paulo, Rio de Janeiro..."
-                  maxLength={60}
-                />
+              <p className="text-xs text-muted-foreground">
+                Padrão: Simples. Você pode mudar em Configurações a qualquer momento.
+              </p>
+              <div className="space-y-2.5">
+                {MODES.map((m) => (
+                  <OptionCard key={m.value} selected={viewMode === m.value} onClick={() => setViewMode(m.value)} emoji={m.emoji} label={m.label} desc={m.desc} />
+                ))}
               </div>
               <div className="flex gap-2">
                 <Button variant="outline" onClick={handleBack} className="flex-1" size="lg">Voltar</Button>
-                <Button onClick={handleNext} disabled={!canAdvance[5]} className="flex-1 gap-2" size="lg">
+                <Button onClick={handleNext} className="flex-1 gap-2" size="lg">
                   Próximo <ArrowRight className="h-4 w-4" />
                 </Button>
               </div>
@@ -417,12 +442,15 @@ export default function Onboarding() {
               </div>
 
               <div className="rounded-xl border border-border p-4 space-y-2.5">
-                <SummaryRow label="Momento" value={MOMENTS.find((m) => m.value === moment)?.label || "—"} />
-                <SummaryRow label="Projeto" value={`${PROJECT_TYPES.find((t) => t.value === projectType)?.label || "—"} — "${PROJECT_NAME_MAP[projectType] || "Meu Projeto"}"`} />
-                <SummaryRow label="Modo" value={viewMode === "basic" ? "🎯 Simples" : "⚡ Completo"} />
-                <SummaryRow label="Foco" value={PAINS.find((p) => p.value === pain)?.label || "—"} />
                 <SummaryRow label="Nome" value={artistName.trim() || "—"} />
                 {city.trim() && <SummaryRow label="Cidade" value={city.trim()} />}
+                <SummaryRow label="Momento" value={MOMENTS.find((m) => m.value === moment)?.label || "—"} />
+                <SummaryRow
+                  label="Projeto"
+                  value={`${PROJECT_TYPES.find((t) => t.value === projectType)?.label || "—"} — "${projectName.trim() || PROJECT_NAME_MAP[projectType] || "Meu Projeto"}"`}
+                />
+                <SummaryRow label="Foco" value={PAINS.find((p) => p.value === pain)?.label || "—"} />
+                <SummaryRow label="Modo" value={viewMode === "basic" ? "🎯 Simples" : "⚡ Completo"} />
               </div>
 
               <div className="rounded-xl bg-muted/50 border border-border p-4 space-y-2">
@@ -450,10 +478,6 @@ export default function Onboarding() {
             </div>
           )}
         </div>
-
-        <p className="text-center text-xs text-muted-foreground">
-          Passo {step} de {TOTAL_STEPS}
-        </p>
       </div>
     </div>
   );

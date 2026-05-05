@@ -26,6 +26,7 @@ export interface Profile {
   current_moment: string;
   main_pain: string;
   onboarding_version: number;
+  last_onboarding_project_id?: string | null;
   created_at?: string;
 }
 
@@ -60,7 +61,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     }
     const { data } = await supabase
       .from("profiles")
-      .select("id, display_name, username, bio, user_type, track_view_mode, plan, origin, whatsapp, city, specialties, accept_invites, projects_completed, public_email, allow_global_listing, onboarding_completed, current_moment, main_pain, onboarding_version, created_at")
+      .select("id, display_name, username, bio, user_type, track_view_mode, plan, origin, whatsapp, city, specialties, accept_invites, projects_completed, public_email, allow_global_listing, onboarding_completed, current_moment, main_pain, onboarding_version, last_onboarding_project_id, created_at")
       .eq("id", user.id)
       .maybeSingle();
 
@@ -103,7 +104,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   const needsProfileSetup =
     !loading &&
     !!user &&
-    (profile === null || (!profile.onboarding_completed && profile.origin !== "invite"));
+    (profile === null || !profile.onboarding_completed);
 
   return (
     <ProfileContext.Provider
