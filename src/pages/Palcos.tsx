@@ -607,6 +607,24 @@ export default function Palcos() {
     search, retryLastSearch, saveResults, matchByPerfil,
   } = usePalcos();
   const createApplication = useCreateApplication();
+  const { data: allApplications = [] } = useEditalApplications();
+  const updateApplication = useUpdateApplication();
+  const deleteApplication = useDeleteApplication();
+  const { ensureAutoTask } = useTasks();
+
+  const palcoApplications = useMemo(
+    () => (allApplications as EditalApplication[]).filter((a) => (a as any).tipo === "palco"),
+    [allApplications]
+  );
+  const applicationByEditalId = useMemo(() => {
+    const map = new Map<string, EditalApplication>();
+    palcoApplications.forEach((a) => map.set(a.edital_id, a));
+    return map;
+  }, [palcoApplications]);
+
+  const [activeTab, setActiveTab] = useState("descobrir");
+  const [selectedAppId, setSelectedAppId] = useState<string | null>(null);
+  const [resultAppId, setResultAppId] = useState<string | null>(null);
 
   const [query, setQuery] = useState("");
   const [filterTipo, setFilterTipo] = useState<TipoPalco | "todos">("todos");
