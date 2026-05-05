@@ -48,6 +48,7 @@ import { type Project, type Professional, type ProjectType } from "@/data/mockDa
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useProjects } from "@/contexts/ProjectContext";
 import { useProfile } from "@/contexts/ProfileContext";
+import { GENRE_OPTIONS, AUDIENCE_SIZE_OPTIONS } from "@/constants/genreOptions";
 
 import { useProfessionals } from "@/hooks/useProfessionals";
 
@@ -583,6 +584,26 @@ export default function Projects() {
               {(form.projectType === "ep" || form.projectType === "album") && (
                 <div className="space-y-1.5"><Label>{t("projects.trackCount")}</Label><Input type="number" min="1" placeholder="8" value={form.trackCount} onChange={(e) => setForm({ ...form, trackCount: e.target.value })} className="font-mono-nums" /></div>
               )}
+              <div className="space-y-1.5">
+                <Label>Gênero principal *</Label>
+                <Select value={form.genre} onValueChange={(v) => setForm({ ...form, genre: v })}>
+                  <SelectTrigger><SelectValue placeholder="Selecione o gênero" /></SelectTrigger>
+                  <SelectContent>
+                    {GENRE_OPTIONS.map((g) => <SelectItem key={g} value={g}>{g}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <p className="text-[11px] text-muted-foreground">Usamos para te mostrar referências do seu estilo.</p>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Seus seguidores hoje</Label>
+                <Select value={form.audienceSize} onValueChange={(v) => setForm({ ...form, audienceSize: v })}>
+                  <SelectTrigger><SelectValue placeholder="Opcional" /></SelectTrigger>
+                  <SelectContent>
+                    {AUDIENCE_SIZE_OPTIONS.map((a) => <SelectItem key={a.value} value={a.value}>{a.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <p className="text-[11px] text-muted-foreground">Usamos para comparar seu crescimento ao longo do tempo.</p>
+              </div>
               <div className="space-y-1.5">
                 <Label>Data estimada de lançamento</Label>
                 <DatePickerField
@@ -1228,6 +1249,24 @@ export default function Projects() {
             {(editForm.projectType === "ep" || editForm.projectType === "album") && (
               <div className="space-y-1.5"><Label>{t("projects.trackCount")}</Label><Input type="number" min="1" value={editForm.trackCount} onChange={(e) => setEditForm({ ...editForm, trackCount: e.target.value })} className="font-mono-nums" /></div>
             )}
+            <div className="space-y-1.5">
+              <Label>Gênero principal</Label>
+              <Select value={editForm.genre} onValueChange={(v) => setEditForm({ ...editForm, genre: v })}>
+                <SelectTrigger><SelectValue placeholder="Selecione o gênero" /></SelectTrigger>
+                <SelectContent>
+                  {GENRE_OPTIONS.map((g) => <SelectItem key={g} value={g}>{g}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Seus seguidores hoje</Label>
+              <Select value={editForm.audienceSize} onValueChange={(v) => setEditForm({ ...editForm, audienceSize: v })}>
+                <SelectTrigger><SelectValue placeholder="Opcional" /></SelectTrigger>
+                <SelectContent>
+                  {AUDIENCE_SIZE_OPTIONS.map((a) => <SelectItem key={a.value} value={a.value}>{a.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
             <div className="space-y-1.5">
               <Label>Data estimada de lançamento</Label>
               <DatePickerField
