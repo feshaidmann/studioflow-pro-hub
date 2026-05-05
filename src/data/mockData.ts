@@ -78,6 +78,13 @@ export interface Project {
   estimatedMonths: number | null;
   completed: boolean;
   notes: string;
+  // Market intelligence (invisible to user, used for benchmarks)
+  genre?: string | null;
+  subgenre?: string | null;
+  artistState?: string | null;
+  audienceSizeAtStart?: string | null;
+  productionStartDate?: string | null;
+  distributor?: string | null;
   tracks?: MixTrack[];
   professionals?: Professional[];
 }

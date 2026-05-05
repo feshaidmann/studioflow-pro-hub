@@ -48,6 +48,7 @@ import { type Project, type Professional, type ProjectType } from "@/data/mockDa
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useProjects } from "@/contexts/ProjectContext";
 import { useProfile } from "@/contexts/ProfileContext";
+import { GENRE_OPTIONS, AUDIENCE_SIZE_OPTIONS } from "@/constants/genreOptions";
 
 import { useProfessionals } from "@/hooks/useProfessionals";
 
@@ -106,7 +107,7 @@ export default function Projects() {
   const { t } = useLanguage();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { displayName } = useProfile();
+  const { displayName, profile } = useProfile();
   const {
     projects, professionals, masterResults,
     addProject, updateProject, deleteProject,
@@ -146,7 +147,7 @@ export default function Projects() {
   const [showTeam, setShowTeam] = useState(false);
   const [teamDialogOpen, setTeamDialogOpen] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [form, setForm] = useState({ name: "", artist: "", bpm: "120", key: "C", stage: "inicio" as Project["stage"], projectType: "single" as ProjectType, trackCount: "", uploadDate: "", template: "none" as ProjectTemplate });
+  const [form, setForm] = useState({ name: "", artist: "", bpm: "120", key: "C", stage: "inicio" as Project["stage"], projectType: "single" as ProjectType, trackCount: "", uploadDate: "", template: "none" as ProjectTemplate, genre: "", audienceSize: "" });
 
   /* ── Wizard state (single-step) ── */
   const [wizardSource, setWizardSource] = useState<WizardSource>("new");
@@ -352,7 +353,7 @@ export default function Projects() {
 
   /* ── Edit/Delete state ── */
   const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [editForm, setEditForm] = useState({ id: "", name: "", artist: "", bpm: "120", key: "C", stage: "inicio" as Project["stage"], projectType: "single" as ProjectType, trackCount: "", uploadDate: "" });
+  const [editForm, setEditForm] = useState({ id: "", name: "", artist: "", bpm: "120", key: "C", stage: "inicio" as Project["stage"], projectType: "single" as ProjectType, trackCount: "", uploadDate: "", genre: "", audienceSize: "" });
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const [confirmUploadOpen, setConfirmUploadOpen] = useState(false);
@@ -399,6 +400,7 @@ export default function Projects() {
   };
 
   const handleAddProject = async () => {
+    if (!form.genre) { toast.error("Selecione o gênero principal"); return; }
     if ((form.projectType === "ep" || form.projectType === "album") && (!form.trackCount || Number(form.trackCount) < 1)) { toast.error(t("projects.trackCount") + " é obrigatório para EP/Álbum"); return; }
     let uploadDateStr = "";
     if (form.uploadDate) {
@@ -423,12 +425,15 @@ export default function Projects() {
         estimatedMonths: null,
         uploadDate: uploadDateStr,
         templateTracks: templateTracks,
+        genre: form.genre || null,
+        audienceSizeAtStart: form.audienceSize || null,
+        artistState: (profile as any)?.state ?? null,
       });
       if (!newProj) {
         toast.error("Erro ao criar projeto. Verifique sua conexão e tente novamente.");
         return;
       }
-      setForm({ name: "", artist: "", bpm: "120", key: "C", stage: "inicio", projectType: "single", trackCount: "", uploadDate: "", template: "none" });
+      setForm({ name: "", artist: "", bpm: "120", key: "C", stage: "inicio", projectType: "single", trackCount: "", uploadDate: "", template: "none", genre: "", audienceSize: "" });
       setDialogOpen(false);
       addNotification({ title: "Novo projeto criado", message: `${newProj.name} foi adicionado aos seus projetos`, link: "/projects", type: "stage" });
       toast.success(`Projeto "${newProj.name}" criado! Adicione sua equipe para começar. 🎵`);
@@ -444,7 +449,7 @@ export default function Projects() {
       const parts = project.uploadDate.match(/^(\d{4})-(\d{2})-(\d{2})$/);
       if (parts) uploadDateDisplay = `${parts[3]}/${parts[2]}/${parts[1]}`;
     }
-    setEditForm({ id: project.id, name: project.name, artist: project.artist, bpm: String(project.bpm), key: project.key, stage: project.stage, projectType: project.projectType || "single", trackCount: project.trackCount ? String(project.trackCount) : "", uploadDate: uploadDateDisplay });
+    setEditForm({ id: project.id, name: project.name, artist: project.artist, bpm: String(project.bpm), key: project.key, stage: project.stage, projectType: project.projectType || "single", trackCount: project.trackCount ? String(project.trackCount) : "", uploadDate: uploadDateDisplay, genre: (project as any).genre ?? "", audienceSize: (project as any).audienceSizeAtStart ?? "" });
     setEditDialogOpen(true);
   };
 
@@ -467,6 +472,8 @@ export default function Projects() {
       projectType: editForm.projectType,
       trackCount: needsTrackCount ? (editForm.trackCount ? Number(editForm.trackCount) : null) : null,
       uploadDate: uploadDateStr,
+      genre: editForm.genre || null,
+      audienceSizeAtStart: editForm.audienceSize || null,
       ...(isLancado ? { completed: true } : {}),
     };
     updateProject(editForm.id, updates);
@@ -577,6 +584,26 @@ export default function Projects() {
               {(form.projectType === "ep" || form.projectType === "album") && (
                 <div className="space-y-1.5"><Label>{t("projects.trackCount")}</Label><Input type="number" min="1" placeholder="8" value={form.trackCount} onChange={(e) => setForm({ ...form, trackCount: e.target.value })} className="font-mono-nums" /></div>
               )}
+              <div className="space-y-1.5">
+                <Label>Gênero principal *</Label>
+                <Select value={form.genre} onValueChange={(v) => setForm({ ...form, genre: v })}>
+                  <SelectTrigger><SelectValue placeholder="Selecione o gênero" /></SelectTrigger>
+                  <SelectContent>
+                    {GENRE_OPTIONS.map((g) => <SelectItem key={g} value={g}>{g}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <p className="text-[11px] text-muted-foreground">Usamos para te mostrar referências do seu estilo.</p>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Seus seguidores hoje</Label>
+                <Select value={form.audienceSize} onValueChange={(v) => setForm({ ...form, audienceSize: v })}>
+                  <SelectTrigger><SelectValue placeholder="Opcional" /></SelectTrigger>
+                  <SelectContent>
+                    {AUDIENCE_SIZE_OPTIONS.map((a) => <SelectItem key={a.value} value={a.value}>{a.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <p className="text-[11px] text-muted-foreground">Usamos para comparar seu crescimento ao longo do tempo.</p>
+              </div>
               <div className="space-y-1.5">
                 <Label>Data estimada de lançamento</Label>
                 <DatePickerField
@@ -1222,6 +1249,24 @@ export default function Projects() {
             {(editForm.projectType === "ep" || editForm.projectType === "album") && (
               <div className="space-y-1.5"><Label>{t("projects.trackCount")}</Label><Input type="number" min="1" value={editForm.trackCount} onChange={(e) => setEditForm({ ...editForm, trackCount: e.target.value })} className="font-mono-nums" /></div>
             )}
+            <div className="space-y-1.5">
+              <Label>Gênero principal</Label>
+              <Select value={editForm.genre} onValueChange={(v) => setEditForm({ ...editForm, genre: v })}>
+                <SelectTrigger><SelectValue placeholder="Selecione o gênero" /></SelectTrigger>
+                <SelectContent>
+                  {GENRE_OPTIONS.map((g) => <SelectItem key={g} value={g}>{g}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Seus seguidores hoje</Label>
+              <Select value={editForm.audienceSize} onValueChange={(v) => setEditForm({ ...editForm, audienceSize: v })}>
+                <SelectTrigger><SelectValue placeholder="Opcional" /></SelectTrigger>
+                <SelectContent>
+                  {AUDIENCE_SIZE_OPTIONS.map((a) => <SelectItem key={a.value} value={a.value}>{a.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
             <div className="space-y-1.5">
               <Label>Data estimada de lançamento</Label>
               <DatePickerField

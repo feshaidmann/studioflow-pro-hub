@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -77,7 +78,7 @@ function SectionBlock({ section, items, toggleCheck, setValue }: {
                   onCheckedChange={() => {
                     if (item.type === "check") toggleCheck(item.key);
                   }}
-                  disabled={item.type === "text"}
+                  disabled={item.type !== "check"}
                   className="shrink-0"
                 />
                 {item.type === "text" ? (
@@ -89,6 +90,20 @@ function SectionBlock({ section, items, toggleCheck, setValue }: {
                       placeholder={`Informar ${item.label.toLowerCase()}`}
                       className="h-7 text-xs"
                     />
+                  </div>
+                ) : item.type === "select" ? (
+                  <div className="flex-1 min-w-0">
+                    <label className="text-xs text-muted-foreground block mb-0.5">{item.label}</label>
+                    <Select value={state.value} onValueChange={(v) => setValue(item.key, v)}>
+                      <SelectTrigger className="h-7 text-xs">
+                        <SelectValue placeholder={`Selecionar ${item.label.toLowerCase()}`} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(item.options ?? []).map((opt) => (
+                          <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 ) : (
                   <span className={cn("text-sm flex-1", state.checked && "line-through text-muted-foreground")}>
