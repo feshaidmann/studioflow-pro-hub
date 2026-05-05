@@ -1071,6 +1071,10 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
               <Check className="h-3 w-3" /> Salva
             </span>
           )}
+          <Button variant="outline" size="sm" className="text-xs gap-1.5" onClick={() => downloadAnalysisReport(input, diagnosis)}>
+            <Download className="h-3 w-3" />
+            Baixar relatório
+          </Button>
           <CreateArtButton isSaved={isSaved} savedAnalysisId={savedAnalysisId} />
           <Button variant="outline" size="sm" className="text-xs gap-1.5" onClick={() => setFeedbackOpen(true)}>
             <MessageSquare className="h-3 w-3" />
