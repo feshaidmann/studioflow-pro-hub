@@ -416,19 +416,124 @@ function buildAnalysisMarkdown(input: { name: string; references: string[]; note
   return lines.join("\n");
 }
 
-function downloadAnalysisReport(input: { name: string; references: string[]; notes?: string }, diagnosis: DiagnosisResult) {
-  const md = buildAnalysisMarkdown(input, diagnosis);
-  const blob = new Blob([md], { type: "text/markdown;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
+async function downloadAnalysisReport(input: { name: string; references: string[]; notes?: string }, diagnosis: DiagnosisResult) {
+  const { jsPDF } = await import("jspdf");
+  const doc = new jsPDF({ unit: "pt", format: "a4" });
+  const pageW = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
+  const margin = 48;
+  const maxW = pageW - margin * 2;
+  let y = margin;
+
+  const ensureSpace = (h: number) => {
+    if (y + h > pageH - margin) {
+      doc.addPage();
+      y = margin;
+    }
+  };
+
+  const writeText = (text: string, opts: { size?: number; bold?: boolean; color?: [number, number, number]; gap?: number } = {}) => {
+    const { size = 11, bold = false, color = [40, 40, 40], gap = 4 } = opts;
+    doc.setFont("helvetica", bold ? "bold" : "normal");
+    doc.setFontSize(size);
+    doc.setTextColor(color[0], color[1], color[2]);
+    const lines = doc.splitTextToSize(text, maxW);
+    for (const line of lines) {
+      ensureSpace(size + gap);
+      doc.text(line, margin, y);
+      y += size + gap;
+    }
+  };
+
+  const heading = (text: string) => {
+    y += 8;
+    ensureSpace(22);
+    writeText(text, { size: 13, bold: true, color: [20, 20, 20], gap: 6 });
+    doc.setDrawColor(220);
+    doc.line(margin, y - 2, pageW - margin, y - 2);
+    y += 6;
+  };
+
+  const bullet = (text: string) => {
+    const lines = doc.splitTextToSize(text, maxW - 14);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(11);
+    doc.setTextColor(40, 40, 40);
+    lines.forEach((line: string, i: number) => {
+      ensureSpace(15);
+      if (i === 0) doc.text("•", margin, y);
+      doc.text(line, margin + 14, y);
+      y += 15;
+    });
+  };
+
+  // Cabeçalho
+  writeText("DNA Musical", { size: 20, bold: true, color: [20, 20, 20], gap: 6 });
+  writeText(input.name, { size: 14, bold: true, color: [60, 60, 60], gap: 4 });
+  writeText(`Gerado em ${new Date().toLocaleString("pt-BR")}`, { size: 9, color: [120, 120, 120], gap: 4 });
+  if (diagnosis.genero_classificado) writeText(`Gênero classificado: ${diagnosis.genero_classificado}`, { size: 10, color: [80, 80, 80] });
+  if (input.references?.length) writeText(`Referências informadas: ${input.references.join(", ")}`, { size: 10, color: [80, 80, 80] });
+  if (input.notes) writeText(`Notas: ${input.notes}`, { size: 10, color: [80, 80, 80] });
+
+  heading("Resumo executivo");
+  writeText(diagnosis.diagnostico_resumo || "—");
+
+  const r = diagnosis.realAnalysis;
+  const a = diagnosis.audioAnalysis;
+  heading("Métricas técnicas");
+  bullet(`LUFS integrado: ${r?.lufs_integrated ?? a?.lufs ?? "—"}`);
+  bullet(`True Peak: ${r?.true_peak_dbtp ?? a?.truePeak ?? "—"} dBTP`);
+  bullet(`Dynamic Range: ${r?.dynamic_range_lu ?? a?.dynamicRange ?? "—"} LU`);
+  bullet(`BPM: ${r?.bpm ?? "—"}`);
+  bullet(`Tom: ${r?.key ?? "—"}`);
+  if (r?.duration_sec) bullet(`Duração: ${Math.floor(r.duration_sec / 60)}:${String(Math.round(r.duration_sec % 60)).padStart(2, "0")}`);
+
+  if (diagnosis.diagnostico_tecnico) {
+    heading("Avaliação técnica");
+    bullet(`LUFS — ${diagnosis.diagnostico_tecnico.lufs_avaliacao}`);
+    bullet(`True Peak — ${diagnosis.diagnostico_tecnico.true_peak_avaliacao}`);
+    bullet(`Dynamic Range — ${diagnosis.diagnostico_tecnico.dynamic_range_avaliacao}`);
+    bullet(`Espectro — ${diagnosis.diagnostico_tecnico.espectro_avaliacao}`);
+  }
+
+  if (diagnosis.identidade) {
+    heading("Identidade artística");
+    bullet(`Mood: ${diagnosis.identidade.mood_principal}`);
+    bullet(`Território sonoro: ${diagnosis.identidade.territorio_sonoro}`);
+    bullet(`Persona do ouvinte: ${diagnosis.identidade.persona_ouvinte}`);
+    if (diagnosis.identidade.tags?.length) bullet(`Tags: ${diagnosis.identidade.tags.join(", ")}`);
+  }
+
+  if (diagnosis.pontos_fortes?.length) {
+    heading("Pontos fortes");
+    diagnosis.pontos_fortes.forEach(bullet);
+  }
+  if (diagnosis.gargalos_criativos?.length) {
+    heading("Gargalos criativos");
+    diagnosis.gargalos_criativos.forEach(bullet);
+  }
+  if (diagnosis.sugestoes_arranjo?.length) {
+    heading("Sugestões de arranjo");
+    diagnosis.sugestoes_arranjo.forEach(bullet);
+  }
+  if (diagnosis.proximos_passos?.length) {
+    heading("Próximos passos");
+    diagnosis.proximos_passos.forEach((p) => {
+      const acao = typeof p === "string" ? p : p.acao;
+      const prio = typeof p === "string" ? "" : ` (prioridade: ${p.prioridade})`;
+      bullet(`${acao}${prio}`);
+    });
+  }
+  if (diagnosis.referencias_proximas?.length) {
+    heading("Referências próximas");
+    diagnosis.referencias_proximas.forEach((ref) => {
+      bullet(`${ref.artista} — ${ref.similaridade}${ref.motivo ? ` — ${ref.motivo}` : ""}`);
+    });
+  }
+
   const safeName = input.name.replace(/[^a-z0-9-_]+/gi, "_").slice(0, 60) || "dna-musical";
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `dna-musical_${safeName}.md`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-  toast.success("Relatório baixado");
+  doc.save(`dna-musical_${safeName}.pdf`);
+  toast.success("Relatório PDF baixado");
 }
 
 function FormView({ onSubmit, isPending, projects }: {
