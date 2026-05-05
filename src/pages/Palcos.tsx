@@ -1324,6 +1324,33 @@ export default function Palcos() {
         projects={projectList}
         onConfirm={handleConfirmCandidatura}
       />
+
+      {/* Checklist de documentos */}
+      {selectedAppId && (
+        <Sheet open={!!selectedAppId} onOpenChange={(o) => { if (!o) setSelectedAppId(null); }}>
+          <SheetContent side="right" className="w-full sm:max-w-lg overflow-y-auto">
+            <SheetHeader>
+              <SheetTitle>Checklist de documentos</SheetTitle>
+            </SheetHeader>
+            <div className="mt-4">
+              <ApplicationChecklist applicationId={selectedAppId} projects={projectList} />
+            </div>
+          </SheetContent>
+        </Sheet>
+      )}
+
+      {/* Registrar resultado */}
+      {resultAppId && (() => {
+        const app = palcoApplications.find((a) => a.id === resultAppId);
+        if (!app) return null;
+        return (
+          <EditalResultModal
+            application={app}
+            open={!!resultAppId}
+            onOpenChange={(o) => { if (!o) setResultAppId(null); }}
+          />
+        );
+      })()}
     </div>
   );
 }
