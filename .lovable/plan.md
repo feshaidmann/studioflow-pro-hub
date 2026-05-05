@@ -1,30 +1,24 @@
-## Problema
+## Objetivo
+Aplicar a nova página de conversão (Welcome) enviada, que reposiciona a comunicação para o artista independente brasileiro, ancora o produto em um mock concreto e inclui credenciais (INCAMP/ABMI).
 
-No `src/components/AppLayout.tsx` atual:
+## Mudanças
 
-1. **Bug:** `Palcos` está em `gestaoItems[4]`, mas `toolDrawerItems` referencia índices `[3], [5], [4], [2]` — que correspondem a Editais, Profissionais, Criativo, DNA. O `[4]` aqui é Criativo, não Palcos (porque a ordem do array `gestaoItems` no arquivo atual é Finanças, Agenda, DNA, Editais, **Palcos**, Criativo, Profissionais). Resultado: Palcos não aparece no drawer mobile e a sidebar desktop renderiza apenas 4 ferramentas, deixando Palcos fora.
-2. **Ordem invertida** vs. jornada real do artista (DNA → Criativo → Palcos → Editais → Profissionais).
+**Arquivo único:** `src/pages/Welcome.tsx` — sobrescrever pelo conteúdo de `user-uploads://Welcome.tsx` (515 linhas).
 
-## Solução
+Estrutura nova:
+1. Badge "Pré-incubado no INCAMP · Unicamp 2026"
+2. Hero "Sua música merece mais do que WhatsApp e planilha"
+3. CTA principal (Google + e-mail + login) logo após o hero
+4. Mock visual do projeto "Noite Clara" (orçamento + checklist com itens urgentes)
+5. Seção de dores específicas BR (4 pares dor → solução)
+6. Grid dos 8 módulos com Palcos incluído (Projetos, Financeiro, Agenda, Equipe, Editais, Palcos, Criativo, DNA Musical)
+7. CTA final + credenciais (INCAMP, ABMI, artistas BR)
 
-Aplicar o arquivo enviado em `user-uploads://AppLayout-2.tsx` sobre `src/components/AppLayout.tsx`. Ele já contém:
+## Compatibilidade verificada
+- Imports usados (`useAuth`, `useProfile`, `useLanguage`, `lovable.auth`, `Button`, ícones lucide) já existem no projeto.
+- Rotas referenciadas (`/auth`, `/auth?mode=signup`, `/dashboard`, `/onboarding`) já existem.
+- Guard de redirecionamento (`needsProfileSetup`/`user`) preservado.
+- Não há dependências novas a instalar.
 
-- `gestaoItems` reordenado pela jornada, com índices comentados:
-  - `[0]` Finanças, `[1]` Agenda, `[2]` DNA, `[3]` Criativo, `[4]` Palcos, `[5]` Editais, `[6]` Profissionais.
-- `toolDrawerItems` agora inclui os **5** itens de ferramenta na ordem correta (`[2]` DNA → `[3]` Criativo → `[4]` Palcos → `[5]` Editais → `[6]` Profissionais), eliminando o bug de Palcos ausente.
-- Bloco da sidebar desktop renderizando os mesmos 5 itens na mesma ordem.
-- `drawerSubLabels`, prefetch de `/palcos`, `ROOT_ROUTES`, header mobile, seção Conta e demais comportamentos preservados.
-
-## Passos
-
-1. Sobrescrever `src/components/AppLayout.tsx` com o conteúdo de `user-uploads://AppLayout-2.tsx` (448 linhas).
-2. Verificar visualmente:
-   - Mobile: drawer "Mais" mostra 5 ferramentas em grid na ordem DNA, Criativo, Palcos, Editais, Profissionais.
-   - Desktop: seção "Ferramentas" da sidebar lista as mesmas 5 entradas na mesma ordem, com Palcos visível.
-3. Sem mudanças em rotas, traduções (`nav.palcos` já existe) ou outros arquivos.
-
-## Detalhes técnicos
-
-- Arquivo único editado: `src/components/AppLayout.tsx`.
-- Sem migrations, sem mudanças em hooks ou edge functions.
-- Sem novos imports — `Mic2` já está presente.
+## Não muda
+Nenhum outro arquivo é afetado. Navegação, AppLayout, rotas e demais páginas permanecem intactos.
