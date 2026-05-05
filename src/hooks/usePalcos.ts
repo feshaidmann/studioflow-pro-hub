@@ -65,6 +65,9 @@ export function usePalcos() {
   const [loadingCurados, setLoadingCurados] = useState(true);
   const [searching, setSearching] = useState(false);
   const [searchResult, setSearchResult] = useState<PalcoSearchResult | null>(null);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const [lastQuery, setLastQuery] = useState<string | null>(null);
+  const [lastProjectId, setLastProjectId] = useState<string | null>(null);
 
   // ── Banco curado ─────────────────────────────────────────────────────────
   const fetchCurados = useCallback(async () => {
