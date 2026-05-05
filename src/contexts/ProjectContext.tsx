@@ -141,6 +141,12 @@ function dbRowToProject(row: any): Project {
     estimatedMonths: row.estimated_months,
     completed: row.completed ?? false,
     notes: row.notes ?? "",
+    genre: row.genre ?? null,
+    subgenre: row.subgenre ?? null,
+    artistState: row.artist_state ?? null,
+    audienceSizeAtStart: row.audience_size_at_start ?? null,
+    productionStartDate: row.production_start_date ?? null,
+    distributor: row.distributor ?? null,
   };
 }
 
