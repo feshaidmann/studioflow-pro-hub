@@ -1175,6 +1175,23 @@ export default function Creative() {
         <TabsContent value="gallery" className="mt-4 space-y-4">
           {assets.length > 0 && (
             <div className="flex flex-col gap-2">
+              {filterProject !== "all" && projects.find((p) => p.id === filterProject) && (
+                <div className="flex items-center justify-between gap-2 rounded-lg border border-primary/20 bg-primary/5 px-2.5 py-1.5">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <FolderKanban className="h-3.5 w-3.5 text-primary shrink-0" />
+                    <span className="text-[12px] text-foreground truncate">
+                      Filtrando por: <span className="font-medium">{projects.find((p) => p.id === filterProject)?.name}</span>
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => setFilterProject("all")}
+                    className="text-muted-foreground hover:text-foreground shrink-0"
+                    aria-label="Remover filtro do projeto"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              )}
               <div className="relative">
                 <Input
                   value={gallerySearch}
