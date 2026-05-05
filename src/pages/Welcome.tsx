@@ -115,7 +115,6 @@ const MODULES = [
 
 // ── Credenciais de credibilidade ─────────────────────────────────────────
 const CREDENTIALS = [
-  { label: "Parceiro estratégico", sub: "ABMI · Associação Brasileira da Música Independente" },
   { label: "Desenvolvido com", sub: "artistas do mercado fonográfico BR" },
 ];
 
