@@ -213,10 +213,11 @@ function StartCandidaturaDialog({
   open: boolean;
   onOpenChange: (o: boolean) => void;
   projects: { id: string; name: string }[];
-  onConfirm: (params: { edital_id: string; project_id?: string | null; notas?: string; tipo: "palco" }) => void;
+  onConfirm: (params: { edital_id: string; project_id?: string | null; notas?: string; tipo: "palco"; data_inscricao?: string }) => void;
 }) {
   const [projectId, setProjectId] = useState("none");
   const [notas, setNotas] = useState("");
+  const [dataInscricao, setDataInscricao] = useState("");
 
   if (!palco) return null;
 
@@ -242,12 +243,14 @@ function StartCandidaturaDialog({
             <Label className="text-xs">Nota (opcional)</Label>
             <Input value={notas} onChange={(e) => setNotas(e.target.value)} placeholder="Ex: Prazo apertado, prioridade alta" />
           </div>
+          <div>
+            <Label className="text-xs">Data prevista de inscrição <span className="text-muted-foreground/60">(opcional)</span></Label>
+            <Input type="date" value={dataInscricao} onChange={(e) => setDataInscricao(e.target.value)} className="text-sm" />
+          </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
           <Button onClick={async () => {
-            // Precisamos do ID no banco de editais para criar candidatura
-            // Buscamos ou criamos o registro
             const { data: { session } } = await supabase.auth.getSession();
             if (!session) return;
 
@@ -255,7 +258,6 @@ function StartCandidaturaDialog({
               .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
               .replace(/[^a-z0-9_]/g, "_").replace(/_+/g, "_");
 
-            // Upsert no banco de editais (tipo=palco)
             const { data: upserted } = await supabase
               .from("editais")
               .upsert({
@@ -286,10 +288,12 @@ function StartCandidaturaDialog({
                 project_id: projectId !== "none" ? projectId : null,
                 notas: notas.trim() || undefined,
                 tipo: "palco",
+                data_inscricao: dataInscricao || undefined,
               });
             }
             setProjectId("none");
             setNotas("");
+            setDataInscricao("");
             onOpenChange(false);
           }}>
             <ClipboardList className="h-3.5 w-3.5 mr-1.5" />Iniciar
