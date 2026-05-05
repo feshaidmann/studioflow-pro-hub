@@ -729,16 +729,54 @@ export default function Palcos() {
   };
 
   const handleConfirmCandidatura = (params: {
-    edital_id: string; project_id?: string | null; notas?: string; tipo: "palco"
+    edital_id: string; project_id?: string | null; notas?: string; tipo: "palco"; data_inscricao?: string;
   }) => {
+    const target = candidaturaTarget;
     createApplication.mutate(
-      { edital_id: params.edital_id, project_id: params.project_id, notas: params.notas },
       {
-        onSuccess: () => {
+        edital_id: params.edital_id,
+        project_id: params.project_id,
+        notas: params.notas,
+        data_inscricao: params.data_inscricao || null,
+      },
+      {
+        onSuccess: async (newApp: any) => {
+          // Checklist automático por tipo de palco
+          if (target && newApp?.id) {
+            const template = PALCO_CHECKLIST_TEMPLATES[target.tipo_palco] || [];
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session && template.length > 0) {
+              await supabase.from("edital_application_docs").insert(
+                template.map((item) => ({
+                  user_id: session.user.id,
+                  application_id: newApp.id,
+                  doc_label: item.label,
+                  doc_type: item.type,
+                  is_required: item.required,
+                }))
+              );
+            }
+          }
+          // Tarefa automática no projeto vinculado
+          if (params.project_id && target) {
+            const prazoText = target.prazo
+              ? ` — prazo ${new Date(target.prazo + "T12:00:00-03:00").toLocaleDateString("pt-BR")}`
+              : "";
+            await ensureAutoTask(`palco:${params.edital_id}:${params.project_id}`, {
+              description: `Preparar candidatura para ${target.nome}${prazoText}`,
+              source: "palco_candidatura",
+              sourceModule: "palcos",
+              taskArea: "lancamento",
+              severity: target.prazo ? "high" : "medium",
+              projectId: params.project_id,
+              dueDate: target.prazo || undefined,
+            });
+          }
           toast.success("Candidatura iniciada!", {
+            description: "Checklist de documentos criado automaticamente.",
             action: {
-              label: "Ver pipeline →",
-              onClick: () => navigate("/editais?tab=meus"),
+              label: "Ver candidaturas →",
+              onClick: () => setActiveTab("candidaturas"),
             },
           });
         },
