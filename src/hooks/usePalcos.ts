@@ -17,8 +17,8 @@ export const TIPO_PALCO_LABELS: Record<TipoPalco, string> = {
 
 export const TIPO_PALCO_COLORS: Record<TipoPalco, string> = {
   festival:   "bg-primary/15 text-primary border-primary/30",
-  showcase:   "bg-amber-500/15 text-amber-700 border-amber-200",
-  circuito:   "bg-blue-500/15 text-blue-700 border-blue-200",
+  showcase:   "bg-amber-500/25 text-amber-900 border-amber-500/50 font-semibold",
+  circuito:   "bg-blue-500/25 text-blue-900 border-blue-500/50 font-semibold",
   residencia: "bg-emerald-500/15 text-emerald-700 border-emerald-200",
   abertura:   "bg-purple-500/15 text-purple-700 border-purple-200",
 };

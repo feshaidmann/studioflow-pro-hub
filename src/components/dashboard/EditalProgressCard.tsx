@@ -58,7 +58,7 @@ export default function EditalProgressCard({ hidden }: { hidden?: boolean }) {
             );
           })}
           {stats.aprovados > 0 && (
-            <Badge variant="outline" className="bg-green-500/15 text-green-700 border-green-200 text-[10px]">
+            <Badge variant="outline" className="bg-green-500/25 text-green-900 border-green-500/50 font-semibold text-[10px]">
               <Award className="h-3 w-3 mr-0.5" />
               {stats.aprovados} aprovado{stats.aprovados > 1 ? "s" : ""}
             </Badge>

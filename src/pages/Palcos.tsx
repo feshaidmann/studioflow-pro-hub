@@ -90,9 +90,9 @@ const PALCO_CALENDAR = [
 ];
 
 function statusColor(status: string) {
-  if (status === "Aberto")   return "bg-green-500/15 text-green-700 border-green-200";
-  if (status === "Encerrado") return "bg-red-500/15 text-red-700 border-red-200";
-  return "bg-amber-500/15 text-amber-700 border-amber-200";
+  if (status === "Aberto")   return "bg-green-500/25 text-green-900 border-green-500/50 font-semibold";
+  if (status === "Encerrado") return "bg-red-500/25 text-red-900 border-red-500/50 font-semibold";
+  return "bg-amber-500/25 text-amber-900 border-amber-500/50 font-semibold";
 }
 
 // ── Card de detalhe de palco ──────────────────────────────────────────────
@@ -334,8 +334,8 @@ function PalcoCard({
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Badge variant="outline" className={`text-[10px] ${
-                    score >= 15 ? "bg-green-500/15 text-green-700 border-green-200" :
-                    score >= 8  ? "bg-amber-500/15 text-amber-700 border-amber-200" :
+                    score >= 15 ? "bg-green-500/25 text-green-900 border-green-500/50 font-semibold" :
+                    score >= 8  ? "bg-amber-500/25 text-amber-900 border-amber-500/50 font-semibold" :
                                   "bg-muted text-muted-foreground"
                   }`}>
                     <Star className="h-2.5 w-2.5 mr-0.5" />
@@ -857,7 +857,7 @@ export default function Palcos() {
                   className={cn(
                     "h-8 px-3 text-xs rounded-md border transition-colors",
                     filterApenasAbertos
-                      ? "bg-green-500/15 text-green-700 border-green-200"
+                      ? "bg-green-500/25 text-green-900 border-green-500/50 font-semibold"
                       : "bg-background text-muted-foreground border-border hover:bg-muted"
                   )}
                 >
