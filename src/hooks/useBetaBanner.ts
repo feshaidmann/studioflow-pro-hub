@@ -11,7 +11,9 @@ export function dismissBetaBanner() {
 }
 
 export function useBetaBannerVisible() {
-  const [visible, setVisible] = useState(false);
+  const [visible, setVisible] = useState(
+    () => sessionStorage.getItem(STORAGE_KEY) !== "true"
+  );
 
   useEffect(() => {
     const update = () => {

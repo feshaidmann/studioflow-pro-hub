@@ -1,57 +1,32 @@
-# Melhorias de CX — Módulo Criativo no Fluxo do Projeto
+## Objetivo
 
-Implementar as 4 melhorias de maior impacto identificadas na auditoria, ligando melhor o módulo Criativo ao Hub do Projeto e ao Checklist de Lançamento.
+Substituir o `useBetaBannerVisible` em `src/hooks/useBetaBanner.ts` pela versão enviada, que lê o `sessionStorage` de forma **síncrona** no `useState` inicial.
 
-## 1. Pré-popular detalhes da faixa quando vier do projeto
+## Diferença em relação à versão atual
 
-**Arquivo:** `src/pages/Creative.tsx`
+Hoje o hook inicia com `useState(false)` e só atualiza a visibilidade dentro do `useEffect`. Isso provoca um pequeno flicker: no primeiro render o banner fica oculto mesmo para usuários que ainda não dispensaram, e aparece no segundo render.
 
-Quando o usuário entra com `?project=<id>`:
-- Preencher `trackName` com `linkedProject.name` (via `cleanTrackName`)
-- Preencher `artistName` com `linkedProject.artist`
-- Abrir o `Collapsible` de "Detalhes da faixa" (`setTrackDetailsOpen(true)`)
-- Disparar apenas uma vez (guard via `useRef`) para não sobrescrever edições do usuário
+A versão enviada usa um inicializador lazy:
 
-## 2. Auto-filtrar a Galeria pelo projeto vinculado
+```ts
+const [visible, setVisible] = useState(
+  () => sessionStorage.getItem(STORAGE_KEY) !== "true"
+);
+```
 
-**Arquivo:** `src/pages/Creative.tsx`
+Assim o estado correto já está disponível no primeiro render — sem flash e sem render extra.
 
-- Ao detectar `?project=<id>`, setar `filterProject = projectIdParam` por padrão
-- Mostrar um chip removível ("Filtrando: <Nome do projeto> ✕") acima da grid quando o filtro vier do contexto
+## Mudanças
 
-## 3. Auto-marcar itens do Checklist de Lançamento ao salvar arte do projeto
+**`src/hooks/useBetaBanner.ts`**
+- Trocar `useState(false)` pelo inicializador lazy lendo `sessionStorage` direto.
+- Manter o `useEffect` com listener do evento `beta-banner-changed` para sincronizar entre abas/componentes (a chamada `update()` dentro do effect continua útil para casos em que o storage muda entre o mount e o subscribe).
+- `dismissBetaBanner` e o evento `trackEvent("beta_banner_dismissed")` permanecem inalterados.
 
-**Arquivos:**
-- `src/hooks/useReleaseChecklist.ts` — exportar helper `markChecklistItem(projectId, key)` que faz upsert direto via `supabase` (sem depender da instância do hook)
-- `src/pages/Creative.tsx` — após `saveAsset` bem-sucedido com `projectId`, mapear formato → chave de checklist e chamar o helper:
-  - `spotify_cover` → `capa`
-  - `youtube_cover` → `thumbnail`
-  - `reels_loop` → `reels`
-  - `story` → `stories`
-  - `instagram_post` → (nenhum, ignorar)
-- Mostrar toast: "Item '<label>' marcado no checklist do projeto"
+## Fora de escopo
 
-Helper faz `select` da row, faz merge de `items[key] = { checked: true, value: "" }` e `update`/`insert`. Se já estava marcado, no-op silencioso.
+Nenhuma alteração em `BetaBanner.tsx`, `AppLayout.tsx` ou no schema do Supabase — a API pública do hook (`useBetaBannerVisible`, `dismissBetaBanner`) não muda.
 
-## 4. Analytics do módulo Criativo
+## Risco
 
-**Arquivo:** `src/pages/Creative.tsx`
-
-Adicionar `trackEvent` (de `@/lib/analytics`) em pontos-chave:
-- `creative_opened` — no mount, com `{ from_project: !!projectIdParam, has_dna: !!dnaParam }`
-- `creative_generated` — após geração de imagem com sucesso, `{ format, has_dna, has_reference, project_linked }`
-- `creative_saved_to_gallery` — após `saveAsset`, `{ format, project_linked, media_type }`
-- `creative_caption_generated` — em `CaptionGeneratorCard.tsx` ao gerar legenda
-- `creative_returned_to_project` — no clique do botão "Voltar ao projeto"
-
-## Detalhes técnicos
-
-- Não há mudanças de schema; `release_checklists` já suporta o upsert.
-- O helper `markChecklistItem` precisa do `user_id` (vem de `useAuth`).
-- `trackEvent` é no-op até PostHog ser inicializado, então é seguro para shipar agora.
-- Nenhum item é desmarcado automaticamente — somente marcação aditiva, para não atropelar o controle manual do usuário.
-
-## Fora de escopo (deixar para depois)
-- Contagem de materiais já criados no `CreativeEntryCard`
-- Botão "desfazer" no toast de auto-save
-- Refatoração do listener `open-feedback` (já implementado)
+Mínimo. Como `sessionStorage` está disponível no browser desde o mount (app SPA Vite, sem SSR), o acesso síncrono é seguro.
