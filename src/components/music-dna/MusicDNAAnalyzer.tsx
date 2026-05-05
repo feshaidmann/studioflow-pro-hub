@@ -7,7 +7,7 @@ import {
   Radar, RadarChart, PolarAngleAxis,
   ResponsiveContainer, Legend,
 } from "recharts";
-import { Upload, X, FileAudio, Music, MessageSquare, ListPlus, Check, Save, Trash2, History, Palette, ArrowRight, FolderKanban } from "lucide-react";
+import { Upload, X, FileAudio, Music, MessageSquare, ListPlus, Check, Save, Trash2, History, Palette, ArrowRight, FolderKanban, Download } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useProjects } from "@/contexts/ProjectContext";
 import { useTasks } from "@/hooks/useTasks";
@@ -343,7 +343,93 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-// ── FORM VIEW ────────────────────────────────────────────────────────────────
+function buildAnalysisMarkdown(input: { name: string; references: string[]; notes?: string }, diagnosis: DiagnosisResult): string {
+  const r = diagnosis.realAnalysis;
+  const a = diagnosis.audioAnalysis;
+  const lines: string[] = [];
+  lines.push(`# DNA Musical — ${input.name}`);
+  lines.push("");
+  lines.push(`_Gerado em ${new Date().toLocaleString("pt-BR")}_`);
+  lines.push("");
+  if (diagnosis.genero_classificado) lines.push(`**Gênero classificado:** ${diagnosis.genero_classificado}`);
+  if (input.references?.length) lines.push(`**Referências informadas:** ${input.references.join(", ")}`);
+  if (input.notes) lines.push(`**Notas:** ${input.notes}`);
+  lines.push("");
+  lines.push("## Resumo executivo");
+  lines.push(diagnosis.diagnostico_resumo || "—");
+  lines.push("");
+  lines.push("## Métricas técnicas");
+  lines.push(`- LUFS integrado: ${r?.lufs_integrated ?? a?.lufs ?? "—"}`);
+  lines.push(`- True Peak: ${r?.true_peak_dbtp ?? a?.truePeak ?? "—"} dBTP`);
+  lines.push(`- Dynamic Range: ${r?.dynamic_range_lu ?? a?.dynamicRange ?? "—"} LU`);
+  lines.push(`- BPM: ${r?.bpm ?? "—"}`);
+  lines.push(`- Tom: ${r?.key ?? "—"}`);
+  if (r?.duration_sec) lines.push(`- Duração: ${Math.floor(r.duration_sec / 60)}:${String(Math.round(r.duration_sec % 60)).padStart(2, "0")}`);
+  lines.push("");
+  if (diagnosis.diagnostico_tecnico) {
+    lines.push("## Avaliação técnica");
+    lines.push(`- **LUFS:** ${diagnosis.diagnostico_tecnico.lufs_avaliacao}`);
+    lines.push(`- **True Peak:** ${diagnosis.diagnostico_tecnico.true_peak_avaliacao}`);
+    lines.push(`- **Dynamic Range:** ${diagnosis.diagnostico_tecnico.dynamic_range_avaliacao}`);
+    lines.push(`- **Espectro:** ${diagnosis.diagnostico_tecnico.espectro_avaliacao}`);
+    lines.push("");
+  }
+  if (diagnosis.identidade) {
+    lines.push("## Identidade artística");
+    lines.push(`- **Mood:** ${diagnosis.identidade.mood_principal}`);
+    lines.push(`- **Território sonoro:** ${diagnosis.identidade.territorio_sonoro}`);
+    lines.push(`- **Persona do ouvinte:** ${diagnosis.identidade.persona_ouvinte}`);
+    if (diagnosis.identidade.tags?.length) lines.push(`- **Tags:** ${diagnosis.identidade.tags.join(", ")}`);
+    lines.push("");
+  }
+  if (diagnosis.pontos_fortes?.length) {
+    lines.push("## Pontos fortes");
+    diagnosis.pontos_fortes.forEach(p => lines.push(`- ${p}`));
+    lines.push("");
+  }
+  if (diagnosis.gargalos_criativos?.length) {
+    lines.push("## Gargalos criativos");
+    diagnosis.gargalos_criativos.forEach(p => lines.push(`- ${p}`));
+    lines.push("");
+  }
+  if (diagnosis.sugestoes_arranjo?.length) {
+    lines.push("## Sugestões de arranjo");
+    diagnosis.sugestoes_arranjo.forEach(p => lines.push(`- ${p}`));
+    lines.push("");
+  }
+  if (diagnosis.proximos_passos?.length) {
+    lines.push("## Próximos passos");
+    diagnosis.proximos_passos.forEach((p) => {
+      const acao = typeof p === "string" ? p : p.acao;
+      const prio = typeof p === "string" ? "" : ` _(prioridade: ${p.prioridade})_`;
+      lines.push(`- ${acao}${prio}`);
+    });
+    lines.push("");
+  }
+  if (diagnosis.referencias_proximas?.length) {
+    lines.push("## Referências próximas");
+    diagnosis.referencias_proximas.forEach(ref => {
+      lines.push(`- **${ref.artista}** — ${ref.similaridade}${ref.motivo ? ` — ${ref.motivo}` : ""}`);
+    });
+    lines.push("");
+  }
+  return lines.join("\n");
+}
+
+function downloadAnalysisReport(input: { name: string; references: string[]; notes?: string }, diagnosis: DiagnosisResult) {
+  const md = buildAnalysisMarkdown(input, diagnosis);
+  const blob = new Blob([md], { type: "text/markdown;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const safeName = input.name.replace(/[^a-z0-9-_]+/gi, "_").slice(0, 60) || "dna-musical";
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `dna-musical_${safeName}.md`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  toast.success("Relatório baixado");
+}
 
 function FormView({ onSubmit, isPending, projects }: {
   onSubmit: (v: FormValues, file: File) => void;
@@ -985,6 +1071,10 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
               <Check className="h-3 w-3" /> Salva
             </span>
           )}
+          <Button variant="outline" size="sm" className="text-xs gap-1.5" onClick={() => downloadAnalysisReport(input, diagnosis)}>
+            <Download className="h-3 w-3" />
+            Baixar relatório
+          </Button>
           <CreateArtButton isSaved={isSaved} savedAnalysisId={savedAnalysisId} />
           <Button variant="outline" size="sm" className="text-xs gap-1.5" onClick={() => setFeedbackOpen(true)}>
             <MessageSquare className="h-3 w-3" />
