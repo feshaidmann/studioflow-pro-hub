@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
+import { trackEvent } from "@/lib/analytics";
 import type { CreativeCaption } from "@/hooks/useCreativeAssets";
 
 const PLATFORMS = [
@@ -155,6 +156,13 @@ export default function CaptionGeneratorCard({
       if (result?.text) {
         setCaption(result.text.trim());
         setSaved(false);
+        trackEvent("creative_caption_generated", {
+          platform: selectedLabels.platform,
+          campaign_phase: selectedLabels.campaignPhase,
+          objective: selectedLabels.objective,
+          project_linked: !!projectId,
+          has_dna: !!dnaContext,
+        });
       }
     } finally {
       setLoading(false);
