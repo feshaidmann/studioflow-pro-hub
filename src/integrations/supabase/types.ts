@@ -1279,6 +1279,7 @@ export type Database = {
           allow_global_listing: boolean
           avatar_url: string | null
           bio: string
+          career_start_year: number | null
           city: string
           created_at: string
           current_moment: string
@@ -1290,9 +1291,11 @@ export type Database = {
           onboarding_version: number
           origin: string
           plan: string
+          primary_genre: string | null
           projects_completed: number
           public_email: string
           specialties: string[]
+          state: string | null
           track_view_mode: string
           updated_at: string
           user_type: string
@@ -1306,6 +1309,7 @@ export type Database = {
           allow_global_listing?: boolean
           avatar_url?: string | null
           bio?: string
+          career_start_year?: number | null
           city?: string
           created_at?: string
           current_moment?: string
@@ -1317,9 +1321,11 @@ export type Database = {
           onboarding_version?: number
           origin?: string
           plan?: string
+          primary_genre?: string | null
           projects_completed?: number
           public_email?: string
           specialties?: string[]
+          state?: string | null
           track_view_mode?: string
           updated_at?: string
           user_type?: string
@@ -1333,6 +1339,7 @@ export type Database = {
           allow_global_listing?: boolean
           avatar_url?: string | null
           bio?: string
+          career_start_year?: number | null
           city?: string
           created_at?: string
           current_moment?: string
@@ -1344,9 +1351,11 @@ export type Database = {
           onboarding_version?: number
           origin?: string
           plan?: string
+          primary_genre?: string | null
           projects_completed?: number
           public_email?: string
           specialties?: string[]
+          state?: string | null
           track_view_mode?: string
           updated_at?: string
           user_type?: string
@@ -1524,6 +1533,7 @@ export type Database = {
           phone: string
           project_id: string
           role: string
+          specialty_category: string | null
           stage: string
           user_id: string
         }
@@ -1545,6 +1555,7 @@ export type Database = {
           phone?: string
           project_id: string
           role?: string
+          specialty_category?: string | null
           stage?: string
           user_id: string
         }
@@ -1566,6 +1577,7 @@ export type Database = {
           phone?: string
           project_id?: string
           role?: string
+          specialty_category?: string | null
           stage?: string
           user_id?: string
         }
@@ -1637,10 +1649,14 @@ export type Database = {
         Row: {
           amount_paid: number | null
           artist: string
+          artist_state: string | null
+          audience_size_at_start: string | null
           bpm: number
           completed: boolean
           created_at: string
+          distributor: string | null
           estimated_months: number | null
+          genre: string | null
           id: string
           key: string
           lufs: number
@@ -1649,10 +1665,12 @@ export type Database = {
           name: string
           notes: string
           perfil_cultural: Json
+          production_start_date: string | null
           project_type: string
           revenue_estimate: number
           stage: string
           streaming_ready: boolean | null
+          subgenre: string | null
           total_contract_value: number | null
           track_count: number | null
           updated_at: string
@@ -1662,10 +1680,14 @@ export type Database = {
         Insert: {
           amount_paid?: number | null
           artist?: string
+          artist_state?: string | null
+          audience_size_at_start?: string | null
           bpm?: number
           completed?: boolean
           created_at?: string
+          distributor?: string | null
           estimated_months?: number | null
+          genre?: string | null
           id?: string
           key?: string
           lufs?: number
@@ -1674,10 +1696,12 @@ export type Database = {
           name: string
           notes?: string
           perfil_cultural?: Json
+          production_start_date?: string | null
           project_type?: string
           revenue_estimate?: number
           stage?: string
           streaming_ready?: boolean | null
+          subgenre?: string | null
           total_contract_value?: number | null
           track_count?: number | null
           updated_at?: string
@@ -1687,10 +1711,14 @@ export type Database = {
         Update: {
           amount_paid?: number | null
           artist?: string
+          artist_state?: string | null
+          audience_size_at_start?: string | null
           bpm?: number
           completed?: boolean
           created_at?: string
+          distributor?: string | null
           estimated_months?: number | null
+          genre?: string | null
           id?: string
           key?: string
           lufs?: number
@@ -1699,10 +1727,12 @@ export type Database = {
           name?: string
           notes?: string
           perfil_cultural?: Json
+          production_start_date?: string | null
           project_type?: string
           revenue_estimate?: number
           stage?: string
           streaming_ready?: boolean | null
+          subgenre?: string | null
           total_contract_value?: number | null
           track_count?: number | null
           updated_at?: string
