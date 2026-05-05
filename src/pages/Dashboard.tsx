@@ -247,9 +247,15 @@ export default function Dashboard() {
   const isFirstRun = projects.length === 0;
   const journeyPlan = useMemo(() => getJourneyPlan(profile?.main_pain ?? "organization", profile?.current_moment ?? "", profile?.track_view_mode ?? "basic"), [profile]);
   const recentOnboardingProject = useMemo(() => {
-    const id = localStorage.getItem("sfp_recent_onboarding_project");
-    return id ? projects.find((p) => p.id === id) ?? null : null;
-  }, [projects]);
+    const localId = localStorage.getItem("sfp_recent_onboarding_project");
+    if (localId) {
+      const found = projects.find((p) => p.id === localId);
+      if (found) return found;
+    }
+    const profileId = profile?.last_onboarding_project_id;
+    if (profileId) return projects.find((p) => p.id === profileId) ?? null;
+    return null;
+  }, [projects, profile]);
 
   // Build "next recommended action" block
   const nextAction = useMemo(() => {

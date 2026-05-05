@@ -22,6 +22,7 @@ import Auth from "@/pages/Auth";
 // Lazy-load everything else to reduce initial bundle
 const ResetPassword = lazy(() => import("@/pages/ResetPassword"));
 const Onboarding = lazy(() => import("@/pages/Onboarding"));
+const OnboardingGuest = lazy(() => import("@/pages/OnboardingGuest"));
 const Dashboard = lazy(() => import("@/pages/Dashboard"));
 const Projects = lazy(() => import("@/pages/Projects"));
 const ProjectDetail = lazy(() => import("@/pages/ProjectDetail"));
@@ -98,6 +99,12 @@ const AppRoutes = () => (
   </ProtectedRoute>
 );
 
+function OnboardingRouter() {
+  const { profile } = useProfile();
+  if (profile?.origin === "invite") return <OnboardingGuest />;
+  return <Onboarding />;
+}
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <LanguageProvider>
@@ -114,7 +121,7 @@ const App = () => (
                       <Route path="/" element={<Welcome />} />
                       <Route path="/auth" element={<Auth />} />
                       <Route path="/auth/reset-password" element={<ResetPassword />} />
-                      <Route path="/onboarding" element={<Onboarding />} />
+                      <Route path="/onboarding" element={<OnboardingRouter />} />
                       <Route path="/u/:username" element={<PublicProfile />} />
                       <Route path="/invite/:token" element={<InviteResponse />} />
                       
