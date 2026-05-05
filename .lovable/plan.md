@@ -1,111 +1,76 @@
+
 ## Objetivo
 
-Adicionar campos de segmentação em `projects`, `profiles` e `project_members` para alimentar futuras análises (custo médio por gênero, ROI, tempo de produção etc.) — sem expor essa camada ao usuário. Cada campo entra com framing de benefício direto ("ver referências do seu estilo", "comparar seu crescimento").
-
-Convenções respeitadas: PT-BR, light mode, macOS minimalist, RLS owner-only inalterada.
+Completar 6 lacunas na jornada do artista em `/palcos` sem alterar `Editais`, RLS, autenticação ou outros módulos. Todas as alterações ficam em **`src/pages/Palcos.tsx`** (1 arquivo).
 
 ---
 
-## 1. Migração SQL
+## Alterações em `src/pages/Palcos.tsx`
 
-Em `projects`:
-- `genre TEXT`, `subgenre TEXT`
-- `artist_state TEXT`
-- `audience_size_at_start TEXT` (faixas: `0-500`, `500-2k`, `2k-10k`, `10k-50k`, `50k+`)
-- `production_start_date TIMESTAMPTZ DEFAULT NOW()`
-- `distributor TEXT`
-- Trigger `set_updated_at` em `projects` (atualiza `updated_at` em todo UPDATE)
+### 1. Imports adicionais
+- `useEditalApplications`, `useUpdateApplication`, `useDeleteApplication`, `APPLICATION_STATUS_LABELS`, `APPLICATION_STATUS_COLORS`, `ApplicationStatus`, `EditalApplication` de `@/hooks/useEditalApplications`
+- `ApplicationChecklist` (default) de `@/components/editais/ApplicationChecklist`
+- `EditalResultModal` (default) de `@/components/editais/EditalResultModal`
+- `useTasks` de `@/hooks/useTasks` (usar `ensureAutoTask` que já faz upsert por `source_key` — não existe `addUniqueTask`)
+- `DropdownMenu*` de `@/components/ui/dropdown-menu`
+- Icons: `MoreHorizontal`, `Trophy`, `Trash2`
 
-Em `profiles`:
-- `primary_genre TEXT`
-- `state TEXT`
-- `career_start_year INTEGER`
+### 2. Estado novo no componente `Palcos`
+- `activeTab` (default `"descobrir"`) para controlar `<Tabs value/onValueChange>`
+- `selectedAppId`, `resultAppId` para sheets de checklist e resultado
+- `palcoApplications` filtrando `tipo === "palco"` e `applicationByEditalId` (Map) para lookup nos cards
+- `useEditalApplications`, `useUpdateApplication`, `useDeleteApplication`, `useTasks().ensureAutoTask`
 
-Em `project_members`:
-- `specialty_category TEXT`
+### 3. Quarta aba "Minhas Candidaturas"
+- Novo `<TabsTrigger value="candidaturas">` com badge de contagem
+- Novo `<TabsContent value="candidaturas">` que renderiza vazio ou `PalcoPipelineView` com 4 colunas (interesse → preparando → inscrito → resultado), responsivo desktop/mobile
+- Componentes auxiliares `PalcoPipelineView` e `PalcoPipelineCard` declarados no topo do arquivo, com dropdown de mover status, abrir checklist, registrar resultado, abrir link e remover
 
-Sem alterar RLS — as políticas existentes já cobrem os novos campos.
+### 4. `PalcoCard` — badge "Acompanhando" + CTA condicional
+- Adicionar props `existingApplication?: EditalApplication | null` e `onViewCandidatura?: (app) => void`
+- Renderizar badge de status quando há candidatura
+- Substituir botão "Candidatar" por "Ver status" quando já existe candidatura, navegando via `setActiveTab("candidaturas")`
+- Passar essas props nos 3 locais onde `PalcoCard` é renderizado (descobrir, buscar, recomendações)
 
----
+### 5. `StartCandidaturaDialog` — campo de data
+- Novo state `dataInscricao` (input `type="date"`, opcional)
+- Atualizar interface de `onConfirm` com `data_inscricao?: string`
+- Passar `data_inscricao` no `onConfirm`
+- Limpar state ao fechar
 
-## 2. Constantes compartilhadas
+### 6. `handleConfirmCandidatura` — checklist + tarefa + toast novo
+- Constante `PALCO_CHECKLIST_TEMPLATES` mapeando `TipoPalco` → lista de docs (festival, showcase, circuito, residencia, abertura)
+- Passar `data_inscricao` no `createApplication.mutate`
+- No `onSuccess`:
+  - Inserir docs em `edital_application_docs` baseado no `tipo_palco` do `candidaturaTarget` (com `user_id` da sessão atual)
+  - Se `params.project_id` existir, chamar `ensureAutoTask({ key: "palco:<edital_id>:<project_id>", description: "Preparar candidatura para <nome>[ — prazo dd/mm/aaaa]", source: "palco_candidatura", sourceModule: "palcos", taskArea: "lancamento", severity: prazo ? "high" : "medium", projectId, dueDate: prazo })`
+  - Toast com action "Ver candidaturas →" que faz `setActiveTab("candidaturas")` (substitui o `navigate("/editais?tab=meus")`)
 
-`src/constants/genreOptions.ts` com:
-- `GENRE_OPTIONS` (18 gêneros + "Outros")
-- `AUDIENCE_SIZE_OPTIONS` (5 faixas)
-- `DISTRIBUTOR_OPTIONS` (8 + "Outra")
-- `BRAZIL_STATES` (27 UFs)
-
-`src/constants/specialtyOptions.ts` extraído do array atual em `FreelancerProfile.tsx`, importado pelos dois consumidores (Profile + ProjectTeamTab).
-
----
-
-## 3. Onboarding (`src/pages/Onboarding.tsx`)
-
-- Novo passo opcional **Gênero principal** (após "Desafio", antes de "Modo") — grid com top 10 gêneros + "Outros", com botão "Pular por agora". Persiste em `profiles.primary_genre`.
-- No passo de Identidade, adicionar `<Select>` de UF (`BRAZIL_STATES`) abaixo de Cidade. Persiste em `profiles.state`.
-- Atualizar `stepLabels` para 7 passos.
-- Atualizar `OnboardingGuest.tsx` com o mesmo Select de UF (passo 1).
-
-## 4. Projects.tsx
-
-No formulário de criação:
-- `<Select>` **Gênero principal** (obrigatório) com tooltip "Usamos para te mostrar referências do seu estilo".
-- `<Select>` **Seus seguidores hoje** (opcional) com tooltip "Comparar seu crescimento ao longo do tempo".
-- Em background: `artist_state = profile.state`, `production_start_date = now()`.
-
-No dialog de edição: mesmos dois campos, populados com valores atuais, persistidos via `updateProject()`.
-
-Estender `addProject`/`updateProject` em `src/contexts/ProjectContext.tsx` e mapeamento em `src/data/mockData.ts` (tipo `Project`) para incluir os novos campos.
-
-## 5. Release Checklist
-
-`src/hooks/useReleaseChecklist.ts`:
-- `ChecklistItemDef.type` aceita `"select"` com `options?: readonly string[]`.
-- `genero` → `type: "select"`, `options: GENRE_OPTIONS`.
-- `distribuidora` → `type: "select"`, `options: DISTRIBUTOR_OPTIONS`.
-- `setValue` adicional: quando key for `distribuidora`, atualizar `projects.distributor`. Quando `genero`, atualizar `projects.genre` (mantém ambas fontes em sincronia).
-
-`ProjectReleaseTab.tsx`: renderizar `<Select>` quando `item.type === "select"`.
-
-## 6. Perfil público (`src/pages/FreelancerProfile.tsx`)
-
-- Importar `SPECIALTY_OPTIONS` da nova constante (sem mudança de UI).
-- Adicionar `<Select>` **Gênero principal** após especialidades.
-- Adicionar `<Select>` **Estado (UF)** abaixo de cidade.
-- Persistir `primary_genre` e `state` no `updateProfile()`.
-
-Atualizar `Profile` em `src/contexts/ProfileContext.tsx` (interface + select da query) com `primary_genre`, `state`, `career_start_year`.
-
-## 7. ProjectTeamTab.tsx
-
-No formulário de adição de membro: `<Select>` **Especialidade** (`SPECIALTY_OPTIONS`), opcional. Inserir como `specialty_category` no `project_members`.
+### 7. Sheets/modais ao final do JSX
+- `<Sheet>` com `ApplicationChecklist applicationId={selectedAppId} projects={projectList}` (ApplicationChecklist atual usa `projectId` — passar `undefined`, basta `projects`)
+- `EditalResultModal application={app} open onOpenChange` — buscar a `application` via `palcoApplications.find(a => a.id === resultAppId)` (o componente espera o objeto completo, não só o id)
 
 ---
 
-## 8. Não alterar
+## Notas técnicas
 
-- Nenhum dashboard/UI de "benchmark" agora.
-- `genre` não retroativamente obrigatório para projetos antigos.
-- Campo `key` (tonalidade) permanece como texto livre.
-- RLS, dark mode, inglês, módulo `/studio`, fluxo de pagamento — intactos.
+- O hook `useTasks` expõe `ensureAutoTask` (não `addUniqueTask`) — já faz `upsert` em `tasks` com `onConflict: user_id,source_key, ignoreDuplicates: true`. Perfeito para deduplicar.
+- `EditalResultModal` recebe `application: EditalApplication` (não `applicationId`). Plano usa o objeto, divergindo do prompt original.
+- `ApplicationChecklist` é `default export` — importar como `import ApplicationChecklist from "..."`.
+- `useCreateApplication` atual NÃO aceita `data_inscricao`. Para incluir, ampliar o `mutationFn` em `src/hooks/useEditalApplications.ts` adicionando `data_inscricao?: string | null` ao `params` e ao `insert`. Mudança mínima e isolada.
+- O toast de sucesso global de `useCreateApplication` (`"Candidatura iniciada"`) continua existindo — o toast extra de `Palcos.tsx` complementa com a action de navegação. Aceitável.
+- Sem novas migrations: `data_inscricao`, `auto_generated`, `source_key`, `task_area`, `source_module`, `severity` já existem.
+- Todas as 4 abas continuam responsivas, scroll horizontal preservado.
 
 ---
 
 ## Arquivos tocados
 
 ```text
-supabase/migrations/<timestamp>_market_intel_fields.sql   (nova)
-src/constants/genreOptions.ts                              (novo)
-src/constants/specialtyOptions.ts                          (novo)
-src/contexts/ProfileContext.tsx
-src/contexts/ProjectContext.tsx
-src/data/mockData.ts
-src/pages/Onboarding.tsx
-src/pages/OnboardingGuest.tsx
-src/pages/Projects.tsx
-src/pages/FreelancerProfile.tsx
-src/hooks/useReleaseChecklist.ts
-src/components/project-hub/ProjectReleaseTab.tsx
-src/components/project-hub/ProjectTeamTab.tsx
+src/pages/Palcos.tsx                  (alterações principais)
+src/hooks/useEditalApplications.ts    (+ data_inscricao no useCreateApplication)
 ```
+
+## O que NÃO muda
+
+- `Editais.tsx`, `PipelineTab`, view `palcos_pipeline`, RLS, dark mode, i18n, `/studio`, lógica de busca IA, schema de `palcos_curados`.
