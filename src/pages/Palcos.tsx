@@ -1018,6 +1018,8 @@ export default function Palcos() {
                   score={recoProfile ? scoreById.get(p.id) : undefined}
                   onViewDetail={(p) => { setDetailPalco(p); setDetailOpen(true); }}
                   onCandidatar={handleCandidatar}
+                  existingApplication={applicationByEditalId.get(p.id) ?? null}
+                  onViewCandidatura={() => setActiveTab("candidaturas")}
                 />
               ))}
             </div>
@@ -1160,6 +1162,8 @@ export default function Palcos() {
                           palco={p as any}
                           onViewDetail={(p) => { setDetailPalco(p); setDetailOpen(true); }}
                           onCandidatar={handleCandidatar}
+                          existingApplication={applicationByEditalId.get((p as any).id) ?? null}
+                          onViewCandidatura={() => setActiveTab("candidaturas")}
                         />
                       ))}
                     </div>
@@ -1267,6 +1271,8 @@ export default function Palcos() {
                         score={p.score}
                         onViewDetail={(p) => { setDetailPalco(p); setDetailOpen(true); }}
                         onCandidatar={handleCandidatar}
+                        existingApplication={applicationByEditalId.get(p.id) ?? null}
+                        onViewCandidatura={() => setActiveTab("candidaturas")}
                       />
                     ))}
                   </div>
@@ -1274,6 +1280,31 @@ export default function Palcos() {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* ── ABA: Minhas Candidaturas ─────────────────────────────── */}
+        <TabsContent value="candidaturas" className="space-y-4 mt-4">
+          {palcoApplications.length === 0 ? (
+            <Card>
+              <CardContent className="py-12 flex flex-col items-center text-center text-muted-foreground gap-3">
+                <ClipboardList className="h-10 w-10 opacity-40" />
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-foreground">Nenhuma candidatura ainda</p>
+                  <p className="text-xs max-w-sm">
+                    Encontre uma oportunidade nas abas acima e clique em "Candidatar" para começar a acompanhar.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <PalcoPipelineView
+              applications={palcoApplications}
+              onUpdate={(p) => updateApplication.mutate(p)}
+              onDelete={(id) => deleteApplication.mutate(id)}
+              onOpenChecklist={(id) => setSelectedAppId(id)}
+              onOpenResult={(id) => setResultAppId(id)}
+            />
+          )}
         </TabsContent>
       </Tabs>
 
