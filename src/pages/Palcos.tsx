@@ -4,6 +4,7 @@ import {
   Mic2, Search, Save, ExternalLink, Star, MapPin, Users,
   Music2, ChevronDown, Filter, X, Sparkles, ArrowRight,
   Calendar, DollarSign, Info, ClipboardList, AlertCircle, RefreshCw,
+  MoreHorizontal, Trophy, Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +18,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { MobileStickyHeader } from "@/components/ui/mobile-sticky-header";
 import {
@@ -24,9 +26,50 @@ import {
   TIPO_PALCO_LABELS, TIPO_PALCO_COLORS, PORTE_LABELS,
 } from "@/hooks/usePalcos";
 import { useProjects } from "@/contexts/ProjectContext";
-import { useCreateApplication } from "@/hooks/useEditalApplications";
+import {
+  useCreateApplication, useEditalApplications, useUpdateApplication, useDeleteApplication,
+  APPLICATION_STATUS_LABELS, APPLICATION_STATUS_COLORS,
+  type ApplicationStatus, type EditalApplication,
+} from "@/hooks/useEditalApplications";
+import { useTasks } from "@/hooks/useTasks";
+import ApplicationChecklist from "@/components/editais/ApplicationChecklist";
+import EditalResultModal from "@/components/editais/EditalResultModal";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+
+// ── Templates de checklist por tipo de palco ─────────────────────────────
+const PALCO_CHECKLIST_TEMPLATES: Record<TipoPalco, { label: string; type: string; required: boolean }[]> = {
+  festival: [
+    { label: "Press kit completo (bio + fotos)",  type: "portfolio_links", required: true },
+    { label: "Rider técnico (equipamentos)",       type: "outro",           required: true },
+    { label: "Links de streaming atualizados",     type: "portfolio_links", required: true },
+    { label: "Foto profissional (alta resolução)", type: "outro",           required: false },
+    { label: "Vídeo ao vivo recente",              type: "outro",           required: false },
+  ],
+  showcase: [
+    { label: "Demo gravado (3 a 5 faixas)",  type: "portfolio_links", required: true },
+    { label: "Bio curta (até 100 palavras)", type: "bio_curta",       required: true },
+    { label: "Links de redes sociais",        type: "portfolio_links", required: true },
+    { label: "EPK (Electronic Press Kit)",    type: "outro",           required: false },
+  ],
+  circuito: [
+    { label: "Bio artística completa",            type: "bio_media",       required: true },
+    { label: "Portfólio de shows anteriores",     type: "portfolio_links", required: true },
+    { label: "Rider técnico",                      type: "outro",           required: true },
+    { label: "Cachê e condições de apresentação", type: "outro",           required: false },
+  ],
+  residencia: [
+    { label: "Proposta artística / memorial", type: "memorial",        required: true },
+    { label: "Currículo artístico",            type: "curriculo",       required: true },
+    { label: "Amostras de trabalho",           type: "portfolio_links", required: true },
+    { label: "Plano de execução",              type: "plano_execucao",  required: false },
+  ],
+  abertura: [
+    { label: "Demo ou EP recente", type: "portfolio_links", required: true },
+    { label: "Links de streaming", type: "portfolio_links", required: true },
+    { label: "Bio curta",          type: "bio_curta",       required: false },
+  ],
+};
 
 // ── Exemplos de busca ─────────────────────────────────────────────────────
 const SEARCH_EXAMPLES = [
