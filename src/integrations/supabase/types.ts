@@ -303,6 +303,7 @@ export type Database = {
           resumo: string
           session_key: string | null
           status: string | null
+          tipo: string
           titulo: string
           user_id: string
           valor: string
@@ -325,6 +326,7 @@ export type Database = {
           resumo?: string
           session_key?: string | null
           status?: string | null
+          tipo?: string
           titulo: string
           user_id: string
           valor?: string
@@ -347,6 +349,7 @@ export type Database = {
           resumo?: string
           session_key?: string | null
           status?: string | null
+          tipo?: string
           titulo?: string
           user_id?: string
           valor?: string
@@ -434,6 +437,7 @@ export type Database = {
           project_id: string | null
           resultado: string | null
           status: string
+          tipo: string
           updated_at: string
           user_id: string
           valor_aprovado: number | null
@@ -450,6 +454,7 @@ export type Database = {
           project_id?: string | null
           resultado?: string | null
           status?: string
+          tipo?: string
           updated_at?: string
           user_id: string
           valor_aprovado?: number | null
@@ -466,6 +471,7 @@ export type Database = {
           project_id?: string | null
           resultado?: string | null
           status?: string
+          tipo?: string
           updated_at?: string
           user_id?: string
           valor_aprovado?: number | null
@@ -1073,6 +1079,69 @@ export type Database = {
           page_path?: string
           session_id?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      palcos_curados: {
+        Row: {
+          ativo: boolean | null
+          cachet_medio: string | null
+          created_at: string | null
+          estado: string | null
+          generos: string[] | null
+          id: string
+          link: string | null
+          nome: string
+          organizador: string
+          periodo_inscricao: string | null
+          porte: string | null
+          prazo: string | null
+          publico_estimado: string | null
+          resumo: string | null
+          status: string | null
+          tem_edital: boolean | null
+          tipo_palco: string
+          updated_at: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          cachet_medio?: string | null
+          created_at?: string | null
+          estado?: string | null
+          generos?: string[] | null
+          id?: string
+          link?: string | null
+          nome: string
+          organizador: string
+          periodo_inscricao?: string | null
+          porte?: string | null
+          prazo?: string | null
+          publico_estimado?: string | null
+          resumo?: string | null
+          status?: string | null
+          tem_edital?: boolean | null
+          tipo_palco: string
+          updated_at?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          cachet_medio?: string | null
+          created_at?: string | null
+          estado?: string | null
+          generos?: string[] | null
+          id?: string
+          link?: string | null
+          nome?: string
+          organizador?: string
+          periodo_inscricao?: string | null
+          porte?: string | null
+          prazo?: string | null
+          publico_estimado?: string | null
+          resumo?: string | null
+          status?: string | null
+          tem_edital?: boolean | null
+          tipo_palco?: string
+          updated_at?: string | null
         }
         Relationships: []
       }
