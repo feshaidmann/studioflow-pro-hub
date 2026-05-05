@@ -106,7 +106,7 @@ export default function Projects() {
   const { t } = useLanguage();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { displayName } = useProfile();
+  const { displayName, profile } = useProfile();
   const {
     projects, professionals, masterResults,
     addProject, updateProject, deleteProject,
@@ -448,7 +448,7 @@ export default function Projects() {
       const parts = project.uploadDate.match(/^(\d{4})-(\d{2})-(\d{2})$/);
       if (parts) uploadDateDisplay = `${parts[3]}/${parts[2]}/${parts[1]}`;
     }
-    setEditForm({ id: project.id, name: project.name, artist: project.artist, bpm: String(project.bpm), key: project.key, stage: project.stage, projectType: project.projectType || "single", trackCount: project.trackCount ? String(project.trackCount) : "", uploadDate: uploadDateDisplay });
+    setEditForm({ id: project.id, name: project.name, artist: project.artist, bpm: String(project.bpm), key: project.key, stage: project.stage, projectType: project.projectType || "single", trackCount: project.trackCount ? String(project.trackCount) : "", uploadDate: uploadDateDisplay, genre: (project as any).genre ?? "", audienceSize: (project as any).audienceSizeAtStart ?? "" });
     setEditDialogOpen(true);
   };
 
@@ -471,6 +471,8 @@ export default function Projects() {
       projectType: editForm.projectType,
       trackCount: needsTrackCount ? (editForm.trackCount ? Number(editForm.trackCount) : null) : null,
       uploadDate: uploadDateStr,
+      genre: editForm.genre || null,
+      audienceSizeAtStart: editForm.audienceSize || null,
       ...(isLancado ? { completed: true } : {}),
     };
     updateProject(editForm.id, updates);
