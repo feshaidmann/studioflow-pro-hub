@@ -573,6 +573,26 @@ async function downloadAnalysisReport(input: { name: string; references: string[
   bullet(`Tom: ${r?.key ?? "—"}`);
   if (r?.duration_sec) bullet(`Duração: ${Math.floor(r.duration_sec / 60)}:${String(Math.round(r.duration_sec % 60)).padStart(2, "0")}`);
 
+  // Gauges visuais
+  const lufsVal = (r?.lufs_integrated ?? a?.lufs) as number | undefined;
+  const tpVal = (r?.true_peak_dbtp ?? a?.truePeak) as number | undefined;
+  const drVal = (r?.dynamic_range_lu ?? a?.dynamicRange) as number | undefined;
+  const gauges: GaugeConfig[] = [
+    { label: "LUFS integrado", value: lufsVal, unit: "LUFS", min: -30, max: -6, ideal: [-16, -10] },
+    { label: "True Peak", value: tpVal, unit: "dBTP", min: -6, max: 3, ideal: [-3, 0] },
+    { label: "Dynamic Range", value: drVal, unit: "LU", min: 0, max: 20, ideal: [7, 14] },
+  ];
+  heading("Indicadores visuais");
+  const gaugeW = (maxW - 12) / 3;
+  const gaugeH = gaugeW * (220 / 360);
+  ensureSpace(gaugeH + 6);
+  gauges.forEach((g, i) => {
+    const png = renderGaugeCanvas(g);
+    doc.addImage(png, "PNG", margin + i * (gaugeW + 6), y, gaugeW, gaugeH);
+  });
+  y += gaugeH + 8;
+
+
   if (diagnosis.diagnostico_tecnico) {
     heading("Avaliação técnica");
     bullet(`LUFS — ${diagnosis.diagnostico_tecnico.lufs_avaliacao}`);
