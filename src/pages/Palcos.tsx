@@ -175,9 +175,9 @@ function PalcoDetailSheet({
 
           {/* Edital notice */}
           {!palco.tem_edital && (
-            <div className="flex items-start gap-2 rounded-lg border border-amber-200/60 bg-amber-50/40 dark:border-amber-800/40 dark:bg-amber-900/10 p-3">
-              <Info className="h-3.5 w-3.5 text-amber-600 shrink-0 mt-0.5" />
-              <p className="text-xs text-amber-700 dark:text-amber-300">
+            <div className="flex items-start gap-2 rounded-lg border border-warning/40 bg-warning/15 p-3">
+              <Info className="h-3.5 w-3.5 text-warning shrink-0 mt-0.5" />
+              <p className="text-xs font-medium text-foreground">
                 Esta oportunidade funciona por indicação ou portfólio — sem processo de seleção formal público.
                 Entre em contato diretamente com o organizador.
               </p>
