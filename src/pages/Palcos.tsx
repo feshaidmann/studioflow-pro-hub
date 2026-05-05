@@ -542,14 +542,39 @@ export default function Palcos() {
 
           {/* Grid de palcos */}
           {loadingCurados ? (
-            <div className="space-y-2">
-              {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-32 w-full" />)}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <Skeleton key={i} className="h-32 w-full rounded-lg" />
+              ))}
             </div>
+          ) : palcosCurados.length === 0 ? (
+            <Card>
+              <CardContent className="py-12 flex flex-col items-center text-center text-muted-foreground gap-3">
+                <Mic2 className="h-10 w-10 opacity-40" />
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-foreground">Banco curado vazio</p>
+                  <p className="text-xs">
+                    Ainda não há oportunidades cadastradas. Tente buscar com IA na aba ao lado.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
           ) : palcosFiltrados.length === 0 ? (
             <Card>
-              <CardContent className="py-12 flex flex-col items-center text-center text-muted-foreground">
-                <Mic2 className="h-10 w-10 mb-3 opacity-40" />
-                <p className="text-sm">Nenhuma oportunidade encontrada com esses filtros.</p>
+              <CardContent className="py-12 flex flex-col items-center text-center text-muted-foreground gap-3">
+                <Filter className="h-10 w-10 opacity-40" />
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-foreground">Nenhum resultado para esses filtros</p>
+                  <p className="text-xs">Tente ampliar os critérios ou limpar os filtros.</p>
+                </div>
+                {hasFilters && (
+                  <Button
+                    size="sm" variant="outline"
+                    onClick={() => { setFilterTipo("todos"); setFilterEstado("todos"); setFilterPorte("todos"); setFilterApenasAbertos(false); }}
+                  >
+                    <X className="h-3.5 w-3.5 mr-1.5" /> Limpar filtros
+                  </Button>
+                )}
               </CardContent>
             </Card>
           ) : (
