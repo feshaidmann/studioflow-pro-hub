@@ -400,24 +400,59 @@ export default function Palcos() {
     return matchByPerfil(recoProfile, recoProfile?.generos || []);
   }, [recoProfile, selectedProjectId, matchByPerfil]);
 
-  // Palcos curados filtrados (aba "Descobrir")
+  // Lookup de score por id para ordenar por match (quando há projeto)
+  const scoreById = useMemo(() => {
+    const m = new Map<string, number>();
+    palcosComScore.forEach((p) => m.set(p.id, p.score));
+    return m;
+  }, [palcosComScore]);
+
+  // Status weight (Aberto > Previsto > Encerrado)
+  const statusWeight = (s: string) => (s === "Aberto" ? 0 : s === "Previsto" ? 1 : 2);
+
+  // Palcos curados filtrados + ordenados (aba "Descobrir")
   const palcosFiltrados = useMemo(() => {
-    return palcosCurados.filter((p) => {
+    const filtered = palcosCurados.filter((p) => {
       if (filterTipo !== "todos" && p.tipo_palco !== filterTipo) return false;
       if (filterEstado !== "todos" && p.estado !== filterEstado) return false;
       if (filterPorte !== "todos" && p.porte !== filterPorte) return false;
       if (filterApenasAbertos && p.status !== "Aberto") return false;
       return true;
     });
-  }, [palcosCurados, filterTipo, filterEstado, filterPorte, filterApenasAbertos]);
+
+    const sorted = [...filtered];
+    if (sortBy === "status") {
+      sorted.sort((a, b) => statusWeight(a.status) - statusWeight(b.status) || a.nome.localeCompare(b.nome));
+    } else if (sortBy === "prazo") {
+      sorted.sort((a, b) => {
+        const ad = a.prazo ? new Date(a.prazo).getTime() : Infinity;
+        const bd = b.prazo ? new Date(b.prazo).getTime() : Infinity;
+        return ad - bd;
+      });
+    } else if (sortBy === "match") {
+      sorted.sort((a, b) => (scoreById.get(b.id) || 0) - (scoreById.get(a.id) || 0));
+    } else {
+      sorted.sort((a, b) => a.nome.localeCompare(b.nome));
+    }
+    return sorted;
+  }, [palcosCurados, filterTipo, filterEstado, filterPorte, filterApenasAbertos, sortBy, scoreById]);
 
   const estados = useMemo(() => {
     const set = new Set(palcosCurados.map((p) => p.estado || "").filter(Boolean));
     return Array.from(set).sort();
   }, [palcosCurados]);
 
-  const hasFilters = filterTipo !== "todos" || filterEstado !== "todos" ||
-    filterPorte !== "todos" || filterApenasAbertos;
+  const activeFilterCount =
+    (filterTipo !== "todos" ? 1 : 0) +
+    (filterEstado !== "todos" ? 1 : 0) +
+    (filterPorte !== "todos" ? 1 : 0) +
+    (filterApenasAbertos ? 1 : 0);
+  const hasFilters = activeFilterCount > 0;
+
+  const clearFilters = () => {
+    setFilterTipo("todos"); setFilterEstado("todos");
+    setFilterPorte("todos"); setFilterApenasAbertos(false);
+  };
 
   const handleSearch = (q?: string) => {
     const sq = (q || query).trim();
