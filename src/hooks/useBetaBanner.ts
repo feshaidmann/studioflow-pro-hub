@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
+import { trackEvent } from "@/lib/analytics";
 
 const STORAGE_KEY = "sfp_beta_banner_dismissed";
 const EVENT = "beta-banner-changed";
 
 export function dismissBetaBanner() {
+  trackEvent("beta_banner_dismissed", { path: window.location.pathname });
   sessionStorage.setItem(STORAGE_KEY, "true");
   window.dispatchEvent(new CustomEvent(EVENT));
 }
