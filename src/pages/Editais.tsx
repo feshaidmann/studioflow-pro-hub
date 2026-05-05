@@ -803,7 +803,7 @@ export default function Editais() {
   const [confirmAppEdital, setConfirmAppEdital] = useState<Edital | null>(null);
   const [confirmAppOpen, setConfirmAppOpen] = useState(false);
   // Sub-view for "Meus Editais": 'salvos' or 'pipeline'
-  const [meusView, setMeusView] = useState<"salvos" | "pipeline">("salvos");
+  const [meusView, setMeusView] = useState<"salvos" | "pipeline" | "palcos_pipeline">("salvos");
   // Recommendations
   const [recoProjectId, setRecoProjectId] = useState<string>("");
   const { matches, loading: loadingMatches, fetchMatches } = useMatchEditais();
@@ -1145,7 +1145,7 @@ export default function Editais() {
           )}
 
           {/* Sub-view toggle */}
-          <div className="flex gap-1.5">
+          <div className="flex gap-1.5 flex-wrap">
             <button
               onClick={() => setMeusView("salvos")}
               className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
@@ -1155,7 +1155,7 @@ export default function Editais() {
               }`}
             >
               <FileText className="inline h-3 w-3 mr-1" />
-              Editais salvos ({editais.length})
+              Editais salvos ({editais.filter((e: any) => !e.tipo || e.tipo === "fomento").length})
             </button>
             <button
               onClick={() => setMeusView("pipeline")}
@@ -1166,7 +1166,18 @@ export default function Editais() {
               }`}
             >
               <KanbanSquare className="inline h-3 w-3 mr-1" />
-              Candidaturas ({applications.length})
+              Fomento ({applications.filter((a: any) => !a.tipo || a.tipo === "fomento").length})
+            </button>
+            <button
+              onClick={() => setMeusView("palcos_pipeline")}
+              className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
+                meusView === "palcos_pipeline"
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "bg-background text-muted-foreground border-border hover:bg-muted"
+              }`}
+            >
+              <KanbanSquare className="inline h-3 w-3 mr-1" />
+              Palcos ({applications.filter((a: any) => a.tipo === "palco").length})
             </button>
           </div>
 
@@ -1445,7 +1456,7 @@ export default function Editais() {
             </>
           )}
 
-          {/* Sub-view: Pipeline */}
+          {/* Sub-view: Pipeline Fomento */}
           {meusView === "pipeline" && (
             <>
               {loadingApps ? (
@@ -1481,7 +1492,7 @@ export default function Editais() {
                 </Card>
               ) : (
                 <PipelineTab
-                  applications={applications}
+                  applications={applications.filter((a: any) => !a.tipo || a.tipo === "fomento")}
                   onUpdate={(p) => updateApplication.mutate(p)}
                   onDelete={(id) => deleteApplication.mutate(id)}
                   onOpenChecklist={(id) => setSelectedAppId(id)}
@@ -1491,6 +1502,51 @@ export default function Editais() {
                       editalTitle: app.edital?.titulo || undefined,
                       editalType: app.edital?.area || undefined,
                       projectId: app.project_id || undefined,
+                      applicationId: app.id,
+                    });
+                    setAiSheetOpen(true);
+                  }}
+                  onGoToInscricao={(editalId) => navigate(`/editais/inscricao/${editalId}`)}
+                  projects={projectList}
+                  t={t}
+                />
+              )}
+            </>
+          )}
+          {/* Sub-view: Pipeline Palcos */}
+          {meusView === "palcos_pipeline" && (
+            <>
+              {loadingApps ? (
+                <Card><CardContent className="pt-5 space-y-2">
+                  <Skeleton className="h-8 w-full" /><Skeleton className="h-8 w-full" />
+                </CardContent></Card>
+              ) : applications.filter((a: any) => a.tipo === "palco").length === 0 ? (
+                <Card>
+                  <CardContent className="py-12 flex flex-col items-center text-center text-muted-foreground">
+                    <KanbanSquare className="h-10 w-10 mb-3 opacity-40" />
+                    <p className="text-sm font-medium">Nenhuma candidatura de palco</p>
+                    <p className="text-xs mt-2 max-w-sm">
+                      Vá até <strong>Palcos &amp; Shows</strong> e clique em "Candidatar" em qualquer oportunidade.
+                    </p>
+                    <Button
+                      size="sm" variant="outline" className="mt-3"
+                      onClick={() => navigate("/palcos")}
+                    >
+                      Ver oportunidades de palco →
+                    </Button>
+                  </CardContent>
+                </Card>
+              ) : (
+                <PipelineTab
+                  applications={applications.filter((a: any) => a.tipo === "palco")}
+                  onUpdate={(p) => updateApplication.mutate(p)}
+                  onDelete={(id) => deleteApplication.mutate(id)}
+                  onOpenChecklist={(id) => setSelectedAppId(id)}
+                  onOpenResult={(id) => setResultAppId(id)}
+                  onOpenAI={(app) => {
+                    setAiContext({
+                      editalTitle: app.edital?.titulo || undefined,
+                      editalType: "Oportunidade de palco",
                       applicationId: app.id,
                     });
                     setAiSheetOpen(true);
