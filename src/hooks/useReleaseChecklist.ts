@@ -1,13 +1,15 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { GENRE_OPTIONS, DISTRIBUTOR_OPTIONS } from "@/constants/genreOptions";
 
 // ── Section / item definitions ──
 
 export interface ChecklistItemDef {
   key: string;
   label: string;
-  type: "check" | "text";
+  type: "check" | "text" | "select";
+  options?: readonly string[];
 }
 
 export interface SectionDef {
@@ -21,12 +23,12 @@ export const RELEASE_SECTIONS: SectionDef[] = [
     key: "distribuicao",
     label: "Distribuição",
     items: [
-      { key: "distribuidora", label: "Distribuidora definida", type: "text" },
+      { key: "distribuidora", label: "Distribuidora definida", type: "select", options: DISTRIBUTOR_OPTIONS },
       { key: "data_lancamento", label: "Data de lançamento", type: "text" },
       { key: "upc", label: "Código UPC", type: "text" },
       { key: "isrc", label: "Código ISRC", type: "text" },
       { key: "idioma", label: "Idioma principal", type: "text" },
-      { key: "genero", label: "Gênero / subgênero", type: "text" },
+      { key: "genero", label: "Gênero / subgênero", type: "select", options: GENRE_OPTIONS },
     ],
   },
   {
