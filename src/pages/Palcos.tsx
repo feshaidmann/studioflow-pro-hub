@@ -369,6 +369,8 @@ export default function Palcos() {
   const [filterEstado, setFilterEstado] = useState("todos");
   const [filterPorte, setFilterPorte] = useState<"todos" | "iniciante" | "medio" | "grande">("todos");
   const [filterApenasAbertos, setFilterApenasAbertos] = useState(false);
+  const [sortBy, setSortBy] = useState<"status" | "prazo" | "match" | "nome">("status");
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [selectedProjectId, setSelectedProjectId] = useState("");
 
   const [detailPalco, setDetailPalco] = useState<PalcoCurado | null>(null);
@@ -398,24 +400,59 @@ export default function Palcos() {
     return matchByPerfil(recoProfile, recoProfile?.generos || []);
   }, [recoProfile, selectedProjectId, matchByPerfil]);
 
-  // Palcos curados filtrados (aba "Descobrir")
+  // Lookup de score por id para ordenar por match (quando há projeto)
+  const scoreById = useMemo(() => {
+    const m = new Map<string, number>();
+    palcosComScore.forEach((p) => m.set(p.id, p.score));
+    return m;
+  }, [palcosComScore]);
+
+  // Status weight (Aberto > Previsto > Encerrado)
+  const statusWeight = (s: string) => (s === "Aberto" ? 0 : s === "Previsto" ? 1 : 2);
+
+  // Palcos curados filtrados + ordenados (aba "Descobrir")
   const palcosFiltrados = useMemo(() => {
-    return palcosCurados.filter((p) => {
+    const filtered = palcosCurados.filter((p) => {
       if (filterTipo !== "todos" && p.tipo_palco !== filterTipo) return false;
       if (filterEstado !== "todos" && p.estado !== filterEstado) return false;
       if (filterPorte !== "todos" && p.porte !== filterPorte) return false;
       if (filterApenasAbertos && p.status !== "Aberto") return false;
       return true;
     });
-  }, [palcosCurados, filterTipo, filterEstado, filterPorte, filterApenasAbertos]);
+
+    const sorted = [...filtered];
+    if (sortBy === "status") {
+      sorted.sort((a, b) => statusWeight(a.status) - statusWeight(b.status) || a.nome.localeCompare(b.nome));
+    } else if (sortBy === "prazo") {
+      sorted.sort((a, b) => {
+        const ad = a.prazo ? new Date(a.prazo).getTime() : Infinity;
+        const bd = b.prazo ? new Date(b.prazo).getTime() : Infinity;
+        return ad - bd;
+      });
+    } else if (sortBy === "match") {
+      sorted.sort((a, b) => (scoreById.get(b.id) || 0) - (scoreById.get(a.id) || 0));
+    } else {
+      sorted.sort((a, b) => a.nome.localeCompare(b.nome));
+    }
+    return sorted;
+  }, [palcosCurados, filterTipo, filterEstado, filterPorte, filterApenasAbertos, sortBy, scoreById]);
 
   const estados = useMemo(() => {
     const set = new Set(palcosCurados.map((p) => p.estado || "").filter(Boolean));
     return Array.from(set).sort();
   }, [palcosCurados]);
 
-  const hasFilters = filterTipo !== "todos" || filterEstado !== "todos" ||
-    filterPorte !== "todos" || filterApenasAbertos;
+  const activeFilterCount =
+    (filterTipo !== "todos" ? 1 : 0) +
+    (filterEstado !== "todos" ? 1 : 0) +
+    (filterPorte !== "todos" ? 1 : 0) +
+    (filterApenasAbertos ? 1 : 0);
+  const hasFilters = activeFilterCount > 0;
+
+  const clearFilters = () => {
+    setFilterTipo("todos"); setFilterEstado("todos");
+    setFilterPorte("todos"); setFilterApenasAbertos(false);
+  };
 
   const handleSearch = (q?: string) => {
     const sq = (q || query).trim();
@@ -481,37 +518,30 @@ export default function Palcos() {
 
         {/* ── ABA: Banco curado ─────────────────────────────────────── */}
         <TabsContent value="descobrir" className="space-y-4 mt-4">
-          {/* Filtros */}
+          {/* Filtros + ordenação */}
           <Card>
-            <CardContent className="pt-4 pb-3 space-y-3">
-              <div className="flex flex-wrap gap-2">
-                <Select value={filterTipo} onValueChange={(v) => setFilterTipo(v as any)}>
-                  <SelectTrigger className="h-8 w-[160px] text-xs"><SelectValue placeholder="Tipo" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="todos">Todos os tipos</SelectItem>
-                    {(Object.keys(TIPO_PALCO_LABELS) as TipoPalco[]).map((t) => (
-                      <SelectItem key={t} value={t}>{TIPO_PALCO_LABELS[t]}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                <Select value={filterEstado} onValueChange={setFilterEstado}>
-                  <SelectTrigger className="h-8 w-[120px] text-xs"><SelectValue placeholder="Estado" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="todos">Todos os estados</SelectItem>
-                    {estados.map((e) => <SelectItem key={e} value={e}>{e}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-
-                <Select value={filterPorte} onValueChange={(v) => setFilterPorte(v as any)}>
-                  <SelectTrigger className="h-8 w-[140px] text-xs"><SelectValue placeholder="Porte" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="todos">Todos os portes</SelectItem>
-                    <SelectItem value="iniciante">Iniciante</SelectItem>
-                    <SelectItem value="medio">Médio</SelectItem>
-                    <SelectItem value="grande">Grande</SelectItem>
-                  </SelectContent>
-                </Select>
+            <CardContent className="pt-3 pb-3 space-y-2.5">
+              {/* Linha principal: toggle filtros + ordenação + apenas abertos */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  onClick={() => setFiltersOpen((v) => !v)}
+                  className={cn(
+                    "h-8 px-3 text-xs rounded-md border flex items-center gap-1.5 transition-colors",
+                    activeFilterCount > 0
+                      ? "bg-primary/10 text-primary border-primary/30"
+                      : "bg-background text-foreground border-border hover:bg-muted"
+                  )}
+                  aria-expanded={filtersOpen}
+                >
+                  <Filter className="h-3.5 w-3.5" />
+                  Filtros
+                  {activeFilterCount > 0 && (
+                    <span className="ml-0.5 inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-medium">
+                      {activeFilterCount}
+                    </span>
+                  )}
+                  <ChevronDown className={cn("h-3 w-3 transition-transform", filtersOpen && "rotate-180")} />
+                </button>
 
                 <button
                   onClick={() => setFilterApenasAbertos((v) => !v)}
@@ -522,19 +552,112 @@ export default function Palcos() {
                       : "bg-background text-muted-foreground border-border hover:bg-muted"
                   )}
                 >
-                  ✅ Apenas abertos
+                  ✅ Abertos
                 </button>
 
-                {hasFilters && (
-                  <button
-                    onClick={() => { setFilterTipo("todos"); setFilterEstado("todos"); setFilterPorte("todos"); setFilterApenasAbertos(false); }}
-                    className="h-8 px-2 text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
-                  >
-                    <X className="h-3 w-3" /> Limpar
-                  </button>
-                )}
+                <div className="ml-auto flex items-center gap-1.5">
+                  <span className="text-[11px] text-muted-foreground hidden sm:inline">Ordenar:</span>
+                  <Select value={sortBy} onValueChange={(v) => setSortBy(v as any)}>
+                    <SelectTrigger className="h-8 w-[130px] text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="status">Status</SelectItem>
+                      <SelectItem value="prazo">Prazo</SelectItem>
+                      <SelectItem value="match" disabled={!recoProfile}>
+                        Match {!recoProfile ? "(selecione projeto)" : ""}
+                      </SelectItem>
+                      <SelectItem value="nome">Nome (A–Z)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-              <p className="text-xs text-muted-foreground">
+
+              {/* Painel de filtros — colapsável (responsivo: full width no mobile) */}
+              {filtersOpen && (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1 border-t border-border/40">
+                  <div className="space-y-1">
+                    <label className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Tipo</label>
+                    <Select value={filterTipo} onValueChange={(v) => setFilterTipo(v as any)}>
+                      <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="todos">Todos os tipos</SelectItem>
+                        {(Object.keys(TIPO_PALCO_LABELS) as TipoPalco[]).map((t) => (
+                          <SelectItem key={t} value={t}>{TIPO_PALCO_LABELS[t]}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Estado</label>
+                    <Select value={filterEstado} onValueChange={setFilterEstado}>
+                      <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="todos">Todos os estados</SelectItem>
+                        {estados.map((e) => <SelectItem key={e} value={e}>{e}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Porte</label>
+                    <Select value={filterPorte} onValueChange={(v) => setFilterPorte(v as any)}>
+                      <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="todos">Todos os portes</SelectItem>
+                        <SelectItem value="iniciante">Iniciante (até 1k)</SelectItem>
+                        <SelectItem value="medio">Médio (1k–10k)</SelectItem>
+                        <SelectItem value="grande">Grande (10k+)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              )}
+
+              {/* Chips de filtros ativos — sempre visíveis para feedback claro */}
+              {hasFilters && (
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {filterTipo !== "todos" && (
+                    <Badge variant="secondary" className="text-[11px] gap-1 pr-1">
+                      {TIPO_PALCO_LABELS[filterTipo as TipoPalco]}
+                      <button onClick={() => setFilterTipo("todos")} aria-label="Remover filtro tipo" className="hover:text-foreground">
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  )}
+                  {filterEstado !== "todos" && (
+                    <Badge variant="secondary" className="text-[11px] gap-1 pr-1">
+                      {filterEstado}
+                      <button onClick={() => setFilterEstado("todos")} aria-label="Remover filtro estado" className="hover:text-foreground">
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  )}
+                  {filterPorte !== "todos" && (
+                    <Badge variant="secondary" className="text-[11px] gap-1 pr-1">
+                      {filterPorte === "iniciante" ? "Iniciante" : filterPorte === "medio" ? "Médio" : "Grande"}
+                      <button onClick={() => setFilterPorte("todos")} aria-label="Remover filtro porte" className="hover:text-foreground">
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  )}
+                  {filterApenasAbertos && (
+                    <Badge variant="secondary" className="text-[11px] gap-1 pr-1">
+                      Apenas abertos
+                      <button onClick={() => setFilterApenasAbertos(false)} aria-label="Remover filtro abertos" className="hover:text-foreground">
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  )}
+                  <button
+                    onClick={clearFilters}
+                    className="text-[11px] text-muted-foreground hover:text-foreground underline-offset-2 hover:underline ml-1"
+                  >
+                    Limpar todos
+                  </button>
+                </div>
+              )}
+
+              <p className="text-xs text-muted-foreground pt-0.5">
                 {palcosFiltrados.length} oportunidade{palcosFiltrados.length !== 1 ? "s" : ""} — banco curado pela equipe JSP, atualizado semestralmente
               </p>
             </CardContent>
@@ -583,6 +706,7 @@ export default function Palcos() {
                 <PalcoCard
                   key={p.id}
                   palco={p}
+                  score={recoProfile ? scoreById.get(p.id) : undefined}
                   onViewDetail={(p) => { setDetailPalco(p); setDetailOpen(true); }}
                   onCandidatar={handleCandidatar}
                 />
