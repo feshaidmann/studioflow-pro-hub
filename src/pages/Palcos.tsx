@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import {
   Mic2, Search, Save, ExternalLink, Star, MapPin, Users,
   Music2, ChevronDown, Filter, X, Sparkles, ArrowRight,
-  Calendar, DollarSign, Info, ClipboardList,
+  Calendar, DollarSign, Info, ClipboardList, AlertCircle, RefreshCw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
