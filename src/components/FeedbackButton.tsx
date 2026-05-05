@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { MessageSquarePlus, X, Send, Star, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -14,6 +14,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useLocation } from "react-router-dom";
+import { trackEvent } from "@/lib/analytics";
+
+type FeedbackSource = "floating_button" | "beta_banner" | "event";
 
 const CATEGORIES = [
   { value: "bug", label: "🐛 Bug / Erro" },
@@ -30,14 +33,28 @@ export default function FeedbackButton() {
   const [rating, setRating] = useState<number | null>(null);
   const [hoveredStar, setHoveredStar] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
+  const sourceRef = useRef<FeedbackSource>("floating_button");
   const { user } = useAuth();
   const location = useLocation();
 
   useEffect(() => {
-    const handler = () => setOpen(true);
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<{ source?: FeedbackSource }>).detail;
+      sourceRef.current = detail?.source ?? "event";
+      setOpen(true);
+    };
     window.addEventListener("open-feedback", handler);
     return () => window.removeEventListener("open-feedback", handler);
   }, []);
+
+  useEffect(() => {
+    if (open) {
+      trackEvent("feedback_modal_opened", {
+        path: location.pathname,
+        source: sourceRef.current,
+      });
+    }
+  }, [open, location.pathname]);
 
   if (!user) return null;
 
@@ -70,7 +87,7 @@ export default function FeedbackButton() {
     <>
       {/* Floating button */}
       <button
-        onClick={() => setOpen(true)}
+        onClick={() => { sourceRef.current = "floating_button"; setOpen(true); }}
         aria-label="Enviar feedback"
         className={cn(
           "fixed bottom-[4.5rem] right-4 z-50 flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 px-3 py-2 text-xs font-medium text-primary shadow-lg backdrop-blur-sm transition-all hover:bg-primary/20 hover:shadow-[0_0_16px_hsl(var(--primary)/0.4)] active:scale-95",

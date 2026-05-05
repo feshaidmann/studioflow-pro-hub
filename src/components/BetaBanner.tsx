@@ -6,7 +6,7 @@ export default function BetaBanner() {
   if (!visible) return null;
 
   const handleOpenFeedback = () => {
-    window.dispatchEvent(new CustomEvent("open-feedback"));
+    window.dispatchEvent(new CustomEvent("open-feedback", { detail: { source: "beta_banner" } }));
   };
 
   return (
