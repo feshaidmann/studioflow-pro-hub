@@ -44,13 +44,14 @@ const principalItems = [
 ];
 
 const gestaoItems = [
-  { labelKey: "nav.finance",       path: "/finance",       icon: DollarSign,   proOnly: false, mobileLabel: "" },
-  { labelKey: "nav.agenda",        path: "/agenda",        icon: CalendarDays, proOnly: false, mobileLabel: "" },
-  { labelKey: "nav.musicdna",      path: "/music-dna",     icon: Dna,          proOnly: false, mobileLabel: "nav.musicdna.short" },
-  { labelKey: "nav.editais",      path: "/editais",       icon: FileText,     proOnly: false, mobileLabel: "" },
-  { labelKey: "nav.palcos",       path: "/palcos",        icon: Mic2,         proOnly: false, mobileLabel: "" },
-  { labelKey: "nav.creative",     path: "/criativo",      icon: Palette,      proOnly: false, mobileLabel: "" },
-  { labelKey: "nav.professionals", path: "/professionals", icon: Users,        proOnly: false, mobileLabel: "" },
+  { labelKey: "nav.finance",       path: "/finance",       icon: DollarSign,   proOnly: false, mobileLabel: "" },  // [0]
+  { labelKey: "nav.agenda",        path: "/agenda",        icon: CalendarDays, proOnly: false, mobileLabel: "" },  // [1]
+  // ── Ferramentas — ordenadas pela jornada do artista ──────────────────
+  { labelKey: "nav.musicdna",      path: "/music-dna",     icon: Dna,          proOnly: false, mobileLabel: "nav.musicdna.short" }, // [2] — entenda a faixa primeiro
+  { labelKey: "nav.creative",      path: "/criativo",      icon: Palette,      proOnly: false, mobileLabel: "" },  // [3] — crie os materiais com base no DNA
+  { labelKey: "nav.palcos",        path: "/palcos",        icon: Mic2,         proOnly: false, mobileLabel: "" },  // [4] — onde apresentar enquanto lança
+  { labelKey: "nav.editais",       path: "/editais",       icon: FileText,     proOnly: false, mobileLabel: "" },  // [5] — fomento para projetos maiores
+  { labelKey: "nav.professionals", path: "/professionals", icon: Users,        proOnly: false, mobileLabel: "" },  // [6] — equipe conforme necessidade
 ];
 
 // Sub-labels descritivos curtos (P2) — apenas para itens do drawer "Mais"
@@ -105,12 +106,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     gestaoItems[1], // Agenda
   ];
 
-  // Drawer "Mais" — apenas FERRAMENTAS, reordenadas por frequência (P1)
+  // Drawer "Mais" — ferramentas ordenadas pela jornada do artista
   const toolDrawerItems = [
-    gestaoItems[3], // Editais
-    gestaoItems[5], // Profissionais
-    gestaoItems[4], // Criativo
-    gestaoItems[2], // DNA Musical
+    gestaoItems[2], // DNA Musical    — entenda a faixa primeiro
+    gestaoItems[3], // Criativo       — materiais com base no DNA
+    gestaoItems[4], // Palcos         — onde apresentar enquanto lança
+    gestaoItems[5], // Editais        — fomento para projetos maiores
+    gestaoItems[6], // Profissionais  — equipe conforme necessidade
   ];
 
   // Prefetch dos chunks lazy ao abrir o drawer "Mais" ou hover na sidebar,
@@ -389,17 +391,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             {renderNavItem(gestaoItems[0])}
             {renderNavItem(gestaoItems[1])}
 
-            {/* Ferramentas: Editais, Profissionais, Criativo, DNA */}
+            {/* Ferramentas: DNA → Criativo → Palcos → Editais → Profissionais */}
             <div className="my-2 border-t border-border/30" />
             {sidebarOpen && (
               <div className="px-2.5 pt-1 pb-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground/60">
                 {t("nav.section.tools") !== "nav.section.tools" ? t("nav.section.tools") : "Ferramentas"}
               </div>
             )}
-            {renderNavItem(gestaoItems[3])}
-            {renderNavItem(gestaoItems[5])}
-            {renderNavItem(gestaoItems[4])}
             {renderNavItem(gestaoItems[2])}
+            {renderNavItem(gestaoItems[3])}
+            {renderNavItem(gestaoItems[4])}
+            {renderNavItem(gestaoItems[5])}
+            {renderNavItem(gestaoItems[6])}
 
             {/* Conta */}
             <div className="my-2 border-t border-border/30" />

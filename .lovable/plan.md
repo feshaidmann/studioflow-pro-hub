@@ -1,32 +1,30 @@
-## Objetivo
+## Problema
 
-Substituir o `useBetaBannerVisible` em `src/hooks/useBetaBanner.ts` pela versão enviada, que lê o `sessionStorage` de forma **síncrona** no `useState` inicial.
+No `src/components/AppLayout.tsx` atual:
 
-## Diferença em relação à versão atual
+1. **Bug:** `Palcos` está em `gestaoItems[4]`, mas `toolDrawerItems` referencia índices `[3], [5], [4], [2]` — que correspondem a Editais, Profissionais, Criativo, DNA. O `[4]` aqui é Criativo, não Palcos (porque a ordem do array `gestaoItems` no arquivo atual é Finanças, Agenda, DNA, Editais, **Palcos**, Criativo, Profissionais). Resultado: Palcos não aparece no drawer mobile e a sidebar desktop renderiza apenas 4 ferramentas, deixando Palcos fora.
+2. **Ordem invertida** vs. jornada real do artista (DNA → Criativo → Palcos → Editais → Profissionais).
 
-Hoje o hook inicia com `useState(false)` e só atualiza a visibilidade dentro do `useEffect`. Isso provoca um pequeno flicker: no primeiro render o banner fica oculto mesmo para usuários que ainda não dispensaram, e aparece no segundo render.
+## Solução
 
-A versão enviada usa um inicializador lazy:
+Aplicar o arquivo enviado em `user-uploads://AppLayout-2.tsx` sobre `src/components/AppLayout.tsx`. Ele já contém:
 
-```ts
-const [visible, setVisible] = useState(
-  () => sessionStorage.getItem(STORAGE_KEY) !== "true"
-);
-```
+- `gestaoItems` reordenado pela jornada, com índices comentados:
+  - `[0]` Finanças, `[1]` Agenda, `[2]` DNA, `[3]` Criativo, `[4]` Palcos, `[5]` Editais, `[6]` Profissionais.
+- `toolDrawerItems` agora inclui os **5** itens de ferramenta na ordem correta (`[2]` DNA → `[3]` Criativo → `[4]` Palcos → `[5]` Editais → `[6]` Profissionais), eliminando o bug de Palcos ausente.
+- Bloco da sidebar desktop renderizando os mesmos 5 itens na mesma ordem.
+- `drawerSubLabels`, prefetch de `/palcos`, `ROOT_ROUTES`, header mobile, seção Conta e demais comportamentos preservados.
 
-Assim o estado correto já está disponível no primeiro render — sem flash e sem render extra.
+## Passos
 
-## Mudanças
+1. Sobrescrever `src/components/AppLayout.tsx` com o conteúdo de `user-uploads://AppLayout-2.tsx` (448 linhas).
+2. Verificar visualmente:
+   - Mobile: drawer "Mais" mostra 5 ferramentas em grid na ordem DNA, Criativo, Palcos, Editais, Profissionais.
+   - Desktop: seção "Ferramentas" da sidebar lista as mesmas 5 entradas na mesma ordem, com Palcos visível.
+3. Sem mudanças em rotas, traduções (`nav.palcos` já existe) ou outros arquivos.
 
-**`src/hooks/useBetaBanner.ts`**
-- Trocar `useState(false)` pelo inicializador lazy lendo `sessionStorage` direto.
-- Manter o `useEffect` com listener do evento `beta-banner-changed` para sincronizar entre abas/componentes (a chamada `update()` dentro do effect continua útil para casos em que o storage muda entre o mount e o subscribe).
-- `dismissBetaBanner` e o evento `trackEvent("beta_banner_dismissed")` permanecem inalterados.
+## Detalhes técnicos
 
-## Fora de escopo
-
-Nenhuma alteração em `BetaBanner.tsx`, `AppLayout.tsx` ou no schema do Supabase — a API pública do hook (`useBetaBannerVisible`, `dismissBetaBanner`) não muda.
-
-## Risco
-
-Mínimo. Como `sessionStorage` está disponível no browser desde o mount (app SPA Vite, sem SSR), o acesso síncrono é seguro.
+- Arquivo único editado: `src/components/AppLayout.tsx`.
+- Sem migrations, sem mudanças em hooks ou edge functions.
+- Sem novos imports — `Mic2` já está presente.
