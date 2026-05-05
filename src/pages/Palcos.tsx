@@ -800,7 +800,7 @@ export default function Palcos() {
         </p>
       </div>
 
-      <Tabs defaultValue="descobrir">
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="w-full overflow-x-auto flex justify-start gap-0.5 no-scrollbar">
           <TabsTrigger value="descobrir" className="text-xs px-2.5 md:px-3 shrink-0">
             <Star className="h-3.5 w-3.5 mr-1" />
@@ -813,6 +813,15 @@ export default function Palcos() {
           <TabsTrigger value="recomendacoes" className="text-xs px-2.5 md:px-3 shrink-0">
             <Sparkles className="h-3.5 w-3.5 mr-1" />
             Para meu projeto
+          </TabsTrigger>
+          <TabsTrigger value="candidaturas" className="text-xs px-2.5 md:px-3 shrink-0">
+            <ClipboardList className="h-3.5 w-3.5 mr-1" />
+            Minhas Candidaturas
+            {palcoApplications.length > 0 && (
+              <span className="ml-1.5 inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-medium">
+                {palcoApplications.length}
+              </span>
+            )}
           </TabsTrigger>
         </TabsList>
 
