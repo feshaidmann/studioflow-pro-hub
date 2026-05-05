@@ -223,6 +223,7 @@ export default function Creative() {
   const projectIdParam = searchParams.get("project");
   const dnaParam = searchParams.get("dna");
   const { projects } = useProjects();
+  const { user } = useAuth();
   const isMobile = useIsMobile();
 
   const initialPrefs = loadPrefs();
@@ -292,7 +293,7 @@ export default function Creative() {
   // ── Galeria ───────────────────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState("create");
   const [filterFormat, setFilterFormat] = useState<string>("all");
-  const [filterProject, setFilterProject] = useState<string>("all");
+  const [filterProject, setFilterProject] = useState<string>(projectIdParam || "all");
   const [gallerySearch, setGallerySearch] = useState<string>("");
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; path: string } | null>(null);
   const [lightboxIndex, setLightboxIndex] = useState<number>(-1);
@@ -367,10 +368,30 @@ export default function Creative() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dnaParam]);
 
-  // ── Não auto-preenchemos artistName a partir do projeto vinculado ──────
-  // Os campos "Nome do artista" e "Título da faixa" são gatilhos explícitos
-  // de tipografia: só devem ser preenchidos quando o usuário decide que o
-  // nome deve aparecer renderizado dentro da arte.
+  // ── Pré-popula detalhes da faixa quando vem do projeto (one-shot) ─────
+  const projectPrefilledRef = useRef(false);
+  useEffect(() => {
+    if (projectPrefilledRef.current) return;
+    if (!projectIdParam || !linkedProject) return;
+    projectPrefilledRef.current = true;
+    if (!trackName.trim() && linkedProject.name) {
+      setTrackName(cleanTrackName(linkedProject.name));
+    }
+    if (!artistName.trim() && linkedProject.artist) {
+      setArtistName(linkedProject.artist);
+    }
+    setTrackDetailsOpen(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectIdParam, linkedProject]);
+
+  // ── Analytics: módulo aberto ─────────────────────────────────────────
+  useEffect(() => {
+    trackEvent("creative_opened", {
+      from_project: !!projectIdParam,
+      has_dna: !!dnaParam,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ── Recalcula prompt quando o formato muda (e há DNA ativo) ──────────
   useEffect(() => {
