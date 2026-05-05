@@ -306,12 +306,14 @@ function StartCandidaturaDialog({
 
 // ── Card de palco ─────────────────────────────────────────────────────────
 function PalcoCard({
-  palco, score, onViewDetail, onCandidatar,
+  palco, score, onViewDetail, onCandidatar, existingApplication, onViewCandidatura,
 }: {
   palco: PalcoCurado;
   score?: number;
   onViewDetail: (p: PalcoCurado) => void;
   onCandidatar: (p: PalcoCurado) => void;
+  existingApplication?: EditalApplication | null;
+  onViewCandidatura?: (app: EditalApplication) => void;
 }) {
   return (
     <div
@@ -343,6 +345,21 @@ function PalcoCard({
                 <TooltipContent side="left" className="text-xs">
                   {score >= 15 ? "Alta compatibilidade com seu perfil" :
                    score >= 8  ? "Compatibilidade média" : "Compatibilidade baixa"}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+          {existingApplication && (
+            <TooltipProvider delayDuration={150}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Badge variant="outline" className={`text-[10px] ${APPLICATION_STATUS_COLORS[existingApplication.status]}`}>
+                    <ClipboardList className="h-2.5 w-2.5 mr-0.5" />
+                    {APPLICATION_STATUS_LABELS[existingApplication.status]}
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent side="left" className="text-xs">
+                  Você já está acompanhando este palco
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -387,14 +404,194 @@ function PalcoCard({
         <Badge variant="outline" className={`text-[10px] ${TIPO_PALCO_COLORS[palco.tipo_palco]}`}>
           {TIPO_PALCO_LABELS[palco.tipo_palco]}
         </Badge>
-        <Button
-          size="sm" variant="default"
-          className="h-7 ml-auto text-xs gap-1"
-          onClick={() => onCandidatar(palco)}
-        >
-          <ClipboardList className="h-3 w-3" />
-          Candidatar
-        </Button>
+        {existingApplication ? (
+          <Button
+            size="sm" variant="outline"
+            className="h-7 ml-auto text-xs gap-1"
+            onClick={() => onViewCandidatura?.(existingApplication)}
+          >
+            <ArrowRight className="h-3 w-3" />
+            Ver status
+          </Button>
+        ) : (
+          <Button
+            size="sm" variant="default"
+            className="h-7 ml-auto text-xs gap-1"
+            onClick={() => onCandidatar(palco)}
+          >
+            <ClipboardList className="h-3 w-3" />
+            Candidatar
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Pipeline (4 colunas) — Minhas candidaturas de palco ───────────────────
+function PalcoPipelineCard({
+  app, nextStatus, statuses, onUpdate, onDelete, onOpenChecklist, onOpenResult,
+}: {
+  app: EditalApplication;
+  nextStatus: ApplicationStatus | null;
+  statuses: ApplicationStatus[];
+  onUpdate: (p: { id: string; status?: ApplicationStatus; notas?: string }) => void;
+  onDelete: (id: string) => void;
+  onOpenChecklist: (id: string) => void;
+  onOpenResult: (id: string) => void;
+}) {
+  return (
+    <Card className="border shadow-sm">
+      <CardContent className="p-3 space-y-2">
+        <div className="flex items-start justify-between gap-2">
+          <p className="text-sm font-medium leading-snug flex-1">
+            {app.edital?.titulo || "Palco"}
+          </p>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0">
+                <MoreHorizontal className="h-3.5 w-3.5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {nextStatus && (
+                <DropdownMenuItem onClick={() => onUpdate({ id: app.id, status: nextStatus })}>
+                  <ArrowRight className="h-3.5 w-3.5 mr-2" />
+                  Mover → {APPLICATION_STATUS_LABELS[nextStatus]}
+                </DropdownMenuItem>
+              )}
+              {statuses.filter((s) => s !== app.status && s !== nextStatus).map((s) => (
+                <DropdownMenuItem key={s} onClick={() => onUpdate({ id: app.id, status: s })}>
+                  Mover → {APPLICATION_STATUS_LABELS[s]}
+                </DropdownMenuItem>
+              ))}
+              <DropdownMenuItem onClick={() => onOpenChecklist(app.id)}>
+                <ClipboardList className="h-3.5 w-3.5 mr-2" />
+                Checklist de documentos
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onOpenResult(app.id)}>
+                <Trophy className="h-3.5 w-3.5 mr-2" />
+                Registrar resultado
+              </DropdownMenuItem>
+              {app.edital?.link && (
+                <DropdownMenuItem asChild>
+                  <a href={app.edital.link} target="_blank" rel="noopener noreferrer">
+                    <ExternalLink className="h-3.5 w-3.5 mr-2" />
+                    Abrir inscrição
+                  </a>
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem className="text-destructive" onClick={() => onDelete(app.id)}>
+                <Trash2 className="h-3.5 w-3.5 mr-2" />
+                Remover
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+        {app.edital?.orgao && (
+          <p className="text-xs text-muted-foreground">{app.edital.orgao}</p>
+        )}
+        {app.edital?.prazo && (
+          <p className="text-xs text-muted-foreground flex items-center gap-1">
+            <Calendar className="h-3 w-3" />
+            Prazo: {new Date(app.edital.prazo + "T12:00:00-03:00").toLocaleDateString("pt-BR")}
+          </p>
+        )}
+        {app.notas && (
+          <p className="text-xs text-muted-foreground italic line-clamp-2">{app.notas}</p>
+        )}
+        {nextStatus && (
+          <Button
+            size="sm"
+            variant={app.status === "interesse" ? "outline" : "default"}
+            className="h-7 text-xs w-full"
+            onClick={() => onUpdate({ id: app.id, status: nextStatus })}
+          >
+            <ArrowRight className="h-3 w-3 mr-1" />
+            Mover para {APPLICATION_STATUS_LABELS[nextStatus]}
+          </Button>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function PalcoPipelineView({
+  applications, onUpdate, onDelete, onOpenChecklist, onOpenResult,
+}: {
+  applications: EditalApplication[];
+  onUpdate: (p: { id: string; status?: ApplicationStatus; notas?: string }) => void;
+  onDelete: (id: string) => void;
+  onOpenChecklist: (id: string) => void;
+  onOpenResult: (id: string) => void;
+}) {
+  const statuses: ApplicationStatus[] = ["interesse", "preparando", "inscrito", "resultado"];
+  const grouped = useMemo(() => {
+    const map: Record<ApplicationStatus, EditalApplication[]> = {
+      interesse: [], preparando: [], inscrito: [], resultado: [],
+    };
+    applications.forEach((a) => { if (map[a.status]) map[a.status].push(a); });
+    return map;
+  }, [applications]);
+  const nextStatus = (s: ApplicationStatus): ApplicationStatus | null => {
+    const idx = statuses.indexOf(s);
+    return idx < statuses.length - 1 ? statuses[idx + 1] : null;
+  };
+  return (
+    <div className="space-y-4">
+      <div className="hidden md:grid grid-cols-4 gap-3">
+        {statuses.map((status) => (
+          <div key={status} className="space-y-2">
+            <div className="flex items-center justify-between px-1">
+              <Badge variant="outline" className={APPLICATION_STATUS_COLORS[status] + " text-xs"}>
+                {APPLICATION_STATUS_LABELS[status]}
+              </Badge>
+              <span className="text-xs text-muted-foreground">{grouped[status].length}</span>
+            </div>
+            <div className="space-y-2 min-h-[80px]">
+              {grouped[status].length === 0 ? (
+                <div className="rounded-lg border border-dashed border-border/50 p-3 text-center">
+                  <p className="text-xs text-muted-foreground/60">Vazio</p>
+                </div>
+              ) : (
+                grouped[status].map((app) => (
+                  <PalcoPipelineCard
+                    key={app.id} app={app}
+                    nextStatus={nextStatus(app.status)} statuses={statuses}
+                    onUpdate={onUpdate} onDelete={onDelete}
+                    onOpenChecklist={onOpenChecklist} onOpenResult={onOpenResult}
+                  />
+                ))
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="md:hidden space-y-4">
+        {statuses.map((status) => (
+          <div key={status}>
+            <div className="flex items-center gap-2 mb-2">
+              <Badge variant="outline" className={APPLICATION_STATUS_COLORS[status] + " text-xs"}>
+                {APPLICATION_STATUS_LABELS[status]}
+              </Badge>
+              <span className="text-xs text-muted-foreground">({grouped[status].length})</span>
+            </div>
+            {grouped[status].length === 0 ? (
+              <p className="text-xs text-muted-foreground pl-2 py-2">Nenhuma candidatura</p>
+            ) : (
+              <div className="space-y-2">
+                {grouped[status].map((app) => (
+                  <PalcoPipelineCard
+                    key={app.id} app={app}
+                    nextStatus={nextStatus(app.status)} statuses={statuses}
+                    onUpdate={onUpdate} onDelete={onDelete}
+                    onOpenChecklist={onOpenChecklist} onOpenResult={onOpenResult}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
       </div>
     </div>
   );
