@@ -448,6 +448,12 @@ export default function Creative() {
       setGeneratedVideoUrl(null);
       setGeneratedVideoBlob(null);
       setStep("result");
+      trackEvent("creative_generated", {
+        format: selectedFormat.id,
+        has_dna: !!dnaSource,
+        has_reference: !!referenceImage,
+        project_linked: selectedProjectId !== "none",
+      });
 
       if (selectedFormat.isVideo) {
         try {
@@ -560,7 +566,36 @@ export default function Creative() {
       projectId: selectedProjectId !== "none" ? selectedProjectId : undefined,
       videoBlob: generatedVideoBlob || undefined,
     });
-    if (result) setSavedToGallery(true);
+    if (result) {
+      setSavedToGallery(true);
+      trackEvent("creative_saved_to_gallery", {
+        format: selectedFormat.id,
+        project_linked: selectedProjectId !== "none",
+        media_type: generatedVideoBlob ? "video" : "image",
+      });
+
+      // Auto-marca item correspondente no checklist do projeto vinculado
+      if (selectedProjectId !== "none" && user?.id) {
+        const checklistKey = FORMAT_TO_CHECKLIST_KEY[selectedFormat.id];
+        if (checklistKey) {
+          try {
+            const { alreadyChecked, label } = await markChecklistItem(
+              selectedProjectId,
+              user.id,
+              checklistKey,
+            );
+            if (!alreadyChecked && label) {
+              toast({
+                title: "Checklist atualizado",
+                description: `"${label}" marcado no checklist de lançamento.`,
+              });
+            }
+          } catch {
+            /* silencioso — não bloqueia o fluxo */
+          }
+        }
+      }
+    }
   };
 
   const handleConfirmDelete = async () => {
