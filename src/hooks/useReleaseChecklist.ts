@@ -111,6 +111,40 @@ function defaultState(): ChecklistState {
   return s;
 }
 
+// ── Standalone helper: marca um item do checklist sem precisar do hook ──
+// Usado pelo módulo Criativo para auto-marcar capa/reels/stories/thumbnail
+// quando o usuário salva uma arte vinculada ao projeto.
+export async function markChecklistItem(
+  projectId: string,
+  userId: string,
+  key: string,
+): Promise<{ alreadyChecked: boolean; label: string | null }> {
+  const def = RELEASE_SECTIONS.flatMap((s) => s.items).find((i) => i.key === key);
+  const label = def?.label ?? null;
+
+  const { data: existing } = await supabase
+    .from("release_checklists")
+    .select("id, items")
+    .eq("project_id", projectId)
+    .maybeSingle();
+
+  if (existing) {
+    const current = (existing.items as ChecklistState) ?? {};
+    if (current[key]?.checked) return { alreadyChecked: true, label };
+    const next = { ...defaultState(), ...current, [key]: { checked: true, value: "" } };
+    await supabase
+      .from("release_checklists")
+      .update({ items: next as any })
+      .eq("id", existing.id);
+  } else {
+    const next = { ...defaultState(), [key]: { checked: true, value: "" } };
+    await supabase
+      .from("release_checklists")
+      .insert({ project_id: projectId, user_id: userId, items: next as any });
+  }
+  return { alreadyChecked: false, label };
+}
+
 // ── Hook ──
 
 export function useReleaseChecklist(projectId: string) {
