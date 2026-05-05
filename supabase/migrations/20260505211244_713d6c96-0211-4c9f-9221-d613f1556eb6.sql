@@ -1,0 +1,1 @@
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS last_onboarding_project_id UUID REFERENCES public.projects(id) ON DELETE SET NULL;

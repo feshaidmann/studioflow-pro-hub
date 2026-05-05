@@ -1284,6 +1284,7 @@ export type Database = {
           current_moment: string
           display_name: string
           id: string
+          last_onboarding_project_id: string | null
           main_pain: string
           onboarding_completed: boolean
           onboarding_version: number
@@ -1310,6 +1311,7 @@ export type Database = {
           current_moment?: string
           display_name?: string
           id: string
+          last_onboarding_project_id?: string | null
           main_pain?: string
           onboarding_completed?: boolean
           onboarding_version?: number
@@ -1336,6 +1338,7 @@ export type Database = {
           current_moment?: string
           display_name?: string
           id?: string
+          last_onboarding_project_id?: string | null
           main_pain?: string
           onboarding_completed?: boolean
           onboarding_version?: number
@@ -1352,7 +1355,15 @@ export type Database = {
           work_links?: Json
           youtube_url?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_last_onboarding_project_id_fkey"
+            columns: ["last_onboarding_project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       project_files: {
         Row: {
