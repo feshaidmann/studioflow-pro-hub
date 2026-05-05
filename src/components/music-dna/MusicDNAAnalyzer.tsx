@@ -376,7 +376,10 @@ function buildAnalysisMarkdown(input: { name: string; references: string[]; note
   }
   if (diagnosis.identidade) {
     lines.push("## Identidade artística");
-    lines.push(diagnosis.identidade);
+    lines.push(`- **Mood:** ${diagnosis.identidade.mood_principal}`);
+    lines.push(`- **Território sonoro:** ${diagnosis.identidade.territorio_sonoro}`);
+    lines.push(`- **Persona do ouvinte:** ${diagnosis.identidade.persona_ouvinte}`);
+    if (diagnosis.identidade.tags?.length) lines.push(`- **Tags:** ${diagnosis.identidade.tags.join(", ")}`);
     lines.push("");
   }
   if (diagnosis.pontos_fortes?.length) {
