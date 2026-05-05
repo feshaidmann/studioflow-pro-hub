@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import {
   Palette, Sparkles, ImageIcon, FileText, Dna, X, Music, User,
@@ -36,6 +36,19 @@ import { VideoEffectPicker } from "@/components/creative/VideoEffectPicker";
 import type { Intensity, SpotEffect } from "@/components/creative/videoLayers";
 import { cleanTrackName } from "@/lib/trackName";
 import { AIQuotaBadge } from "@/components/ui/ai-quota-badge";
+import { trackEvent } from "@/lib/analytics";
+import { markChecklistItem } from "@/hooks/useReleaseChecklist";
+import { useAuth } from "@/contexts/AuthContext";
+
+// Mapeia formato gerado → chave do Checklist de Lançamento
+const FORMAT_TO_CHECKLIST_KEY: Record<string, string> = {
+  spotify_cover: "capa",
+  deezer_cover: "capa",
+  tidal_cover: "capa",
+  youtube_cover: "thumbnail",
+  reels_loop: "reels",
+  story: "stories",
+};
 
 // ── Tipos de material — define formato implicitamente ─────────────────────
 type MaterialType = "capa" | "post" | "story" | "reels" | "legenda";
@@ -210,6 +223,7 @@ export default function Creative() {
   const projectIdParam = searchParams.get("project");
   const dnaParam = searchParams.get("dna");
   const { projects } = useProjects();
+  const { user } = useAuth();
   const isMobile = useIsMobile();
 
   const initialPrefs = loadPrefs();
@@ -279,7 +293,7 @@ export default function Creative() {
   // ── Galeria ───────────────────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState("create");
   const [filterFormat, setFilterFormat] = useState<string>("all");
-  const [filterProject, setFilterProject] = useState<string>("all");
+  const [filterProject, setFilterProject] = useState<string>(projectIdParam || "all");
   const [gallerySearch, setGallerySearch] = useState<string>("");
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; path: string } | null>(null);
   const [lightboxIndex, setLightboxIndex] = useState<number>(-1);
@@ -354,10 +368,30 @@ export default function Creative() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dnaParam]);
 
-  // ── Não auto-preenchemos artistName a partir do projeto vinculado ──────
-  // Os campos "Nome do artista" e "Título da faixa" são gatilhos explícitos
-  // de tipografia: só devem ser preenchidos quando o usuário decide que o
-  // nome deve aparecer renderizado dentro da arte.
+  // ── Pré-popula detalhes da faixa quando vem do projeto (one-shot) ─────
+  const projectPrefilledRef = useRef(false);
+  useEffect(() => {
+    if (projectPrefilledRef.current) return;
+    if (!projectIdParam || !linkedProject) return;
+    projectPrefilledRef.current = true;
+    if (!trackName.trim() && linkedProject.name) {
+      setTrackName(cleanTrackName(linkedProject.name));
+    }
+    if (!artistName.trim() && linkedProject.artist) {
+      setArtistName(linkedProject.artist);
+    }
+    setTrackDetailsOpen(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectIdParam, linkedProject]);
+
+  // ── Analytics: módulo aberto ─────────────────────────────────────────
+  useEffect(() => {
+    trackEvent("creative_opened", {
+      from_project: !!projectIdParam,
+      has_dna: !!dnaParam,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ── Recalcula prompt quando o formato muda (e há DNA ativo) ──────────
   useEffect(() => {
@@ -414,6 +448,12 @@ export default function Creative() {
       setGeneratedVideoUrl(null);
       setGeneratedVideoBlob(null);
       setStep("result");
+      trackEvent("creative_generated", {
+        format: selectedFormat.id,
+        has_dna: !!dnaSource,
+        has_reference: !!referenceImage,
+        project_linked: selectedProjectId !== "none",
+      });
 
       if (selectedFormat.isVideo) {
         try {
@@ -526,7 +566,36 @@ export default function Creative() {
       projectId: selectedProjectId !== "none" ? selectedProjectId : undefined,
       videoBlob: generatedVideoBlob || undefined,
     });
-    if (result) setSavedToGallery(true);
+    if (result) {
+      setSavedToGallery(true);
+      trackEvent("creative_saved_to_gallery", {
+        format: selectedFormat.id,
+        project_linked: selectedProjectId !== "none",
+        media_type: generatedVideoBlob ? "video" : "image",
+      });
+
+      // Auto-marca item correspondente no checklist do projeto vinculado
+      if (selectedProjectId !== "none" && user?.id) {
+        const checklistKey = FORMAT_TO_CHECKLIST_KEY[selectedFormat.id];
+        if (checklistKey) {
+          try {
+            const { alreadyChecked, label } = await markChecklistItem(
+              selectedProjectId,
+              user.id,
+              checklistKey,
+            );
+            if (!alreadyChecked && label) {
+              toast({
+                title: "Checklist atualizado",
+                description: `"${label}" marcado no checklist de lançamento.`,
+              });
+            }
+          } catch {
+            /* silencioso — não bloqueia o fluxo */
+          }
+        }
+      }
+    }
   };
 
   const handleConfirmDelete = async () => {
@@ -628,7 +697,10 @@ export default function Creative() {
               </div>
               <div className="flex items-center gap-1 shrink-0">
                 <Button asChild variant="ghost" size="sm" className="h-7 px-2 text-[12px]">
-                  <Link to={`/projects/${linkedProject.id}`}>
+                  <Link
+                    to={`/projects/${linkedProject.id}`}
+                    onClick={() => trackEvent("creative_returned_to_project", { from: "context_chip" })}
+                  >
                     <ArrowLeft className="h-3.5 w-3.5 mr-1" />
                     Voltar ao projeto
                   </Link>
@@ -1012,7 +1084,10 @@ export default function Creative() {
                     {savedToGallery ? "✓ Salvo na galeria do projeto" : "Ainda não salvo na galeria"}
                   </span>
                   <Button asChild variant="ghost" size="sm" className="h-8 text-xs gap-1.5">
-                    <Link to={`/projects/${linkedProject.id}`}>
+                    <Link
+                      to={`/projects/${linkedProject.id}`}
+                      onClick={() => trackEvent("creative_returned_to_project", { from: "result_step" })}
+                    >
                       <ArrowLeft className="h-3.5 w-3.5" />
                       Voltar ao projeto
                     </Link>
@@ -1081,7 +1156,10 @@ export default function Creative() {
                 </Button>
                 {linkedProject && (
                   <Button asChild variant="ghost" size="sm" className="h-8 text-xs gap-1.5">
-                    <Link to={`/projects/${linkedProject.id}`}>
+                    <Link
+                      to={`/projects/${linkedProject.id}`}
+                      onClick={() => trackEvent("creative_returned_to_project", { from: "caption_step" })}
+                    >
                       <ArrowLeft className="h-3.5 w-3.5" />
                       Voltar ao projeto
                     </Link>
@@ -1097,6 +1175,23 @@ export default function Creative() {
         <TabsContent value="gallery" className="mt-4 space-y-4">
           {assets.length > 0 && (
             <div className="flex flex-col gap-2">
+              {filterProject !== "all" && projects.find((p) => p.id === filterProject) && (
+                <div className="flex items-center justify-between gap-2 rounded-lg border border-primary/20 bg-primary/5 px-2.5 py-1.5">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <FolderKanban className="h-3.5 w-3.5 text-primary shrink-0" />
+                    <span className="text-[12px] text-foreground truncate">
+                      Filtrando por: <span className="font-medium">{projects.find((p) => p.id === filterProject)?.name}</span>
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => setFilterProject("all")}
+                    className="text-muted-foreground hover:text-foreground shrink-0"
+                    aria-label="Remover filtro do projeto"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              )}
               <div className="relative">
                 <Input
                   value={gallerySearch}
