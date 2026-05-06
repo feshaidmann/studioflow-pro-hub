@@ -285,18 +285,29 @@ function DetailSection({ id, title, icon, children }: {
   );
 }
 
-function ExecutiveSummary({ diagnosis }: { diagnosis: DiagnosisResult }) {
-  const truePeak = diagnosis.realAnalysis?.true_peak_dbtp ?? diagnosis.audioAnalysis?.truePeak ?? -1;
-  const lufs = diagnosis.realAnalysis?.lufs_integrated ?? diagnosis.audioAnalysis?.lufs ?? -14;
-  const dynamicRange = diagnosis.realAnalysis?.dynamic_range_lu ?? diagnosis.audioAnalysis?.dynamicRange ?? 8;
+function ExecutiveSummary({ diagnosis, onAddAllSteps, allStepsAdded }: {
+  diagnosis: DiagnosisResult;
+  onAddAllSteps: () => void;
+  allStepsAdded: boolean;
+}) {
+  const truePeak = diagnosis.realAnalysis?.true_peak_dbtp;
+  const lufs = diagnosis.realAnalysis?.lufs_integrated;
+  const dynamicRange = diagnosis.realAnalysis?.dynamic_range_lu;
+  const duration = diagnosis.realAnalysis?.duration_sec;
+  const hasCoreMetrics = [truePeak, lufs, dynamicRange].every(
+    (v) => typeof v === "number" && Number.isFinite(v),
+  );
+
   const primaryStrength = diagnosis.pontos_fortes?.[0] ?? "A faixa já apresenta uma identidade sonora reconhecível.";
   const mainBottleneck = diagnosis.gargalos_criativos?.[0] ?? "Vale refinar o contraste entre seções antes da finalização.";
   const nextAction = diagnosis.proximos_passos?.[0]?.acao ?? diagnosis.sugestoes_arranjo?.[0] ?? "Revisar mix e arranjo com foco no ponto mais sensível do diagnóstico.";
 
-  // True Peak: alvo -1 dBTP com tolerância de ±1 dB → aceitável até 0 dBTP
-  const status = truePeak <= 0 && lufs >= -16 && lufs <= -10 && dynamicRange >= 7
+  // Status só vira "Pronta" se TODAS as métricas críticas existem e estão dentro do alvo
+  const status = !hasCoreMetrics
+    ? { label: "Análise incompleta", tone: "warning" as const }
+    : (truePeak as number) <= 0 && (lufs as number) >= -16 && (lufs as number) <= -10 && (dynamicRange as number) >= 7
     ? { label: "Pronta para streaming", tone: "success" as const }
-    : truePeak > 0 || dynamicRange < 5
+    : (truePeak as number) > 0 || (dynamicRange as number) < 5
     ? { label: "Precisa revisão técnica", tone: "destructive" as const }
     : { label: "Boa base, precisa ajustes", tone: "primary" as const };
 
@@ -304,7 +315,14 @@ function ExecutiveSummary({ diagnosis }: { diagnosis: DiagnosisResult }) {
     success: "bg-primary/10 text-primary border-primary/30",
     destructive: "bg-destructive/10 text-destructive border-destructive/30",
     primary: "bg-primary/10 text-primary border-primary/30",
+    warning: "bg-amber-100 text-amber-800 border-amber-300",
   }[status.tone];
+
+  // Confiança da análise
+  const totalCompared = diagnosis.catalogTotalCompared ?? 0;
+  const formatDuration = (sec: number) =>
+    `${Math.floor(sec / 60)}:${String(Math.round(sec % 60)).padStart(2, "0")}`;
+  const stepsCount = diagnosis.proximos_passos?.length ?? 0;
 
   return (
     <section id="dna-resumo" className="scroll-mt-16">
@@ -327,9 +345,42 @@ function ExecutiveSummary({ diagnosis }: { diagnosis: DiagnosisResult }) {
             ].map((item) => (
               <div key={item.label} className="rounded-lg bg-muted/30 border border-border p-3">
                 <p className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground mb-1">{item.label}</p>
-                <p className="text-xs leading-relaxed">{item.text}</p>
+                <p className="text-sm leading-relaxed text-foreground/85">{item.text}</p>
               </div>
             ))}
+          </div>
+
+          {/* CTA primário + chips de confiança */}
+          <div className="flex flex-wrap items-center justify-between gap-3 pt-1 border-t border-border/60">
+            <div className="flex flex-wrap gap-1.5">
+              {totalCompared > 0 && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-muted/50 border border-border px-2 py-0.5 text-[11px] font-mono text-foreground/70">
+                  Catálogo: {totalCompared.toLocaleString("pt-BR")} faixas
+                </span>
+              )}
+              {typeof duration === "number" && Number.isFinite(duration) && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-muted/50 border border-border px-2 py-0.5 text-[11px] font-mono text-foreground/70">
+                  Trecho: 0:00–{formatDuration(duration)}
+                </span>
+              )}
+              <span className="inline-flex items-center gap-1 rounded-full bg-muted/50 border border-border px-2 py-0.5 text-[11px] font-mono text-foreground/70">
+                {hasCoreMetrics ? "Métricas globais OK" : "Métricas globais parciais"}
+              </span>
+            </div>
+            {stepsCount > 0 && (
+              <Button
+                size="sm"
+                onClick={onAddAllSteps}
+                disabled={allStepsAdded}
+                className="text-xs gap-1.5"
+              >
+                {allStepsAdded ? (
+                  <><Check className="h-3.5 w-3.5" /> {stepsCount} ações adicionadas</>
+                ) : (
+                  <><ListPlus className="h-3.5 w-3.5" /> Adicionar {stepsCount} ações ao checklist</>
+                )}
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>
