@@ -25,7 +25,9 @@ export default function OnboardingGuest() {
   const [step, setStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
   const [name, setName] = useState("");
+  const [stateUf, setStateUf] = useState("");
   const [city, setCity] = useState("");
+  const [customCity, setCustomCity] = useState(false);
   const [moment, setMoment] = useState("");
   const nameRef = useRef<HTMLInputElement>(null);
 
