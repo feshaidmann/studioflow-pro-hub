@@ -180,6 +180,7 @@ serve(async (req: Request) => {
 
     // Always look for nearest neighbors in the full reference catalog using the user's actual track features
     const num = (v: unknown): number | null => (typeof v === "number" && Number.isFinite(v) ? v : null);
+    const str = (v: unknown): string | null => (typeof v === "string" && v.trim() ? v : null);
     const { data: neighbors, error: nnError } = await adminClient.rpc("find_nearest_reference_tracks", {
       p_tempo_bpm: num(trackFeatures.tempo) ?? num(trackFeatures.tempo_bpm) ?? num(trackFeatures.bpm),
       p_lufs_integrated: num(trackFeatures.lufs_integrated) ?? num(trackFeatures.lufs),
@@ -193,6 +194,14 @@ serve(async (req: Request) => {
       p_genre: targetGenre ?? null,
       p_limit: 6,
       p_strict_genre: false,
+      p_speechiness: num(trackFeatures.speechiness),
+      p_liveness: num(trackFeatures.liveness),
+      p_spectral_bandwidth: num(trackFeatures.spectral_bandwidth),
+      p_spectral_rolloff: num(trackFeatures.spectral_rolloff),
+      p_spectral_flatness: num(trackFeatures.spectral_flatness),
+      p_zero_crossing_rate: num(trackFeatures.zero_crossing_rate) ?? num(trackFeatures.zcr),
+      p_key_name: str(trackFeatures.key_name) ?? str(trackFeatures.key),
+      p_mode: str(trackFeatures.mode) ?? str(trackFeatures.mode_name),
     });
     if (nnError) console.error("[music-dna-analyze] nearest neighbors error:", nnError);
     nearestNeighbors = neighbors;
