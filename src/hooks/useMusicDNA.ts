@@ -512,7 +512,7 @@ export function useMusicDNA(): UseMusicDNAReturn {
       appendLog("🎧  Selecionando referências artísticas próximas…");
 
       const prompt = buildPrompt(input, realAnalysis, instrumentResult, selectedReferences, externalLookup);
-      const rawText = await callMusicDNAAnalyze(prompt, {
+      const { content: rawText, neighbors: catalogNeighbors } = await callMusicDNAAnalyze(prompt, {
         features: externalLookup?.features,
         genero: input.genre,
         track_name: input.name,
@@ -533,7 +533,7 @@ export function useMusicDNA(): UseMusicDNAReturn {
 
       setProgress(100);
       setStep("done");
-      appendLog("✅  Diagnóstico concluído.");
+      appendLog(catalogNeighbors.length ? `🎯  ${catalogNeighbors.length} faixas próximas encontradas no catálogo.` : "✅  Diagnóstico concluído.");
 
       return {
         ...parsed,
@@ -545,6 +545,7 @@ export function useMusicDNA(): UseMusicDNAReturn {
         externalLookup,
         detectedInstruments,
         instrumentDetection: instrumentResult,
+        catalogNeighbors,
       };
     },
 
