@@ -1211,6 +1211,32 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
         ))}
       </div>
 
+      {/* IDENTIDADE — promovida para logo após o resumo */}
+      <section id="dna-identidade" className="scroll-mt-16">
+        <DiagCard icon="🎭" title="Identidade da Faixa" variant="primary">
+          <div className="space-y-3">
+            <div>
+              <p className="text-base font-bold">{identidade?.mood_principal}</p>
+              <p className="text-xs text-foreground/75 mt-1 leading-relaxed">
+                {identidade?.territorio_sonoro}
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {(identidade?.tags ?? []).map(tag => (
+                <Badge key={tag} variant="outline"
+                  className="text-xs font-mono bg-primary/10 border-primary/30 text-primary">
+                  {tag}
+                </Badge>
+              ))}
+            </div>
+            <div className="rounded-md bg-muted/30 p-2.5 text-xs text-foreground/75 leading-relaxed">
+              <span className="text-primary">🎧 Ouvinte: </span>
+              {identidade?.persona_ouvinte}
+            </div>
+          </div>
+        </DiagCard>
+      </section>
+
       <section id="dna-acoes" className="scroll-mt-16 space-y-4">
         <DiagCard icon="🚀" title="Próximos passos de produção" variant="success">
           <div className="space-y-2">
@@ -1222,7 +1248,7 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
                   <PriorityBadge priority={p.prioridade} />
                   <div className="flex-1">
                     <p className="text-xs leading-relaxed">{p.acao}</p>
-                    <p className="text-[10px] text-muted-foreground mt-1">
+                    <p className="text-xs text-foreground/70 mt-1">
                       Impacto: {p.impacto}
                     </p>
                   </div>
@@ -1288,112 +1314,148 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
             })}
           </div>
         </DiagCard>
+      </section>
 
-        {catalogNeighbors && catalogNeighbors.length > 0 && (
-          <DiagCard icon="🎯" title="Faixas mais próximas no catálogo">
-            <div className="space-y-2">
-              <p className="rounded-md bg-muted/30 p-2.5 text-[11px] text-muted-foreground leading-relaxed">
-                Faixas reais do catálogo de referência interno (CSV importado), ranqueadas por similaridade técnica
-                contra a sua. Esta lista fundamenta o card "Referências mais próximas" gerado pela IA.
+      {/* REFERÊNCIAS — unificadas em Tabs (Catálogo Real + Sugestões IA) */}
+      <section id="dna-referencias" className="scroll-mt-16 space-y-4">
+        <DiagCard icon="🔗" title="Referências mais próximas">
+          <Tabs defaultValue={catalogNeighbors && catalogNeighbors.length > 0 ? "catalogo" : "ia"} className="w-full">
+            <TabsList className="grid w-full grid-cols-2 h-9">
+              <TabsTrigger value="catalogo" className="text-xs">
+                Catálogo Real
+                {catalogNeighbors && catalogNeighbors.length > 0 && (
+                  <span className="ml-1.5 text-foreground/60">({catalogNeighbors.length})</span>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="ia" className="text-xs">
+                Sugestões IA
+                {referencias_proximas && referencias_proximas.length > 0 && (
+                  <span className="ml-1.5 text-foreground/60">({referencias_proximas.length})</span>
+                )}
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="catalogo" className="space-y-2 mt-3">
+              <p className="rounded-md bg-muted/30 p-2.5 text-xs text-foreground/75 leading-relaxed">
+                Faixas reais do catálogo interno ranqueadas por similaridade técnica contra a sua.
+                {totalCompared > 0 && <> Comparado contra <strong>{totalCompared}</strong> faixas. Clique em uma para ver o comparativo detalhado.</>}
               </p>
-              {catalogNeighbors.map((n, i) => {
+              {(!catalogNeighbors || catalogNeighbors.length === 0) && (
+                <p className="text-xs text-foreground/70 py-3 text-center">Nenhum vizinho técnico encontrado no catálogo.</p>
+              )}
+              {catalogNeighbors && catalogNeighbors.map((n, i) => {
                 const sim = Math.round((Number(n.similarity_score) || 0) * 100);
                 return (
-                  <div
+                  <button
+                    type="button"
                     key={`${n.band}-${n.filename}-${i}`}
+                    onClick={() => setOpenNeighbor(n)}
                     className={cn(
-                      "flex flex-col gap-1 py-2 text-xs",
+                      "w-full text-left flex flex-col gap-1 py-2 px-2 -mx-2 rounded-md text-xs transition-colors hover:bg-muted/40",
                       i < catalogNeighbors.length - 1 && "border-b border-border",
                     )}
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <p className="font-semibold truncate">{n.band}</p>
-                        <p className="text-[11px] text-muted-foreground truncate">{n.filename}</p>
+                        <p className="text-xs text-foreground/70 truncate">{n.filename}</p>
                       </div>
                       <div className="flex flex-col items-end shrink-0">
                         <span className="font-mono text-primary text-sm">{sim}%</span>
                         {n.genre && (
-                          <span className="text-[10px] text-muted-foreground uppercase tracking-wide">{n.genre}</span>
+                          <span className="text-xs text-foreground/70 uppercase tracking-wide">{n.genre}</span>
                         )}
                       </div>
                     </div>
-                    <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[10px] font-mono text-muted-foreground">
+                    <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs font-mono text-foreground/70">
                       <span>BPM {fmt(n.tempo_bpm, 0)} <span className="text-primary/70">({fmtDelta(n.tempo_bpm, realAnalysis?.bpm, 0)})</span></span>
                       <span>LUFS {fmt(n.lufs_integrated)} <span className="text-primary/70">({fmtDelta(n.lufs_integrated, realAnalysis?.lufs_integrated)})</span></span>
                       <span>Energy {fmt(n.energy, 2)} <span className="text-primary/70">({fmtDelta(n.energy, realAnalysis?.energy, 2)})</span></span>
                       {n.key_name && <span>Tom {n.key_name}{n.mode ? ` ${n.mode}` : ""}</span>}
                     </div>
-                  </div>
+                  </button>
                 );
               })}
-            </div>
-          </DiagCard>
-        )}
-      </section>
+            </TabsContent>
 
-      <section id="dna-referencias" className="scroll-mt-16 space-y-4">
-        <DiagCard icon="🔗" title="Referências mais próximas">
-          <div className="space-y-2">
-            <p className="rounded-md bg-muted/30 p-2.5 text-[11px] text-muted-foreground leading-relaxed">
-              Essas referências indicam proximidade técnica/sonora, não uma sugestão para copiar estética.
-            </p>
-            {(referencias_proximas ?? []).map((r, i) => (
-              <div key={i} className={cn(
-                "flex justify-between items-start gap-3 py-2 text-xs",
-                i < (referencias_proximas?.length ?? 0) - 1 && "border-b border-border"
-              )}>
-                <div>
-                  <p className="font-semibold">{r.artista}</p>
-                  <p className="text-muted-foreground mt-0.5">{r.motivo}</p>
+            <TabsContent value="ia" className="space-y-2 mt-3">
+              <p className="rounded-md bg-muted/30 p-2.5 text-xs text-foreground/75 leading-relaxed">
+                Sugestões da IA com base em proximidade técnica/sonora. Não são recomendações para copiar estética.
+              </p>
+              {(!referencias_proximas || referencias_proximas.length === 0) && (
+                <p className="text-xs text-foreground/70 py-3 text-center">Nenhuma sugestão gerada.</p>
+              )}
+              {(referencias_proximas ?? []).map((r, i) => (
+                <div key={i} className={cn(
+                  "flex justify-between items-start gap-3 py-2 text-xs",
+                  i < (referencias_proximas?.length ?? 0) - 1 && "border-b border-border"
+                )}>
+                  <div>
+                    <p className="font-semibold">{r.artista}</p>
+                    <p className="text-foreground/75 mt-0.5">{r.motivo}</p>
+                  </div>
+                  <span className="font-mono text-primary shrink-0">{r.similaridade}</span>
                 </div>
-                <span className="font-mono text-primary shrink-0">{r.similaridade}</span>
-              </div>
-            ))}
-          </div>
+              ))}
+            </TabsContent>
+          </Tabs>
         </DiagCard>
 
         <BenchmarkPanel diagnosis={diagnosis} benchmark={benchmark} />
       </section>
 
-      <section id="dna-identidade" className="scroll-mt-16">
-        <DiagCard icon="🎭" title="Identidade da Faixa" variant="primary">
-          <div className="space-y-3">
-            <div>
-              <p className="text-base font-bold">{identidade?.mood_principal}</p>
-              <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                {identidade?.territorio_sonoro}
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-1.5">
-              {(identidade?.tags ?? []).map(tag => (
-                <Badge key={tag} variant="outline"
-                  className="text-[11px] font-mono bg-primary/10 border-primary/30 text-primary">
-                  {tag}
-                </Badge>
-              ))}
-            </div>
-            <div className="rounded-md bg-muted/30 p-2.5 text-[11px] text-muted-foreground leading-relaxed">
-              <span className="text-primary">🎧 Ouvinte: </span>
-              {identidade?.persona_ouvinte}
-            </div>
-          </div>
-        </DiagCard>
-      </section>
-
       <DetailSection id="dna-tecnico" icon="🔬" title="Métricas e diagnóstico técnico">
         <div className="space-y-4">
           <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 animate-fade-in">
-            {metricItems.map((m) => (
-              <Card key={m.label} className="text-center py-2.5 px-1">
-                <p className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground">{m.label}</p>
-                <p className="text-base font-bold text-primary leading-tight">{m.value}</p>
-                {m.unit && <p className="text-[11px] text-muted-foreground">{m.unit}</p>}
-                <p className="mt-1 text-[11px] leading-tight text-muted-foreground">{m.help}</p>
-              </Card>
-            ))}
+            <MetricCard
+              label="LUFS" value={lufsValue} unit="LUFS"
+              help="volume percebido em plataformas"
+              target={{ min: -15, max: -13, ideal: -14 }}
+              range={{ min: -30, max: -6 }}
+            />
+            <MetricCard
+              label="True Peak" value={tpValue} unit="dBTP"
+              help="risco de distorção após streaming"
+              target={{ min: -2, max: -1, ideal: -1 }}
+              range={{ min: -6, max: 0 }}
+            />
+            <MetricCard
+              label="DR" value={drValue} unit="LU"
+              help="variação suave/forte"
+              target={{ min: 7, max: 12, ideal: 9 }}
+              range={{ min: 2, max: 18 }}
+            />
+            <MetricCard
+              label="BPM" value={bpmValue} unit=""
+              help="pulso médio detectado"
+              digits={0}
+            />
+            <Card className="text-center py-2.5 px-2 flex flex-col gap-1.5">
+              <p className="text-xs font-mono uppercase tracking-widest text-muted-foreground">Tom</p>
+              <p className="text-base font-bold text-primary leading-tight">{keyValue ?? "—"}</p>
+              <p className="text-xs leading-tight text-foreground/70">centro tonal provável</p>
+            </Card>
+            <Card className="text-center py-2.5 px-2 flex flex-col gap-1.5">
+              <p className="text-xs font-mono uppercase tracking-widest text-muted-foreground">Duração</p>
+              <p className="text-base font-bold text-primary leading-tight">{durationValue ?? "—"}</p>
+              <p className="text-xs leading-tight text-foreground/70">tempo total da faixa</p>
+            </Card>
           </div>
 
+          {diagnostico_tecnico && (
+            <DiagCard icon="🔬" title="Diagnóstico Técnico" variant="primary">
+              <div className="space-y-3">
+                {technicalItems.map((item) => (
+                  <div key={item.label} className="bg-muted/30 rounded-lg p-3 border-l-2 border-primary/30">
+                    <div className="mb-1 flex items-center justify-between gap-2 flex-wrap">
+                      <p className="text-xs font-mono uppercase tracking-widest text-primary">{item.label}</p>
+                      <p className="text-xs text-foreground/70">{item.help}</p>
+                    </div>
+                    <p className="text-xs leading-relaxed">{item.text}</p>
+                  </div>
+                ))}
+              </div>
+            </DiagCard>
           {diagnostico_tecnico && (
             <DiagCard icon="🔬" title="Diagnóstico Técnico" variant="primary">
               <div className="space-y-3">
