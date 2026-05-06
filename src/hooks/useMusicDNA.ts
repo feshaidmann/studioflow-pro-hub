@@ -527,6 +527,13 @@ export function useMusicDNA(): UseMusicDNAReturn {
 
     onSuccess: (data) => {
       setResult(data);
+      trackAppEvent("audio_analyzed", {
+        genre: data.realAnalysis?.genre_guess ?? null,
+        bpm: data.realAnalysis?.bpm ?? null,
+        lufs: data.realAnalysis?.lufs_integrated ?? null,
+        source: data.externalLookup?.fonte ?? "local",
+        instruments_count: data.detectedInstruments?.length ?? 0,
+      });
       toast.success("Diagnóstico gerado com sucesso");
     },
 
