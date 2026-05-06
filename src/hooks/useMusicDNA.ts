@@ -82,6 +82,24 @@ export interface AnaliseSeccoes {
   secao_mais_fraca: string;
 }
 
+export interface CatalogNeighbor {
+  band: string;
+  filename: string;
+  genre: string;
+  similarity_score: number;
+  tempo_bpm: number | null;
+  lufs_integrated: number | null;
+  key_name: string | null;
+  mode: string | null;
+  energy: number | null;
+  danceability: number | null;
+  valence: number | null;
+  acousticness: number | null;
+  instrumentalness: number | null;
+  dynamic_range_db: number | null;
+  spectral_centroid: number | null;
+}
+
 export interface DiagnosisResult {
   genero_classificado: string;
   identidade: {
@@ -106,6 +124,7 @@ export interface DiagnosisResult {
   externalLookup?: MusicDnaLookupResult | null;
   detectedInstruments: string[];
   instrumentDetection: InstrumentDetection;
+  catalogNeighbors?: CatalogNeighbor[];
 }
 
 // ── CONSTANTS ────────────────────────────────────────────────────────────────
