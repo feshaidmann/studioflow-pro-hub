@@ -155,7 +155,10 @@ export default function ReferenceTracks() {
   };
 
   useEffect(() => {
-    if (isAdmin) refreshMeta();
+    if (isAdmin) {
+      refreshMeta();
+      refreshSnapshotMeta();
+    }
   }, [isAdmin]);
 
   const onFileSelected = async (f: File) => {
