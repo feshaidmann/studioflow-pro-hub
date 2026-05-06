@@ -125,6 +125,7 @@ export interface DiagnosisResult {
   detectedInstruments: string[];
   instrumentDetection: InstrumentDetection;
   catalogNeighbors?: CatalogNeighbor[];
+  catalogTotalCompared?: number;
 }
 
 // ── CONSTANTS ────────────────────────────────────────────────────────────────
@@ -427,14 +428,18 @@ Instruções por campo:
 async function callMusicDNAAnalyze(
   prompt: string,
   payload: Record<string, unknown> = {},
-): Promise<{ content: string; neighbors: CatalogNeighbor[] }> {
+): Promise<{ content: string; neighbors: CatalogNeighbor[]; catalogTotalCompared: number }> {
   const { data, error } = await supabase.functions.invoke("music-dna-analyze", {
     body: { action: "generate_diagnosis", payload: { prompt, ...payload } },
   });
 
   if (error) throw new Error(error.message);
-  const d = data as { content?: string; neighbors?: CatalogNeighbor[] } | null;
-  return { content: d?.content ?? "", neighbors: d?.neighbors ?? [] };
+  const d = data as { content?: string; neighbors?: CatalogNeighbor[]; catalog_total_compared?: number } | null;
+  return {
+    content: d?.content ?? "",
+    neighbors: d?.neighbors ?? [],
+    catalogTotalCompared: d?.catalog_total_compared ?? 0,
+  };
 }
 
 // ── HOOK ─────────────────────────────────────────────────────────────────────
@@ -512,7 +517,7 @@ export function useMusicDNA(): UseMusicDNAReturn {
       appendLog("🎧  Selecionando referências artísticas próximas…");
 
       const prompt = buildPrompt(input, realAnalysis, instrumentResult, selectedReferences, externalLookup);
-      const { content: rawText, neighbors: catalogNeighbors } = await callMusicDNAAnalyze(prompt, {
+      const { content: rawText, neighbors: catalogNeighbors, catalogTotalCompared } = await callMusicDNAAnalyze(prompt, {
         features: externalLookup?.features,
         genero: input.genre,
         track_name: input.name,
@@ -546,6 +551,7 @@ export function useMusicDNA(): UseMusicDNAReturn {
         detectedInstruments,
         instrumentDetection: instrumentResult,
         catalogNeighbors,
+        catalogTotalCompared,
       };
     },
 

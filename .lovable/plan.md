@@ -1,120 +1,112 @@
-## Objetivo
 
-Aumentar a precisão do match do DNA Musical incorporando features do `music_reference_tracks` que hoje são ignoradas, e tornar visível ao usuário **quais faixas reais do catálogo** mais se parecem com a dele.
+# Plano — Revisão CX completa da tela de resultados do DNA Musical
 
-Sem mudanças no front de extração de áudio (Fase 3 com MFCC/chroma fica para depois).
+Aplicar as 10 melhorias identificadas na auditoria, mantendo o estilo macOS minimalista (light mode, glassmorphism, tokens existentes) e a persona técnica/acolhedora do módulo.
 
----
+## Escopo por arquivo
 
-## Fase 1 — Distância escalar enriquecida (puro SQL)
+### 1. `src/components/music-dna/MusicDNAAnalyzer.tsx` (mudanças principais)
 
-**Migração nova:** estender `find_nearest_reference_tracks` adicionando 6 features escalares e bônus de tonalidade. Mantém compatibilidade (todos os novos parâmetros opcionais com default `NULL`).
+**a) Resumo executivo confiável (#2)**
+- Em `ExecutiveSummary`, remover fallbacks `?? -14` / `?? -1` / `?? 8`. Se LUFS, True Peak ou DR forem `null/undefined`, status passa a `{ label: "Análise incompleta", tone: "warning" }`.
+- Adicionar tom `warning` (amarelo/âmbar via `bg-amber-100 text-amber-800 border-amber-300`) ao mapa `toneClass`.
 
-Novos parâmetros:
-- `p_speechiness numeric` — peso ×1.0
-- `p_liveness numeric` — peso ×0.8
-- `p_spectral_bandwidth numeric` — peso /1500
-- `p_spectral_rolloff numeric` — peso /3000
-- `p_spectral_flatness numeric` — peso ×5.0
-- `p_zero_crossing_rate numeric` — peso ×4.0
-- `p_key_name text`, `p_mode text` — bônus −0.3 se ambos batem, −0.15 se só `key_name` bate
+**b) Bloco de confiança da análise (#7)**
+- Acrescentar rodapé no `ExecutiveSummary` com 3 chips compactos:
+  - "BPM: alta/média/baixa confiança" (deriva de `realAnalysis.tempo_confidence` se presente; fallback: omitir).
+  - "Catálogo comparado: N faixas" (vem de `catalogNeighbors?.length` + total — passar contagem total via prop opcional).
+  - "Trecho analisado: 0:00–X:XX" (de `realAnalysis.duration_sec`).
 
-Termos `COALESCE(..., 0)` garantem que features ausentes simplesmente não pesam (não viram NULL na soma).
+**c) CTA primário no resumo (#9)**
+- Botão "Adicionar todas as próximas ações ao checklist" abaixo do grid de 3 colunas, dispara `addTask` em loop sobre `proximos_passos`.
+- Mover `<NextStepsBar>` para **depois** de `<ExecutiveSummary>` (#8) — hoje aparece antes (linha 1017).
 
-Retorno ganha colunas: `speechiness`, `liveness`, `spectral_flatness`, `zero_crossing_rate` (para o front exibir).
+**d) Métricas com indicador de alvo (#3)**
+- Substituir os 6 `Card` simples (linha 1217) por novo subcomponente `MetricCard` que recebe `{ label, value, unit, target, range, help }` e renderiza:
+  - Valor grande
+  - Ícone de status (`CheckCircle2` / `AlertTriangle` / `XCircle` do lucide) baseado em comparação com `target ± tolerance`
+  - Mini-barra horizontal (`<div>` com `bg-muted` e indicador `bg-primary`) mostrando posição do valor no range esperado
+- Targets fixos: LUFS [-16,-10] (alvo -14), True Peak [-2,0] (alvo -1), DR [6,14] (alvo 8), BPM/Tom/Duração sem indicador (manter cards atuais).
 
-**Edge function `music-dna-analyze`:** passar os novos parâmetros a partir de `payload.track_features` (já temos `spectral_centroid`; os demais ficam `null` por enquanto até a Fase 3 extrair de fato — o algoritmo continua funcionando porque os termos viram 0).
+**e) Unificar cards de referências em tabs (#1)**
+- Substituir os dois `DiagCard` separados (linhas 1123 e 1167) por **um único `DiagCard`** com `<Tabs>` interno:
+  - Tab 1: "Catálogo real" (atual `catalogNeighbors`, com deltas técnicos)
+  - Tab 2: "Sugestões da IA" (atual `referencias_proximas`, com `motivo`)
+- Microcopy explícita no header do card: "Comparação técnica com nosso catálogo (CSV) + sugestões estilísticas geradas pela IA".
+- Mover esse card unificado para a seção `#dna-referencias` (deixa de duplicar em `#dna-acoes`).
 
-**Benchmark de gênero:** estender `music_dna_benchmarks` com:
-- `avg_spectral_centroid`, `avg_spectral_flatness`, `avg_zero_crossing_rate`, `avg_dynamic_range_db`
+**f) Vizinhos clicáveis com modal de detalhe (#6)**
+- Tornar cada linha de vizinho um `<button>` que abre novo componente `<NeighborDetailDialog>` (Dialog do shadcn) mostrando:
+  - Cabeçalho: band + filename + genre + similarity %
+  - Comparação lado-a-lado das 6 métricas (sua faixa vs vizinho) com setas ↑↓
+  - Tooltip explicando cada delta em linguagem do artista ("Sua faixa está 2 dB mais baixa — para ficar competitiva no Spotify, considere subir o nível geral no master")
+  - (Player de preview fica como nota: não há áudio dos vizinhos no banco, então omitido nesta fase — adicionar TODO comentado)
 
-E atualizar `recalcular_benchmark_genero` para popular esses campos a partir de `music_reference_tracks` (a tabela `music_dna_analyses` não tem essas colunas, então só entra `music_reference_tracks` para esses 4 novos avg).
+**g) Sticky nav alinhada às seções reais (#4)**
+- Atualizar array do menu (linha 1019-1024) para refletir 5 seções consolidadas:
+  - "Resumo" → `#dna-resumo`
+  - "Ações" → `#dna-acoes`
+  - "Identidade" → `#dna-identidade`
+  - "Referências" → `#dna-referencias`
+  - "Técnico" → `#dna-tecnico` (engloba Perfil acústico via collapse)
+- Mover a seção `#dna-identidade` (linha 1190) para **logo abaixo** do Resumo Executivo e acima de Ações (mental model: entender → agir).
+- Aglutinar `#dna-perfil` (Perfil acústico) dentro do `DetailSection` Técnico via subdivisão visual.
 
-## Fase 2 — Mostrar os vizinhos no resultado
+**h) Tipografia acessível (#5)**
+- Substituir tokens `text-[10px]` e `text-[11px]` em **conteúdo de leitura** por `text-xs` (12px) ou `text-sm` (14px) onde for corpo de parágrafo.
+- Manter `text-[11px] font-mono` apenas em **labels** (uppercase tracking-widest) — convenção macOS.
+- Trocar combinações `text-muted-foreground` em `bg-muted/30` por `text-foreground/70` para passar contraste WCAG AA (≥4.5:1).
+- Subir `text-xs` → `text-sm` no `diagnostico_resumo` (linha 316), nos `pontos_fortes`/`gargalos_criativos` (linhas 1080, 1090) e nos `sugestoes_arranjo` (linha 1106).
 
-Hoje `nearestNeighbors` é injetado só no prompt da IA. Vamos expor no UI.
+**i) Contexto de projeto vinculado (#10)**
+- No header (linha 988-1015), se `input_metadata.project_id` existir, mostrar breadcrumb: `← Projeto: {nome}` clicável que volta para `/projects?id={projectId}`.
+- Adicionar badge "Vinculado ao projeto X" ao lado do badge de gênero.
 
-**Edge function:** quando `action !== "save_features"` e tivermos `nearestNeighbors`, devolver também no JSON da resposta:
-```json
-{ "content": "...", "neighbors": [...] }
-```
+### 2. `src/hooks/useMusicDNA.ts`
+- Tipo `DiagnosisResult`: adicionar campos opcionais `tempo_confidence?: number`, `catalog_total_compared?: number`, `linked_project_id?: string`, `linked_project_name?: string`.
+- Em `callMusicDNAAnalyze`, capturar `catalog_total_compared` da resposta da edge function.
 
-**`useMusicDNA.ts`:**
-- `callMusicDNAAnalyze` passa a retornar `{ content, neighbors }`.
-- `DiagnosisResult` ganha `catalogNeighbors?: CatalogNeighbor[]` com tipo: `{ band, filename, genre, similarity_score, tempo_bpm, lufs_integrated, key_name, mode, energy, danceability, valence, dynamic_range_db, spectral_centroid }`.
-- Preenche `catalogNeighbors` no objeto retornado.
+### 3. `supabase/functions/music-dna-analyze/index.ts`
+- Após o RPC `find_nearest_reference_tracks`, adicionar `count` query em `music_reference_tracks` (filtrado por gênero quando aplicável) e retornar `catalog_total_compared` no JSON final.
+- Sem mudanças de schema necessárias.
 
-**`MusicDNAAnalyzer.tsx`:** novo card "Faixas mais próximas no catálogo" dentro do resultado, perto de `referencias_proximas`. Para cada vizinho:
-- Linha: `Banda — Filename` + badge `similaridade XX%` (= `similarity_score * 100`).
-- Sub-linha com 3 deltas relevantes calculados contra `result.realAnalysis`:
-  - `ΔBPM`, `ΔLUFS`, `Δenergy` (formatados pt-BR, com sinal).
-- Visual macOS: card glassmorphism, lista compacta, `border-b border-border` entre itens (mesmo padrão de `referencias_proximas`).
+### 4. Novo componente: `src/components/music-dna/NeighborDetailDialog.tsx`
+- Dialog do shadcn, ~120 linhas
+- Props: `neighbor: CatalogNeighbor`, `userTrack: { bpm, lufs, energy, key, dynamic_range, spectral_centroid }`, `open`, `onOpenChange`
+- Renderiza grid 2 colunas (sua faixa | vizinho) com 6 métricas, cada uma com seta de delta e copy interpretativa.
 
-Incluir tooltip explicando que esses vizinhos vêm do catálogo de referência interno (CSV importado) e que a IA usou essa lista para fundamentar `referencias_proximas`.
+### 5. Novo subcomponente: `MetricCard` (inline em `MusicDNAAnalyzer.tsx` ou novo arquivo)
+- Encapsula card + indicador de status + mini-barra de alvo, conforme item (d).
 
-**Markdown / PDF de exportação:** `buildAnalysisMarkdown` e `downloadAnalysisReport` ganham seção "Vizinhos no catálogo" com a mesma lista (sem deltas).
-
-## Detalhes técnicos
-
-### Estrutura do cálculo da nova `find_nearest_reference_tracks`
+## Estrutura visual final da tela
 
 ```text
-distance =
-    |Δtempo|/40              + |ΔLUFS|/8
-  + |Δenergy|×1.2            + |Δdanceability|×1.0
-  + |Δvalence|×0.8           + |Δacousticness|×0.8
-  + |Δinstrumentalness|×0.6  + |Δdynamic_range|/10
-  + |Δspectral_centroid|/2000
-  + |Δspeechiness|×1.0       + |Δliveness|×0.8           [NOVOS]
-  + |Δspectral_bandwidth|/1500
-  + |Δspectral_rolloff|/3000
-  + |Δspectral_flatness|×5.0
-  + |Δzero_crossing_rate|×4.0
-  + bônus de gênero (existente)
-  + bônus de key/mode                                    [NOVO]
-
-similarity_score = 1 / (1 + distance)
+[Header com gênero + (novo) breadcrumb projeto + status]
+[Resumo Executivo  ←  com (novo) chips de confiança e CTA "Adicionar tudo"]
+[NextStepsBar      ←  movido para cá]
+[Sticky nav: Resumo | Identidade | Ações | Referências | Técnico]
+[Identidade da Faixa  ←  promovida da posição inferior]
+[Próximos passos | Pontos fortes / Gargalos | Sugestões de arranjo]
+[Card unificado Referências (Tabs: Catálogo real | Sugestões IA)]
+   └── linhas clicáveis → NeighborDetailDialog
+[Métricas (6 cards com indicador ✓/⚠/✗ + mini-barra)]
+[Diagnóstico Técnico]
+[Análise de seções]
+[Perfil acústico (dentro de Técnico colapsável)]
 ```
 
-### Tipos novos em `useMusicDNA.ts`
+## Itens explicitamente fora do escopo
 
-```ts
-export interface CatalogNeighbor {
-  band: string; filename: string; genre: string;
-  similarity_score: number;
-  tempo_bpm: number | null;
-  lufs_integrated: number | null;
-  key_name: string | null; mode: string | null;
-  energy: number | null; danceability: number | null; valence: number | null;
-  dynamic_range_db: number | null; spectral_centroid: number | null;
-}
-```
+- Player de áudio dos vizinhos do catálogo (não há URLs no banco) — registrar TODO.
+- Re-design completo do `BenchmarkPanel` — mantido como está.
+- Mudanças no PDF/markdown export (`buildAnalysisMarkdown`, `generatePDF`) — ficam para iteração seguinte.
+- Mudanças no fluxo mobile (collapsibles permanecem; só ajustes de tipografia se aplicam).
 
-### Compatibilidade
+## Validação após implementação
 
-- A migração **substitui** `find_nearest_reference_tracks` via `CREATE OR REPLACE FUNCTION` com a mesma assinatura base + novos parâmetros opcionais. A chamada atual da edge function continua válida porque PG aceita parâmetros nomeados.
-- `music_dna_benchmarks` ganha colunas nullable, sem default destrutivo.
-- Front continua funcionando se `neighbors` vier vazio (renderiza só se `catalogNeighbors?.length`).
+1. Subir uma faixa com áudio incompleto (LUFS faltando) → confirmar badge "Análise incompleta".
+2. Verificar mini-barras nos 6 cards técnicos com valores extremos (LUFS −24 e −6).
+3. Clicar num vizinho → dialog abre com comparação lado-a-lado.
+4. Conferir contraste e tamanho dos textos no Lighthouse / DevTools.
+5. Sticky nav rola para cada uma das 5 seções corretamente.
 
-## Fora do escopo desta etapa
-
-- Extração real de MFCC / chroma / spectral_contrast no front (Fase 3, exige integrar `meyda` em `analyzeAudioFull`).
-- Distância tímbrica vetorial via `array_l2_distance` (Fase 3).
-- pgvector / HNSW (Fase 4, só se catálogo crescer >5k faixas).
-- Tabela `harmonic_neighbors` para tons relacionados (extensão futura do bônus key/mode).
-
-## Arquivos afetados
-
-- **Migração SQL** (nova): redefine `find_nearest_reference_tracks`, estende `music_dna_benchmarks`, redefine `recalcular_benchmark_genero`.
-- `supabase/functions/music-dna-analyze/index.ts`: monta novos parâmetros da RPC; devolve `neighbors` no JSON.
-- `src/hooks/useMusicDNA.ts`: tipo `CatalogNeighbor`, propaga `catalogNeighbors` no `DiagnosisResult`.
-- `src/components/music-dna/MusicDNAAnalyzer.tsx`: novo card de vizinhos + entradas no markdown e no PDF.
-
-## Teste manual após deploy
-
-1. Subir uma demo no DNA Musical com gênero válido (ex.: "Sertanejo").
-2. Verificar no resultado:
-   - Card "Faixas mais próximas no catálogo" aparece com 3–6 itens, similaridades entre 0–100%.
-   - `referencias_proximas` (gerado pela IA) cita band+filename que aparecem na lista de vizinhos.
-3. Trocar o gênero e refazer — vizinhos mudam priorizando o novo gênero.
-4. Exportar PDF e markdown — seção "Vizinhos no catálogo" presente.
