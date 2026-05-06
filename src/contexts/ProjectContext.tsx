@@ -318,6 +318,13 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
 
       setProjects((prev) => [newProj, ...prev]);
       setTracks((prev) => ({ ...prev, [newProj.id]: initialTracks }));
+      trackAppEvent("project_created", {
+        project_id: newProj.id,
+        project_type: newProj.projectType,
+        stage: newProj.stage,
+        genre: data.genre ?? null,
+        track_count: initialTracks.length,
+      });
       return newProj;
     },
     [user],
