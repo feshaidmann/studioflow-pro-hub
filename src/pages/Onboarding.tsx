@@ -117,7 +117,9 @@ export default function Onboarding() {
   const [viewMode, setViewMode] = useState<"basic" | "advanced">("basic");
   const [pain, setPain] = useState("");
   const [artistName, setArtistName] = useState("");
+  const [stateUf, setStateUf] = useState("");
   const [city, setCity] = useState("");
+  const [customCity, setCustomCity] = useState(false);
 
   const nameRef = useRef<HTMLInputElement>(null);
 
