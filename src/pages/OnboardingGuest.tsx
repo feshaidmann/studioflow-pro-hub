@@ -104,18 +104,46 @@ export default function OnboardingGuest() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="g-city" className="text-xs text-muted-foreground flex items-center gap-1">
-                  <MapPin className="h-3 w-3" /> Cidade <span className="text-muted-foreground/50">(opcional)</span>
+                <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                  <MapPin className="h-3 w-3" /> Estado <span className="text-muted-foreground/50">(opcional)</span>
                 </Label>
-                <Input
-                  id="g-city"
-                  value={city}
-                  onChange={(e) => setCity(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter" && canAdvance) setStep(2); }}
-                  placeholder="Ex: São Paulo, Rio de Janeiro…"
-                  maxLength={60}
-                />
+                <Select value={stateUf} onValueChange={(v) => { setStateUf(v); setCity(""); setCustomCity(false); }}>
+                  <SelectTrigger><SelectValue placeholder="Selecione seu estado" /></SelectTrigger>
+                  <SelectContent className="max-h-72">
+                    {BRAZIL_STATES.map((s) => (
+                      <SelectItem key={s.uf} value={s.uf}>{s.name} ({s.uf})</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
+              {stateUf && !customCity && (
+                <div className="space-y-1.5 animate-fade-in">
+                  <Label className="text-xs text-muted-foreground">Cidade <span className="text-muted-foreground/50">(opcional)</span></Label>
+                  <Select value={city} onValueChange={(v) => { if (v === "__other") { setCustomCity(true); setCity(""); } else setCity(v); }}>
+                    <SelectTrigger><SelectValue placeholder="Selecione sua cidade" /></SelectTrigger>
+                    <SelectContent className="max-h-72">
+                      {(TOP_CITIES_BY_UF[stateUf] ?? []).map((c) => (
+                        <SelectItem key={c} value={c}>{c}</SelectItem>
+                      ))}
+                      <SelectItem value="__other">Outra cidade…</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              {stateUf && customCity && (
+                <div className="space-y-1.5 animate-fade-in">
+                  <Label htmlFor="g-city" className="text-xs text-muted-foreground">Digite sua cidade</Label>
+                  <Input
+                    id="g-city"
+                    value={city}
+                    onChange={(e) => setCity(e.target.value)}
+                    placeholder="Ex: Pirassununga"
+                    maxLength={60}
+                    autoFocus
+                  />
+                  <button type="button" onClick={() => { setCustomCity(false); setCity(""); }} className="text-[11px] text-primary hover:underline">← Voltar para lista</button>
+                </div>
+              )}
               <Button onClick={() => setStep(2)} disabled={!canAdvance} className="w-full gap-2" size="lg">
                 Próximo <ArrowRight className="h-4 w-4" />
               </Button>
