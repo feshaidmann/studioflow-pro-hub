@@ -214,6 +214,16 @@ export default function Onboarding() {
       onboarding_completed: true,
     });
 
+    trackAppEvent("onboarding_completed", {
+      moment,
+      pain,
+      state: stateUf || null,
+      view_mode: viewMode,
+      project_type: projectType,
+      created_project: !!projectId,
+      project_id: projectId ?? null,
+    });
+
     navigate(projectId ? `/projects/${projectId}` : "/dashboard", { replace: true });
   };
 
