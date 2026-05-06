@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/contexts/ProfileContext";
 import { toast } from "sonner";
+import { trackAppEvent } from "@/lib/analytics";
 
 export const FOLDERS = [
   { key: "composicao", label: "Composição", icon: "Music" },
@@ -114,6 +115,12 @@ export function useProjectFiles(projectId: string) {
 
       const newFile = dbToFile(row);
       setFiles((prev) => [newFile, ...prev]);
+      trackAppEvent("file_uploaded", {
+        project_id: projectId,
+        folder,
+        mime_type: file.type,
+        size_kb: Math.round(file.size / 1024),
+      });
       toast.success("Arquivo enviado!");
       return newFile;
     } finally {

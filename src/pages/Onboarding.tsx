@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { trackAppEvent } from "@/lib/analytics";
 import { useNavigate, Navigate } from "react-router-dom";
 import {
   Music, Mic2, ArrowRight, MapPin, Check, Layers,
@@ -212,6 +213,16 @@ export default function Onboarding() {
       main_pain: pain,
       onboarding_version: 2,
       onboarding_completed: true,
+    });
+
+    trackAppEvent("onboarding_completed", {
+      moment,
+      pain,
+      state: stateUf || null,
+      view_mode: viewMode,
+      project_type: projectType,
+      created_project: !!projectId,
+      project_id: projectId ?? null,
     });
 
     navigate(projectId ? `/projects/${projectId}` : "/dashboard", { replace: true });

@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { BRAZIL_STATES, TOP_CITIES_BY_UF } from "@/constants/brazilStates";
+import { trackAppEvent } from "@/lib/analytics";
 
 const MOMENTS = [
   { value: "idea", label: "Tenho uma ideia", icon: Lightbulb },
@@ -55,6 +56,14 @@ export default function OnboardingGuest() {
       main_pain: "organization",
       onboarding_version: 2,
       onboarding_completed: true,
+    });
+    trackAppEvent("onboarding_completed", {
+      moment: selectedMoment || moment || "producing",
+      pain: "organization",
+      state: stateUf || null,
+      view_mode: "basic",
+      origin: "guest",
+      created_project: false,
     });
     navigate("/dashboard", { replace: true });
   };

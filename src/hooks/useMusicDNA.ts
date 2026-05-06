@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { trackAppEvent } from "@/lib/analytics";
 import { analyzeAudioFull, type AnalysisResult, type RealAudioAnalysis, type AudioSection } from "@/lib/audioAnalysis";
 import { detectInstruments, type InstrumentDetection } from "@/lib/instrumentDetection";
 import { lookupMusicDnaReferences, type MusicDnaLookupResult } from "@/lib/musicDnaLookup";
@@ -526,6 +527,13 @@ export function useMusicDNA(): UseMusicDNAReturn {
 
     onSuccess: (data) => {
       setResult(data);
+      trackAppEvent("audio_analyzed", {
+        genre: null,
+        bpm: data.realAnalysis?.bpm ?? null,
+        lufs: data.realAnalysis?.lufs_integrated ?? null,
+        source: data.externalLookup?.fonte ?? "local",
+        instruments_count: data.detectedInstruments?.length ?? 0,
+      });
       toast.success("Diagnóstico gerado com sucesso");
     },
 
