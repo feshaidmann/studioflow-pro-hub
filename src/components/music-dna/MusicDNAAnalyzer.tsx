@@ -914,7 +914,19 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
     referencias_proximas, pontos_fortes, gargalos_criativos,
     sugestoes_arranjo, proximos_passos, diagnostico_resumo,
     distance, trackFeatures, refFeatures, audioAnalysis, realAnalysis, externalLookup,
+    catalogNeighbors,
   } = diagnosis;
+
+  const fmt = (n: number | null | undefined, digits = 1) =>
+    typeof n === "number" && Number.isFinite(n)
+      ? n.toLocaleString("pt-BR", { minimumFractionDigits: digits, maximumFractionDigits: digits })
+      : "—";
+  const fmtDelta = (a: number | null | undefined, b: number | null | undefined, digits = 1) => {
+    if (typeof a !== "number" || !Number.isFinite(a) || typeof b !== "number" || !Number.isFinite(b)) return "—";
+    const d = a - b;
+    const sign = d > 0 ? "+" : d < 0 ? "−" : "±";
+    return `${sign}${Math.abs(d).toLocaleString("pt-BR", { minimumFractionDigits: digits, maximumFractionDigits: digits })}`;
+  };
 
   const formatDuration = (sec: number) =>
     `${Math.floor(sec / 60)}:${String(Math.round(sec % 60)).padStart(2, "0")}`;
