@@ -115,6 +115,12 @@ export function useProjectFiles(projectId: string) {
 
       const newFile = dbToFile(row);
       setFiles((prev) => [newFile, ...prev]);
+      trackAppEvent("file_uploaded", {
+        project_id: projectId,
+        folder,
+        mime_type: file.type,
+        size_kb: Math.round(file.size / 1024),
+      });
       toast.success("Arquivo enviado!");
       return newFile;
     } finally {
