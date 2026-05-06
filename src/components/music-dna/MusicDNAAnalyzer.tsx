@@ -43,6 +43,7 @@ import { spotifyFeaturesFromDiagnosis, FEATURE_DESCRIPTIONS, type MusicDnaBenchm
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { NeighborDetailDialog } from "@/components/music-dna/NeighborDetailDialog";
+import { AcousticMatchPanel } from "@/components/music-dna/AcousticMatchPanel";
 import {
   Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList,
   BreadcrumbPage, BreadcrumbSeparator,
@@ -1576,6 +1577,12 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
               </div>
             </CardContent>
           </Card>
+        </DetailSection>
+      )}
+
+      {realAnalysis && (
+        <DetailSection id="dna-acoustic-match" icon="🎯" title="Match acústico (catálogo local)">
+          <AcousticMatchPanel analysis={realAnalysis} />
         </DetailSection>
       )}
 
