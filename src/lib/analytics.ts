@@ -27,13 +27,13 @@ export async function trackAppEvent(
     const userId = auth?.user?.id;
     if (!userId) return;
     const { project_id = null, ...rest } = props ?? {};
-    await supabase.from("analytics_events").insert({
+    await supabase.from("analytics_events").insert([{
       user_id: userId,
       event_name: eventName,
       project_id: project_id ?? null,
-      properties: rest as Record<string, unknown>,
+      properties: rest as never,
       session_id: getSessionId(),
-    });
+    }] as never);
     if (initialized) posthog.capture(eventName, props);
   } catch (err) {
     console.warn("[analytics] trackAppEvent failed", eventName, err);
