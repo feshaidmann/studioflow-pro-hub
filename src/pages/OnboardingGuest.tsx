@@ -48,6 +48,7 @@ export default function OnboardingGuest() {
     await updateProfile({
       display_name: name.trim(),
       city: city.trim(),
+      state: stateUf || null,
       user_type: "artist",
       track_view_mode: "basic",
       current_moment: selectedMoment || moment || "producing",
