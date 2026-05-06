@@ -1042,6 +1042,8 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
 }) {
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [addedItems, setAddedItems] = useState<Set<string>>(new Set());
+  const [allStepsAdded, setAllStepsAdded] = useState(false);
+  const [openNeighbor, setOpenNeighbor] = useState<CatalogNeighbor | null>(null);
   const { addTask } = useTasks();
   const {
     identidade, diagnostico_tecnico, analise_seccoes,
