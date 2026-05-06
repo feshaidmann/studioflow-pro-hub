@@ -306,6 +306,45 @@ export default function ReferenceTracks() {
       </Card>
 
       <Card>
+        <CardHeader className="flex flex-row items-start justify-between gap-3">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <PackageCheck className="h-4 w-4" /> Snapshot acústico (catálogo público)
+            </CardTitle>
+            <CardDescription>
+              Gera <code>creative-assets/acoustic-catalog/v1.json</code> com todas as faixas de referência (MFCC + Chroma + métricas físicas).
+              Consumido pelo painel de Match Acústico no Music DNA.
+            </CardDescription>
+          </div>
+          <Button onClick={handleGenerateSnapshot} disabled={snapshotting}>
+            {snapshotting ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Gerando…</> : <><RefreshCw className="h-4 w-4 mr-2" />Gerar snapshot</>}
+          </Button>
+        </CardHeader>
+        <CardContent>
+          {snapshot ? (
+            <div className="text-sm space-y-1">
+              <div><strong>{snapshot.count}</strong> faixas · {(snapshot.size_bytes / 1024).toFixed(0)} KB</div>
+              <div className="text-muted-foreground">
+                Gerado em {new Date(snapshot.generated_at).toLocaleString("pt-BR")}
+              </div>
+              <a
+                href={snapshot.public_url}
+                target="_blank"
+                rel="noreferrer"
+                className="text-xs font-mono text-primary hover:underline break-all"
+              >
+                {snapshot.public_url}
+              </a>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Nenhum snapshot encontrado ainda. Clique em <strong>Gerar snapshot</strong>.
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
             <CardTitle>Cobertura de Benchmarks</CardTitle>
