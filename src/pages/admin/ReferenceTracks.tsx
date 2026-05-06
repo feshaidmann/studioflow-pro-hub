@@ -60,6 +60,47 @@ export default function ReferenceTracks() {
   const [coverage, setCoverage] = useState<CoverageRow[]>([]);
   const [loadingMeta, setLoadingMeta] = useState(false);
   const [recalcAll, setRecalcAll] = useState(false);
+  const [snapshotting, setSnapshotting] = useState(false);
+  const [snapshot, setSnapshot] = useState<{ count: number; generated_at: string; size_bytes: number; public_url: string } | null>(null);
+
+  const SNAPSHOT_BUCKET = "creative-assets";
+  const SNAPSHOT_PATH = "acoustic-catalog/v1.json";
+
+  const refreshSnapshotMeta = async () => {
+    try {
+      const { data: pub } = supabase.storage.from(SNAPSHOT_BUCKET).getPublicUrl(SNAPSHOT_PATH);
+      const res = await fetch(pub.publicUrl, { cache: "no-store" });
+      if (!res.ok) {
+        setSnapshot(null);
+        return;
+      }
+      const json = await res.json();
+      setSnapshot({
+        count: json.count,
+        generated_at: json.generated_at,
+        size_bytes: Number(res.headers.get("content-length") ?? 0),
+        public_url: pub.publicUrl,
+      });
+    } catch {
+      setSnapshot(null);
+    }
+  };
+
+  const handleGenerateSnapshot = async () => {
+    setSnapshotting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("export-acoustic-catalog", { body: {} });
+      if (error) throw error;
+      toast.success(`Snapshot gerado: ${data?.count ?? "?"} faixas`);
+      // Clear browser session cache so MusicDNAAnalyzer pulls the fresh version
+      try { sessionStorage.removeItem("acoustic-catalog:v1"); } catch { /* ignore */ }
+      await refreshSnapshotMeta();
+    } catch (e) {
+      toast.error(`Falha ao gerar snapshot: ${(e as Error).message}`);
+    } finally {
+      setSnapshotting(false);
+    }
+  };
 
   const refreshMeta = async () => {
     setLoadingMeta(true);
