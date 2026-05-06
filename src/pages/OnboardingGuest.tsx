@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { BRAZIL_STATES, TOP_CITIES_BY_UF } from "@/constants/brazilStates";
+import { trackAppEvent } from "@/lib/analytics";
 
 const MOMENTS = [
   { value: "idea", label: "Tenho uma ideia", icon: Lightbulb },
