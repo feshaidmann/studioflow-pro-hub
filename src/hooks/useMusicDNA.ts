@@ -125,6 +125,7 @@ export interface DiagnosisResult {
   detectedInstruments: string[];
   instrumentDetection: InstrumentDetection;
   catalogNeighbors?: CatalogNeighbor[];
+  catalogTotalCompared?: number;
 }
 
 // ── CONSTANTS ────────────────────────────────────────────────────────────────
