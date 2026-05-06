@@ -1146,11 +1146,14 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
         </div>
       </div>
 
+      <ExecutiveSummary diagnosis={diagnosis} onAddAllSteps={handleAddAllSteps} allStepsAdded={allStepsAdded} />
+
       <NextStepsBar diagnosis={diagnosis} input={input} isSaved={!!isSaved} savedAnalysisId={savedAnalysisId} />
 
       <div className="sticky top-2 z-20 -mx-1 flex gap-1.5 overflow-x-auto rounded-lg border border-border bg-background/95 p-1 backdrop-blur animate-fade-in">
         {[
           { label: "Resumo", id: "dna-resumo" },
+          { label: "Identidade", id: "dna-identidade" },
           { label: "Ações", id: "dna-acoes" },
           { label: "Referências", id: "dna-referencias" },
           { label: "Técnico", id: "dna-tecnico" },
@@ -1171,8 +1174,6 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
           </Button>
         ))}
       </div>
-
-      <ExecutiveSummary diagnosis={diagnosis} />
 
       <section id="dna-acoes" className="scroll-mt-16 space-y-4">
         <DiagCard icon="🚀" title="Próximos passos de produção" variant="success">
