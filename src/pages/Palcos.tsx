@@ -258,39 +258,73 @@ function StartCandidaturaDialog({
               .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
               .replace(/[^a-z0-9_]/g, "_").replace(/_+/g, "_");
 
-            const { data: upserted } = await supabase
-              .from("editais")
-              .upsert({
-                user_id: session.user.id,
-                project_id: projectId !== "none" ? projectId : null,
-                tipo: "palco",
-                titulo: palco.nome,
-                orgao: palco.organizador,
-                estado: palco.estado || "",
-                area: "Música",
-                status: palco.status,
-                prazo: palco.prazo || null,
-                link: palco.link || "",
-                origem_url: palco.link || "",
-                inferido: false,
-                session_key: sk,
-                valor: palco.cachet_medio || "",
-                publico_alvo: palco.publico_estimado || "",
-                resumo: palco.resumo || "",
-                documentos_resumo: "",
-              } as any, { onConflict: "user_id,session_key" })
-              .select("id")
-              .single();
+            const payload = {
+              project_id: projectId !== "none" ? projectId : null,
+              tipo: "palco",
+              titulo: palco.nome,
+              orgao: palco.organizador,
+              estado: palco.estado || "",
+              area: "Música",
+              status: palco.status,
+              prazo: palco.prazo || null,
+              link: palco.link || "",
+              origem_url: palco.link || "",
+              inferido: false,
+              valor: palco.cachet_medio || "",
+              publico_alvo: palco.publico_estimado || "",
+              resumo: palco.resumo || "",
+              documentos_resumo: "",
+            };
 
-            if (upserted?.id) {
-              onConfirm({
-                edital_id: upserted.id,
-                project_id: projectId !== "none" ? projectId : null,
-                notas: notas.trim() || undefined,
-                tipo: "palco",
-                data_inscricao: dataInscricao || undefined,
-              });
+            // Índice único é parcial (WHERE session_key <> ''), então upsert
+            // com onConflict não funciona. Fazemos SELECT → UPDATE/INSERT.
+            const { data: existing, error: selErr } = await supabase
+              .from("editais")
+              .select("id")
+              .eq("user_id", session.user.id)
+              .eq("session_key", sk)
+              .maybeSingle();
+
+            if (selErr) {
+              console.error("[Palcos] select edital error", selErr);
+              toast.error("Erro ao buscar palco: " + selErr.message);
+              return;
             }
+
+            let editalId: string | undefined = existing?.id;
+
+            if (editalId) {
+              const { error: updErr } = await supabase
+                .from("editais")
+                .update(payload as any)
+                .eq("id", editalId);
+              if (updErr) {
+                console.error("[Palcos] update edital error", updErr);
+                toast.error("Erro ao salvar palco: " + updErr.message);
+                return;
+              }
+            } else {
+              const { data: inserted, error: insErr } = await supabase
+                .from("editais")
+                .insert({ ...payload, user_id: session.user.id, session_key: sk } as any)
+                .select("id")
+                .single();
+              if (insErr || !inserted) {
+                console.error("[Palcos] insert edital error", insErr);
+                toast.error("Erro ao criar palco: " + (insErr?.message || "desconhecido"));
+                return;
+              }
+              editalId = inserted.id;
+            }
+
+            onConfirm({
+              edital_id: editalId!,
+              project_id: projectId !== "none" ? projectId : null,
+              notas: notas.trim() || undefined,
+              tipo: "palco",
+              data_inscricao: dataInscricao || undefined,
+            });
+
             setProjectId("none");
             setNotas("");
             setDataInscricao("");
