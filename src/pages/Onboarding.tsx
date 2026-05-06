@@ -205,6 +205,7 @@ export default function Onboarding() {
     await updateProfile({
       display_name: name,
       city: city.trim(),
+      state: stateUf || null,
       user_type: "artist",
       track_view_mode: viewMode,
       current_moment: moment,
