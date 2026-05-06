@@ -6,7 +6,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { BRAZIL_STATES, TOP_CITIES_BY_UF } from "@/constants/brazilStates";
 
 const MOMENTS = [
   { value: "idea", label: "Tenho uma ideia", icon: Lightbulb },
