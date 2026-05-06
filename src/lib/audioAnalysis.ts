@@ -75,6 +75,10 @@ export interface RealAudioAnalysis {
   liveness: number;
   speechiness: number;
 
+  // Acoustic fingerprint (matches music_reference_tracks columns)
+  mfcc: number[];          // 13 coefficients (DCT-II of log-mel)
+  chroma_cens: number[];   // 12 pitch classes (L2-normalized)
+
   // Sections
   sections: AudioSection[];
 
