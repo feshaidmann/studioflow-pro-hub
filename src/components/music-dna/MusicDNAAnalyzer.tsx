@@ -1456,20 +1456,6 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
                 ))}
               </div>
             </DiagCard>
-          {diagnostico_tecnico && (
-            <DiagCard icon="🔬" title="Diagnóstico Técnico" variant="primary">
-              <div className="space-y-3">
-                {technicalItems.map((item) => (
-                  <div key={item.label} className="bg-muted/30 rounded-lg p-3 border-l-2 border-primary/30">
-                    <div className="mb-1 flex items-center justify-between gap-2 flex-wrap">
-                      <p className="text-[11px] font-mono uppercase tracking-widest text-primary">{item.label}</p>
-                      <p className="text-[11px] text-muted-foreground">{item.help}</p>
-                    </div>
-                    <p className="text-xs leading-relaxed">{item.text}</p>
-                  </div>
-                ))}
-              </div>
-            </DiagCard>
           )}
         </div>
       </DetailSection>
