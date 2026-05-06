@@ -424,13 +424,17 @@ Instruções por campo:
 }`.trim();
 }
 
-async function callMusicDNAAnalyze(prompt: string, payload: Record<string, unknown> = {}): Promise<string> {
+async function callMusicDNAAnalyze(
+  prompt: string,
+  payload: Record<string, unknown> = {},
+): Promise<{ content: string; neighbors: CatalogNeighbor[] }> {
   const { data, error } = await supabase.functions.invoke("music-dna-analyze", {
     body: { action: "generate_diagnosis", payload: { prompt, ...payload } },
   });
 
   if (error) throw new Error(error.message);
-  return (data as { content: string })?.content ?? "";
+  const d = data as { content?: string; neighbors?: CatalogNeighbor[] } | null;
+  return { content: d?.content ?? "", neighbors: d?.neighbors ?? [] };
 }
 
 // ── HOOK ─────────────────────────────────────────────────────────────────────
