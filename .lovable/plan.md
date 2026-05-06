@@ -1,66 +1,89 @@
-## Objetivo
-Fechar os 5 últimos itens do plano de CX da tela de resultados do DNA Musical (`src/components/music-dna/MusicDNAAnalyzer.tsx`). Tudo numa única edição, sem mudar contratos do hook nem da edge function.
+# Ajuste de precisão do comparativo do DNA Musical
 
-## 1. MetricCards técnicos com targets visuais
-Em `DetailSection #dna-tecnico` (linhas ~1350-1359), substituir o grid de 6 `Card` "burras" por 6 `<MetricCard />` (componente já existe na linha 394) passando `target` + `range`:
+Você está certo: o problema não é "reconhecer o nome da música". O problema é que o comparativo técnico está usando métricas de origens diferentes e uma função de distância que hoje gera ranking ruim.
 
-- LUFS — `range {min:-30,max:-6}`, `target {min:-15,max:-13,ideal:-14}`, unit `LUFS`
-- True Peak — `range {-6,0}`, `target {-2,-1,ideal:-1}`, unit `dBTP`
-- DR — `range {2,18}`, `target {7,12,ideal:9}`, unit `LU`
-- BPM — `range {40,200}`, sem target (neutro), digits 0
-- Tom — render como card simples (string), sem barra
-- Duração — string "MM:SS", neutro
+## Diagnóstico confirmado
 
-Para Tom/Duração mantém um sub-componente leve `MetricChip` (label + valor + help) reutilizando o mesmo visual mas sem barra/status. Valores vêm de `realAnalysis ?? audioAnalysis` (nunca usar fallback `?? -14`).
+No teste com `03. Linus And Lucy`, a faixa existe no catálogo, mas ficou fora do topo porque:
 
-## 2. Unificar referências em Tabs
-Trocar as duas seções `#dna-acoes`→"Faixas mais próximas no catálogo" (linhas 1256-1296) e `#dna-referencias`→"Referências mais próximas" (linhas 1300-1318) por **uma única** `DiagCard` dentro de `#dna-referencias` com `<Tabs>`:
+- A análise do usuário veio do navegador/Web Audio com BPM `76,9`, tom `C minor`, energy `0,80`.
+- A mesma faixa no catálogo está com BPM `123,05`, tom `G/G# major`, energy perto de `0,40`.
+- A busca atual compara esses números diretamente e ainda dá muito peso a `energy`, `danceability`, `valence`, `acousticness`, `instrumentalness`, `liveness`, que são heurísticas pouco estáveis entre extratores.
+- Além disso, quando uma métrica de entrada está ausente, a função atual usa `COALESCE(..., 0)`, o que reduz artificialmente a distância de faixas com valores faltantes e pode favorecer resultados errados.
 
-- Aba **"Catálogo Real"** (default) — lista atual de `catalogNeighbors` mantendo `NeighborDetailDialog` e badge `catalogTotalCompared` ("comparado contra N faixas").
-- Aba **"Sugestões IA"** — `referencias_proximas` com motivo + similaridade.
+Ou seja: o ranking falha porque está tratando features instáveis/heterogêneas como ground truth comparável.
 
-Manter `BenchmarkPanel` logo abaixo da DiagCard. Remover o bloco do catálogo de dentro de `#dna-acoes`.
+## Objetivo da correção
 
-## 3. Promover Identidade
-Reordenar o JSX para:
-1. Header + ExecutiveSummary
-2. NextStepsBar
-3. Sticky nav (atualizar para incluir Identidade no início)
-4. **`#dna-identidade`** (movido de baixo para cá)
-5. `#dna-acoes`
-6. `#dna-referencias` (com Tabs)
-7. `#dna-tecnico`
-8. demais DetailSections
+Fazer o catálogo real retornar referências tecnicamente coerentes, com ranking mais confiável, sem depender de match por nome de arquivo.
 
-Sticky nav vira: Resumo → Identidade → Ações → Referências → Técnico (já está, mas a ordem dos `<section>` no DOM precisa bater).
+## Plano de implementação
 
-## 4. Tipografia / contraste
-Substituições globais no componente:
-- `text-[10px]` → `text-xs` (linhas 1189, 1281, 1285, 1356; impacta deltas de catálogo, "Impacto:", labels de gênero do vizinho).
-- `text-[11px]` em parágrafos de conteúdo (não mono-uppercase) → `text-xs`. Manter `text-[11px] font-mono uppercase` nos rótulos de seção (eles funcionam como eyebrow).
-- Cor `text-muted-foreground` em corpo de leitura → `text-foreground/75` para WCAG AA.
-- Headings de DiagCard mantêm `text-xs font-mono uppercase`.
+### 1. Corrigir a função de similaridade do catálogo
 
-## 5. Breadcrumb ← Projeto X
-No header (linhas 1121-1147), antes de `<h2>{input.name}</h2>`, renderizar breadcrumb usando `@/components/ui/breadcrumb` quando `input.projectId` existir:
+Criar uma migration para substituir `find_nearest_reference_tracks` por uma versão calibrada:
 
-```
-Projetos / {project.name} / DNA Musical
-```
+- Separar métricas em grupos:
+  - Alta confiança: `lufs_integrated`, `dynamic_range_db`, `spectral_centroid`, `spectral_flatness`, `zero_crossing_rate`.
+  - Média confiança: `tempo_bpm`, `key_name`, `mode`.
+  - Baixa confiança: `energy`, `danceability`, `valence`, `acousticness`, `instrumentalness`, `liveness`, `speechiness`.
+- Reduzir fortemente o peso das métricas estilo Spotify geradas por heurística local.
+- Aumentar peso relativo de LUFS/DR/espectro, que são mais próximos de propriedades físicas do áudio.
+- Corrigir o tratamento de `NULL`: métrica ausente não deve virar distância zero; ela deve ser ignorada e o score normalizado pelo peso total disponível.
+- Tratar BPM com tolerância musical:
+  - considerar equivalência de half-time/double-time (`76,9` próximo de `153,8`, por exemplo);
+  - não deixar BPM sozinho dominar o ranking quando há divergência de extrator.
+- Manter bônus de gênero, mas menor que as métricas técnicas, para não forçar gênero quando a IA classificou errado.
 
-- Resolver nome via `useProjects()` (já importado em outro escopo) — mover hook para o componente `DiagnosisView` ou passar `projects` por prop.
-- Click em "Projetos" → `/projects`; click em `{project.name}` → `/projects/{projectId}`.
-- Sem `projectId`: breadcrumb não renderiza (mantém comportamento atual para análises avulsas).
+### 2. Enviar todas as métricas técnicas disponíveis para a busca
 
-## Detalhes técnicos
-- Arquivo único: `src/components/music-dna/MusicDNAAnalyzer.tsx`.
-- Sem migrations, sem mudança em `useMusicDNA`, sem mudar a edge function.
-- `MetricCard` já existe e suporta `target`/`range`; só precisa ser usada.
-- `Tabs` (`@/components/ui/tabs`) já existe.
-- `Breadcrumb*` (`@/components/ui/breadcrumb`) já existe.
-- `useProjects` já é importado no componente raiz; expor `projects` para `DiagnosisView` via prop (mais simples que re-chamar o hook lá dentro).
+Atualizar `src/hooks/useMusicDNA.ts` para mandar ao backend, além do que já envia:
 
-## Fora de escopo
-- Mudanças no schema, na RPC `find_nearest_reference_tracks`, ou na edge function.
-- Reescrita da `ExecutiveSummary` (já refeita na rodada anterior).
-- i18n PT/EN dos novos textos (segue PT, padrão atual da tela).
+- `duration_sec`
+- `spectral_rolloff`
+- `spectral_flatness`
+- `speechiness`
+- `liveness`
+- `key_name`
+- `mode`
+
+Hoje parte dessas métricas existe no cliente, mas não chega à função de catálogo. Isso empobrece o ranking.
+
+### 3. Ajustar o backend para usar o score calibrado como fonte de verdade
+
+Em `supabase/functions/music-dna-analyze/index.ts`:
+
+- Chamar a função recalibrada.
+- Enviar para a IA apenas os vizinhos já ranqueados pela função calibrada.
+- Ajustar o texto do prompt para deixar claro que as referências são "comparativos técnicos aproximados" e não uma identificação da obra.
+- Evitar que o modelo invente probabilidade alta quando o score técnico não sustenta isso.
+
+### 4. Melhorar a UI para não comunicar falsa certeza
+
+Na tela de resultados:
+
+- Trocar linguagem de "probabilidade" por "similaridade técnica" ou "proximidade técnica".
+- Mostrar um microtexto: "Comparação baseada em loudness, dinâmica, espectro, ritmo e atributos perceptivos; não é identificação por fingerprint".
+- Se o maior score ficar baixo, mostrar estado de baixa confiança: "Referências aproximadas; nenhuma faixa muito próxima no catálogo".
+- Se o score ficar alto, destacar como "Alta proximidade técnica".
+
+### 5. Validar com casos de controle
+
+Usar consultas de leitura para testar antes/depois em faixas conhecidas:
+
+- `03. Linus And Lucy`
+- pelo menos 2 faixas recentes do usuário que tenham correspondentes prováveis no catálogo
+- 1 faixa fora do catálogo para verificar se não há falso positivo
+
+O critério de sucesso não será "a própria faixa sempre em #1", porque sem fingerprint e com extratores diferentes isso não é tecnicamente garantível. O critério será: os vizinhos devem ser musicalmente e tecnicamente mais coerentes, e o score deve expressar confiança real.
+
+## Fora de escopo nesta etapa
+
+- Audio fingerprinting/Chromaprint.
+- Reprocessar todo o catálogo com o mesmo extrator do navegador.
+- Identificação por nome de arquivo/banda.
+- Mudanças no fluxo visual já aplicado anteriormente.
+
+## Resultado esperado
+
+Após o ajuste, o DNA Musical deixa de vender o ranking como "probabilidade de ser aquela banda" e passa a entregar uma comparação técnica calibrada, com confiança proporcional aos dados. Isso corrige a falha conceitual e melhora a utilidade dos resultados para análise musical real.
