@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import type { AnalysisResult } from "@/lib/audioAnalysis";
 import type { Project, MixTrack, Professional, Transaction, ProjectType } from "@/data/mockData";
+import { trackAppEvent } from "@/lib/analytics";
 
 /* ── Default tracks created for every new project ── */
 const defaultTracks: Omit<MixTrack, "id">[] = [
