@@ -144,6 +144,36 @@ export type Database = {
           },
         ]
       }
+      analytics_events: {
+        Row: {
+          created_at: string
+          event_name: string
+          id: string
+          project_id: string | null
+          properties: Json
+          session_id: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_name: string
+          id?: string
+          project_id?: string | null
+          properties?: Json
+          session_id?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_name?: string
+          id?: string
+          project_id?: string | null
+          properties?: Json
+          session_id?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       beta_feedback: {
         Row: {
           category: string
@@ -2155,7 +2185,15 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      analytics_funnel_daily: {
+        Row: {
+          day: string | null
+          event_name: string | null
+          total: number | null
+          unique_users: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       find_nearest_reference_tracks: {
