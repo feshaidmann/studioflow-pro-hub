@@ -247,7 +247,90 @@ function computeSpectralMetrics(mono: Float32Array, sampleRate: number): Spectra
   return { centroid, rolloff, flatness, magnitudes, freqPerBin };
 }
 
-// ── BPM Detection ────────────────────────────────────────────────────────────
+// ── MFCC + Chroma CENS (catalog-aligned acoustic fingerprint) ───────────────
+
+/**
+ * Computes 13 MFCC coefficients and 12-class Chroma CENS from the averaged
+ * magnitude spectrum produced by computeSpectralMetrics.
+ * - Mel filterbank: 40 triangular filters, 0–sampleRate/2
+ * - DCT-II of log-mel energies → first 13 coefficients (MFCC[0] = energy)
+ * - Chroma: bins folded into 12 pitch classes, L2-normalized (CENS-style)
+ */
+function computeMfccChroma(
+  magnitudes: Float64Array,
+  freqPerBin: number,
+  sampleRate: number,
+): { mfcc: number[]; chroma: number[] } {
+  const binCount = magnitudes.length;
+  const numFilters = 40;
+  const numCoefs = 13;
+
+  // Mel scale helpers
+  const hzToMel = (hz: number) => 2595 * Math.log10(1 + hz / 700);
+  const melToHz = (mel: number) => 700 * (Math.pow(10, mel / 2595) - 1);
+
+  const lowMel = hzToMel(0);
+  const highMel = hzToMel(sampleRate / 2);
+  const melPoints = new Float64Array(numFilters + 2);
+  for (let i = 0; i < melPoints.length; i++) {
+    melPoints[i] = lowMel + (i * (highMel - lowMel)) / (numFilters + 1);
+  }
+  const binPoints = new Float64Array(numFilters + 2);
+  for (let i = 0; i < melPoints.length; i++) {
+    binPoints[i] = melToHz(melPoints[i]) / freqPerBin;
+  }
+
+  // Apply triangular mel filters
+  const melEnergies = new Float64Array(numFilters);
+  for (let m = 0; m < numFilters; m++) {
+    const left = binPoints[m];
+    const center = binPoints[m + 1];
+    const right = binPoints[m + 2];
+    let sum = 0;
+    const kStart = Math.max(0, Math.floor(left));
+    const kEnd = Math.min(binCount - 1, Math.ceil(right));
+    for (let k = kStart; k <= kEnd; k++) {
+      let weight = 0;
+      if (k >= left && k <= center) {
+        weight = (k - left) / Math.max(center - left, 1e-10);
+      } else if (k > center && k <= right) {
+        weight = (right - k) / Math.max(right - center, 1e-10);
+      }
+      if (weight > 0) sum += magnitudes[k] * weight;
+    }
+    melEnergies[m] = Math.log(sum + 1e-10);
+  }
+
+  // DCT-II → MFCC
+  const mfcc: number[] = new Array(numCoefs);
+  for (let i = 0; i < numCoefs; i++) {
+    let s = 0;
+    for (let m = 0; m < numFilters; m++) {
+      s += melEnergies[m] * Math.cos((Math.PI * i * (m + 0.5)) / numFilters);
+    }
+    mfcc[i] = s;
+  }
+
+  // Chroma (12 pitch classes, A4=440Hz reference)
+  const chroma = new Float64Array(12);
+  for (let k = 1; k < binCount; k++) {
+    const freq = k * freqPerBin;
+    if (freq < 27.5 || freq > 5000) continue;
+    const pitchClass = Math.round(12 * Math.log2(freq / 440)) % 12;
+    const idx = (pitchClass + 12) % 12;
+    chroma[idx] += magnitudes[k];
+  }
+  // L2 normalize (CENS-style)
+  let norm = 0;
+  for (let i = 0; i < 12; i++) norm += chroma[i] * chroma[i];
+  norm = Math.sqrt(norm);
+  const chromaOut: number[] = new Array(12);
+  for (let i = 0; i < 12; i++) chromaOut[i] = norm > 1e-10 ? chroma[i] / norm : 0;
+
+  return { mfcc, chroma: chromaOut };
+}
+
+
 
 function detectBPM(mono: Float32Array, sampleRate: number): number {
   // Compute onset envelope using energy in short windows
