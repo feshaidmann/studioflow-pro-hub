@@ -41,13 +41,16 @@ import { LufsCompatibility } from "@/components/music-dna/LufsCompatibility";
 import { useMusicDnaBenchmarks, findBenchmarkForGenre } from "@/hooks/useMusicDnaBenchmarks";
 import { spotifyFeaturesFromDiagnosis, FEATURE_DESCRIPTIONS, type MusicDnaBenchmark, type SpotifyFeatures } from "@/types/musicDna";
 
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { NeighborDetailDialog } from "@/components/music-dna/NeighborDetailDialog";
+
 import {
   useMusicDNA,
   FEATURE_KEYS, FEATURE_LABELS,
   GENRE_PRESETS, calcDistance,
   toRadarData,
   type TrackInput, type Genre,
-  type DiagnosisResult, type AudioFeatures,
+  type DiagnosisResult, type AudioFeatures, type CatalogNeighbor,
 } from "@/hooks/useMusicDNA";
 
 // ── ZOD SCHEMA ───────────────────────────────────────────────────────────────
