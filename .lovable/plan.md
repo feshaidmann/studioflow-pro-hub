@@ -1,52 +1,55 @@
-# Rastreamento de eventos para funil de métricas
+## Diagnóstico
 
-Hoje o app usa PostHog (com chave placeholder, então nada é enviado) e a tabela `page_views` só guarda navegação. Para construir um funil próprio no banco (onboarding → projeto → upload → análise), vamos criar uma tabela dedicada e instrumentar os pontos-chave.
+A criação de candidatura no módulo Palcos falha silenciosamente. Causa raiz:
 
-## O que vamos entregar
+1. **Upsert em índice parcial não funciona.** A tabela `editais` tem um índice ÚNICO PARCIAL: `idx_editais_user_session_key ON (user_id, session_key) WHERE session_key <> ''`. O `supabase.from("editais").upsert(..., { onConflict: "user_id,session_key" })` usa `INSERT ... ON CONFLICT (user_id, session_key)` sem cláusula `WHERE`, que o Postgres rejeita ("there is no unique or exclusion constraint matching the ON CONFLICT specification"). O erro é ignorado em `StartCandidaturaDialog` (apenas `data` é desestruturado), `upserted` fica `null`, `onConfirm` nunca é chamado e nada acontece — o usuário vê o diálogo fechar e "Nenhuma candidatura ainda".
 
-1. **Tabela `analytics_events` no seu banco** — armazena cada evento com tipo, usuário, projeto associado, timestamp e propriedades flexíveis (JSON). Protegida por RLS: usuário insere os próprios eventos, admin lê tudo para montar o funil.
+2. **Erros silenciados.** O bloco do botão "Iniciar" não trata `error` nem mostra toast em caso de falha.
 
-2. **Helper `trackAppEvent(name, props)`** em `src/lib/analytics.ts` — escreve no Supabase (e também envia ao PostHog quando configurado, sem quebrar nada). Falha silenciosamente para nunca atrapalhar o fluxo do usuário.
+3. **Warning React (não bloqueia, mas suja o console):** `StartCandidaturaDialog` e `PalcoCard` recebem `ref` de wrappers (Radix `Tabs`/`Presence`) e disparam "Function components cannot be given refs". Resolver com `forwardRef`.
 
-3. **Instrumentação dos eventos do funil**:
-   - `onboarding_completed` — em `Onboarding.tsx` e `OnboardingGuest.tsx` (após `updateProfile` com `onboarding_completed: true`), com props: `moment`, `pain`, `state`, `view_mode`, `created_project` (bool).
-   - `project_created` — em `ProjectContext.addProject` (após insert), props: `project_id`, `project_type`, `stage`, `genre`, `from_onboarding` (bool).
-   - `project_updated` — em `ProjectContext.updateProject` quando `stage` muda, props: `project_id`, `from_stage`, `to_stage`.
-   - `project_completed` — quando `stage` vira `lancado` ou `completed=true`.
-   - `file_uploaded` — em `useProjectFiles.uploadFile` e `CollaboratorFilesTab` (após insert OK), props: `project_id`, `folder`, `mime_type`, `size_kb`.
-   - `audio_analyzed` — em `useMusicDNA` (após retorno da edge function `music-dna-analyze`), props: `genre`, `track_name`, `bpm`, `lufs`, `source` (`upload` ou `metadata_lookup`).
+## Mudanças
 
-4. **View `analytics_funnel_daily`** (somente admin) — agrega por dia e tipo de evento para o painel admin futuro consumir facilmente. Inclui contagem distinta de usuários por etapa.
+### `src/pages/Palcos.tsx`
 
-## Detalhes técnicos
+**1. Substituir o `upsert` em `StartCandidaturaDialog` por um fluxo SELECT → UPDATE/INSERT manual** (compatível com índice parcial):
 
-**Schema:**
-```sql
-analytics_events (
-  id uuid pk,
-  user_id uuid,           -- nullable (eventos anônimos no futuro)
-  event_name text,        -- ex: 'project_created'
-  project_id uuid,        -- nullable
-  properties jsonb,       -- payload livre
-  session_id text,        -- mesmo session_id do page_views
-  created_at timestamptz
-)
--- índices: (event_name, created_at), (user_id, created_at), (project_id)
-```
-
-**RLS:** `INSERT` se `auth.uid() = user_id`; `SELECT` para `has_role(auth.uid(),'admin')` e para o próprio usuário (ver os próprios eventos).
-
-**Helper:**
 ```ts
-export async function trackAppEvent(name, props?) {
-  // fire-and-forget, ignora erros, usa session_id já presente em sessionStorage
-  // também chama posthog.capture quando inicializado
+// 1) procurar edital existente por (user_id, session_key)
+const { data: existing } = await supabase
+  .from("editais")
+  .select("id")
+  .eq("user_id", session.user.id)
+  .eq("session_key", sk)
+  .maybeSingle();
+
+let editalId = existing?.id as string | undefined;
+const payload = { /* mesmos campos atuais, sem user_id/session_key no UPDATE */ };
+
+if (editalId) {
+  const { error: updErr } = await supabase.from("editais").update(payload).eq("id", editalId);
+  if (updErr) { toast.error("Erro ao salvar palco: " + updErr.message); return; }
+} else {
+  const { data: inserted, error: insErr } = await supabase
+    .from("editais").insert({ ...payload, user_id: session.user.id, session_key: sk } as any)
+    .select("id").single();
+  if (insErr || !inserted) { toast.error("Erro ao criar palco: " + (insErr?.message || "")); return; }
+  editalId = inserted.id;
 }
+
+onConfirm({ edital_id: editalId, project_id: ..., notas: ..., tipo: "palco", data_inscricao: ... });
 ```
 
-**View admin:** agrupa por `date_trunc('day', created_at)` + `event_name`, retorna `total` e `unique_users`. Reaproveita política de admin.
+**2. Toast de erro também no `useCreateApplication.onError`** — já existe; manter. Adicionar log para depuração.
 
-## Fora do escopo
-- Painel visual do funil (consulta direta no banco até o admin pedir UI).
-- Eventos anônimos pré-login (todos os pontos atuais já estão autenticados).
-- Migrar PostHog (continua coexistindo; chave segue placeholder).
+**3. Embrulhar `StartCandidaturaDialog` e `PalcoCard` em `React.forwardRef`** para suprimir o warning quando renderizados dentro de `TabsContent`/`Presence`. Os refs são apenas encaminhados para o `<div>`/`<Dialog>` raiz (não usados internamente).
+
+## Fora de escopo
+
+- Mexer no índice parcial do banco (manter — é correto para evitar duplicar quando `session_key` está vazio).
+- Refatorar `useCreateApplication` ou `useEditalApplications`.
+- Outras mudanças de UI no módulo Palcos.
+
+## Resultado esperado
+
+Clicar "Iniciar" no diálogo de candidatura cria/atualiza o `editais` (palco) e a `edital_applications`, mostra o toast "Candidatura iniciada!" com link para a aba "Candidaturas", e a aplicação aparece na lista. Erros do banco passam a ser visíveis via toast em vez de falharem silenciosamente.
