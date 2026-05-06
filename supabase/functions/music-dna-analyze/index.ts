@@ -51,10 +51,10 @@ ${benchmarkCtx}
 Faixas de referência típicas do gênero (medianas — ground truth):
 ${genreCtx}
 
-VIZINHOS MAIS PRÓXIMOS NO CATÁLOGO REAL (faixas analisadas tecnicamente mais semelhantes à do usuário, ordenadas por similarity_score 0–1):
+VIZINHOS MAIS PRÓXIMOS NO CATÁLOGO REAL — comparativo TÉCNICO calibrado (não é fingerprint nem identificação da obra). similarity_score 0–1 reflete proximidade ponderada de LUFS, dinâmica, espectro, ritmo e atributos perceptivos. Scores ≥ 0,80 = alta proximidade; 0,55–0,80 = moderada; < 0,55 = apenas referência aproximada:
 ${neighborsCtx}
 
-INSTRUÇÃO ADICIONAL: Use os "vizinhos mais próximos" acima para fundamentar o campo "referencias_proximas" do JSON, citando band+filename reais quando fizer sentido, e explicando QUAL nuance técnica (BPM, LUFS, energia, range dinâmico, centroide espectral, dançabilidade) aproxima a faixa do usuário de cada referência. Não invente artistas que não estejam nesta lista ou no pool de comparação fornecido pelo usuário.`;
+INSTRUÇÃO ADICIONAL: Use estes vizinhos para fundamentar "referencias_proximas" citando band+filename reais, descrevendo a nuance técnica (BPM, LUFS, range dinâmico, centroide espectral) que aproxima cada referência da faixa do usuário. NÃO afirme que a faixa "é" de algum artista, NÃO use linguagem de probabilidade de identidade ("provavelmente é da banda X"). Trate sempre como comparativo técnico aproximado. Não invente artistas fora desta lista.`;
 }
 
 async function logInvocation(adminClient: ReturnType<typeof createClient>, userId: string | null, status: "success" | "error", usage?: { prompt_tokens?: number; completion_tokens?: number }) {

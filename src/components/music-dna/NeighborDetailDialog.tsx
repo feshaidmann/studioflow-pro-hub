@@ -131,14 +131,22 @@ export function NeighborDetailDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between gap-3 flex-wrap">
             <span className="truncate">{neighbor.band}</span>
-            <Badge variant="outline" className="font-mono text-xs bg-primary/10 text-primary border-primary/30">
-              {sim}% similaridade
+            <Badge variant="outline" className={cn(
+              "font-mono text-xs",
+              sim >= 80 ? "bg-primary/10 text-primary border-primary/30"
+              : sim >= 55 ? "bg-amber-500/10 text-amber-700 border-amber-500/30"
+              : "bg-muted text-muted-foreground border-border"
+            )}>
+              {sim}% proximidade técnica
             </Badge>
           </DialogTitle>
           <DialogDescription className="text-xs">
             {neighbor.filename}
             {neighbor.genre && <> · <span className="uppercase tracking-wide">{neighbor.genre}</span></>}
             {neighbor.key_name && <> · Tom {neighbor.key_name}{neighbor.mode ? ` ${neighbor.mode}` : ""}</>}
+            <div className="mt-2 text-[11px] text-foreground/60">
+              Comparação por LUFS, dinâmica, espectro, ritmo e atributos perceptivos. Não é identificação por fingerprint.
+            </div>
           </DialogDescription>
         </DialogHeader>
 

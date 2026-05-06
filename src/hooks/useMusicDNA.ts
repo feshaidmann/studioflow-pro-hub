@@ -531,6 +531,12 @@ export function useMusicDNA(): UseMusicDNAReturn {
           instrumentalness: realAnalysis.instrumentalness,
           dynamic_range_db: realAnalysis.dynamic_range_lu,
           spectral_centroid_hz: realAnalysis.spectral_centroid_hz,
+          spectral_rolloff: realAnalysis.spectral_rolloff_hz,
+          spectral_flatness: realAnalysis.spectral_flatness,
+          speechiness: realAnalysis.speechiness,
+          liveness: realAnalysis.liveness,
+          key_name: (realAnalysis.key ?? "").replace(/m$/, "") || null,
+          mode: /m$/.test(realAnalysis.key ?? "") ? "minor" : "major",
         },
       });
       const clean = rawText.replace(/```json|```/g, "").trim();

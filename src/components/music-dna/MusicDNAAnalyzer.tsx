@@ -1337,14 +1337,28 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
 
             <TabsContent value="catalogo" className="space-y-2 mt-3">
               <p className="rounded-md bg-muted/30 p-2.5 text-xs text-foreground/75 leading-relaxed">
-                Faixas reais do catálogo interno ranqueadas por similaridade técnica contra a sua.
-                {totalCompared > 0 && <> Comparado contra <strong>{totalCompared}</strong> faixas. Clique em uma para ver o comparativo detalhado.</>}
+                Comparação técnica calibrada (LUFS, dinâmica, espectro, ritmo e atributos perceptivos) contra o catálogo interno. <strong>Não é identificação por fingerprint</strong> — extratores diferentes (browser vs. catálogo) podem deslocar BPM, tom e energia, então o ranking é uma aproximação técnica.
+                {totalCompared > 0 && <> Comparado contra <strong>{totalCompared}</strong> faixas. Clique em uma para o detalhe.</>}
               </p>
+              {(() => {
+                const topSim = catalogNeighbors && catalogNeighbors.length > 0
+                  ? Math.round((Number(catalogNeighbors[0].similarity_score) || 0) * 100)
+                  : 0;
+                if (catalogNeighbors && catalogNeighbors.length > 0 && topSim < 55) {
+                  return (
+                    <p className="rounded-md border border-amber-500/30 bg-amber-500/5 p-2.5 text-xs text-amber-800 leading-relaxed">
+                      Confiança baixa: nenhuma faixa do catálogo ficou tecnicamente muito próxima desta. Trate as referências abaixo como aproximações.
+                    </p>
+                  );
+                }
+                return null;
+              })()}
               {(!catalogNeighbors || catalogNeighbors.length === 0) && (
                 <p className="text-xs text-foreground/70 py-3 text-center">Nenhum vizinho técnico encontrado no catálogo.</p>
               )}
               {catalogNeighbors && catalogNeighbors.map((n, i) => {
                 const sim = Math.round((Number(n.similarity_score) || 0) * 100);
+                const simColor = sim >= 80 ? "text-primary" : sim >= 55 ? "text-amber-700" : "text-foreground/60";
                 return (
                   <button
                     type="button"
@@ -1361,7 +1375,7 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
                         <p className="text-xs text-foreground/70 truncate">{n.filename}</p>
                       </div>
                       <div className="flex flex-col items-end shrink-0">
-                        <span className="font-mono text-primary text-sm">{sim}%</span>
+                        <span className={cn("font-mono text-sm", simColor)}>{sim}%</span>
                         {n.genre && (
                           <span className="text-xs text-foreground/70 uppercase tracking-wide">{n.genre}</span>
                         )}
@@ -1370,7 +1384,7 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
                     <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs font-mono text-foreground/70">
                       <span>BPM {fmt(n.tempo_bpm, 0)} <span className="text-primary/70">({fmtDelta(n.tempo_bpm, realAnalysis?.bpm, 0)})</span></span>
                       <span>LUFS {fmt(n.lufs_integrated)} <span className="text-primary/70">({fmtDelta(n.lufs_integrated, realAnalysis?.lufs_integrated)})</span></span>
-                      <span>Energy {fmt(n.energy, 2)} <span className="text-primary/70">({fmtDelta(n.energy, realAnalysis?.energy, 2)})</span></span>
+                      <span>DR {fmt(n.dynamic_range_db)} LU</span>
                       {n.key_name && <span>Tom {n.key_name}{n.mode ? ` ${n.mode}` : ""}</span>}
                     </div>
                   </button>
