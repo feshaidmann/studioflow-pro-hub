@@ -551,6 +551,7 @@ export function useMusicDNA(): UseMusicDNAReturn {
         detectedInstruments,
         instrumentDetection: instrumentResult,
         catalogNeighbors,
+        catalogTotalCompared,
       };
     },
 
