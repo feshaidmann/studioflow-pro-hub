@@ -517,7 +517,7 @@ export function useMusicDNA(): UseMusicDNAReturn {
       appendLog("🎧  Selecionando referências artísticas próximas…");
 
       const prompt = buildPrompt(input, realAnalysis, instrumentResult, selectedReferences, externalLookup);
-      const { content: rawText, neighbors: catalogNeighbors } = await callMusicDNAAnalyze(prompt, {
+      const { content: rawText, neighbors: catalogNeighbors, catalogTotalCompared } = await callMusicDNAAnalyze(prompt, {
         features: externalLookup?.features,
         genero: input.genre,
         track_name: input.name,
