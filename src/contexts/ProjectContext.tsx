@@ -357,17 +357,28 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     await supabase.from("projects").update(dbData).eq("id", id);
 
     // Push notification on stage change
+    const prevProject = projects.find((p) => p.id === id);
     if (data.stage !== undefined && user) {
-      const project = projects.find((p) => p.id === id);
-      if (project && project.stage !== data.stage) {
+      if (prevProject && prevProject.stage !== data.stage) {
         const stageLabels: Record<string, string> = {
           rough: "Rascunho", gravacao: "Gravação", mix: "Mix", master: "Master", upload: "Upload", lancado: "Lançado",
         };
         const label = stageLabels[data.stage] ?? data.stage;
         supabase.functions.invoke("send-push-notification", {
-          body: { user_id: user.id, title: "📁 Status atualizado", body: `${project.name} avançou para ${label}`, url: `/projetos/${id}` },
+          body: { user_id: user.id, title: "📁 Status atualizado", body: `${prevProject.name} avançou para ${label}`, url: `/projetos/${id}` },
         });
+        trackAppEvent("project_stage_changed", {
+          project_id: id,
+          from_stage: prevProject.stage,
+          to_stage: data.stage,
+        });
+        if (data.stage === "lancado") {
+          trackAppEvent("project_completed", { project_id: id, via: "stage" });
+        }
       }
+    }
+    if (data.completed === true && prevProject && !prevProject.completed) {
+      trackAppEvent("project_completed", { project_id: id, via: "flag" });
     }
 
     setProjects((prev) => prev.map((p) => (p.id === id ? { ...p, ...data } : p)));
