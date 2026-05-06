@@ -671,6 +671,10 @@ export async function analyzeAudioFull(file: File): Promise<{
   // Spotify-style
   const features = computeSpotifyFeatures(mono, sampleRate, spectral, bpm, rmsDb);
 
+  // Acoustic fingerprint (catalog-aligned)
+  const fp = computeMfccChroma(spectral.magnitudes, spectral.freqPerBin, sampleRate);
+  const round4 = (v: number) => Math.round(v * 10000) / 10000;
+
   const r = (v: number) => Math.round(v * 10) / 10;
 
   const real: RealAudioAnalysis = {
@@ -692,6 +696,8 @@ export async function analyzeAudioFull(file: File): Promise<{
     instrumentalness: Math.round(features.instrumentalness * 100) / 100,
     liveness: Math.round(features.liveness * 100) / 100,
     speechiness: Math.round(features.speechiness * 100) / 100,
+    mfcc: fp.mfcc.map(round4),
+    chroma_cens: fp.chroma.map(round4),
     sections,
   };
 
