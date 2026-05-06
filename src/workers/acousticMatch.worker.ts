@@ -1,0 +1,234 @@
+/**
+ * Acoustic match Web Worker.
+ * Computes weighted Euclidean distance between the user's track features
+ * and every track in the catalog snapshot, returning top-N tracks plus
+ * artist & genre aggregations. MFCC + Chroma dominate the vector.
+ *
+ * Message in:
+ *   { type: "match", query: QueryFeatures, catalog: CatalogTrack[], topN?: number }
+ * Message out:
+ *   { type: "result", topTracks: ScoredTrack[], topArtists: AggBucket[], topGenres: AggBucket[] }
+ *   { type: "error", error: string }
+ */
+
+export interface QueryFeatures {
+  bpm?: number | null;
+  lufs_integrated?: number | null;
+  dynamic_range_lu?: number | null;
+  spectral_centroid_hz?: number | null;
+  spectral_rolloff_hz?: number | null;
+  spectral_flatness?: number | null;
+  energy?: number | null;
+  danceability?: number | null;
+  valence?: number | null;
+  acousticness?: number | null;
+  instrumentalness?: number | null;
+  liveness?: number | null;
+  speechiness?: number | null;
+  mfcc?: number[] | null;          // 13
+  chroma_cens?: number[] | null;   // 12
+}
+
+export interface CatalogTrack {
+  band: string;
+  filename: string;
+  genre?: string | null;
+  tempo_bpm?: number | null;
+  key_name?: string | null;
+  mode?: string | null;
+  lufs_integrated?: number | null;
+  dynamic_range_db?: number | null;
+  spectral_centroid?: number | null;
+  spectral_rolloff?: number | null;
+  spectral_flatness?: number | null;
+  energy?: number | null;
+  danceability?: number | null;
+  valence?: number | null;
+  acousticness?: number | null;
+  instrumentalness?: number | null;
+  liveness?: number | null;
+  speechiness?: number | null;
+  mfcc?: number[] | null;
+  chroma_cens?: number[] | null;
+}
+
+export interface ScoredTrack {
+  band: string;
+  filename: string;
+  genre: string | null;
+  similarity: number; // 0..1 (1 = identical)
+  distance: number;
+}
+
+export interface AggBucket {
+  label: string;
+  similarity: number; // average similarity of top contributors
+  count: number;
+}
+
+// ── Weights (MFCC + Chroma dominate per user decision) ───────────────────────
+const W_MFCC = 2.0;     // per coefficient
+const W_CHROMA = 1.5;   // per pitch class
+const W_LUFS = 1.0;
+const W_DR = 1.0;
+const W_CENTROID = 1.0;
+const W_ROLLOFF = 0.7;
+const W_FLATNESS = 0.7;
+const W_BPM = 0.8;
+const W_PERCEPTUAL = 0.3; // each (energy, dance, valence, acous, instr, live, speech)
+
+// Normalization scales (so all dims are roughly comparable before weighting)
+const S_MFCC = 8;       // typical MFCC coef range
+const S_CHROMA = 0.3;   // L2-normalized chroma diffs
+const S_LUFS = 6;
+const S_DR = 6;
+const S_CENTROID = 1500;
+const S_ROLLOFF = 2500;
+const S_FLATNESS = 0.25;
+const S_BPM = 30;       // half/double-time aware below
+
+function bpmDistance(a: number, b: number): number {
+  return Math.min(
+    Math.abs(a - b),
+    Math.abs(a - b * 2),
+    Math.abs(a - b / 2),
+  );
+}
+
+function scoreTrack(q: QueryFeatures, t: CatalogTrack): { distance: number; weight: number } | null {
+  let sum = 0;
+  let weight = 0;
+
+  const addNum = (
+    qv: number | null | undefined,
+    tv: number | null | undefined,
+    scale: number,
+    w: number,
+  ) => {
+    if (qv == null || tv == null || !isFinite(qv) || !isFinite(tv)) return;
+    const d = Math.abs(qv - tv) / scale;
+    sum += w * d * d;
+    weight += w;
+  };
+
+  // MFCC vector (per-coefficient Euclidean, weighted)
+  if (q.mfcc && t.mfcc && q.mfcc.length === t.mfcc.length) {
+    for (let i = 0; i < q.mfcc.length; i++) {
+      const d = (q.mfcc[i] - t.mfcc[i]) / S_MFCC;
+      sum += W_MFCC * d * d;
+      weight += W_MFCC;
+    }
+  }
+  // Chroma vector
+  if (q.chroma_cens && t.chroma_cens && q.chroma_cens.length === t.chroma_cens.length) {
+    for (let i = 0; i < q.chroma_cens.length; i++) {
+      const d = (q.chroma_cens[i] - t.chroma_cens[i]) / S_CHROMA;
+      sum += W_CHROMA * d * d;
+      weight += W_CHROMA;
+    }
+  }
+
+  // BPM (half/double-time aware)
+  if (q.bpm != null && t.tempo_bpm != null && isFinite(q.bpm) && isFinite(t.tempo_bpm)) {
+    const d = bpmDistance(q.bpm, t.tempo_bpm) / S_BPM;
+    sum += W_BPM * d * d;
+    weight += W_BPM;
+  }
+
+  addNum(q.lufs_integrated, t.lufs_integrated, S_LUFS, W_LUFS);
+  addNum(q.dynamic_range_lu, t.dynamic_range_db, S_DR, W_DR);
+  addNum(q.spectral_centroid_hz, t.spectral_centroid, S_CENTROID, W_CENTROID);
+  addNum(q.spectral_rolloff_hz, t.spectral_rolloff, S_ROLLOFF, W_ROLLOFF);
+  addNum(q.spectral_flatness, t.spectral_flatness, S_FLATNESS, W_FLATNESS);
+
+  addNum(q.energy, t.energy, 1, W_PERCEPTUAL);
+  addNum(q.danceability, t.danceability, 1, W_PERCEPTUAL);
+  addNum(q.valence, t.valence, 1, W_PERCEPTUAL);
+  addNum(q.acousticness, t.acousticness, 1, W_PERCEPTUAL);
+  addNum(q.instrumentalness, t.instrumentalness, 1, W_PERCEPTUAL);
+  addNum(q.liveness, t.liveness, 1, W_PERCEPTUAL);
+  addNum(q.speechiness, t.speechiness, 1, W_PERCEPTUAL);
+
+  if (weight === 0) return null;
+  return { distance: Math.sqrt(sum / weight), weight };
+}
+
+function distanceToSimilarity(d: number): number {
+  // Smooth mapping: 1 / (1 + d). d≈0 → 1.0, d≈1 → 0.5, d→∞ → 0
+  return 1 / (1 + d);
+}
+
+function aggregateBy(
+  tracks: ScoredTrack[],
+  key: "band" | "genre",
+  topPer: number,
+  topOut: number,
+): AggBucket[] {
+  const buckets = new Map<string, number[]>();
+  for (const t of tracks) {
+    const label = (key === "band" ? t.band : t.genre) || "";
+    if (!label) continue;
+    const arr = buckets.get(label) ?? [];
+    arr.push(t.similarity);
+    buckets.set(label, arr);
+  }
+  const out: AggBucket[] = [];
+  for (const [label, sims] of buckets) {
+    sims.sort((a, b) => b - a);
+    const top = sims.slice(0, topPer);
+    const avg = top.reduce((a, b) => a + b, 0) / top.length;
+    out.push({ label, similarity: avg, count: sims.length });
+  }
+  out.sort((a, b) => b.similarity - a.similarity);
+  return out.slice(0, topOut);
+}
+
+self.addEventListener("message", (event: MessageEvent) => {
+  const data = event.data;
+  if (!data || data.type !== "match") return;
+
+  try {
+    const query = data.query as QueryFeatures;
+    const catalog = data.catalog as CatalogTrack[];
+    const topN = (data.topN as number) ?? 10;
+
+    if (!Array.isArray(catalog) || catalog.length === 0) {
+      throw new Error("Catálogo vazio");
+    }
+
+    const scored: ScoredTrack[] = [];
+    for (const t of catalog) {
+      const res = scoreTrack(query, t);
+      if (!res) continue;
+      scored.push({
+        band: t.band,
+        filename: t.filename,
+        genre: t.genre ?? null,
+        distance: res.distance,
+        similarity: distanceToSimilarity(res.distance),
+      });
+    }
+    scored.sort((a, b) => b.similarity - a.similarity);
+    const topTracks = scored.slice(0, topN);
+
+    // Aggregations use the broader pool (top 60) so artists/genres reflect the catalog
+    const pool = scored.slice(0, Math.min(60, scored.length));
+    const topArtists = aggregateBy(pool, "band", 3, 5);
+    const topGenres = aggregateBy(pool, "genre", 5, 5);
+
+    (self as unknown as Worker).postMessage({
+      type: "result",
+      topTracks,
+      topArtists,
+      topGenres,
+      scoredCount: scored.length,
+    });
+  } catch (e) {
+    (self as unknown as Worker).postMessage({
+      type: "error",
+      error: String((e as Error).message ?? e),
+    });
+  }
+});
+
+export {};
