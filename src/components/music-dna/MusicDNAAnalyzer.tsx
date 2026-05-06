@@ -1862,6 +1862,7 @@ export function MusicDNAAnalyzer() {
             isSaved={isSaved}
             isSaving={isSaving}
             savedAnalysisId={savedAnalysisId}
+            projects={projects}
           />
         </>
       ) : isPending ? (
