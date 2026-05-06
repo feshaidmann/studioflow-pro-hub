@@ -206,6 +206,18 @@ serve(async (req: Request) => {
     if (nnError) console.error("[music-dna-analyze] nearest neighbors error:", nnError);
     nearestNeighbors = neighbors;
 
+    // Conta o total de faixas no catálogo (com filtro de gênero quando aplicável)
+    let catalogTotalCompared = 0;
+    {
+      const countQuery = adminClient
+        .from("music_reference_tracks")
+        .select("id", { count: "exact", head: true });
+      if (targetGenre) countQuery.ilike("genre", targetGenre);
+      const { count, error: countErr } = await countQuery;
+      if (countErr) console.error("[music-dna-analyze] count error:", countErr);
+      catalogTotalCompared = count ?? 0;
+    }
+
     const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
     if (!lovableApiKey) {
       throw new Error("LOVABLE_API_KEY not configured");
