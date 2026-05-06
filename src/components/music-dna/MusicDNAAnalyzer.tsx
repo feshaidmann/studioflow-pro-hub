@@ -391,7 +391,71 @@ function ExecutiveSummary({ diagnosis, onAddAllSteps, allStepsAdded }: {
   );
 }
 
-function formatFileSize(bytes: number): string {
+function MetricCard({ label, value, unit, help, target, range, digits = 1 }: {
+  label: string;
+  value: number | null | undefined;
+  unit: string;
+  help: string;
+  target?: { min: number; max: number; ideal: number };
+  range?: { min: number; max: number };
+  digits?: number;
+}) {
+  const hasValue = typeof value === "number" && Number.isFinite(value);
+  const fmtValue = hasValue
+    ? (value as number).toLocaleString("pt-BR", { minimumFractionDigits: digits, maximumFractionDigits: digits })
+    : "—";
+
+  let status: "ok" | "warn" | "bad" | "neutral" = "neutral";
+  let pct = 50;
+  if (hasValue && target && range) {
+    const v = value as number;
+    if (v >= target.min && v <= target.max) status = "ok";
+    else if (v >= target.min - (target.max - target.min) * 0.5 && v <= target.max + (target.max - target.min) * 0.5) status = "warn";
+    else status = "bad";
+    pct = Math.max(0, Math.min(100, ((v - range.min) / (range.max - range.min)) * 100));
+  }
+
+  const StatusIcon = status === "ok" ? CheckCircle2 : status === "warn" ? AlertTriangle : status === "bad" ? XCircle : null;
+  const statusColor = status === "ok"
+    ? "text-primary"
+    : status === "warn"
+    ? "text-amber-600"
+    : status === "bad"
+    ? "text-destructive"
+    : "text-muted-foreground";
+
+  return (
+    <Card className="text-center py-2.5 px-2 flex flex-col gap-1.5">
+      <div className="flex items-center justify-center gap-1">
+        <p className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground">{label}</p>
+        {StatusIcon && <StatusIcon className={cn("h-3 w-3", statusColor)} />}
+      </div>
+      <p className="text-base font-bold text-primary leading-tight">{fmtValue}</p>
+      {unit && <p className="text-[11px] text-muted-foreground">{unit}</p>}
+      {target && range && hasValue && (
+        <div className="relative h-1 rounded-full bg-muted/60 mx-1 mt-0.5">
+          <div
+            className="absolute top-0 bottom-0 rounded-full bg-primary/20"
+            style={{
+              left: `${Math.max(0, ((target.min - range.min) / (range.max - range.min)) * 100)}%`,
+              right: `${Math.max(0, 100 - ((target.max - range.min) / (range.max - range.min)) * 100)}%`,
+            }}
+          />
+          <div
+            className={cn(
+              "absolute top-1/2 -translate-y-1/2 -translate-x-1/2 h-2 w-2 rounded-full border border-background",
+              status === "ok" ? "bg-primary" : status === "warn" ? "bg-amber-500" : "bg-destructive"
+            )}
+            style={{ left: `${pct}%` }}
+          />
+        </div>
+      )}
+      <p className="text-[11px] leading-tight text-foreground/70">{help}</p>
+    </Card>
+  );
+}
+
+
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
