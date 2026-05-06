@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Navigate } from "react-router-dom";
 import Papa from "papaparse";
-import { Database, Upload, RefreshCw, FileText, Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Database, Upload, RefreshCw, FileText, Loader2, AlertCircle, CheckCircle2, PackageCheck } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -60,6 +60,47 @@ export default function ReferenceTracks() {
   const [coverage, setCoverage] = useState<CoverageRow[]>([]);
   const [loadingMeta, setLoadingMeta] = useState(false);
   const [recalcAll, setRecalcAll] = useState(false);
+  const [snapshotting, setSnapshotting] = useState(false);
+  const [snapshot, setSnapshot] = useState<{ count: number; generated_at: string; size_bytes: number; public_url: string } | null>(null);
+
+  const SNAPSHOT_BUCKET = "creative-assets";
+  const SNAPSHOT_PATH = "acoustic-catalog/v1.json";
+
+  const refreshSnapshotMeta = async () => {
+    try {
+      const { data: pub } = supabase.storage.from(SNAPSHOT_BUCKET).getPublicUrl(SNAPSHOT_PATH);
+      const res = await fetch(pub.publicUrl, { cache: "no-store" });
+      if (!res.ok) {
+        setSnapshot(null);
+        return;
+      }
+      const json = await res.json();
+      setSnapshot({
+        count: json.count,
+        generated_at: json.generated_at,
+        size_bytes: Number(res.headers.get("content-length") ?? 0),
+        public_url: pub.publicUrl,
+      });
+    } catch {
+      setSnapshot(null);
+    }
+  };
+
+  const handleGenerateSnapshot = async () => {
+    setSnapshotting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("export-acoustic-catalog", { body: {} });
+      if (error) throw error;
+      toast.success(`Snapshot gerado: ${data?.count ?? "?"} faixas`);
+      // Clear browser session cache so MusicDNAAnalyzer pulls the fresh version
+      try { sessionStorage.removeItem("acoustic-catalog:v1"); } catch { /* ignore */ }
+      await refreshSnapshotMeta();
+    } catch (e) {
+      toast.error(`Falha ao gerar snapshot: ${(e as Error).message}`);
+    } finally {
+      setSnapshotting(false);
+    }
+  };
 
   const refreshMeta = async () => {
     setLoadingMeta(true);
@@ -114,7 +155,10 @@ export default function ReferenceTracks() {
   };
 
   useEffect(() => {
-    if (isAdmin) refreshMeta();
+    if (isAdmin) {
+      refreshMeta();
+      refreshSnapshotMeta();
+    }
   }, [isAdmin]);
 
   const onFileSelected = async (f: File) => {
@@ -257,6 +301,45 @@ export default function ReferenceTracks() {
                 )}
               </AlertDescription>
             </Alert>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex flex-row items-start justify-between gap-3">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <PackageCheck className="h-4 w-4" /> Snapshot acústico (catálogo público)
+            </CardTitle>
+            <CardDescription>
+              Gera <code>creative-assets/acoustic-catalog/v1.json</code> com todas as faixas de referência (MFCC + Chroma + métricas físicas).
+              Consumido pelo painel de Match Acústico no Music DNA.
+            </CardDescription>
+          </div>
+          <Button onClick={handleGenerateSnapshot} disabled={snapshotting}>
+            {snapshotting ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Gerando…</> : <><RefreshCw className="h-4 w-4 mr-2" />Gerar snapshot</>}
+          </Button>
+        </CardHeader>
+        <CardContent>
+          {snapshot ? (
+            <div className="text-sm space-y-1">
+              <div><strong>{snapshot.count}</strong> faixas · {(snapshot.size_bytes / 1024).toFixed(0)} KB</div>
+              <div className="text-muted-foreground">
+                Gerado em {new Date(snapshot.generated_at).toLocaleString("pt-BR")}
+              </div>
+              <a
+                href={snapshot.public_url}
+                target="_blank"
+                rel="noreferrer"
+                className="text-xs font-mono text-primary hover:underline break-all"
+              >
+                {snapshot.public_url}
+              </a>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Nenhum snapshot encontrado ainda. Clique em <strong>Gerar snapshot</strong>.
+            </p>
           )}
         </CardContent>
       </Card>
