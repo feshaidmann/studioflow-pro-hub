@@ -1078,6 +1078,19 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
     }
   };
 
+  const handleAddAllSteps = async () => {
+    const steps = proximos_passos ?? [];
+    let count = 0;
+    for (let i = 0; i < steps.length; i++) {
+      const key = `passo-${i}`;
+      if (addedItems.has(key)) continue;
+      const task = await addTask({ description: `[DNA] ${steps[i].acao}`, source: "music-dna" });
+      if (task) { setAddedItems(prev => new Set(prev).add(key)); count++; }
+    }
+    setAllStepsAdded(true);
+    if (count > 0) toast.success(`${count} ações adicionadas ao checklist`);
+  };
+
   // Sticky nav (~40px) + folga visual; evita que o título da seção fique escondido atrás da barra
   const jumpTo = (id: string) => {
     // Avisa Collapsibles (mobile) para abrirem antes do scroll
