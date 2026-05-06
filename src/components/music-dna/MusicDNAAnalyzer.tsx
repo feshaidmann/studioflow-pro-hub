@@ -1597,6 +1597,22 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
         </div>
       </div>
 
+      <NeighborDetailDialog
+        neighbor={openNeighbor}
+        onOpenChange={(open) => !open && setOpenNeighbor(null)}
+        userTrack={{
+          name: input.name,
+          tempo_bpm: realAnalysis?.bpm ?? null,
+          lufs_integrated: realAnalysis?.lufs_integrated ?? null,
+          energy: realAnalysis?.energy ?? null,
+          danceability: realAnalysis?.danceability ?? null,
+          valence: realAnalysis?.valence ?? null,
+          acousticness: realAnalysis?.acousticness ?? null,
+          instrumentalness: realAnalysis?.instrumentalness ?? null,
+          dynamic_range_db: realAnalysis?.dynamic_range_lu ?? null,
+          key_name: realAnalysis?.key ?? null,
+        }}
+      />
       <FeedbackModal open={feedbackOpen} onOpenChange={setFeedbackOpen} diagnosis={diagnosis} />
     </div>
   );
