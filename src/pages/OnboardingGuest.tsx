@@ -57,6 +57,14 @@ export default function OnboardingGuest() {
       onboarding_version: 2,
       onboarding_completed: true,
     });
+    trackAppEvent("onboarding_completed", {
+      moment: selectedMoment || moment || "producing",
+      pain: "organization",
+      state: stateUf || null,
+      view_mode: "basic",
+      origin: "guest",
+      created_project: false,
+    });
     navigate("/dashboard", { replace: true });
   };
 
