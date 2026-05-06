@@ -657,6 +657,14 @@ async function downloadAnalysisReport(input: { name: string; references: string[
       bullet(`${ref.artista} — ${ref.similaridade}${ref.motivo ? ` — ${ref.motivo}` : ""}`);
     });
   }
+  if (diagnosis.catalogNeighbors?.length) {
+    heading("Vizinhos no catálogo de referência");
+    diagnosis.catalogNeighbors.forEach((n) => {
+      const sim = Math.round((Number(n.similarity_score) || 0) * 100);
+      const tom = n.key_name ? ` — ${n.key_name}${n.mode ? ` ${n.mode}` : ""}` : "";
+      bullet(`${n.band} (${n.filename}) — ${sim}%${tom} — BPM ${n.tempo_bpm ?? "—"} · LUFS ${n.lufs_integrated ?? "—"}`);
+    });
+  }
 
   const safeName = input.name.replace(/[^a-z0-9-_]+/gi, "_").slice(0, 60) || "dna-musical";
   doc.save(`dna-musical_${safeName}.pdf`);
