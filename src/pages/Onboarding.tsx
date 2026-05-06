@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { trackAppEvent } from "@/lib/analytics";
 import { useNavigate, Navigate } from "react-router-dom";
 import {
   Music, Mic2, ArrowRight, MapPin, Check, Layers,
