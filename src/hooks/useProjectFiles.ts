@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/contexts/ProfileContext";
 import { toast } from "sonner";
+import { trackAppEvent } from "@/lib/analytics";
 
 export const FOLDERS = [
   { key: "composicao", label: "Composição", icon: "Music" },
