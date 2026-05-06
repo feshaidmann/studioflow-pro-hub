@@ -82,6 +82,24 @@ export interface AnaliseSeccoes {
   secao_mais_fraca: string;
 }
 
+export interface CatalogNeighbor {
+  band: string;
+  filename: string;
+  genre: string;
+  similarity_score: number;
+  tempo_bpm: number | null;
+  lufs_integrated: number | null;
+  key_name: string | null;
+  mode: string | null;
+  energy: number | null;
+  danceability: number | null;
+  valence: number | null;
+  acousticness: number | null;
+  instrumentalness: number | null;
+  dynamic_range_db: number | null;
+  spectral_centroid: number | null;
+}
+
 export interface DiagnosisResult {
   genero_classificado: string;
   identidade: {
@@ -106,6 +124,7 @@ export interface DiagnosisResult {
   externalLookup?: MusicDnaLookupResult | null;
   detectedInstruments: string[];
   instrumentDetection: InstrumentDetection;
+  catalogNeighbors?: CatalogNeighbor[];
 }
 
 // ── CONSTANTS ────────────────────────────────────────────────────────────────
@@ -405,13 +424,17 @@ Instruções por campo:
 }`.trim();
 }
 
-async function callMusicDNAAnalyze(prompt: string, payload: Record<string, unknown> = {}): Promise<string> {
+async function callMusicDNAAnalyze(
+  prompt: string,
+  payload: Record<string, unknown> = {},
+): Promise<{ content: string; neighbors: CatalogNeighbor[] }> {
   const { data, error } = await supabase.functions.invoke("music-dna-analyze", {
     body: { action: "generate_diagnosis", payload: { prompt, ...payload } },
   });
 
   if (error) throw new Error(error.message);
-  return (data as { content: string })?.content ?? "";
+  const d = data as { content?: string; neighbors?: CatalogNeighbor[] } | null;
+  return { content: d?.content ?? "", neighbors: d?.neighbors ?? [] };
 }
 
 // ── HOOK ─────────────────────────────────────────────────────────────────────
@@ -489,7 +512,7 @@ export function useMusicDNA(): UseMusicDNAReturn {
       appendLog("🎧  Selecionando referências artísticas próximas…");
 
       const prompt = buildPrompt(input, realAnalysis, instrumentResult, selectedReferences, externalLookup);
-      const rawText = await callMusicDNAAnalyze(prompt, {
+      const { content: rawText, neighbors: catalogNeighbors } = await callMusicDNAAnalyze(prompt, {
         features: externalLookup?.features,
         genero: input.genre,
         track_name: input.name,
@@ -510,7 +533,7 @@ export function useMusicDNA(): UseMusicDNAReturn {
 
       setProgress(100);
       setStep("done");
-      appendLog("✅  Diagnóstico concluído.");
+      appendLog(catalogNeighbors.length ? `🎯  ${catalogNeighbors.length} faixas próximas encontradas no catálogo.` : "✅  Diagnóstico concluído.");
 
       return {
         ...parsed,
@@ -522,6 +545,7 @@ export function useMusicDNA(): UseMusicDNAReturn {
         externalLookup,
         detectedInstruments,
         instrumentDetection: instrumentResult,
+        catalogNeighbors,
       };
     },
 

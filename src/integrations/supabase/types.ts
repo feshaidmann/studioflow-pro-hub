@@ -853,14 +853,18 @@ export type Database = {
           atualizado_em: string | null
           avg_acousticness: number | null
           avg_danceability: number | null
+          avg_dynamic_range_db: number | null
           avg_energy: number | null
           avg_instrumentalness: number | null
           avg_liveness: number | null
           avg_loudness_db: number | null
           avg_lufs: number | null
+          avg_spectral_centroid: number | null
+          avg_spectral_flatness: number | null
           avg_speechiness: number | null
           avg_tempo_bpm: number | null
           avg_valence: number | null
+          avg_zero_crossing_rate: number | null
           genero: string
           id: string
           top_keys: Json | null
@@ -870,14 +874,18 @@ export type Database = {
           atualizado_em?: string | null
           avg_acousticness?: number | null
           avg_danceability?: number | null
+          avg_dynamic_range_db?: number | null
           avg_energy?: number | null
           avg_instrumentalness?: number | null
           avg_liveness?: number | null
           avg_loudness_db?: number | null
           avg_lufs?: number | null
+          avg_spectral_centroid?: number | null
+          avg_spectral_flatness?: number | null
           avg_speechiness?: number | null
           avg_tempo_bpm?: number | null
           avg_valence?: number | null
+          avg_zero_crossing_rate?: number | null
           genero: string
           id?: string
           top_keys?: Json | null
@@ -887,14 +895,18 @@ export type Database = {
           atualizado_em?: string | null
           avg_acousticness?: number | null
           avg_danceability?: number | null
+          avg_dynamic_range_db?: number | null
           avg_energy?: number | null
           avg_instrumentalness?: number | null
           avg_liveness?: number | null
           avg_loudness_db?: number | null
           avg_lufs?: number | null
+          avg_spectral_centroid?: number | null
+          avg_spectral_flatness?: number | null
           avg_speechiness?: number | null
           avg_tempo_bpm?: number | null
           avg_valence?: number | null
+          avg_zero_crossing_rate?: number | null
           genero?: string
           id?: string
           top_keys?: Json | null
@@ -2204,12 +2216,20 @@ export type Database = {
           p_energy?: number
           p_genre?: string
           p_instrumentalness?: number
+          p_key_name?: string
           p_limit?: number
+          p_liveness?: number
           p_lufs_integrated?: number
+          p_mode?: string
+          p_spectral_bandwidth?: number
           p_spectral_centroid?: number
+          p_spectral_flatness?: number
+          p_spectral_rolloff?: number
+          p_speechiness?: number
           p_strict_genre?: boolean
           p_tempo_bpm?: number
           p_valence?: number
+          p_zero_crossing_rate?: number
         }
         Returns: {
           acousticness: number
@@ -2221,12 +2241,16 @@ export type Database = {
           genre: string
           instrumentalness: number
           key_name: string
+          liveness: number
           lufs_integrated: number
           mode: string
           similarity_score: number
           spectral_centroid: number
+          spectral_flatness: number
+          speechiness: number
           tempo_bpm: number
           valence: number
+          zero_crossing_rate: number
         }[]
       }
       get_auth_email: { Args: never; Returns: string }
