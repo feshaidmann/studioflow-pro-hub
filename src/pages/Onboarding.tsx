@@ -13,8 +13,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { BRAZIL_STATES, TOP_CITIES_BY_UF } from "@/constants/brazilStates";
 
 /* ── option maps ────────────────────────────────────────────── */
 
@@ -115,7 +117,9 @@ export default function Onboarding() {
   const [viewMode, setViewMode] = useState<"basic" | "advanced">("basic");
   const [pain, setPain] = useState("");
   const [artistName, setArtistName] = useState("");
+  const [stateUf, setStateUf] = useState("");
   const [city, setCity] = useState("");
+  const [customCity, setCustomCity] = useState(false);
 
   const nameRef = useRef<HTMLInputElement>(null);
 
@@ -201,6 +205,7 @@ export default function Onboarding() {
     await updateProfile({
       display_name: name,
       city: city.trim(),
+      state: stateUf || null,
       user_type: "artist",
       track_view_mode: viewMode,
       current_moment: moment,
@@ -321,18 +326,47 @@ export default function Onboarding() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="city" className="text-xs text-muted-foreground flex items-center gap-1">
-                  <MapPin className="h-3 w-3" /> Cidade <span className="text-muted-foreground/50">(opcional)</span>
+                <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                  <MapPin className="h-3 w-3" /> Estado <span className="text-muted-foreground/50">(opcional)</span>
                 </Label>
-                <Input
-                  id="city"
-                  value={city}
-                  onChange={(e) => setCity(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter" && canAdvance[1]) handleNext(); }}
-                  placeholder="Ex: São Paulo, Rio de Janeiro…"
-                  maxLength={60}
-                />
+                <Select value={stateUf} onValueChange={(v) => { setStateUf(v); setCity(""); setCustomCity(false); }}>
+                  <SelectTrigger><SelectValue placeholder="Selecione seu estado" /></SelectTrigger>
+                  <SelectContent className="max-h-72">
+                    {BRAZIL_STATES.map((s) => (
+                      <SelectItem key={s.uf} value={s.uf}>{s.name} ({s.uf})</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
+              {stateUf && !customCity && (
+                <div className="space-y-1.5 animate-fade-in">
+                  <Label className="text-xs text-muted-foreground">Cidade <span className="text-muted-foreground/50">(opcional)</span></Label>
+                  <Select value={city} onValueChange={(v) => { if (v === "__other") { setCustomCity(true); setCity(""); } else setCity(v); }}>
+                    <SelectTrigger><SelectValue placeholder="Selecione sua cidade" /></SelectTrigger>
+                    <SelectContent className="max-h-72">
+                      {(TOP_CITIES_BY_UF[stateUf] ?? []).map((c) => (
+                        <SelectItem key={c} value={c}>{c}</SelectItem>
+                      ))}
+                      <SelectItem value="__other">Outra cidade…</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              {stateUf && customCity && (
+                <div className="space-y-1.5 animate-fade-in">
+                  <Label htmlFor="city" className="text-xs text-muted-foreground">Digite sua cidade</Label>
+                  <Input
+                    id="city"
+                    value={city}
+                    onChange={(e) => setCity(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter" && canAdvance[1]) handleNext(); }}
+                    placeholder="Ex: Pirassununga"
+                    maxLength={60}
+                    autoFocus
+                  />
+                  <button type="button" onClick={() => { setCustomCity(false); setCity(""); }} className="text-[11px] text-primary hover:underline">← Voltar para lista</button>
+                </div>
+              )}
               <Button onClick={handleNext} disabled={!canAdvance[1]} className="w-full gap-2" size="lg">
                 Próximo <ArrowRight className="h-4 w-4" />
               </Button>
