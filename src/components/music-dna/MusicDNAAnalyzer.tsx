@@ -1034,8 +1034,8 @@ function LoadingView({ trackName, logs, progress }: {
 
 // ── RESULT VIEW ──────────────────────────────────────────────────────────────
 
-function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isSaving, savedAnalysisId }: {
-  input: TrackInput | { name: string; notes?: string; references: string[] };
+function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isSaving, savedAnalysisId, projects }: {
+  input: TrackInput | { name: string; notes?: string; references: string[]; projectId?: string };
   diagnosis: DiagnosisResult;
   benchmark?: MusicDnaBenchmark;
   savedAnalysisId?: string;
@@ -1043,6 +1043,7 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
   onSave?: () => void;
   isSaved?: boolean;
   isSaving?: boolean;
+  projects?: Array<{ id: string; name: string }>;
 }) {
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [addedItems, setAddedItems] = useState<Set<string>>(new Set());
