@@ -1580,6 +1580,12 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
         </DetailSection>
       )}
 
+      {realAnalysis && (
+        <DetailSection id="dna-acoustic-match" icon="🎯" title="Match acústico (catálogo local)">
+          <AcousticMatchPanel analysis={realAnalysis} />
+        </DetailSection>
+      )}
+
       {/* Footer */}
       <div className="flex items-center justify-between gap-3 p-4 rounded-lg bg-muted/20 border border-border flex-wrap">
         <p className="text-xs text-muted-foreground">
