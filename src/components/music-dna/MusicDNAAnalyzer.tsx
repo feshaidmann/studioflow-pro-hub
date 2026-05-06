@@ -1128,21 +1128,48 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
     <div className="space-y-4">
       {/* Header */}
       <div className="flex items-start justify-between gap-3 flex-wrap animate-slide-up">
-        <div>
-          <p className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground mb-1">
+        <div className="min-w-0">
+          {projectId && (
+            <Breadcrumb className="mb-2">
+              <BreadcrumbList className="text-xs">
+                <BreadcrumbItem>
+                  <BreadcrumbLink
+                    className="cursor-pointer hover:text-primary"
+                    onClick={() => window.location.assign("/projects")}
+                  >
+                    Projetos
+                  </BreadcrumbLink>
+                </BreadcrumbItem>
+                <BreadcrumbSeparator />
+                <BreadcrumbItem>
+                  <BreadcrumbLink
+                    className="cursor-pointer hover:text-primary truncate max-w-[200px] inline-block align-bottom"
+                    onClick={() => window.location.assign(`/projects?id=${projectId}`)}
+                  >
+                    {projectName ?? "Projeto"}
+                  </BreadcrumbLink>
+                </BreadcrumbItem>
+                <BreadcrumbSeparator />
+                <BreadcrumbItem>
+                  <BreadcrumbPage>DNA Musical</BreadcrumbPage>
+                </BreadcrumbItem>
+              </BreadcrumbList>
+            </Breadcrumb>
+          )}
+          <p className="text-xs font-mono uppercase tracking-widest text-muted-foreground mb-1">
             Diagnóstico
           </p>
           <h2 className="text-xl font-bold">{input.name}</h2>
           <div className="flex items-center gap-2 mt-1 flex-wrap">
-            <Badge variant="outline" className="text-[11px] font-mono bg-primary/10 border-primary/30 text-primary">
+            <Badge variant="outline" className="text-xs font-mono bg-primary/10 border-primary/30 text-primary">
               {diagnosis.genero_classificado || "Gênero não classificado"}
             </Badge>
             {input.references.length > 0 && (
-              <span className="text-xs text-muted-foreground">
+              <span className="text-xs text-foreground/75">
                 {input.references.slice(0, 2).join(", ")}
               </span>
             )}
-            <Badge variant="outline" className="text-[11px] font-mono bg-muted/30 border-border text-muted-foreground">
+            <Badge variant="outline" className="text-xs font-mono bg-muted/30 border-border text-foreground/75">
               Fonte: {externalLookup?.fonte ?? "web_audio"}
             </Badge>
           </div>
