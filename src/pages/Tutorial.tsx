@@ -244,7 +244,27 @@ const tabContent: Record<TabId, React.ReactNode> = {
         ))}
       </div>
 
-      <SectionTitle>Integração com o Módulo Criativo</SectionTitle>
+      <SectionTitle>Match Acústico Local (MFCC + Chroma)</SectionTitle>
+      <div className="flex items-start gap-2 rounded-lg bg-primary/10 border border-primary/20 p-3">
+        <Radar className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+        <p className="text-sm text-muted-foreground">
+          Após a análise, o painel <strong className="text-foreground">"Match Acústico"</strong> compara a impressão sonora da sua faixa (MFCC + Chroma + métricas físicas e perceptuais) contra um catálogo de referência — direto no seu navegador, em um Web Worker. Mostra os <strong className="text-foreground">artistas, gêneros e faixas mais próximas</strong> com % de similaridade.
+        </p>
+      </div>
+      <div className="flex items-start gap-2 rounded-lg bg-[hsl(var(--success))]/10 border border-[hsl(var(--success))]/20 p-3 mt-2">
+        <ShieldCheck className="h-4 w-4 text-[hsl(var(--success))] mt-0.5 shrink-0" />
+        <p className="text-sm text-muted-foreground">
+          O cálculo é <strong className="text-foreground">100% local</strong>: nenhuma faixa é enviada a APIs externas. O catálogo é baixado uma vez por sessão e reutilizado em cache.
+        </p>
+      </div>
+
+      <SectionTitle>Snapshot do catálogo (admin)</SectionTitle>
+      <Step n={1}>Acesse <strong>/admin/reference-tracks</strong> (apenas perfis admin).</Step>
+      <Step n={2}>No card <strong>"Snapshot acústico"</strong>, clique em <strong>"Gerar snapshot"</strong> para empacotar todas as faixas de referência (com MFCC + Chroma) em um único JSON público.</Step>
+      <Step n={3}>O snapshot é versionado em <code className="text-xs">acoustic-catalog/v1.json</code> e alimenta o Match Acústico de todos os usuários.</Step>
+      <Tip>Regere o snapshot sempre que importar novas referências em massa via <code className="text-xs">import-reference-tracks</code>.</Tip>
+
+
       <div className="flex items-start gap-2 rounded-lg bg-primary/10 border border-primary/20 p-3">
         <Palette className="h-4 w-4 text-primary mt-0.5 shrink-0" />
         <p className="text-sm text-muted-foreground">
