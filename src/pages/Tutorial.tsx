@@ -264,7 +264,7 @@ const tabContent: Record<TabId, React.ReactNode> = {
       <Step n={3}>O snapshot é versionado em <code className="text-xs">acoustic-catalog/v1.json</code> e alimenta o Match Acústico de todos os usuários.</Step>
       <Tip>Regere o snapshot sempre que importar novas referências em massa via <code className="text-xs">import-reference-tracks</code>.</Tip>
 
-
+      <SectionTitle>Integração com o Módulo Criativo</SectionTitle>
       <div className="flex items-start gap-2 rounded-lg bg-primary/10 border border-primary/20 p-3">
         <Palette className="h-4 w-4 text-primary mt-0.5 shrink-0" />
         <p className="text-sm text-muted-foreground">
