@@ -4,7 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
-  Radar, RadarChart, PolarAngleAxis,
+  Radar, RadarChart, PolarAngleAxis, PolarGrid, PolarRadiusAxis,
   ResponsiveContainer, Legend,
 } from "recharts";
 import { Upload, X, FileAudio, Music, MessageSquare, ListPlus, Check, Save, Trash2, History, Palette, ArrowRight, FolderKanban, Download, CheckCircle2, AlertTriangle, XCircle, ChevronRight } from "lucide-react";
