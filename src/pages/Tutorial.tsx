@@ -203,6 +203,7 @@ const tabContent: Record<TabId, React.ReactNode> = {
           { title: "Rítmica e harmonia", desc: "BPM, tonalidade, duração" },
           { title: "Espectro", desc: "Centroide espectral (brilho), Rolloff, Flatness" },
           { title: "Perfil acústico", desc: "Energia, dançabilidade, valência, instrumentalidade e mais" },
+          { title: "Impressão acústica", desc: "MFCC (13 coeficientes) e Chroma CENS (12 classes) — usados no Match Acústico Local" },
           { title: "Segmentação", desc: "Intro, verso, refrão, bridge, outro — com métricas por seção" },
           { title: "Contraste", desc: "Ganho de RMS, energia e brilho entre verso e refrão" },
         ].map(({ title, desc }) => (
