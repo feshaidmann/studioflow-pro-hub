@@ -18,6 +18,8 @@ import {
   FileText,
   Palette,
   Share2,
+  Radar,
+  ShieldCheck,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
