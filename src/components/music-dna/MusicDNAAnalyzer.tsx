@@ -75,16 +75,84 @@ type FormValues = z.infer<typeof formSchema>;
 
 // ── SUB-COMPONENTS ───────────────────────────────────────────────────────────
 
+function RadarTick(props: {
+  payload?: { value: string };
+  x?: number; y?: number; cx?: number; cy?: number;
+  textAnchor?: string;
+}) {
+  const { payload, x = 0, y = 0, cx = 0, cy = 0 } = props;
+  const label = payload?.value ?? "";
+  // quebra rótulos longos em até 2 linhas (~12 chars por linha)
+  const words = label.split(" ");
+  const lines: string[] = [];
+  let current = "";
+  for (const w of words) {
+    if ((current + " " + w).trim().length > 12 && current) {
+      lines.push(current);
+      current = w;
+    } else {
+      current = (current ? current + " " : "") + w;
+    }
+  }
+  if (current) lines.push(current);
+  const limited = lines.slice(0, 2);
+  if (lines.length > 2) limited[1] = limited[1].replace(/.{0,2}$/, "…");
+
+  // empurra o rótulo levemente para fora, na direção do centro→ponto
+  const dx = x - cx;
+  const dy = y - cy;
+  const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+  const offset = 6;
+  const ox = x + (dx / dist) * offset;
+  const oy = y + (dy / dist) * offset;
+
+  // ancoragem horizontal por quadrante para evitar overflow
+  const anchor: "start" | "middle" | "end" =
+    Math.abs(dx) < 12 ? "middle" : dx > 0 ? "start" : "end";
+
+  return (
+    <text
+      x={ox}
+      y={oy}
+      textAnchor={anchor}
+      fill="hsl(var(--muted-foreground))"
+      fontSize={10}
+      style={{ pointerEvents: "none" }}
+    >
+      {limited.map((line, i) => (
+        <tspan key={i} x={ox} dy={i === 0 ? 0 : 12}>{line}</tspan>
+      ))}
+    </text>
+  );
+}
+
 function AcousticRadar({ trackFeatures, refFeatures }: {
   trackFeatures: AudioFeatures;
   refFeatures: AudioFeatures;
 }) {
   return (
-    <ResponsiveContainer width="100%" height={280}>
-      <RadarChart data={toRadarData(trackFeatures, refFeatures)}
-        margin={{ top: 16, right: 30, bottom: 16, left: 30 }}>
-        <PolarAngleAxis dataKey="subject"
-          tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
+    <ResponsiveContainer width="100%" height={320}>
+      <RadarChart
+        data={toRadarData(trackFeatures, refFeatures)}
+        margin={{ top: 24, right: 64, bottom: 24, left: 64 }}
+        outerRadius="72%"
+      >
+        <PolarGrid
+          stroke="hsl(var(--border))"
+          strokeOpacity={0.6}
+          strokeDasharray="2 3"
+        />
+        <PolarAngleAxis
+          dataKey="subject"
+          tick={<RadarTick />}
+          tickLine={false}
+        />
+        <PolarRadiusAxis
+          angle={90}
+          domain={[0, 1]}
+          tick={false}
+          axisLine={false}
+          stroke="hsl(var(--border))"
         />
         <Radar name="Referência" dataKey="Referência"
           stroke="hsl(var(--primary) / 0.5)" fill="hsl(var(--primary) / 0.1)"
@@ -95,7 +163,7 @@ function AcousticRadar({ trackFeatures, refFeatures }: {
           strokeWidth={2}
         />
         <Legend iconSize={8}
-          wrapperStyle={{ fontSize: 11,
+          wrapperStyle={{ fontSize: 11, paddingTop: 8,
             color: "hsl(var(--muted-foreground))" }}
         />
       </RadarChart>
