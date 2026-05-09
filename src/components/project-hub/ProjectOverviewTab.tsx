@@ -227,7 +227,7 @@ export default function ProjectOverviewTab({ project, progress, isOwner, onSwitc
       {isOwner && (
         <div className="grid grid-cols-2 gap-2">
           <Link
-            to={`/editais?project=${project.id}`}
+            to={`/carreira?project=${project.id}`}
             className="rounded-lg border border-border p-2.5 flex items-center gap-2 hover:bg-muted/30 hover:border-primary/40 transition-colors group"
           >
             <FileText className="h-4 w-4 text-primary shrink-0" />

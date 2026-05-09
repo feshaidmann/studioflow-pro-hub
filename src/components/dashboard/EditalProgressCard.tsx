@@ -91,7 +91,7 @@ export default function EditalProgressCard({ hidden }: { hidden?: boolean }) {
           variant="ghost"
           size="sm"
           className="text-xs text-primary w-full justify-center"
-          onClick={() => navigate("/editais")}
+          onClick={() => navigate("/carreira")}
         >
           Ver pipeline completo
           <ArrowRight className="h-3 w-3 ml-1" />

@@ -235,7 +235,7 @@ export default function EditalInscricao() {
     return (
       <div className="p-4 md:p-6 max-w-4xl mx-auto">
         <p className="text-muted-foreground">Edital não encontrado.</p>
-        <Button variant="ghost" onClick={() => navigate("/editais")} className="mt-4">
+        <Button variant="ghost" onClick={() => navigate("/carreira")} className="mt-4">
           <ArrowLeft className="h-4 w-4 mr-1.5" /> Voltar
         </Button>
       </div>
@@ -248,7 +248,7 @@ export default function EditalInscricao() {
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
-            <BreadcrumbLink className="cursor-pointer text-xs" onClick={() => navigate("/editais")}>
+            <BreadcrumbLink className="cursor-pointer text-xs" onClick={() => navigate("/carreira")}>
               Editais
             </BreadcrumbLink>
           </BreadcrumbItem>
@@ -265,7 +265,7 @@ export default function EditalInscricao() {
 
       {/* Header with application status */}
       <div className="flex items-start gap-3">
-        <Button variant="ghost" size="icon" onClick={() => navigate("/editais")} className="mt-0.5">
+        <Button variant="ghost" size="icon" onClick={() => navigate("/carreira")} className="mt-0.5">
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div className="flex-1 min-w-0">

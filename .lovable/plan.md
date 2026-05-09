@@ -1,89 +1,95 @@
-# Ajuste de precisão do comparativo do DNA Musical
+## Visão geral
 
-Você está certo: o problema não é "reconhecer o nome da música". O problema é que o comparativo técnico está usando métricas de origens diferentes e uma função de distância que hoje gera ranking ruim.
+Unificar **Editais** e **Palcos** num único módulo chamado **Carreira** (`/carreira`), com filtro lateral por tipo de oportunidade, busca IA única que mistura fomento e palcos, e remoção das rotas legadas `/editais` e `/palcos`.
 
-## Diagnóstico confirmado
+A arquitetura interna já favorece a fusão: ambos os módulos hoje compartilham `useEditalApplications`, `ApplicationChecklist` e `EditalResultModal` para rastrear inscrições. A diferença real está apenas no **tipo de oportunidade** (fomento financeiro × apresentação ao vivo) e nos templates de checklist.
 
-No teste com `03. Linus And Lucy`, a faixa existe no catálogo, mas ficou fora do topo porque:
+## Estrutura da nova página `/carreira`
 
-- A análise do usuário veio do navegador/Web Audio com BPM `76,9`, tom `C minor`, energy `0,80`.
-- A mesma faixa no catálogo está com BPM `123,05`, tom `G/G# major`, energy perto de `0,40`.
-- A busca atual compara esses números diretamente e ainda dá muito peso a `energy`, `danceability`, `valence`, `acousticness`, `instrumentalness`, `liveness`, que são heurísticas pouco estáveis entre extratores.
-- Além disso, quando uma métrica de entrada está ausente, a função atual usa `COALESCE(..., 0)`, o que reduz artificialmente a distância de faixas com valores faltantes e pode favorecer resultados errados.
+```text
+┌──────────────────────────────────────────────────────────┐
+│  Carreira                              [+ Nova busca IA] │
+├────────────┬─────────────────────────────────────────────┤
+│ FILTROS    │  [Buscar por nome, órgão, cidade…]          │
+│            │                                             │
+│ Tipo       │  ┌─ Card (badge: Edital · Fomento) ──────┐  │
+│ ☐ Todos    │  │ Lei Aldir Blanc - SP   R$ 50k · 30d  │  │
+│ ☐ Editais  │  └──────────────────────────────────────┘  │
+│ ☐ Palcos   │  ┌─ Card (badge: Palco · Festival) ─────┐  │
+│            │  │ Festival MIMO 2026     RJ · 60d      │  │
+│ Status     │  └──────────────────────────────────────┘  │
+│ ☐ Aberto   │                                             │
+│ ☐ Inscrito │                                             │
+│ ☐ Salvo    │                                             │
+│            │                                             │
+│ Estado     │                                             │
+│ Categoria  │                                             │
+│ Valor      │                                             │
+└────────────┴─────────────────────────────────────────────┘
+```
 
-Ou seja: o ranking falha porque está tratando features instáveis/heterogêneas como ground truth comparável.
+- Lista única ordenada por relevância/prazo, com **badge de tipo** em cada card (cor diferente para Edital vs Palco).
+- Filtros laterais persistem em querystring (`?tipo=edital&status=aberto`).
+- Painel **"Minhas inscrições"** acessível por aba secundária no topo (compartilha tudo via `useEditalApplications`).
 
-## Objetivo da correção
+## Busca IA unificada
 
-Fazer o catálogo real retornar referências tecnicamente coerentes, com ranking mais confiável, sem depender de match por nome de arquivo.
+Nova edge function **`oportunidades-search`** que:
+1. Recebe a query em linguagem natural do usuário.
+2. Usa Lovable AI (`google/gemini-3-flash-preview`) com structured output para classificar a intenção em `["edital", "palco", "ambos"]` + extrair filtros (estado, categoria, prazo).
+3. Dispara em paralelo as buscas internas existentes (`edital-search` e/ou `palco-search`) conforme a classificação.
+4. Mescla, normaliza num shape comum `{ tipo, titulo, orgao, prazo, valor, link, categoria, estado }` e devolve ranqueado.
 
-## Plano de implementação
+As edge functions `edital-search` e `palco-search` continuam existindo internamente — só ganham um wrapper.
 
-### 1. Corrigir a função de similaridade do catálogo
+## Modelo de dados
 
-Criar uma migration para substituir `find_nearest_reference_tracks` por uma versão calibrada:
+Nada de novo no banco. As tabelas `editais`, `palcos_curados` e `edital_applications` permanecem como estão. A unificação é puramente de UI + roteamento.
 
-- Separar métricas em grupos:
-  - Alta confiança: `lufs_integrated`, `dynamic_range_db`, `spectral_centroid`, `spectral_flatness`, `zero_crossing_rate`.
-  - Média confiança: `tempo_bpm`, `key_name`, `mode`.
-  - Baixa confiança: `energy`, `danceability`, `valence`, `acousticness`, `instrumentalness`, `liveness`, `speechiness`.
-- Reduzir fortemente o peso das métricas estilo Spotify geradas por heurística local.
-- Aumentar peso relativo de LUFS/DR/espectro, que são mais próximos de propriedades físicas do áudio.
-- Corrigir o tratamento de `NULL`: métrica ausente não deve virar distância zero; ela deve ser ignorada e o score normalizado pelo peso total disponível.
-- Tratar BPM com tolerância musical:
-  - considerar equivalência de half-time/double-time (`76,9` próximo de `153,8`, por exemplo);
-  - não deixar BPM sozinho dominar o ranking quando há divergência de extrator.
-- Manter bônus de gênero, mas menor que as métricas técnicas, para não forçar gênero quando a IA classificou errado.
+## Migração de rotas
 
-### 2. Enviar todas as métricas técnicas disponíveis para a busca
+- Nova rota: `/carreira` (substitui ambas).
+- `/editais` e `/palcos` removidos do `App.tsx`, do menu `AppLayout` e da bottom-nav mobile.
+- Adicionar **um único redirect React Router** de `/editais` e `/palcos` → `/carreira?tipo=...` para evitar quebrar links externos durante a transição (1 linha cada, sem custo).
+- Atualizar `EditalProgressCard`, `EditalMetricsDashboard` e `Tutorial.tsx` para apontar para `/carreira`.
 
-Atualizar `src/hooks/useMusicDNA.ts` para mandar ao backend, além do que já envia:
+## Detalhes técnicos
 
-- `duration_sec`
-- `spectral_rolloff`
-- `spectral_flatness`
-- `speechiness`
-- `liveness`
-- `key_name`
-- `mode`
+- **Páginas afetadas:**
+  - Criar `src/pages/Carreira.tsx` (layout com filtro lateral + lista).
+  - Refatorar conteúdo útil de `Editais.tsx` e `Palcos.tsx` em componentes reutilizáveis em `src/components/carreira/`:
+    - `OpportunityCard.tsx` (renderiza tanto edital quanto palco via prop `tipo`)
+    - `OpportunityFilters.tsx` (filtro lateral)
+    - `MyApplicationsTab.tsx` (consolida inscrições)
+    - `AISearchPanel.tsx` (busca IA unificada)
+  - Manter `EditalInscricao.tsx` (página de inscrição detalhada) — só renomear menus.
+  - Deletar `src/pages/Editais.tsx` e `src/pages/Palcos.tsx` após extrair os componentes.
 
-Hoje parte dessas métricas existe no cliente, mas não chega à função de catálogo. Isso empobrece o ranking.
+- **Hooks:**
+  - Criar `useOportunidades()` que internamente chama `useEditais()` e `usePalcos()` e mescla o resultado tipado.
+  - Manter `useEditais` e `usePalcos` como hooks especializados (chamados pelo novo hook agregador).
 
-### 3. Ajustar o backend para usar o score calibrado como fonte de verdade
+- **Edge function nova:** `supabase/functions/oportunidades-search/index.ts` (orquestra `edital-search` + `palco-search` via classificação IA).
 
-Em `supabase/functions/music-dna-analyze/index.ts`:
+- **Navegação:**
+  - `AppLayout.tsx`: substituir os dois itens (`/editais` e `/palcos`) por um único item **"Carreira"** com ícone `Trophy` ou `Sparkles`.
+  - Atualizar bottom-nav mobile e prefetch dinâmico.
 
-- Chamar a função recalibrada.
-- Enviar para a IA apenas os vizinhos já ranqueados pela função calibrada.
-- Ajustar o texto do prompt para deixar claro que as referências são "comparativos técnicos aproximados" e não uma identificação da obra.
-- Evitar que o modelo invente probabilidade alta quando o score técnico não sustenta isso.
+- **i18n:** adicionar chaves `nav.carreira`, `carreira.tipo.edital`, `carreira.tipo.palco`, etc. em `LanguageContext`.
 
-### 4. Melhorar a UI para não comunicar falsa certeza
+- **Memória do projeto:** adicionar nota em `mem://navegacao/estrutura-e-onboarding` sobre o módulo unificado e a remoção das rotas antigas.
 
-Na tela de resultados:
+## Ordem de implementação sugerida
 
-- Trocar linguagem de "probabilidade" por "similaridade técnica" ou "proximidade técnica".
-- Mostrar um microtexto: "Comparação baseada em loudness, dinâmica, espectro, ritmo e atributos perceptivos; não é identificação por fingerprint".
-- Se o maior score ficar baixo, mostrar estado de baixa confiança: "Referências aproximadas; nenhuma faixa muito próxima no catálogo".
-- Se o score ficar alto, destacar como "Alta proximidade técnica".
+1. Criar componentes compartilhados em `src/components/carreira/` extraindo o que já é reutilizável.
+2. Criar `Carreira.tsx` consumindo o novo `useOportunidades`.
+3. Criar edge function `oportunidades-search` e plugá-la no `AISearchPanel`.
+4. Atualizar `App.tsx`, `AppLayout.tsx` e referências em outros componentes.
+5. Remover `Editais.tsx` e `Palcos.tsx` (após confirmar paridade funcional).
+6. Atualizar Tutorial e i18n.
 
-### 5. Validar com casos de controle
+## Fora do escopo
 
-Usar consultas de leitura para testar antes/depois em faixas conhecidas:
-
-- `03. Linus And Lucy`
-- pelo menos 2 faixas recentes do usuário que tenham correspondentes prováveis no catálogo
-- 1 faixa fora do catálogo para verificar se não há falso positivo
-
-O critério de sucesso não será "a própria faixa sempre em #1", porque sem fingerprint e com extratores diferentes isso não é tecnicamente garantível. O critério será: os vizinhos devem ser musicalmente e tecnicamente mais coerentes, e o score deve expressar confiança real.
-
-## Fora de escopo nesta etapa
-
-- Audio fingerprinting/Chromaprint.
-- Reprocessar todo o catálogo com o mesmo extrator do navegador.
-- Identificação por nome de arquivo/banda.
-- Mudanças no fluxo visual já aplicado anteriormente.
-
-## Resultado esperado
-
-Após o ajuste, o DNA Musical deixa de vender o ranking como "probabilidade de ser aquela banda" e passa a entregar uma comparação técnica calibrada, com confiança proporcional aos dados. Isso corrige a falha conceitual e melhora a utilidade dos resultados para análise musical real.
+- Mudanças no schema de banco (não são necessárias).
+- Refatoração da página `EditalInscricao` (formulário de inscrição segue intacto).
+- Mudanças no `EditalAIAssistant` (continua sendo invocado pela página de inscrição detalhada).

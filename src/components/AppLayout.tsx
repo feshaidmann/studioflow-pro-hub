@@ -21,6 +21,7 @@ import {
   Palette,
   Database,
   Mic2,
+  Trophy,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -49,15 +50,13 @@ const gestaoItems = [
   // ── Ferramentas — ordenadas pela jornada do artista ──────────────────
   { labelKey: "nav.musicdna",      path: "/music-dna",     icon: Dna,          proOnly: false, mobileLabel: "nav.musicdna.short" }, // [2] — entenda a faixa primeiro
   { labelKey: "nav.creative",      path: "/criativo",      icon: Palette,      proOnly: false, mobileLabel: "" },  // [3] — crie os materiais com base no DNA
-  { labelKey: "nav.palcos",        path: "/palcos",        icon: Mic2,         proOnly: false, mobileLabel: "" },  // [4] — onde apresentar enquanto lança
-  { labelKey: "nav.editais",       path: "/editais",       icon: FileText,     proOnly: false, mobileLabel: "" },  // [5] — fomento para projetos maiores
-  { labelKey: "nav.professionals", path: "/professionals", icon: Users,        proOnly: false, mobileLabel: "" },  // [6] — equipe conforme necessidade
+  { labelKey: "nav.carreira",      path: "/carreira",      icon: Trophy,       proOnly: false, mobileLabel: "" },  // [4] — editais + palcos unificados
+  { labelKey: "nav.professionals", path: "/professionals", icon: Users,        proOnly: false, mobileLabel: "" },  // [5] — equipe conforme necessidade
 ];
 
 // Sub-labels descritivos curtos (P2) — apenas para itens do drawer "Mais"
 const drawerSubLabels: Record<string, string> = {
-  "/editais":            "Chamadas e inscrições",
-  "/palcos":             "Festivais e shows",
+  "/carreira":           "Editais, festivais e palcos",
   "/professionals":      "Equipe e parceiros",
   "/criativo":           "Arte com IA",
   "/music-dna":          "Análise técnica de mix/master",
@@ -110,9 +109,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const toolDrawerItems = [
     gestaoItems[2], // DNA Musical    — entenda a faixa primeiro
     gestaoItems[3], // Criativo       — materiais com base no DNA
-    gestaoItems[4], // Palcos         — onde apresentar enquanto lança
-    gestaoItems[5], // Editais        — fomento para projetos maiores
-    gestaoItems[6], // Profissionais  — equipe conforme necessidade
+    gestaoItems[4], // Carreira       — editais + palcos unificados
+    gestaoItems[5], // Profissionais  — equipe conforme necessidade
   ];
 
   // Prefetch dos chunks lazy ao abrir o drawer "Mais" ou hover na sidebar,
@@ -120,8 +118,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const prefetchRoute = (path: string) => {
     switch (path) {
       case "/criativo":     import("@/pages/Creative");      break;
-      case "/editais":      import("@/pages/Editais");       break;
-      case "/palcos":       import("@/pages/Palcos");        break;
+      case "/carreira":     import("@/pages/Carreira");      break;
       case "/professionals": import("@/pages/Professionals"); break;
       case "/music-dna":    import("@/pages/MusicDNA");      break;
       case "/agenda":       import("@/pages/Agenda");        break;
@@ -149,7 +146,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   const isItemActive = (item: { path: string }) => location.pathname === item.path;
 
-  const ROOT_ROUTES = ["/dashboard", "/projects", "/finance", "/agenda", "/professionals", "/settings", "/admin", "/tutorial", "/music-dna", "/editais", "/palcos", "/criativo", "/"];
+  const ROOT_ROUTES = ["/dashboard", "/projects", "/finance", "/agenda", "/professionals", "/settings", "/admin", "/tutorial", "/music-dna", "/carreira", "/criativo", "/"];
   const isRootRoute = ROOT_ROUTES.includes(location.pathname);
 
   // ── Mobile ─────────────────────────────────────────────────────────────────

@@ -87,7 +87,7 @@ const tabs = [
   { id: "getting-started", icon: HelpCircle, label: "Primeiros passos", short: "Início" },
   { id: "projects", icon: FolderKanban, label: "Projetos", short: "Proj" },
   { id: "music-dna", icon: Dna, label: "DNA Musical", short: "DNA" },
-  { id: "editais", icon: FileText, label: "Editais", short: "Editais" },
+  { id: "editais", icon: FileText, label: "Carreira", short: "Carreira" },
   { id: "creative", icon: Palette, label: "Criativo", short: "Arte" },
   { id: "finance", icon: DollarSign, label: "Finanças", short: "Fin" },
   { id: "agenda", icon: CalendarDays, label: "Agenda", short: "Agenda" },
@@ -283,51 +283,33 @@ const tabContent: Record<TabId, React.ReactNode> = {
 
   editais: (
     <div className="space-y-2">
-      <SectionTitle>O que são Editais?</SectionTitle>
+      <SectionTitle>Carreira: editais e palcos no mesmo lugar</SectionTitle>
       <p className="text-sm text-muted-foreground leading-relaxed">
-        O módulo de Editais ajuda você a encontrar e se inscrever em editais de fomento cultural — festivais, prêmios, bolsas e patrocínios públicos que financiam projetos artísticos.
+        O módulo <strong>Carreira</strong> reúne todas as oportunidades para crescer artisticamente:
+        editais de fomento (leis de incentivo, bolsas, prêmios) e palcos (festivais, showcases,
+        residências, aberturas). Tudo numa lista única, com filtro lateral por tipo.
       </p>
 
-      <SectionTitle>Busca inteligente com IA</SectionTitle>
-      <Step n={1}>Acesse <strong>Editais</strong> no menu lateral.</Step>
-      <Step n={2}>A IA busca editais abertos compatíveis com seu perfil (área, estado, porte).</Step>
-      <Step n={3}>Cada edital mostra órgão, prazo, área, valor e status.</Step>
+      <SectionTitle>Filtros laterais</SectionTitle>
+      <Step n={1}>Acesse <strong>Carreira</strong> no menu.</Step>
+      <Step n={2}>Use o filtro <strong>Tipo</strong> para ver só editais, só palcos, ou ambos.</Step>
+      <Step n={3}>Combine com filtros de <strong>status</strong> (Aberto, Previsto…) e <strong>estado</strong> (UF).</Step>
 
-      <SectionTitle>Match de Editais</SectionTitle>
+      <SectionTitle>Busca inteligente unificada</SectionTitle>
       <div className="flex items-start gap-2 rounded-lg bg-primary/10 border border-primary/20 p-3">
         <Sparkles className="h-4 w-4 text-primary mt-0.5 shrink-0" />
         <p className="text-sm text-muted-foreground">
-          O <strong className="text-foreground">Match IA</strong> cruza os dados do seu perfil cultural (áreas, estados, palavras-chave) com os editais disponíveis e ranqueia os mais relevantes para você.
+          Descreva o que procura em linguagem natural (ex: <em>"festivais de MPB no Sul"</em> ou <em>"bolsas de produção musical"</em>).
+          A IA detecta a intenção, dispara as buscas certas e mistura os resultados num único feed.
         </p>
       </div>
 
-      <SectionTitle>Inscrição com auto-preenchimento</SectionTitle>
-      <Step n={1}>Selecione um edital e clique em <strong>"Iniciar Inscrição"</strong>.</Step>
-      <Step n={2}>Use o botão <strong>"Preencher com meu perfil"</strong> para auto-preencher campos como biografia, cidade, especialidades e portfólio.</Step>
-      <Step n={3}>A IA extrai automaticamente os campos do formulário do edital.</Step>
-      <Step n={4}>Revise, complete os campos restantes e salve o rascunho.</Step>
+      <SectionTitle>Candidatura e acompanhamento</SectionTitle>
+      <Step n={1}>Clique em <strong>Candidatar</strong> num edital para iniciar uma inscrição.</Step>
+      <Step n={2}>Acompanhe tudo na aba <strong>Minhas inscrições</strong>: status, prazos e checklist de documentos.</Step>
+      <Step n={3}>Use o auto-preenchimento com base no seu perfil cultural para acelerar formulários.</Step>
 
-      <SectionTitle>Assistente IA para Editais</SectionTitle>
-      <div className="space-y-1.5">
-        {[
-          "Tire dúvidas sobre requisitos do edital",
-          "Peça ajuda para redigir justificativas e objetivos",
-          "Consulte documentos necessários para inscrição",
-          "Compare dois editais lado a lado",
-        ].map((item, i) => (
-          <div key={i} className="flex items-start gap-2">
-            <CheckCircle2 className="h-3.5 w-3.5 text-primary mt-0.5 shrink-0" />
-            <p className="text-sm text-muted-foreground">{item}</p>
-          </div>
-        ))}
-      </div>
-
-      <SectionTitle>Banco de Documentos</SectionTitle>
-      <p className="text-sm text-muted-foreground leading-relaxed">
-        Salve documentos reutilizáveis (bio artística, currículo, portfólio, carta de intenção) no <strong className="text-foreground">Banco de Documentos</strong> para agilizar futuras inscrições.
-      </p>
-
-      <Tip>Quanto mais completo seu perfil (bio, especialidades, cidade), mais preciso será o match e o auto-preenchimento.</Tip>
+      <Tip>Quanto mais completo seu perfil (bio, especialidades, cidade), mais preciso será o match com editais e palcos.</Tip>
     </div>
   ),
 
