@@ -155,22 +155,20 @@ export default function Carreira() {
     <div className="space-y-4 pb-8">
       <MobileStickyHeader
         title="Carreira"
-        right={
-          isMobile ? (
-            <Sheet>
-              <SheetTrigger asChild>
-                <Button variant="outline" size="sm" className="h-8">
-                  <ListFilter className="h-3.5 w-3.5 mr-1" /> Filtros
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="left" className="w-[300px]">
-                <SheetHeader><SheetTitle>Filtros</SheetTitle></SheetHeader>
-                <div className="mt-4">
-                  <OpportunityFilters filters={filters} onChange={setFilters} />
-                </div>
-              </SheetContent>
-            </Sheet>
-          ) : null
+        cta={
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button variant="outline" size="sm" className="h-8">
+                <ListFilter className="h-3.5 w-3.5 mr-1" /> Filtros
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="w-[300px]">
+              <SheetHeader><SheetTitle>Filtros</SheetTitle></SheetHeader>
+              <div className="mt-4">
+                <OpportunityFilters filters={filters} onChange={setFilters} />
+              </div>
+            </SheetContent>
+          </Sheet>
         }
       />
 
