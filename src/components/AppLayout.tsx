@@ -109,9 +109,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const toolDrawerItems = [
     gestaoItems[2], // DNA Musical    — entenda a faixa primeiro
     gestaoItems[3], // Criativo       — materiais com base no DNA
-    gestaoItems[4], // Palcos         — onde apresentar enquanto lança
-    gestaoItems[5], // Editais        — fomento para projetos maiores
-    gestaoItems[6], // Profissionais  — equipe conforme necessidade
+    gestaoItems[4], // Carreira       — editais + palcos unificados
+    gestaoItems[5], // Profissionais  — equipe conforme necessidade
   ];
 
   // Prefetch dos chunks lazy ao abrir o drawer "Mais" ou hover na sidebar,
