@@ -85,8 +85,9 @@ const AppRoutes = () => (
           <Route path="/perfil" element={<FreelancerProfile />} />
           <Route path="/upgrade" element={<UpgradeScreen />} />
           <Route path="/music-dna" element={<MusicDNA />} />
-          <Route path="/editais" element={<Editais />} />
-          <Route path="/palcos" element={<Palcos />} />
+          <Route path="/carreira" element={<Carreira />} />
+          <Route path="/editais" element={<Navigate to="/carreira?tipo=edital" replace />} />
+          <Route path="/palcos" element={<Navigate to="/carreira?tipo=palco" replace />} />
           <Route path="/editais/inscricao/:id" element={<EditalInscricao />} />
           <Route path="/criativo" element={<Creative />} />
           <Route path="/track-intelligence/*" element={<Navigate to="/dashboard" replace />} />
