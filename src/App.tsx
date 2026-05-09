@@ -41,8 +41,7 @@ const UpgradeScreen = lazy(() => import("@/pages/UpgradeScreen"));
 const PublicProfile = lazy(() => import("@/pages/PublicProfile"));
 const Legal = lazy(() => import("@/pages/Legal"));
 const MusicDNA = lazy(() => import("@/pages/MusicDNA"));
-const Editais = lazy(() => import("@/pages/Editais"));
-const Palcos = lazy(() => import("@/pages/Palcos"));
+const Carreira = lazy(() => import("@/pages/Carreira"));
 const EditalInscricao = lazy(() => import("@/pages/EditalInscricao"));
 const Creative = lazy(() => import("@/pages/Creative"));
 
