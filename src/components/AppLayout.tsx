@@ -146,7 +146,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   const isItemActive = (item: { path: string }) => location.pathname === item.path;
 
-  const ROOT_ROUTES = ["/dashboard", "/projects", "/finance", "/agenda", "/professionals", "/settings", "/admin", "/tutorial", "/music-dna", "/editais", "/palcos", "/criativo", "/"];
+  const ROOT_ROUTES = ["/dashboard", "/projects", "/finance", "/agenda", "/professionals", "/settings", "/admin", "/tutorial", "/music-dna", "/carreira", "/criativo", "/"];
   const isRootRoute = ROOT_ROUTES.includes(location.pathname);
 
   // ── Mobile ─────────────────────────────────────────────────────────────────
