@@ -87,7 +87,7 @@ const tabs = [
   { id: "getting-started", icon: HelpCircle, label: "Primeiros passos", short: "Início" },
   { id: "projects", icon: FolderKanban, label: "Projetos", short: "Proj" },
   { id: "music-dna", icon: Dna, label: "DNA Musical", short: "DNA" },
-  { id: "editais", icon: FileText, label: "Editais", short: "Editais" },
+  { id: "editais", icon: FileText, label: "Carreira", short: "Carreira" },
   { id: "creative", icon: Palette, label: "Criativo", short: "Arte" },
   { id: "finance", icon: DollarSign, label: "Finanças", short: "Fin" },
   { id: "agenda", icon: CalendarDays, label: "Agenda", short: "Agenda" },
