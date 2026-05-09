@@ -49,15 +49,13 @@ const gestaoItems = [
   // ── Ferramentas — ordenadas pela jornada do artista ──────────────────
   { labelKey: "nav.musicdna",      path: "/music-dna",     icon: Dna,          proOnly: false, mobileLabel: "nav.musicdna.short" }, // [2] — entenda a faixa primeiro
   { labelKey: "nav.creative",      path: "/criativo",      icon: Palette,      proOnly: false, mobileLabel: "" },  // [3] — crie os materiais com base no DNA
-  { labelKey: "nav.palcos",        path: "/palcos",        icon: Mic2,         proOnly: false, mobileLabel: "" },  // [4] — onde apresentar enquanto lança
-  { labelKey: "nav.editais",       path: "/editais",       icon: FileText,     proOnly: false, mobileLabel: "" },  // [5] — fomento para projetos maiores
-  { labelKey: "nav.professionals", path: "/professionals", icon: Users,        proOnly: false, mobileLabel: "" },  // [6] — equipe conforme necessidade
+  { labelKey: "nav.carreira",      path: "/carreira",      icon: Trophy,       proOnly: false, mobileLabel: "" },  // [4] — editais + palcos unificados
+  { labelKey: "nav.professionals", path: "/professionals", icon: Users,        proOnly: false, mobileLabel: "" },  // [5] — equipe conforme necessidade
 ];
 
 // Sub-labels descritivos curtos (P2) — apenas para itens do drawer "Mais"
 const drawerSubLabels: Record<string, string> = {
-  "/editais":            "Chamadas e inscrições",
-  "/palcos":             "Festivais e shows",
+  "/carreira":           "Editais, festivais e palcos",
   "/professionals":      "Equipe e parceiros",
   "/criativo":           "Arte com IA",
   "/music-dna":          "Análise técnica de mix/master",
