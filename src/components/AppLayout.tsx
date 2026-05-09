@@ -118,8 +118,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const prefetchRoute = (path: string) => {
     switch (path) {
       case "/criativo":     import("@/pages/Creative");      break;
-      case "/editais":      import("@/pages/Editais");       break;
-      case "/palcos":       import("@/pages/Palcos");        break;
+      case "/carreira":     import("@/pages/Carreira");      break;
       case "/professionals": import("@/pages/Professionals"); break;
       case "/music-dna":    import("@/pages/MusicDNA");      break;
       case "/agenda":       import("@/pages/Agenda");        break;
