@@ -21,6 +21,7 @@ import {
   Palette,
   Database,
   Mic2,
+  Trophy,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
