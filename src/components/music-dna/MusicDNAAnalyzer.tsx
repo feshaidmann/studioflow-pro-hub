@@ -1270,13 +1270,15 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
 
       <ExecutiveSummary diagnosis={diagnosis} onAddAllSteps={handleAddAllSteps} allStepsAdded={allStepsAdded} />
 
+      <PlatformCompatibilityCard lufs={lufsValue} />
+
       <NextStepsBar diagnosis={diagnosis} input={input} isSaved={!!isSaved} savedAnalysisId={savedAnalysisId} />
 
       <div className="sticky top-2 z-20 -mx-1 flex gap-1.5 overflow-x-auto rounded-lg border border-border bg-background/95 p-1 backdrop-blur animate-fade-in">
         {[
           { label: "Resumo", id: "dna-resumo" },
+          { label: "Diagnóstico", id: "dna-acoes" },
           { label: "Identidade", id: "dna-identidade" },
-          { label: "Ações", id: "dna-acoes" },
           { label: "Referências", id: "dna-referencias" },
           { label: "Técnico", id: "dna-tecnico" },
         ].map((item) => (
@@ -1297,33 +1299,30 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
         ))}
       </div>
 
-      {/* IDENTIDADE — promovida para logo após o resumo */}
-      <section id="dna-identidade" className="scroll-mt-16">
-        <DiagCard icon="🎭" title="Identidade da Faixa" variant="primary">
-          <div className="space-y-3">
-            <div>
-              <p className="text-base font-bold">{identidade?.mood_principal}</p>
-              <p className="text-xs text-foreground/75 mt-1 leading-relaxed">
-                {identidade?.territorio_sonoro}
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-1.5">
-              {(identidade?.tags ?? []).map(tag => (
-                <Badge key={tag} variant="outline"
-                  className="text-xs font-mono bg-primary/10 border-primary/30 text-primary">
-                  {tag}
-                </Badge>
-              ))}
-            </div>
-            <div className="rounded-md bg-muted/30 p-2.5 text-xs text-foreground/75 leading-relaxed">
-              <span className="text-primary">🎧 Ouvinte: </span>
-              {identidade?.persona_ouvinte}
-            </div>
-          </div>
-        </DiagCard>
-      </section>
-
+      {/* DIAGNÓSTICO — fortes + gargalos primeiro, depois ações priorizadas */}
       <section id="dna-acoes" className="scroll-mt-16 space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <DiagCard icon="✅" title="Pontos fortes" variant="success">
+            <ul className="space-y-1.5">
+              {(pontos_fortes ?? []).map((p, i) => (
+                <li key={i} className="flex gap-2 text-xs leading-relaxed">
+                  <span className="text-primary shrink-0 font-bold">+</span> {p}
+                </li>
+              ))}
+            </ul>
+          </DiagCard>
+
+          <DiagCard icon="⚠️" title="Gargalos criativos" variant="destructive">
+            <ul className="space-y-1.5">
+              {(gargalos_criativos ?? []).map((g, i) => (
+                <li key={i} className="flex gap-2 text-xs leading-relaxed">
+                  <span className="text-destructive shrink-0 font-bold">!</span> {g}
+                </li>
+              ))}
+            </ul>
+          </DiagCard>
+        </div>
+
         <DiagCard icon="🚀" title="Próximos passos de produção" variant="success">
           <div className="space-y-2">
             {(proximos_passos ?? []).map((p, i) => {
@@ -1354,36 +1353,18 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
           </div>
         </DiagCard>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <DiagCard icon="✅" title="Pontos fortes" variant="success">
-            <ul className="space-y-1.5">
-              {(pontos_fortes ?? []).map((p, i) => (
-                <li key={i} className="flex gap-2 text-xs leading-relaxed">
-                  <span className="text-primary shrink-0 font-bold">+</span> {p}
-                </li>
-              ))}
-            </ul>
-          </DiagCard>
-
-          <DiagCard icon="⚠️" title="Gargalos criativos" variant="destructive">
-            <ul className="space-y-1.5">
-              {(gargalos_criativos ?? []).map((g, i) => (
-                <li key={i} className="flex gap-2 text-xs leading-relaxed">
-                  <span className="text-destructive shrink-0 font-bold">!</span> {g}
-                </li>
-              ))}
-            </ul>
-          </DiagCard>
-        </div>
-
         <DiagCard icon="🎛️" title="Sugestões de arranjo, timbragem e mix" variant="primary">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
             {(sugestoes_arranjo ?? []).map((s, i) => {
               const key = `arranjo-${i}`;
               const added = addedItems.has(key);
+              // Heurística visual: 0-1 Alta, 2-3 Média, resto Baixa
+              const inferredPriority: "Alta" | "Média" | "Baixa" =
+                i < 2 ? "Alta" : i < 4 ? "Média" : "Baixa";
               return (
                 <div key={i}
                   className="bg-muted/30 rounded-lg p-3 text-xs leading-relaxed border-l-2 border-primary/40 flex items-start gap-2">
+                  <PriorityBadge priority={inferredPriority} />
                   <span className="flex-1">{s}</span>
                   <Button
                     variant="ghost"
@@ -1398,6 +1379,44 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
                 </div>
               );
             })}
+          </div>
+        </DiagCard>
+      </section>
+
+      {/* IDENTIDADE — agora secundária, depois do diagnóstico acionável */}
+      <section id="dna-identidade" className="scroll-mt-16">
+        <DiagCard icon="🎭" title="Identidade da Faixa" variant="primary">
+          <div className="space-y-3">
+            <div>
+              <p className="text-base font-bold">{identidade?.mood_principal}</p>
+              <p className="text-xs text-foreground/75 mt-1 leading-relaxed">
+                {identidade?.territorio_sonoro}
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-1.5 items-center">
+              {(identidade?.tags ?? []).map(tag => (
+                <Badge key={tag} variant="outline"
+                  className="text-xs font-mono bg-primary/10 border-primary/30 text-primary">
+                  {tag}
+                </Badge>
+              ))}
+              {identidade?.persona_ouvinte && (
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="sm" className="h-6 px-2 text-[11px] gap-1 ml-1">
+                      <User className="h-3 w-3" /> Ver perfil do ouvinte
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-72 text-xs space-y-2">
+                    <p className="font-semibold text-primary text-[11px] uppercase tracking-wider">Persona do ouvinte</p>
+                    <p className="leading-relaxed">{identidade.persona_ouvinte}</p>
+                    <p className="text-[11px] text-muted-foreground border-t border-border pt-2 leading-relaxed">
+                      Use isso ao escolher hashtags, pitch de playlist e direção visual da capa.
+                    </p>
+                  </PopoverContent>
+                </Popover>
+              )}
+            </div>
           </div>
         </DiagCard>
       </section>
