@@ -457,17 +457,34 @@ Instruções por campo:
 async function callMusicDNAAnalyze(
   prompt: string,
   payload: Record<string, unknown> = {},
-): Promise<{ content: string; neighbors: CatalogNeighbor[]; catalogTotalCompared: number }> {
+): Promise<{
+  content: string;
+  neighbors: CatalogNeighbor[];
+  catalogTotalCompared: number;
+  catalogTotal: number;
+  catalogGenreCount: number;
+  strictGenreUsed: boolean;
+}> {
   const { data, error } = await supabase.functions.invoke("music-dna-analyze", {
     body: { action: "generate_diagnosis", payload: { prompt, ...payload } },
   });
 
   if (error) throw new Error(error.message);
-  const d = data as { content?: string; neighbors?: CatalogNeighbor[]; catalog_total_compared?: number } | null;
+  const d = data as {
+    content?: string;
+    neighbors?: CatalogNeighbor[];
+    catalog_total_compared?: number;
+    catalog_total?: number;
+    catalog_genre_count?: number;
+    strict_genre_used?: boolean;
+  } | null;
   return {
     content: d?.content ?? "",
     neighbors: d?.neighbors ?? [],
     catalogTotalCompared: d?.catalog_total_compared ?? 0,
+    catalogTotal: d?.catalog_total ?? 0,
+    catalogGenreCount: d?.catalog_genre_count ?? 0,
+    strictGenreUsed: d?.strict_genre_used ?? false,
   };
 }
 
