@@ -7,7 +7,9 @@ import {
   Radar, RadarChart, PolarAngleAxis, PolarGrid, PolarRadiusAxis,
   ResponsiveContainer, Legend,
 } from "recharts";
-import { Upload, X, FileAudio, Music, MessageSquare, ListPlus, Check, Save, Trash2, History, Palette, ArrowRight, FolderKanban, Download, CheckCircle2, AlertTriangle, XCircle, ChevronRight } from "lucide-react";
+import { Upload, X, FileAudio, Music, MessageSquare, ListPlus, Check, Save, Trash2, History, Palette, ArrowRight, FolderKanban, Download, CheckCircle2, AlertTriangle, XCircle, ChevronRight, Info, User } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useNavigate } from "react-router-dom";
 import { useProjects } from "@/contexts/ProjectContext";
 import { useTasks } from "@/hooks/useTasks";
