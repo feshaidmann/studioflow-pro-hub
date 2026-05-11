@@ -2208,6 +2208,10 @@ export type Database = {
       }
     }
     Functions: {
+      count_reference_tracks_by_genre: {
+        Args: { p_genre: string }
+        Returns: number
+      }
       find_nearest_reference_tracks: {
         Args: {
           p_acousticness?: number
@@ -2235,6 +2239,8 @@ export type Database = {
           acousticness: number
           band: string
           danceability: number
+          dims_total: number
+          dims_used: number
           dynamic_range_db: number
           energy: number
           filename: string
