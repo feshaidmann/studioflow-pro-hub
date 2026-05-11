@@ -1703,11 +1703,7 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
         </DetailSection>
       )}
 
-      {realAnalysis && (
-        <DetailSection id="dna-acoustic-match" icon="🎯" title="Match acústico (catálogo local)">
-          <AcousticMatchPanel analysis={realAnalysis} />
-        </DetailSection>
-      )}
+      {/* AcousticMatchPanel removido do resultado: as referências unificadas (catálogo + IA) já cobrem o caso de uso. */}
 
       {/* Footer */}
       <div className="flex items-center justify-between gap-3 p-4 rounded-lg bg-muted/20 border border-border flex-wrap">
