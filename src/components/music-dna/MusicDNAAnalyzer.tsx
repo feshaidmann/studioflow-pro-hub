@@ -241,7 +241,6 @@ function BenchmarkPanel({ diagnosis, benchmark }: { diagnosis: DiagnosisResult; 
           <p className="text-[11px] text-muted-foreground leading-relaxed">
             As referências artísticas completas ficam ocultas; a IA recebe apenas um recorte técnico relevante e exibe aqui no relatório os 3–5 artistas mais próximos.
           </p>
-          <LufsCompatibility lufs={diagnosis.realAnalysis.lufs_integrated} />
         </div>
       </div>
     </DiagCard>
