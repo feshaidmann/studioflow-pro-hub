@@ -1143,6 +1143,9 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
     distance, trackFeatures, refFeatures, audioAnalysis, realAnalysis, externalLookup,
     catalogNeighbors,
   } = diagnosis;
+  const catalogTotal = diagnosis.catalogTotal ?? 0;
+  const catalogGenreCount = diagnosis.catalogGenreCount ?? 0;
+  const strictGenreUsed = diagnosis.strictGenreUsed ?? false;
 
   const fmt = (n: number | null | undefined, digits = 1) =>
     typeof n === "number" && Number.isFinite(n)
