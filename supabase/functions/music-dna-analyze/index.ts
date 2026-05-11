@@ -277,7 +277,14 @@ serve(async (req: Request) => {
     const content = aiData.choices?.[0]?.message?.content ?? "";
     await logInvocation(adminClient, data.claims.sub, "success", aiData.usage).catch((err) => console.error("[music-dna-analyze] invocation log error:", err));
 
-    return jsonResponse({ content, neighbors: nearestNeighbors ?? [], catalog_total_compared: catalogTotalCompared });
+    return jsonResponse({
+      content,
+      neighbors: nearestNeighbors ?? [],
+      catalog_total_compared: catalogTotalCompared,
+      catalog_total: catalogTotal,
+      catalog_genre_count: catalogGenreCount,
+      strict_genre_used: useStrictGenre,
+    });
   } catch (error) {
     console.error("[music-dna-analyze] Error:", error);
     return jsonResponse({ error: error instanceof Error ? error.message : "Internal server error" }, 500);
