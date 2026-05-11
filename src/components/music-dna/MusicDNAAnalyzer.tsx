@@ -198,6 +198,22 @@ function FeatureBar({ label, value, refValue }: {
   );
 }
 
+function PlatformCompatibilityCard({ lufs }: { lufs: number | null | undefined }) {
+  if (typeof lufs !== "number" || !Number.isFinite(lufs)) return null;
+  return (
+    <Card className="border-l-4 border-l-primary animate-fade-in">
+      <CardHeader className="pb-2 px-4 pt-3">
+        <CardTitle className="flex items-center gap-2 text-[11px] font-mono uppercase tracking-wider text-primary">
+          <span>📡</span> Compatibilidade com plataformas
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="px-4 pb-4">
+        <LufsCompatibility lufs={lufs} />
+      </CardContent>
+    </Card>
+  );
+}
+
 function BenchmarkPanel({ diagnosis, benchmark }: { diagnosis: DiagnosisResult; benchmark?: MusicDnaBenchmark }) {
   const features = spotifyFeaturesFromDiagnosis(diagnosis);
   const benchmarkSource = benchmark ? "Banco público" : "Preset local";
