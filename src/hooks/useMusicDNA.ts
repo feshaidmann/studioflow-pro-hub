@@ -563,22 +563,37 @@ export function useMusicDNA(): UseMusicDNAReturn {
       appendLog("🎧  Selecionando referências artísticas próximas…");
 
       const prompt = buildPrompt(input, realAnalysis, instrumentResult, selectedReferences, externalLookup);
-      const { content: rawText, neighbors: catalogNeighbors, catalogTotalCompared } = await callMusicDNAAnalyze(prompt, {
+
+      const calibrated = calibrateForCatalog({
+        lufs_integrated: realAnalysis.lufs_integrated,
+        spectral_centroid_hz: realAnalysis.spectral_centroid_hz,
+        spectral_rolloff: realAnalysis.spectral_rolloff_hz,
+        spectral_flatness: realAnalysis.spectral_flatness,
+      });
+
+      const {
+        content: rawText,
+        neighbors: catalogNeighbors,
+        catalogTotalCompared,
+        catalogTotal,
+        catalogGenreCount,
+        strictGenreUsed,
+      } = await callMusicDNAAnalyze(prompt, {
         features: externalLookup?.features,
         genero: input.genre,
         track_name: input.name,
         track_features: {
           tempo_bpm: realAnalysis.bpm,
-          lufs_integrated: realAnalysis.lufs_integrated,
+          lufs_integrated: calibrated.lufs_integrated,
           energy: realAnalysis.energy,
           danceability: realAnalysis.danceability,
           valence: realAnalysis.valence,
           acousticness: realAnalysis.acousticness,
           instrumentalness: realAnalysis.instrumentalness,
           dynamic_range_db: realAnalysis.dynamic_range_lu,
-          spectral_centroid_hz: realAnalysis.spectral_centroid_hz,
-          spectral_rolloff: realAnalysis.spectral_rolloff_hz,
-          spectral_flatness: realAnalysis.spectral_flatness,
+          spectral_centroid_hz: calibrated.spectral_centroid_hz,
+          spectral_rolloff: calibrated.spectral_rolloff,
+          spectral_flatness: calibrated.spectral_flatness,
           speechiness: realAnalysis.speechiness,
           liveness: realAnalysis.liveness,
           key_name: (realAnalysis.key ?? "").replace(/m$/, "") || null,
@@ -587,6 +602,24 @@ export function useMusicDNA(): UseMusicDNAReturn {
       });
       const clean = rawText.replace(/```json|```/g, "").trim();
       const parsed = JSON.parse(clean);
+
+      // Validação client-side: filtra `referencias_proximas` para manter apenas
+      // artistas que estão na lista curada OU em vizinhos reais do catálogo.
+      // Evita o LLM citar artista fora do escopo permitido.
+      const allowedArtists = new Set<string>([
+        ...ALL_REFERENCE_ARTISTS.map((a) => a.toLowerCase()),
+        ...catalogNeighbors.map((n) => n.band?.toLowerCase()).filter(Boolean) as string[],
+      ]);
+      const rawReferences: ReferenceMatch[] = Array.isArray(parsed.referencias_proximas) ? parsed.referencias_proximas : [];
+      const validatedReferences = rawReferences.filter((r) => {
+        const name = (r.artista ?? "").toLowerCase().trim();
+        return name.length > 0 && allowedArtists.has(name);
+      });
+      if (rawReferences.length !== validatedReferences.length) {
+        const dropped = rawReferences.filter((r) => !validatedReferences.includes(r));
+        console.warn("[music-dna] referências IA descartadas (fora da lista permitida):", dropped.map((r) => r.artista));
+      }
+      parsed.referencias_proximas = validatedReferences;
 
       setProgress(100);
       setStep("done");
@@ -604,6 +637,9 @@ export function useMusicDNA(): UseMusicDNAReturn {
         instrumentDetection: instrumentResult,
         catalogNeighbors,
         catalogTotalCompared,
+        catalogTotal,
+        catalogGenreCount,
+        strictGenreUsed,
       };
     },
 
