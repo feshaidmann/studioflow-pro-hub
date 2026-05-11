@@ -1535,6 +1535,8 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
               ))}
             </TabsContent>
           </Tabs>
+            );
+          })()}
         </DiagCard>
 
         <BenchmarkPanel diagnosis={diagnosis} benchmark={benchmark} />
