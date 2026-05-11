@@ -1710,30 +1710,39 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
         <p className="text-xs text-muted-foreground">
           Gerado pelo Assistente IA · Compartilhe com o produtor
         </p>
-        <div className="flex gap-2 flex-wrap">
-          {onSave && !isSaved && (
-            <Button variant="outline" size="sm" className="text-xs gap-1.5" onClick={onSave} disabled={isSaving}>
-              <Save className="h-3 w-3" />
-              {isSaving ? "Salvando…" : "Salvar análise"}
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Cluster primário */}
+          <div className="flex gap-2 flex-wrap items-center">
+            {onSave && !isSaved && (
+              <Button variant="default" size="sm" className="text-xs gap-1.5" onClick={onSave} disabled={isSaving}>
+                <Save className="h-3 w-3" />
+                {isSaving ? "Salvando…" : "Salvar análise"}
+              </Button>
+            )}
+            {isSaved && (
+              <span className="inline-flex items-center gap-1.5 text-xs text-primary px-3 py-1">
+                <Check className="h-3 w-3" /> Salva
+              </span>
+            )}
+            <Button variant="outline" size="sm" className="text-xs gap-1.5" onClick={() => downloadAnalysisReport(input, diagnosis)}>
+              <Download className="h-3 w-3" />
+              Baixar relatório
             </Button>
-          )}
-          {isSaved && (
-            <span className="inline-flex items-center gap-1.5 text-xs text-primary px-3 py-1">
-              <Check className="h-3 w-3" /> Salva
-            </span>
-          )}
-          <Button variant="outline" size="sm" className="text-xs gap-1.5" onClick={() => downloadAnalysisReport(input, diagnosis)}>
-            <Download className="h-3 w-3" />
-            Baixar relatório
-          </Button>
-          <CreateArtButton isSaved={isSaved} savedAnalysisId={savedAnalysisId} />
-          <Button variant="outline" size="sm" className="text-xs gap-1.5" onClick={() => setFeedbackOpen(true)}>
-            <MessageSquare className="h-3 w-3" />
-            Ajustar análise
-          </Button>
-          <Button variant="outline" size="sm" className="text-xs" onClick={onReset}>
-            Nova análise
-          </Button>
+            <CreateArtButton isSaved={isSaved} savedAnalysisId={savedAnalysisId} />
+          </div>
+
+          <Separator orientation="vertical" className="h-6 mx-1 hidden sm:block" />
+
+          {/* Cluster secundário */}
+          <div className="flex gap-2 flex-wrap items-center">
+            <Button variant="ghost" size="sm" className="text-xs gap-1.5" onClick={() => setFeedbackOpen(true)}>
+              <MessageSquare className="h-3 w-3" />
+              Ajustar análise
+            </Button>
+            <Button variant="ghost" size="sm" className="text-xs" onClick={onReset}>
+              Nova análise
+            </Button>
+          </div>
         </div>
       </div>
 
