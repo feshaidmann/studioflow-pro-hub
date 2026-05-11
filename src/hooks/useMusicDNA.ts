@@ -98,6 +98,8 @@ export interface CatalogNeighbor {
   instrumentalness: number | null;
   dynamic_range_db: number | null;
   spectral_centroid: number | null;
+  dims_used?: number | null;
+  dims_total?: number | null;
 }
 
 export interface DiagnosisResult {
@@ -126,6 +128,33 @@ export interface DiagnosisResult {
   instrumentDetection: InstrumentDetection;
   catalogNeighbors?: CatalogNeighbor[];
   catalogTotalCompared?: number;
+  catalogTotal?: number;
+  catalogGenreCount?: number;
+  strictGenreUsed?: boolean;
+}
+
+// Calibração v1: offsets empíricos para alinhar features extraídas pelo navegador
+// (Web Audio API) com o pipeline Python/Librosa do catálogo. Stub conservador.
+// Atualizar conforme dados de calibração reais forem coletados.
+export const BROWSER_CALIBRATION = {
+  lufs_offset_db: 0,
+  centroid_scale: 1,
+  rolloff_scale: 1,
+  flatness_offset: 0,
+} as const;
+
+function calibrateForCatalog(features: {
+  lufs_integrated: number | null;
+  spectral_centroid_hz: number | null;
+  spectral_rolloff: number | null;
+  spectral_flatness: number | null;
+}) {
+  return {
+    lufs_integrated: features.lufs_integrated == null ? null : features.lufs_integrated + BROWSER_CALIBRATION.lufs_offset_db,
+    spectral_centroid_hz: features.spectral_centroid_hz == null ? null : features.spectral_centroid_hz * BROWSER_CALIBRATION.centroid_scale,
+    spectral_rolloff: features.spectral_rolloff == null ? null : features.spectral_rolloff * BROWSER_CALIBRATION.rolloff_scale,
+    spectral_flatness: features.spectral_flatness == null ? null : features.spectral_flatness + BROWSER_CALIBRATION.flatness_offset,
+  };
 }
 
 // ── CONSTANTS ────────────────────────────────────────────────────────────────
