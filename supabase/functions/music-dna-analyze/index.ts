@@ -178,10 +178,30 @@ serve(async (req: Request) => {
       referenceExamples = refs;
     }
 
-    // Always look for nearest neighbors in the full reference catalog using the user's actual track features
+    // Conta total no catálogo e quantas são do gênero do usuário (separadamente)
     const num = (v: unknown): number | null => (typeof v === "number" && Number.isFinite(v) ? v : null);
     const str = (v: unknown): string | null => (typeof v === "string" && v.trim() ? v : null);
-    const { data: neighbors, error: nnError } = await adminClient.rpc("find_nearest_reference_tracks", {
+
+    let catalogTotal = 0;
+    let catalogGenreCount = 0;
+    {
+      const { count: total } = await adminClient
+        .from("music_reference_tracks")
+        .select("id", { count: "exact", head: true });
+      catalogTotal = total ?? 0;
+      if (targetGenre) {
+        const { count: gcount } = await adminClient
+          .from("music_reference_tracks")
+          .select("id", { count: "exact", head: true })
+          .ilike("genre", targetGenre);
+        catalogGenreCount = gcount ?? 0;
+      }
+    }
+
+    // Estratégia: se há boa cobertura do gênero (>=20 faixas), usa strict_genre.
+    // Caso contrário, busca no catálogo inteiro com bônus de gênero (-0.25) ajudando a priorizar.
+    const useStrictGenre = !!targetGenre && catalogGenreCount >= 20;
+    const rpcArgs = {
       p_tempo_bpm: num(trackFeatures.tempo) ?? num(trackFeatures.tempo_bpm) ?? num(trackFeatures.bpm),
       p_lufs_integrated: num(trackFeatures.lufs_integrated) ?? num(trackFeatures.lufs),
       p_energy: num(trackFeatures.energy),
@@ -193,7 +213,7 @@ serve(async (req: Request) => {
       p_spectral_centroid: num(trackFeatures.spectral_centroid_hz) ?? num(trackFeatures.spectral_centroid),
       p_genre: targetGenre ?? null,
       p_limit: 6,
-      p_strict_genre: false,
+      p_strict_genre: useStrictGenre,
       p_speechiness: num(trackFeatures.speechiness),
       p_liveness: num(trackFeatures.liveness),
       p_spectral_bandwidth: num(trackFeatures.spectral_bandwidth),
@@ -202,21 +222,11 @@ serve(async (req: Request) => {
       p_zero_crossing_rate: num(trackFeatures.zero_crossing_rate) ?? num(trackFeatures.zcr),
       p_key_name: str(trackFeatures.key_name) ?? str(trackFeatures.key),
       p_mode: str(trackFeatures.mode) ?? str(trackFeatures.mode_name),
-    });
+    };
+    const { data: neighbors, error: nnError } = await adminClient.rpc("find_nearest_reference_tracks", rpcArgs);
     if (nnError) console.error("[music-dna-analyze] nearest neighbors error:", nnError);
     nearestNeighbors = neighbors;
-
-    // Conta o total de faixas no catálogo (com filtro de gênero quando aplicável)
-    let catalogTotalCompared = 0;
-    {
-      const countQuery = adminClient
-        .from("music_reference_tracks")
-        .select("id", { count: "exact", head: true });
-      if (targetGenre) countQuery.ilike("genre", targetGenre);
-      const { count, error: countErr } = await countQuery;
-      if (countErr) console.error("[music-dna-analyze] count error:", countErr);
-      catalogTotalCompared = count ?? 0;
-    }
+    const catalogTotalCompared = useStrictGenre ? catalogGenreCount : catalogTotal;
 
     const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
     if (!lovableApiKey) {
@@ -267,7 +277,14 @@ serve(async (req: Request) => {
     const content = aiData.choices?.[0]?.message?.content ?? "";
     await logInvocation(adminClient, data.claims.sub, "success", aiData.usage).catch((err) => console.error("[music-dna-analyze] invocation log error:", err));
 
-    return jsonResponse({ content, neighbors: nearestNeighbors ?? [], catalog_total_compared: catalogTotalCompared });
+    return jsonResponse({
+      content,
+      neighbors: nearestNeighbors ?? [],
+      catalog_total_compared: catalogTotalCompared,
+      catalog_total: catalogTotal,
+      catalog_genre_count: catalogGenreCount,
+      strict_genre_used: useStrictGenre,
+    });
   } catch (error) {
     console.error("[music-dna-analyze] Error:", error);
     return jsonResponse({ error: error instanceof Error ? error.message : "Internal server error" }, 500);
