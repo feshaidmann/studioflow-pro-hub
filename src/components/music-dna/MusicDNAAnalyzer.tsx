@@ -1742,8 +1742,8 @@ function NextStepsBar({
 
   return (
     <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 animate-fade-in">
-      <p className="text-[11px] font-mono uppercase tracking-widest text-primary mb-2">
-        Próximos passos
+      <p className="text-[11px] font-mono uppercase tracking-widest text-primary mb-2 flex items-center gap-1.5">
+        <ArrowRight className="h-3 w-3" /> Continuar fluxo
       </p>
       <div className="flex flex-wrap gap-2">
         <Button
