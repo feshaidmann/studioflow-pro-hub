@@ -1424,13 +1424,33 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
       {/* REFERÊNCIAS — unificadas em Tabs (Catálogo Real + Sugestões IA) */}
       <section id="dna-referencias" className="scroll-mt-16 space-y-4">
         <DiagCard icon="🔗" title="Referências mais próximas">
-          <Tabs defaultValue={catalogNeighbors && catalogNeighbors.length > 0 ? "catalogo" : "ia"} className="w-full">
+          {(() => {
+            const topSimDefault = catalogNeighbors && catalogNeighbors.length > 0
+              ? Math.round((Number(catalogNeighbors[0].similarity_score) || 0) * 100)
+              : 0;
+            const hasIa = (referencias_proximas?.length ?? 0) > 0;
+            const defaultTab = (catalogNeighbors && catalogNeighbors.length > 0 && (topSimDefault >= 55 || !hasIa))
+              ? "catalogo"
+              : "ia";
+            return (
+          <Tabs defaultValue={defaultTab} className="w-full">
             <TabsList className="grid w-full grid-cols-2 h-9">
-              <TabsTrigger value="catalogo" className="text-xs">
+              <TabsTrigger value="catalogo" className="text-xs gap-1">
                 Catálogo Real
                 {catalogNeighbors && catalogNeighbors.length > 0 && (
-                  <span className="ml-1.5 text-foreground/60">({catalogNeighbors.length})</span>
+                  <span className="text-foreground/60">({catalogNeighbors.length})</span>
                 )}
+                <TooltipProvider delayDuration={150}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="h-3 w-3 text-muted-foreground" onClick={(e) => e.stopPropagation()} />
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" className="max-w-xs text-xs leading-relaxed">
+                      Comparação técnica (LUFS, dinâmica, espectro, ritmo). Não é identificação por fingerprint — extratores diferentes podem deslocar BPM, tom e energia.
+                      {totalCompared > 0 && <> Comparado contra {totalCompared} faixas.</>}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </TabsTrigger>
               <TabsTrigger value="ia" className="text-xs">
                 Sugestões IA
@@ -1441,10 +1461,7 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
             </TabsList>
 
             <TabsContent value="catalogo" className="space-y-2 mt-3">
-              <p className="rounded-md bg-muted/30 p-2.5 text-xs text-foreground/75 leading-relaxed">
-                Comparação técnica calibrada (LUFS, dinâmica, espectro, ritmo e atributos perceptivos) contra o catálogo interno. <strong>Não é identificação por fingerprint</strong> — extratores diferentes (browser vs. catálogo) podem deslocar BPM, tom e energia, então o ranking é uma aproximação técnica.
-                {totalCompared > 0 && <> Comparado contra <strong>{totalCompared}</strong> faixas. Clique em uma para o detalhe.</>}
-              </p>
+
               {(() => {
                 const topSim = catalogNeighbors && catalogNeighbors.length > 0
                   ? Math.round((Number(catalogNeighbors[0].similarity_score) || 0) * 100)
