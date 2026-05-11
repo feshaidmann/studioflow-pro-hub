@@ -1,95 +1,84 @@
-## Visão geral
+# Refatoração do resultado do Music DNA
 
-Unificar **Editais** e **Palcos** num único módulo chamado **Carreira** (`/carreira`), com filtro lateral por tipo de oportunidade, busca IA única que mistura fomento e palcos, e remoção das rotas legadas `/editais` e `/palcos`.
+Aplicar as 10 melhorias levantadas na análise crítica, focando em jornada, hierarquia e densidade de valor. Mudanças concentradas em `src/components/music-dna/MusicDNAAnalyzer.tsx` (arquivo principal do `ResultView`) e ajustes pontuais em sub-componentes.
 
-A arquitetura interna já favorece a fusão: ambos os módulos hoje compartilham `useEditalApplications`, `ApplicationChecklist` e `EditalResultModal` para rastrear inscrições. A diferença real está apenas no **tipo de oportunidade** (fomento financeiro × apresentação ao vivo) e nos templates de checklist.
+## Mudanças por bloco
 
-## Estrutura da nova página `/carreira`
+### 1. Reordenar seções do resultado
+Nova ordem dentro de `ResultView`:
+1. Header + `CompatibilityBadge`
+2. `ExecutiveSummary` (já com LUFS Compatibility integrado — ver #3)
+3. `NextStepsBar` renomeado (ver #2)
+4. Sticky tab nav (atualizada — ver #5)
+5. **Pontos fortes + Gargalos** (movidos para cá, antes das ações)
+6. **Próximos passos de produção** (`dna-acoes`)
+7. **Sugestões de arranjo** (com prioridade — ver #6)
+8. **Identidade da Faixa** (`dna-identidade`) — agora secundária
+9. **Referências unificadas** (`dna-referencias`, ver #4)
+10. **Detalhes técnicos** (Métricas, Perfil, Seções, Timeline)
+11. Footer
 
-```text
-┌──────────────────────────────────────────────────────────┐
-│  Carreira                              [+ Nova busca IA] │
-├────────────┬─────────────────────────────────────────────┤
-│ FILTROS    │  [Buscar por nome, órgão, cidade…]          │
-│            │                                             │
-│ Tipo       │  ┌─ Card (badge: Edital · Fomento) ──────┐  │
-│ ☐ Todos    │  │ Lei Aldir Blanc - SP   R$ 50k · 30d  │  │
-│ ☐ Editais  │  └──────────────────────────────────────┘  │
-│ ☐ Palcos   │  ┌─ Card (badge: Palco · Festival) ─────┐  │
-│            │  │ Festival MIMO 2026     RJ · 60d      │  │
-│ Status     │  └──────────────────────────────────────┘  │
-│ ☐ Aberto   │                                             │
-│ ☐ Inscrito │                                             │
-│ ☐ Salvo    │                                             │
-│            │                                             │
-│ Estado     │                                             │
-│ Categoria  │                                             │
-│ Valor      │                                             │
-└────────────┴─────────────────────────────────────────────┘
-```
+### 2. Renomear `NextStepsBar`
+- Trocar título "Próximos passos" por **"Continuar fluxo"** com ícone `ArrowRight`.
+- Elimina conflito com o card real "Próximos passos de produção".
 
-- Lista única ordenada por relevância/prazo, com **badge de tipo** em cada card (cor diferente para Edital vs Palco).
-- Filtros laterais persistem em querystring (`?tipo=edital&status=aberto`).
-- Painel **"Minhas inscrições"** acessível por aba secundária no topo (compartilha tudo via `useEditalApplications`).
+### 3. Promover `LufsCompatibility`
+- Remover o componente de dentro de `BenchmarkPanel`.
+- Criar card dedicado **"Compatibilidade com plataformas"** logo abaixo do `ExecutiveSummary`, em grid horizontal (Spotify · YouTube · Apple Music) com badge OK/warn/error visível.
+- Manter o `BenchmarkPanel` (feature bars + benchmark) apenas dentro da seção Referências.
 
-## Busca IA unificada
+### 4. Unificar visualizações de "faixas similares"
+- Manter apenas a `DiagCard` "Referências mais próximas" com 2 tabs (Catálogo Real + Sugestões IA).
+- **Remover** `AcousticMatchPanel` da view do usuário final (continua existindo no código para uso futuro/admin, mas sem render em `ResultView`).
+- Disclaimer técnico ("não é fingerprint, MFCC+Chroma…") vira um `Tooltip` num ícone `Info` ao lado do título da tab "Catálogo Real", em vez de banner ocupando espaço.
 
-Nova edge function **`oportunidades-search`** que:
-1. Recebe a query em linguagem natural do usuário.
-2. Usa Lovable AI (`google/gemini-3-flash-preview`) com structured output para classificar a intenção em `["edital", "palco", "ambos"]` + extrair filtros (estado, categoria, prazo).
-3. Dispara em paralelo as buscas internas existentes (`edital-search` e/ou `palco-search`) conforme a classificação.
-4. Mescla, normaliza num shape comum `{ tipo, titulo, orgao, prazo, valor, link, categoria, estado }` e devolve ranqueado.
+### 5. Sticky tab nav ampliada
+Itens novos: `Resumo`, `Diagnóstico` (engloba Pontos fortes + Gargalos + Ações), `Identidade`, `Referências`, `Técnico` (engloba Métricas, Perfil, Seções, Timeline).
 
-As edge functions `edital-search` e `palco-search` continuam existindo internamente — só ganham um wrapper.
+### 6. Prioridade nas `sugestoes_arranjo`
+- Heurística client-side simples (sem mudar prompt da IA): primeiras 2 sugestões = "Alta", próximas 2 = "Média", restante = "Baixa". Mantém compatibilidade com diagnósticos antigos.
+- Renderizar com o mesmo `PriorityBadge` usado em `proximos_passos`.
 
-## Modelo de dados
+### 7. Tab default das referências
+- Em `Tabs defaultValue`, calcular: se `topSim < 55` **e** existem `referencias_proximas`, default = `"ia"`. Caso contrário, mantém `"catalogo"`.
 
-Nada de novo no banco. As tabelas `editais`, `palcos_curados` e `edital_applications` permanecem como estão. A unificação é puramente de UI + roteamento.
+### 8. Repensar `persona_ouvinte`
+- Esconder o bloco "🎧 Ouvinte" por padrão.
+- Substituir por chip "Ver perfil do ouvinte" que abre `Popover` com a persona + sugestão de ação ("Use isso ao escolher hashtags / pitch de playlist").
 
-## Migração de rotas
+### 9. Footer reorganizado
+- Agrupar visualmente em 2 clusters separados por `Separator` vertical:
+  - **Primário:** Salvar análise · Baixar relatório · Criar arte com este DNA
+  - **Secundário:** Ajustar análise · Nova análise
 
-- Nova rota: `/carreira` (substitui ambas).
-- `/editais` e `/palcos` removidos do `App.tsx`, do menu `AppLayout` e da bottom-nav mobile.
-- Adicionar **um único redirect React Router** de `/editais` e `/palcos` → `/carreira?tipo=...` para evitar quebrar links externos durante a transição (1 linha cada, sem custo).
-- Atualizar `EditalProgressCard`, `EditalMetricsDashboard` e `Tutorial.tsx` para apontar para `/carreira`.
+### 10. Disclaimer técnico
+- Já tratado em #4 (Tooltip).
 
-## Detalhes técnicos
+## Arquivos afetados
 
-- **Páginas afetadas:**
-  - Criar `src/pages/Carreira.tsx` (layout com filtro lateral + lista).
-  - Refatorar conteúdo útil de `Editais.tsx` e `Palcos.tsx` em componentes reutilizáveis em `src/components/carreira/`:
-    - `OpportunityCard.tsx` (renderiza tanto edital quanto palco via prop `tipo`)
-    - `OpportunityFilters.tsx` (filtro lateral)
-    - `MyApplicationsTab.tsx` (consolida inscrições)
-    - `AISearchPanel.tsx` (busca IA unificada)
-  - Manter `EditalInscricao.tsx` (página de inscrição detalhada) — só renomear menus.
-  - Deletar `src/pages/Editais.tsx` e `src/pages/Palcos.tsx` após extrair os componentes.
+- `src/components/music-dna/MusicDNAAnalyzer.tsx`
+  - Reordenar JSX do `ResultView`
+  - Renomear `NextStepsBar` (título)
+  - Mover `LufsCompatibility` para card próprio (criar `PlatformCompatibilityCard` inline)
+  - Remover render do `AcousticMatchPanel`
+  - Atualizar array de tabs do sticky nav
+  - Heurística de prioridade em `sugestoes_arranjo`
+  - Cálculo de `defaultValue` da Tab de referências
+  - Substituir bloco fixo de persona por `Popover`
+  - Reorganizar grupo de botões do footer
+  - Tooltip no header da tab "Catálogo Real"
+- `src/components/music-dna/LufsCompatibility.tsx` — sem mudanças (ainda usado pelo novo card)
+- `src/components/music-dna/AcousticMatchPanel.tsx` — sem mudanças (apenas deixa de ser renderizado em `ResultView`)
 
-- **Hooks:**
-  - Criar `useOportunidades()` que internamente chama `useEditais()` e `usePalcos()` e mescla o resultado tipado.
-  - Manter `useEditais` e `usePalcos` como hooks especializados (chamados pelo novo hook agregador).
+## Notas técnicas
 
-- **Edge function nova:** `supabase/functions/oportunidades-search/index.ts` (orquestra `edital-search` + `palco-search` via classificação IA).
+- Sem mudança de schema, prompt da IA, hook `useMusicDNA` ou edge functions.
+- Sem mudança de design tokens — reutilizar `bg-muted/30`, `text-primary`, `border-primary/30`.
+- Manter classes existentes (light mode, macOS minimalist) e ícones Lucide já importados.
+- A heurística de prioridade em sugestões é puramente visual; não persiste nada.
+- Performance: nenhuma chamada extra; só reordenação e render condicional.
 
-- **Navegação:**
-  - `AppLayout.tsx`: substituir os dois itens (`/editais` e `/palcos`) por um único item **"Carreira"** com ícone `Trophy` ou `Sparkles`.
-  - Atualizar bottom-nav mobile e prefetch dinâmico.
+## Riscos
 
-- **i18n:** adicionar chaves `nav.carreira`, `carreira.tipo.edital`, `carreira.tipo.palco`, etc. em `LanguageContext`.
-
-- **Memória do projeto:** adicionar nota em `mem://navegacao/estrutura-e-onboarding` sobre o módulo unificado e a remoção das rotas antigas.
-
-## Ordem de implementação sugerida
-
-1. Criar componentes compartilhados em `src/components/carreira/` extraindo o que já é reutilizável.
-2. Criar `Carreira.tsx` consumindo o novo `useOportunidades`.
-3. Criar edge function `oportunidades-search` e plugá-la no `AISearchPanel`.
-4. Atualizar `App.tsx`, `AppLayout.tsx` e referências em outros componentes.
-5. Remover `Editais.tsx` e `Palcos.tsx` (após confirmar paridade funcional).
-6. Atualizar Tutorial e i18n.
-
-## Fora do escopo
-
-- Mudanças no schema de banco (não são necessárias).
-- Refatoração da página `EditalInscricao` (formulário de inscrição segue intacto).
-- Mudanças no `EditalAIAssistant` (continua sendo invocado pela página de inscrição detalhada).
+- Diagnósticos antigos salvos continuam funcionando (todos os campos opcionais já têm fallback).
+- Usuários que estavam acostumados com a ordem anterior verão Identidade depois das ações — mudança intencional, alinhada à persona "artista produzindo".
