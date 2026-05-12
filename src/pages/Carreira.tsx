@@ -248,6 +248,7 @@ export default function Carreira() {
                       key={`${op.tipo}-${op.key}`}
                       opportunity={op}
                       onApply={op.tipo === "edital" && op.editalId ? handleApply : undefined}
+                      alreadyApplied={op.tipo === "edital" && !!op.editalId && appliedEditalIds.has(op.editalId)}
                       onSave={op.origem === "ai" ? handleSave : undefined}
                       onRemove={op.origem === "saved" ? handleRemove : undefined}
                     />
