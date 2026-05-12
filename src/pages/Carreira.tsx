@@ -108,17 +108,26 @@ export default function Carreira() {
       });
   }, [allOpportunities, filters]);
 
+  const appliedEditalIds = useMemo(
+    () => new Set(applications.map((a) => a.edital_id)),
+    [applications]
+  );
+
   const handleApply = async (op: Opportunity) => {
     if (op.tipo !== "edital" || !op.editalId) {
       toast.info("Use o link oficial para se candidatar a este palco.");
       return;
     }
+    if (appliedEditalIds.has(op.editalId)) {
+      toast.info("Você já tem uma candidatura para este edital.");
+      setTab("inscricoes");
+      return;
+    }
     try {
       await createApp.mutateAsync({ edital_id: op.editalId });
-      toast.success("Candidatura iniciada");
       setTab("inscricoes");
-    } catch (e: any) {
-      toast.error(e.message || "Erro ao iniciar candidatura");
+    } catch {
+      // toast já é exibido pelo onError do hook
     }
   };
 
