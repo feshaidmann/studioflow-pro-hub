@@ -8,6 +8,7 @@ import { detectInstruments, type InstrumentDetection } from "@/lib/instrumentDet
 import { lookupMusicDnaReferences, type MusicDnaLookupResult } from "@/lib/musicDnaLookup";
 import { ALL_REFERENCE_ARTISTS, selectReferenceArtists } from "@/lib/musicDnaReferences";
 import { KEY_NAMES } from "@/types/musicDna";
+import { classifyGenre, HARDCODED_GENRE_PROFILES, mergeProfiles, type BenchmarkRow, type GenreFeatureProfile } from "@/lib/genreClassifier";
 
 // ── Re-exports ───────────────────────────────────────────────────────────────
 export type { RealAudioAnalysis, AudioSection } from "@/lib/audioAnalysis";
@@ -131,6 +132,12 @@ export interface DiagnosisResult {
   catalogTotal?: number;
   catalogGenreCount?: number;
   strictGenreUsed?: boolean;
+  classifierHint?: {
+    detected: string;
+    score: number;
+    runnerUp: { genre: string; score: number } | null;
+    top3: Array<{ genre: string; score: number }>;
+  } | null;
 }
 
 // Calibração v1: offsets empíricos para alinhar features extraídas pelo navegador
@@ -571,6 +578,31 @@ export function useMusicDNA(): UseMusicDNAReturn {
         spectral_flatness: realAnalysis.spectral_flatness,
       });
 
+      // Classificação independente por features (cosine similarity sobre perfis hardcoded + benchmarks BR)
+      let classifierProfiles: Record<string, GenreFeatureProfile> = HARDCODED_GENRE_PROFILES;
+      try {
+        const { data: bm } = await supabase
+          .from("music_dna_benchmarks")
+          .select("genero,total_faixas,avg_tempo_bpm,avg_danceability,avg_energy,avg_acousticness,avg_instrumentalness,avg_valence,avg_speechiness,avg_loudness_db")
+          .gte("total_faixas", 20);
+        classifierProfiles = mergeProfiles(HARDCODED_GENRE_PROFILES, (bm ?? []) as BenchmarkRow[]);
+      } catch (e) {
+        console.warn("[music-dna] benchmarks fetch falhou; classificador usa só perfis hardcoded", e);
+      }
+      const classifierHint = classifyGenre({
+        tempo_bpm: realAnalysis.bpm,
+        danceability: realAnalysis.danceability,
+        energy: realAnalysis.energy,
+        acousticness: realAnalysis.acousticness,
+        instrumentalness: realAnalysis.instrumentalness,
+        valence: realAnalysis.valence,
+        speechiness: realAnalysis.speechiness,
+        loudness_rms_db: realAnalysis.lufs_integrated,
+      }, classifierProfiles);
+      if (classifierHint) {
+        appendLog(`🎼  Classificador interno: ${classifierHint.detected} (${Math.round(classifierHint.score * 100)}%).`);
+      }
+
       const {
         content: rawText,
         neighbors: catalogNeighbors,
@@ -582,6 +614,7 @@ export function useMusicDNA(): UseMusicDNAReturn {
         features: externalLookup?.features,
         genero: input.genre,
         track_name: input.name,
+        classifier_hint: classifierHint,
         track_features: {
           tempo_bpm: realAnalysis.bpm,
           lufs_integrated: calibrated.lufs_integrated,
@@ -640,6 +673,7 @@ export function useMusicDNA(): UseMusicDNAReturn {
         catalogTotal,
         catalogGenreCount,
         strictGenreUsed,
+        classifierHint,
       };
     },
 
