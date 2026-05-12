@@ -1273,6 +1273,13 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
 
       <ExecutiveSummary diagnosis={diagnosis} onAddAllSteps={handleAddAllSteps} allStepsAdded={allStepsAdded} />
 
+      {diagnosis.classifierHint && (
+        <GenreMismatchHint
+          hint={diagnosis.classifierHint}
+          declared={input.genre || diagnosis.genero_classificado || null}
+        />
+      )}
+
       <PlatformCompatibilityCard lufs={lufsValue} />
 
       <NextStepsBar diagnosis={diagnosis} input={input} isSaved={!!isSaved} savedAnalysisId={savedAnalysisId} />
