@@ -131,6 +131,12 @@ export interface DiagnosisResult {
   catalogTotal?: number;
   catalogGenreCount?: number;
   strictGenreUsed?: boolean;
+  classifierHint?: {
+    detected: string;
+    score: number;
+    runnerUp: { genre: string; score: number } | null;
+    top3: Array<{ genre: string; score: number }>;
+  } | null;
 }
 
 // Calibração v1: offsets empíricos para alinhar features extraídas pelo navegador
