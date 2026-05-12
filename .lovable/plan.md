@@ -1,38 +1,64 @@
 ## Objetivo
 
-Tornar o `GenreMismatchHint` mais transparente exibindo:
-- Família musical do gênero declarado e do detectado (ou "fora das famílias mapeadas").
-- Valores numéricos: score top1, score top2, gap, e os limiares calibrados em uso.
+Suíte de testes Vitest cobrindo a lógica do `GenreMismatchHint` com casos derivados de cenários reais de produtores. Garantir que pares dentro da mesma família (Pop ↔ Pop BR, Rock ↔ Grunge, Sertanejo Raiz ↔ Universitário, etc.) **não** disparam alerta, e que divergências reais (Pop ↔ Heavy Metal, Bossa Nova ↔ Trap, Funk Carioca ↔ Country) **continuam** sinalizadas.
 
-Mudanças apenas visuais/UI no componente — sem alterar lógica de gating, calibração ou banco.
+## Arquivos novos
 
-## Arquivos
+### 1. `src/lib/__tests__/genreFamilies.test.ts`
+Testes unitários puros (sem React) sobre `normalizeGenreName`, `sameFamily`, `getFamilies`:
+- `normalizeGenreName`: remove acentos/sufixos regionais (`"Pop Brasileiro"` → `"pop"`, `"Sertanejo Universitário"` → `"sertanejo"`, `"Eletrônica / House"` → `"eletronica"`).
+- `sameFamily` (cases positivos): Pop ↔ Pop Brasileiro, Rock ↔ Grunge, Rock Alternativo BR ↔ Indie BR, Sertanejo Raiz ↔ Sertanejo Universitário, Hip-Hop ↔ Trap BR, Samba ↔ Pagode, Bossa Nova ↔ Jazz, Synth-Pop ↔ Eletrônica.
+- `sameFamily` (cases negativos): Pop ↔ Heavy Metal, Bossa Nova ↔ Trap BR, Funk Carioca ↔ Country, Sertanejo ↔ Hip-Hop, Forró ↔ Eletrônica.
+- `getFamilies`: retorna lista correta para gêneros mapeados; `[]` para gênero desconhecido.
 
-### 1. `src/lib/genreFamilies.ts`
-- Exportar nova função `getFamilies(genre: string): string[]` que devolve a lista de famílias (ou `[]`) a partir do `GENRE_TO_FAMILIES` reverso já existente.
-- Exportar `FAMILY_LABELS: Record<string, string>` com rótulos pt-BR amigáveis (ex: `pop → "Pop"`, `brazilian-roots → "Raízes Brasileiras"`, `urban → "Urbano"`, `electronic → "Eletrônico"`, `acoustic → "Acústico"`, `rock → "Rock"`, `funk-br → "Funk BR"`).
+### 2. `src/components/music-dna/__tests__/GenreMismatchHint.test.tsx`
+Testes de comportamento de renderização (alerta sim/não), mockando `useGenreMismatchCalibration` para retornar thresholds-padrão fixos (`score 0.92 / gap 0.05`) e `submitFeedback` no-op.
 
-### 2. `src/components/music-dna/GenreMismatchHint.tsx`
-Adicionar, abaixo do parágrafo "Sinal técnico apenas..." e antes da linha de feedback, um bloco colapsável discreto "Detalhes técnicos" (`<details>` nativo, sem expandir o card por padrão) contendo:
+Estrutura: array `CASES` com fixtures inspiradas em sessões reais já vistas pelos produtores:
 
-```text
-Família declarada: <familias do declared> (ou "—")
-Família detectada: <familias do detected> (ou "—")
-Top 1 (detectado): <top1 %>  •  Top 2 (runner-up): <top2 %>
-Gap: <gap %>
-Limiares aplicados: score ≥ <scoreThreshold %>, gap ≥ <gapThreshold %>
+```ts
+type Case = {
+  name: string;
+  declared: string;
+  detected: string;
+  top1: number;
+  top2: number;
+  runnerUp?: string;
+  shouldAlert: boolean;
+};
 ```
 
-Observações:
-- Usar fonte mono pequena (`text-[11px] font-mono text-muted-foreground`).
-- Quando `getFamilies()` retorna `[]`, mostrar "fora das famílias mapeadas" para deixar claro por que `sameFamily()` não impediu o alerta.
-- Reaproveitar `getThresholds(declared)` já chamado no componente; não recomputar.
-- Nenhuma mudança em condições de retorno antecipado nem em `submitFeedback`.
+Casos `shouldAlert: false` (silenciado):
+- Pop ↔ Pop Brasileiro (top1 0.95, gap 0.10) — mesma família.
+- Rock ↔ Grunge (0.94 / gap 0.08).
+- Sertanejo Raiz ↔ Sertanejo Universitário (0.96 / gap 0.12).
+- Hip-Hop ↔ Trap BR (0.93 / gap 0.07).
+- Samba ↔ Pagode (0.97 / gap 0.15).
+- Pop ↔ Synth-Pop (mesma família "pop").
+- Score abaixo do limiar: declared Rock, detected Pop, 0.89 / gap 0.08 (não alerta).
+- Gap insuficiente: declared Rock, detected Pop, 0.95 / gap 0.03 (não alerta).
+- Runner-up na mesma família do declared: declared Pop, detected Trap BR (0.93), runnerUp "Pop Brasileiro" (0.86).
 
-### 3. Memória
-Atualizar a entrada `mem://funcionalidades/dna-musical/feedback-de-classificador` mencionando o painel "Detalhes técnicos" exibido no hint.
+Casos `shouldAlert: true` (alerta legítimo):
+- Pop ↔ Heavy Metal (0.94 / gap 0.10).
+- Bossa Nova ↔ Trap BR (0.93 / gap 0.09).
+- Funk Carioca ↔ Country (0.95 / gap 0.12).
+- Sertanejo Universitário ↔ Hip-Hop (0.94 / gap 0.08), runnerUp Eletrônica.
+- Forró / Piseiro ↔ Heavy Metal (0.96 / gap 0.20).
+
+Implementação:
+- `vi.mock("@/hooks/useGenreMismatchCalibration", ...)` com `getThresholds: () => ({ scoreThreshold: 0.92, gapThreshold: 0.05 })` e `submitFeedback: vi.fn()`, `submitting: false`.
+- Loop `it.each(CASES)` que monta `hint = { detected, score: top1, runnerUp: runnerUp ? { genre: runnerUp, score: top2 } : { genre: "outro", score: top2 }, top3: [] }` e renderiza `<GenreMismatchHint hint={...} declared={declared} />`.
+- `shouldAlert ? expect(screen.queryByText(/Sugestão do classificador/i)).toBeInTheDocument() : ...not.toBeInTheDocument()`.
+
+### 3. (Opcional, mesmo arquivo) `describe("calibração")` 
+Um teste extra mocka thresholds elevados (`0.97 / 0.10`) para confirmar que aumentando o limiar (efeito do feedback "Falso alerta") um caso antes alertado deixa de alertar — sem tocar no banco.
 
 ## Fora de escopo
-- Mudar limiares ou regras de família.
-- Adicionar i18n EN (manter pt-BR consistente com o resto do componente).
-- Telemetria do clique em "Detalhes".
+- Datasets de áudio reais / WAV embutidos.
+- Testes do hook `useGenreMismatchCalibration` (banco) — separáveis em outra suíte.
+- Testes da Edge Function.
+- Mudanças em código de produção.
+
+## Como rodar
+`bunx vitest run src/lib/__tests__/genreFamilies.test.ts src/components/music-dna/__tests__/GenreMismatchHint.test.tsx`
