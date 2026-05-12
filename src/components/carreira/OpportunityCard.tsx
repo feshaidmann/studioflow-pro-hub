@@ -29,9 +29,10 @@ interface Props {
   onSave?: (op: Opportunity) => void;
   onRemove?: (op: Opportunity) => void;
   onClick?: (op: Opportunity) => void;
+  alreadyApplied?: boolean;
 }
 
-export default function OpportunityCard({ opportunity: op, onApply, onSave, onRemove, onClick }: Props) {
+export default function OpportunityCard({ opportunity: op, onApply, onSave, onRemove, onClick, alreadyApplied }: Props) {
   const isEdital = op.tipo === "edital";
   const TypeIcon = isEdital ? Trophy : Mic2;
   const typeLabel = isEdital
