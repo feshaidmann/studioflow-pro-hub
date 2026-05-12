@@ -950,6 +950,48 @@ export type Database = {
         }
         Relationships: []
       }
+      music_external_metadata: {
+        Row: {
+          artist_key: string
+          deezer_cover_url: string | null
+          deezer_id: number | null
+          deezer_preview_url: string | null
+          fetched_at: string
+          id: string
+          listenbrainz_similar: Json
+          mbid: string | null
+          musicbrainz_tags: Json
+          raw: Json
+          track_key: string
+        }
+        Insert: {
+          artist_key: string
+          deezer_cover_url?: string | null
+          deezer_id?: number | null
+          deezer_preview_url?: string | null
+          fetched_at?: string
+          id?: string
+          listenbrainz_similar?: Json
+          mbid?: string | null
+          musicbrainz_tags?: Json
+          raw?: Json
+          track_key: string
+        }
+        Update: {
+          artist_key?: string
+          deezer_cover_url?: string | null
+          deezer_id?: number | null
+          deezer_preview_url?: string | null
+          fetched_at?: string
+          id?: string
+          listenbrainz_similar?: Json
+          mbid?: string | null
+          musicbrainz_tags?: Json
+          raw?: Json
+          track_key?: string
+        }
+        Relationships: []
+      }
       music_reference_tracks: {
         Row: {
           acousticness: number | null

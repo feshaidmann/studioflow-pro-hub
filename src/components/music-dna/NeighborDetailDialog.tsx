@@ -1,8 +1,9 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { ArrowDown, ArrowUp, Minus } from "lucide-react";
+import { ArrowDown, ArrowUp, Minus, Sparkles, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { CatalogNeighbor } from "@/hooks/useMusicDNA";
+import { useNeighborEnrichment } from "@/hooks/useNeighborEnrichment";
 
 interface UserTrack {
   bpm?: number | null;
@@ -192,9 +193,78 @@ export function NeighborDetailDialog({
             );
           })}
 
-          {/* TODO: Player de preview — adicionar quando tivermos URLs de áudio em music_reference_tracks */}
+          <NeighborEnrichmentSection artist={neighbor.band} title={neighbor.filename} />
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function NeighborEnrichmentSection({ artist, title }: { artist: string; title: string }) {
+  // Tenta tirar título limpo do filename (remove extensão e prefixos numéricos)
+  const cleanTitle = title.replace(/\.[^.]+$/, "").replace(/^\d+\s*[-._]\s*/, "").trim();
+  const { data, isLoading } = useNeighborEnrichment(artist, cleanTitle);
+
+  if (isLoading) {
+    return (
+      <div className="rounded-lg border border-border/60 bg-muted/10 p-3 text-xs text-muted-foreground animate-pulse">
+        Buscando contexto público da referência…
+      </div>
+    );
+  }
+
+  if (!data || (!data.deezer_preview_url && !data.musicbrainz_tags?.length && !data.listenbrainz_similar?.length)) {
+    return null;
+  }
+
+  return (
+    <div className="rounded-lg border border-border/60 bg-muted/10 p-3 space-y-3">
+      <div className="flex items-center gap-1.5 text-[11px] font-mono uppercase tracking-widest text-muted-foreground">
+        <Sparkles className="h-3 w-3" /> Contexto público
+      </div>
+
+      {data.deezer_preview_url && (
+        <div className="flex items-center gap-3">
+          {data.deezer_cover_url && (
+            <img src={data.deezer_cover_url} alt={artist} className="h-12 w-12 rounded-md object-cover" loading="lazy" />
+          )}
+          <audio controls preload="none" src={data.deezer_preview_url} className="h-9 flex-1 min-w-0">
+            Seu navegador não suporta áudio.
+          </audio>
+        </div>
+      )}
+
+      {data.musicbrainz_tags?.length > 0 && (
+        <div className="space-y-1.5">
+          <div className="text-[11px] text-muted-foreground">Tags coletivas (MusicBrainz)</div>
+          <div className="flex flex-wrap gap-1.5">
+            {data.musicbrainz_tags.slice(0, 8).map((t) => (
+              <Badge key={t.name} variant="secondary" className="text-[10px] font-normal">
+                {t.name}
+              </Badge>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {data.listenbrainz_similar?.length > 0 && (
+        <div className="space-y-1.5">
+          <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+            <Users className="h-3 w-3" /> Quem ouve isso também ouve (ListenBrainz)
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {data.listenbrainz_similar.slice(0, 6).map((a) => (
+              <Badge key={a.name} variant="outline" className="text-[10px] font-normal">
+                {a.name}
+              </Badge>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <p className="text-[10px] text-muted-foreground/70 leading-relaxed">
+        Dados públicos via Deezer · MusicBrainz · ListenBrainz. Comparativo cultural complementar — não substitui análise técnica.
+      </p>
+    </div>
   );
 }
