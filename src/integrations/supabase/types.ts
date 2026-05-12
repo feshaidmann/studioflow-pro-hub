@@ -678,6 +678,42 @@ export type Database = {
         }
         Relationships: []
       }
+      genre_mismatch_feedback: {
+        Row: {
+          analysis_id: string | null
+          created_at: string
+          declared_genre: string
+          detected_genre: string
+          gap: number
+          id: string
+          score: number
+          user_id: string
+          verdict: string
+        }
+        Insert: {
+          analysis_id?: string | null
+          created_at?: string
+          declared_genre?: string
+          detected_genre?: string
+          gap?: number
+          id?: string
+          score?: number
+          user_id: string
+          verdict: string
+        }
+        Update: {
+          analysis_id?: string | null
+          created_at?: string
+          declared_genre?: string
+          detected_genre?: string
+          gap?: number
+          id?: string
+          score?: number
+          user_id?: string
+          verdict?: string
+        }
+        Relationships: []
+      }
       mix_tracks: {
         Row: {
           comp_gr_db: number
