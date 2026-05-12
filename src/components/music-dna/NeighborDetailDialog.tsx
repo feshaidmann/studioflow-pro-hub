@@ -1,8 +1,9 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { ArrowDown, ArrowUp, Minus } from "lucide-react";
+import { ArrowDown, ArrowUp, Minus, Sparkles, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { CatalogNeighbor } from "@/hooks/useMusicDNA";
+import { useNeighborEnrichment } from "@/hooks/useNeighborEnrichment";
 
 interface UserTrack {
   bpm?: number | null;
