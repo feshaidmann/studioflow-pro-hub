@@ -1279,6 +1279,7 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
         <GenreMismatchHint
           hint={diagnosis.classifierHint}
           declared={(input as { genre?: string }).genre || diagnosis.genero_classificado || null}
+          analysisId={savedAnalysisId ?? null}
         />
       )}
 
