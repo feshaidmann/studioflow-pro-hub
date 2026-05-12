@@ -116,7 +116,7 @@ export default function MasterAnalyzerModal({
       setSuggestions(generateSuggestions(analysisResult));
       setProgress(100);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Não foi possível decodificar o arquivo. Verifique se é um WAV, MP3 ou FLAC válido.";
+      const msg = err instanceof Error ? err.message : "Não foi possível decodificar o arquivo. Verifique se é um arquivo de áudio válido (MP3, WAV, FLAC, M4A, OGG ou AIFF).";
       setError(msg);
     } finally {
       setAnalyzing(false);
@@ -182,7 +182,7 @@ export default function MasterAnalyzerModal({
             onDragOver={(e) => e.preventDefault()}
             onDrop={handleDrop}
           >
-            <input type="file" accept=".wav,.mp3,.flac" className="hidden" id="modal-audio-upload" onChange={handleFileSelect} />
+            <input type="file" accept=".mp3,.wav,.flac,.m4a,.ogg,.aiff,.aif" className="hidden" id="modal-audio-upload" onChange={handleFileSelect} />
             <label htmlFor="modal-audio-upload" className="flex flex-col items-center justify-center py-8 cursor-pointer">
               {file ? (
                 <>
@@ -193,8 +193,8 @@ export default function MasterAnalyzerModal({
               ) : (
                 <>
                   <Upload className="h-10 w-10 text-muted-foreground mb-2" />
-                  <p className="text-sm font-medium">Arraste WAV/MP3/FLAC aqui</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">ou clique para buscar</p>
+                  <p className="text-sm font-medium">Arraste áudio aqui</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">MP3, WAV, FLAC, M4A, OGG, AIFF — até 200 MB</p>
                 </>
               )}
             </label>

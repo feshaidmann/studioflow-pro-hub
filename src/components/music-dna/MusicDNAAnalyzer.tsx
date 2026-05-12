@@ -66,6 +66,7 @@ import {
 const ACCEPTED_AUDIO = [
   "audio/wav", "audio/x-wav", "audio/mpeg", "audio/mp3",
   "audio/ogg", "audio/flac", "audio/aac", "audio/x-m4a", "audio/mp4",
+  "audio/aiff", "audio/x-aiff", "audio/x-aifc",
 ];
 
 const formSchema = z.object({
@@ -900,8 +901,8 @@ function FormView({ onSubmit, isPending, projects }: {
 
   const handleFile = useCallback((file: File) => {
     setFileError(null);
-    if (!ACCEPTED_AUDIO.includes(file.type) && !file.name.match(/\.(wav|mp3|ogg|flac|aac|m4a)$/i)) {
-      setFileError("Formato não suportado. Use WAV, MP3, OGG, FLAC ou AAC.");
+    if (!ACCEPTED_AUDIO.includes(file.type) && !file.name.match(/\.(wav|mp3|ogg|flac|aac|m4a|aiff|aif)$/i)) {
+      setFileError("Formato não suportado. Use MP3, WAV, FLAC, M4A, OGG ou AIFF.");
       return;
     }
     if (file.size > 50 * 1024 * 1024) {
@@ -960,13 +961,13 @@ function FormView({ onSubmit, isPending, projects }: {
                     Arraste seu arquivo ou clique para selecionar
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    WAV, MP3, OGG, FLAC, AAC — até 50 MB
+                    MP3, WAV, FLAC, M4A, OGG, AIFF — até 50 MB
                   </p>
                 </div>
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept=".wav,.mp3,.ogg,.flac,.aac,.m4a"
+                  accept=".mp3,.wav,.flac,.m4a,.ogg,.aiff,.aif"
                   className="hidden"
                   onChange={(e) => {
                     const f = e.target.files?.[0];

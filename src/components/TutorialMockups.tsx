@@ -145,7 +145,7 @@ export function MasterAnalyzerMockup() {
       <div className="flex items-center justify-center rounded-md border-2 border-dashed border-border/40 bg-muted/20 py-3 mb-2">
         <div className="flex flex-col items-center gap-1 text-muted-foreground">
           <Upload className="h-5 w-5" />
-          <span>Arraste seu arquivo .wav / .mp3</span>
+          <span>Arraste seu arquivo .mp3, .wav, .flac, .m4a, .ogg, .aiff ou .aif</span>
         </div>
       </div>
 
@@ -292,7 +292,7 @@ export function MusicDNAMockup() {
         <div className="flex flex-col items-center gap-1 text-muted-foreground">
           <Dna className="h-5 w-5 text-primary" />
           <span>Arraste seu arquivo de áudio</span>
-          <span className="text-[9px] text-muted-foreground/60">.wav, .mp3, .flac — até 50 MB</span>
+          <span className="text-[9px] text-muted-foreground/60">.mp3, .wav, .flac, .m4a, .ogg, .aiff, .aif — até 50 MB</span>
         </div>
       </div>
 
