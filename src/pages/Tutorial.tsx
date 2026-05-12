@@ -222,7 +222,7 @@ const tabContent: Record<TabId, React.ReactNode> = {
       <SectionTitle>Como usar</SectionTitle>
       <Step n={1}>Acesse <strong>DNA Musical</strong> no menu lateral.</Step>
       <Step n={2}>Dê um <strong>nome para a faixa</strong> e, opcionalmente, adicione notas e artistas de referência.</Step>
-      <Step n={3}>Faça o <strong>upload do áudio</strong> (.wav, .mp3 ou .flac).</Step>
+      <Step n={3}>Faça o <strong>upload do áudio</strong> (.mp3, .wav, .flac, .m4a, .ogg, .aiff ou .aif).</Step>
       <Step n={4}>Clique em <strong>"Analisar"</strong> e acompanhe o progresso em tempo real.</Step>
 
       <SectionTitle>O que você recebe</SectionTitle>
