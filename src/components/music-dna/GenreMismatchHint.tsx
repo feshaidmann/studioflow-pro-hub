@@ -3,7 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Sparkles, ThumbsDown, ThumbsUp } from "lucide-react";
 import { toast } from "sonner";
-import { normalizeGenreName, sameFamily } from "@/lib/genreFamilies";
+import { normalizeGenreName, sameFamily, getFamilies, FAMILY_LABELS } from "@/lib/genreFamilies";
 import { useGenreMismatchCalibration } from "@/hooks/useGenreMismatchCalibration";
 
 interface ClassifierHint {
@@ -95,6 +95,35 @@ export function GenreMismatchHint({ hint, declared, analysisId }: Props) {
             Sinal técnico apenas. Esses dois gêneros têm assinaturas acústicas distintas — vale conferir
             tags e referências antes de ajustar.
           </p>
+
+          {(() => {
+            const famDeclared = getFamilies(declared!);
+            const famDetected = getFamilies(hint.detected);
+            const fmtFam = (fs: string[]) =>
+              fs.length === 0
+                ? "fora das famílias mapeadas"
+                : fs.map((f) => FAMILY_LABELS[f] ?? f).join(", ");
+            const pct = (n: number) => `${(n * 100).toFixed(1)}%`;
+            return (
+              <details className="group">
+                <summary className="text-[11px] font-mono text-muted-foreground cursor-pointer hover:text-foreground transition-colors select-none">
+                  Detalhes técnicos
+                </summary>
+                <div className="mt-2 space-y-0.5 text-[11px] font-mono text-muted-foreground leading-relaxed pl-2 border-l border-border/60">
+                  <div>Família declarada: {fmtFam(famDeclared)}</div>
+                  <div>Família detectada: {fmtFam(famDetected)}</div>
+                  <div>
+                    Top 1 ({hint.detected}): {pct(top1)} • Top 2
+                    {hint.runnerUp ? ` (${hint.runnerUp.genre})` : ""}: {pct(top2)}
+                  </div>
+                  <div>Gap: {pct(gap)}</div>
+                  <div>
+                    Limiares: score ≥ {pct(scoreThreshold)}, gap ≥ {pct(gapThreshold)}
+                  </div>
+                </div>
+              </details>
+            );
+          })()}
 
           <div className="flex items-center gap-2 pt-1">
             <span className="text-[11px] text-muted-foreground mr-auto">Esse alerta faz sentido?</span>
