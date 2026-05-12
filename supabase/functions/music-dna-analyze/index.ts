@@ -38,6 +38,23 @@ function buildStructuredPrompt(
   const neighborsCtx = Array.isArray(nearestNeighbors) && nearestNeighbors.length
     ? JSON.stringify(nearestNeighbors, null, 2)
     : "Catálogo de referências vazio — sem vizinhos próximos.";
+
+  const hint = payload.classifier_hint as
+    | { detected?: string; score?: number; runnerUp?: { genre?: string; score?: number } | null; top3?: Array<{ genre: string; score: number }> }
+    | null
+    | undefined;
+  const declared = (payload.genero ?? payload.genre) as string | undefined;
+  const classifierBlock = hint?.detected
+    ? `
+
+CLASSIFICADOR INTERNO (cosine similarity sobre features acústicas vs. perfis médios de gêneros do catálogo):
+- top1: ${hint.detected} (${Math.round((hint.score ?? 0) * 100)}%)
+${hint.runnerUp ? `- top2: ${hint.runnerUp.genre} (${Math.round((hint.runnerUp.score ?? 0) * 100)}%)` : ""}
+- declarado pelo usuário: ${declared || "não informado"}
+
+Use isso APENAS para enriquecer a análise. Se o classificador divergir do declarado com confiança alta (≥75%), você pode mencionar a proximidade técnica com ${hint.detected} no diagnostico_resumo, mas NÃO contradiga o gênero declarado pelo usuário no campo genero_classificado.`
+    : "";
+
   return `${prompt}
 
 ════════════════════════════════════════════════
