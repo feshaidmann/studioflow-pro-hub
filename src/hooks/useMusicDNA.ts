@@ -8,6 +8,7 @@ import { detectInstruments, type InstrumentDetection } from "@/lib/instrumentDet
 import { lookupMusicDnaReferences, type MusicDnaLookupResult } from "@/lib/musicDnaLookup";
 import { ALL_REFERENCE_ARTISTS, selectReferenceArtists } from "@/lib/musicDnaReferences";
 import { KEY_NAMES } from "@/types/musicDna";
+import { classifyGenre, HARDCODED_GENRE_PROFILES, mergeProfiles, type BenchmarkRow, type GenreFeatureProfile } from "@/lib/genreClassifier";
 
 // ── Re-exports ───────────────────────────────────────────────────────────────
 export type { RealAudioAnalysis, AudioSection } from "@/lib/audioAnalysis";
