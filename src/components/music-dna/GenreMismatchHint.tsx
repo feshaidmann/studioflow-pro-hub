@@ -1,6 +1,10 @@
+import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Sparkles } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Sparkles, ThumbsDown, ThumbsUp } from "lucide-react";
+import { toast } from "sonner";
 import { normalizeGenreName, sameFamily } from "@/lib/genreFamilies";
+import { useGenreMismatchCalibration } from "@/hooks/useGenreMismatchCalibration";
 
 interface ClassifierHint {
   detected: string;
@@ -12,23 +16,21 @@ interface ClassifierHint {
 interface Props {
   hint: ClassifierHint;
   declared: string | null | undefined;
+  analysisId?: string | null;
 }
-
-// Limiares calibrados após feedback inicial:
-// - score >= 0.92: cosseno em vetores 0-1 de 8 dims tende a ser alto;
-//   só sinalizamos quando a afinidade técnica é muito forte.
-// - gap >= 0.05 entre top1 e top2: evita ruído estatístico.
-// - Pares dentro da mesma família musical não disparam alerta.
-// - Se o runner-up está na mesma família do declarado, consideramos o
-//   declarado "próximo o bastante" e suprimimos o alerta.
-const SCORE_THRESHOLD = 0.92;
-const GAP_THRESHOLD = 0.05;
 
 /**
  * Mostra um aviso amigável quando o classificador interno (cosine sim sobre features)
  * diverge significativamente do gênero declarado pelo usuário ou classificado pela IA.
+ *
+ * Limiares de score/gap são calibrados por usuário e por gênero declarado, com base
+ * no histórico de cliques em "Falso alerta" / "Alerta correto".
  */
-export function GenreMismatchHint({ hint, declared }: Props) {
+export function GenreMismatchHint({ hint, declared, analysisId }: Props) {
+  const { getThresholds, submitFeedback, submitting } = useGenreMismatchCalibration();
+  const [dismissed, setDismissed] = useState(false);
+
+  if (dismissed) return null;
   if (!hint?.detected || !declared) return null;
 
   // Match exato após normalização (sufixos regionais, acentos, case)
@@ -39,17 +41,43 @@ export function GenreMismatchHint({ hint, declared }: Props) {
 
   const top1 = hint.score;
   const top2 = hint.runnerUp?.score ?? 0;
-  if (top1 < SCORE_THRESHOLD || top1 - top2 < GAP_THRESHOLD) return null;
+  const gap = top1 - top2;
+
+  const { scoreThreshold, gapThreshold } = getThresholds(declared);
+  if (top1 < scoreThreshold || gap < gapThreshold) return null;
 
   // Se o runner-up pertence à família do declarado, declared está
   // suficientemente representado nas opções próximas → não alerta
   if (hint.runnerUp && sameFamily(hint.runnerUp.genre, declared)) return null;
 
+  async function handleFeedback(verdict: "falso_alerta" | "correto") {
+    setDismissed(true);
+    try {
+      await submitFeedback({
+        declared: declared!,
+        detected: hint.detected,
+        score: top1,
+        gap,
+        verdict,
+        analysisId: analysisId ?? null,
+      });
+      if (verdict === "falso_alerta") {
+        toast.success(`Anotado — vou ser mais conservador para ${declared}.`);
+      } else {
+        toast.success("Anotado — alertas como esse vão continuar aparecendo.");
+      }
+    } catch (e) {
+      console.error("[GenreMismatchHint] feedback error", e);
+      toast.error("Não consegui registrar o feedback. Tente novamente.");
+      setDismissed(false);
+    }
+  }
+
   return (
     <Card className="border-l-4 border-l-amber-400 bg-amber-50/40 animate-fade-in">
       <CardContent className="p-4 flex gap-3 items-start">
         <Sparkles className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
-        <div className="space-y-1">
+        <div className="space-y-2 flex-1">
           <p className="text-[11px] font-mono uppercase tracking-widest text-amber-700">
             Sugestão do classificador
           </p>
@@ -67,6 +95,28 @@ export function GenreMismatchHint({ hint, declared }: Props) {
             Sinal técnico apenas. Esses dois gêneros têm assinaturas acústicas distintas — vale conferir
             tags e referências antes de ajustar.
           </p>
+
+          <div className="flex items-center gap-2 pt-1">
+            <span className="text-[11px] text-muted-foreground mr-auto">Esse alerta faz sentido?</span>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-xs text-muted-foreground hover:text-amber-700"
+              disabled={submitting}
+              onClick={() => handleFeedback("falso_alerta")}
+            >
+              <ThumbsDown className="h-3.5 w-3.5 mr-1" /> Falso alerta
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 px-2 text-xs"
+              disabled={submitting}
+              onClick={() => handleFeedback("correto")}
+            >
+              <ThumbsUp className="h-3.5 w-3.5 mr-1" /> Alerta correto
+            </Button>
+          </div>
         </div>
       </CardContent>
     </Card>
