@@ -4,16 +4,32 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { GENRE_OPTIONS } from "@/constants/genreOptions";
 
 export type TipoFiltro = "todos" | "edital" | "palco";
 export type StatusFiltro = "todos" | "Aberto" | "Encerrado" | "Indefinido" | "Previsto";
+export type DeadlineWindow = "todos" | "7d" | "30d" | "90d";
 
 export interface CarreiraFilters {
   tipo: TipoFiltro;
   status: StatusFiltro;
   estado: string;
   query: string;
+  genero: string;
+  hideClosed: boolean;
+  deadline: DeadlineWindow;
 }
+
+export const DEFAULT_FILTERS: CarreiraFilters = {
+  tipo: "todos",
+  status: "todos",
+  estado: "todos",
+  query: "",
+  genero: "todos",
+  hideClosed: true,
+  deadline: "todos",
+};
 
 const ESTADOS_BR = [
   "todos","Nacional","AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS",
@@ -30,8 +46,15 @@ export default function OpportunityFilters({ filters, onChange, className }: Pro
   const update = <K extends keyof CarreiraFilters>(key: K, value: CarreiraFilters[K]) =>
     onChange({ ...filters, [key]: value });
 
-  const clear = () => onChange({ tipo: "todos", status: "todos", estado: "todos", query: "" });
-  const hasActive = filters.tipo !== "todos" || filters.status !== "todos" || filters.estado !== "todos" || !!filters.query;
+  const clear = () => onChange({ ...DEFAULT_FILTERS });
+  const hasActive =
+    filters.tipo !== "todos" ||
+    filters.status !== "todos" ||
+    filters.estado !== "todos" ||
+    filters.genero !== "todos" ||
+    filters.deadline !== "todos" ||
+    !filters.hideClosed ||
+    !!filters.query;
 
   return (
     <aside className={className}>
@@ -80,6 +103,30 @@ export default function OpportunityFilters({ filters, onChange, className }: Pro
           </RadioGroup>
         </div>
 
+        <div className="flex items-center justify-between gap-3">
+          <Label htmlFor="hide-closed" className="text-sm font-normal cursor-pointer">
+            Ocultar encerrados
+          </Label>
+          <Switch
+            id="hide-closed"
+            checked={filters.hideClosed}
+            onCheckedChange={(c) => update("hideClosed", c)}
+          />
+        </div>
+
+        <div>
+          <Label className="text-xs mb-1.5 block">Prazo</Label>
+          <Select value={filters.deadline} onValueChange={(v) => update("deadline", v as DeadlineWindow)}>
+            <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Qualquer prazo</SelectItem>
+              <SelectItem value="7d">Próximos 7 dias</SelectItem>
+              <SelectItem value="30d">Próximos 30 dias</SelectItem>
+              <SelectItem value="90d">Próximos 90 dias</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
         <div>
           <Label className="text-xs mb-1.5 block">Status</Label>
           <Select value={filters.status} onValueChange={(v) => update("status", v as StatusFiltro)}>
@@ -101,6 +148,19 @@ export default function OpportunityFilters({ filters, onChange, className }: Pro
             <SelectContent>
               {ESTADOS_BR.map((uf) => (
                 <SelectItem key={uf} value={uf}>{uf === "todos" ? "Todos" : uf}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div>
+          <Label className="text-xs mb-1.5 block">Gênero (palcos)</Label>
+          <Select value={filters.genero} onValueChange={(v) => update("genero", v)}>
+            <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todos</SelectItem>
+              {GENRE_OPTIONS.map((g) => (
+                <SelectItem key={g} value={g}>{g}</SelectItem>
               ))}
             </SelectContent>
           </Select>
