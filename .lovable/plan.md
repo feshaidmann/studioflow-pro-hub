@@ -1,94 +1,75 @@
 
-# Detecção automática de gênero no DNA Musical
+# Refinar GenreMismatchHint — reduzir falsos alertas
 
-Adiciona um classificador que compara as features acústicas da faixa do usuário com perfis médios de gêneros e, se o resultado divergir do gênero declarado, exibe um aviso amigável ("Você declarou Pop, mas as características se aproximam mais de Synth-Pop — 94%"). Não muda o gênero declarado nem o benchmark usado.
+## Problema
+Hoje o alerta dispara sempre que `detected !== declared` com `score >= 0.75` e `gap >= 0.03`. Isso gera ruído porque:
+1. Comparação é case/acento-sensível ("Pop Brasileiro" vs "Pop" não casam mas são irmãos)
+2. Gêneros tecnicamente próximos (Pop ↔ Synth-Pop, Rock ↔ Grunge, Eletrônica ↔ House) disparam alerta sem agregar valor
+3. Limiares (0.75 / 0.03) são frouxos: cosseno entre vetores 0–1 quase sempre passa de 0.75; gap de 3% é ruído estatístico
 
-## Como funciona (visão do usuário)
+## Mudanças
 
-1. Usuário sobe a faixa e declara o gênero (fluxo atual, sem mudanças).
-2. Após a extração local de features, o classificador roda no cliente em ~ms e calcula:
-   - Top 1 gênero detectado + % de similaridade
-   - Top 3 gêneros mais próximos (guardado para uso futuro / debug)
-3. Se o detectado ≠ declarado **e** confiança ≥ 0,75:
-   - Card sutil acima do diagnóstico: "Características técnicas mais próximas de **{detectado}** ({xx}%). Quer revisar o gênero antes de pedir o diagnóstico?"
-   - Botões: "Manter {declarado}" / "Trocar para {detectado}".
-4. Se confiança < 0,60 → não mostra nada (evita ruído).
-5. O resultado da classificação também é enviado ao prompt do Gemini como contexto extra ("classificador interno aponta proximidade técnica com X").
+### 1. Matriz de famílias de gênero (nova)
+Arquivo novo `src/lib/genreFamilies.ts` — mapa `genre → familyId`. Pares dentro da mesma família NÃO disparam alerta, mesmo com score/gap altos.
 
-## Fonte dos perfis (híbrido)
-
-Para cada gênero, o perfil de referência é montado em runtime no edge `music-dna-analyze`:
-
+Famílias propostas:
 ```text
-Para cada gênero G:
-  count = SELECT COUNT(*) FROM music_reference_tracks WHERE genre ILIKE G
-  se count >= 20  → perfil = média do catálogo (já temos AVG via recalcular_benchmark_genero / music_dna_benchmarks)
-  senão           → perfil = hardcoded da tabela fornecida (16 gêneros)
+pop:        Pop, Pop Brasileiro, Pop Internacional, Synth-Pop, Axé / Pop Bahia, MPB Contemporânea
+rock:       Rock, Rock Alternativo, Rock Alternativo BR, Grunge, Punk Rock, Heavy Metal, Indie BR, Indie Folk, Folk Rock
+urban:      Hip-Hop, Rap BR, Trap BR, Lo-Fi Hip Hop, R&B / Soul, Soul, Funk
+brazilian-roots: Samba, Pagode, Bossa Nova, Sertanejo Raiz, Sertanejo Universitário, Forró / Piseiro, Reggae BR, Reggae
+electronic: Eletrônico, Eletrônica / House, Synth-Pop, Ambient
+acoustic:   Jazz, Country, Bossa Nova, Folk Rock, Indie Folk
+funk-br:    Funk Carioca
+```
+(Synth-Pop e Bossa Nova/Folk Rock aparecem em duas famílias propositalmente — match em qualquer overlap suprime alerta.)
+
+### 2. Normalização de nomes
+Função `normalizeGenreName()`:
+- Lowercase, sem acento, sem espaços extras
+- Remove sufixos regionais: ` BR`, ` Brasileiro`, ` Brasileira`, ` BR/`, ` Internacional`, ` Carioca`, ` Raiz`, ` Universitário`, ` / Piseiro`, ` / House`, ` / Soul`, ` / Pop Bahia`
+- Aplicada antes de comparar `detected` vs `declared` (match exato após normalização também suprime alerta)
+
+### 3. Limiares mais rígidos
+Em `GenreMismatchHint.tsx`:
+- `score >= 0.92` (era 0.75) — cosseno em vetores de 8 dims tende a ser alto; só alerta com afinidade muito forte
+- `gap >= 0.05` (era 0.03) — exige diferença real entre top1 e top2
+- Adicionar regra: top1 e top2 NÃO podem estar na mesma família do declared (se top2 = família do declared, mantém como suficientemente próximo e não alerta)
+
+### 4. Lógica final do componente
+```text
+if (!detected || !declared) return null
+if (normalize(detected) === normalize(declared)) return null
+if (sameFamily(detected, declared)) return null
+if (score < 0.92) return null
+if (score - runnerUp.score < 0.05) return null
+if (sameFamily(runnerUp.genre, declared)) return null  // declared é "próximo" o bastante
+render alerta
 ```
 
-Isso garante:
-- Gêneros BR (MPB, Sertanejo, Funk, Forró, Pagode, Gospel etc.) usam o catálogo real quando há massa crítica.
-- Gêneros internacionais sem amostras (Grunge, Ambient, Bossa Nova etc.) usam os perfis hardcoded.
-- Perfis evoluem automaticamente conforme `music_reference_tracks` cresce.
+### 5. Texto do alerta (microcopy)
+Manter, mas trocar o disclaimer final por algo mais específico em PT/EN:
+- PT: "Sinal técnico apenas. Esses dois gêneros têm assinaturas acústicas distintas — vale conferir tags e referências."
+- EN equivalente em `LanguageContext.tsx` (4 chaves já existem do passo anterior; ajustar a chave do disclaimer).
 
-## Detalhes técnicos
+## Arquivos
 
-### 1. Novo arquivo `src/lib/genreClassifier.ts`
-- Exporta `HARDCODED_GENRE_PROFILES` (16 gêneros da tabela do usuário, valores normalizados 0–1).
-- `normalizeFeatures(features)` — converte features brutas (tempo_bpm, loudness_rms_db etc.) para 0–1 usando os ranges fornecidos (tempo 60–200, loudness -60–0).
-- `cosineSimilarity(a, b)`.
-- `classifyGenre(features, profiles)` → `{ top: {genre, score}, runnerUp: {...}, top3: [...] }`.
-- `mergeProfiles(hardcoded, fromBenchmarks)` — para cada gênero presente nos benchmarks com `total_faixas >= 20`, sobrescreve o perfil hardcoded.
+**Criar:**
+- `src/lib/genreFamilies.ts` — mapa de famílias + `normalizeGenreName()` + `sameFamily(a, b)`
 
-### 2. Nova RPC `get_genre_profiles_for_classifier()`
-Retorna um array `{genero, total_faixas, avg_tempo_bpm, avg_danceability, avg_energy, avg_acousticness, avg_instrumentalness, avg_valence, avg_speechiness, avg_loudness_db}` direto de `music_dna_benchmarks` filtrando `total_faixas >= 20`. SECURITY DEFINER, leitura pública (a tabela já é pública).
+**Editar:**
+- `src/components/music-dna/GenreMismatchHint.tsx` — usar normalização, `sameFamily`, novos limiares (0.92 / 0.05), checagem extra do runner-up
+- `src/contexts/LanguageContext.tsx` — atualizar string do disclaimer (PT/EN)
 
-### 3. Hook `useGenreProfiles` (`src/hooks/useGenreProfiles.ts`)
-- Fetcha a RPC uma vez por sessão (cache em React Query, staleTime 1h).
-- Faz o merge com os hardcoded e devolve o objeto pronto para o classifier.
+**Não tocar:**
+- `src/lib/genreClassifier.ts` (cálculo continua igual; só o gating do alerta muda)
+- `useMusicDNA.ts` / edge function `music-dna-analyze` (payload `classifier_hint` continua sendo enviado para a IA, independente do alerta visual)
 
-### 4. Integração em `MusicDNAAnalyzer.tsx`
-- Após `extractFeatures()` e antes do botão "Gerar diagnóstico":
-  - Roda `classifyGenre(features, profiles)`.
-  - Guarda em `useState<{detected, score, top3}>`.
-- Se `detected !== declared && score >= 0.75 && Math.abs(score - secondScore) > 0.03`:
-  - Renderiza `<GenreMismatchHint />` (novo componente) com tom acolhedor PT-BR e i18n EN.
-  - Botão "Trocar para X" só atualiza o select de gênero local.
-- O payload enviado ao edge function ganha `payload.classifier_hint = { detected, score, top3 }` para o prompt.
+## Riscos
+- **Falsos negativos**: limiares mais altos (0.92/0.05) podem suprimir alertas legítimos. Mitigado mantendo o `classifier_hint` no prompt da IA — o modelo ainda usa o sinal técnico mesmo quando o card visual não aparece.
+- **Famílias arbitrárias**: a matriz é uma heurística inicial. Estrutura permite ajuste fácil em um único arquivo conforme feedback dos produtores.
 
-### 5. Edge function `music-dna-analyze`
-- No `buildStructuredPrompt`, se `payload.classifier_hint` existir, injeta um bloco curto:
-  > "Classificador interno (cosine sim sobre features): top1 = {detected} ({xx}%); declarado = {declared}. Use isso apenas para enriquecer o diagnóstico — NUNCA contradiga o gênero declarado pelo usuário."
-
-### 6. Telemetria leve
-- Insert opcional em `analytics_events` com `event_name = 'dna_genre_mismatch'` e `properties = { declared, detected, score }` para a gente medir frequência de divergência (não bloqueante; falha silenciosa).
-
-### 7. i18n
-- Adicionar chaves em `LanguageContext`:
-  - `dna.classifier.mismatchTitle`
-  - `dna.classifier.mismatchBody` (com placeholders)
-  - `dna.classifier.keep`, `dna.classifier.switch`
-
-## Fora de escopo (consciente)
-
-- Não altera a chamada `find_nearest_reference_tracks` nem o k-NN existente.
-- Não auto-preenche gênero quando vazio (usuário escolheu "só sugerir divergência").
-- Não mostra top 3 como card permanente — só o aviso de divergência.
-- Não muda perfis hardcoded da tabela fornecida (são usados como fallback).
-
-## Arquivos afetados
-
-- **Novo**: `src/lib/genreClassifier.ts`
-- **Novo**: `src/hooks/useGenreProfiles.ts`
-- **Novo**: `src/components/music-dna/GenreMismatchHint.tsx`
-- **Migration**: cria RPC `get_genre_profiles_for_classifier()`
-- **Editado**: `src/components/music-dna/MusicDNAAnalyzer.tsx` (state + hint + payload)
-- **Editado**: `supabase/functions/music-dna-analyze/index.ts` (injeta `classifier_hint` no prompt)
-- **Editado**: `src/contexts/LanguageContext.tsx` (4 chaves PT/EN)
-- **Editado**: `.lovable/plan.md` (registro da feature)
-
-## Riscos e mitigações
-
-- **Perfis hardcoded internacionais não cobrem MPB/Sertanejo/etc.**: mitigado pelo merge com benchmarks BR.
-- **Falsos positivos quando confiança baixa**: limiar duplo (score ≥ 0,75 e gap ≥ 0,03 entre top1/top2).
-- **Aviso pode irritar**: tom de sugestão, dispensável, sem bloquear o fluxo.
+## Fora de escopo
+- Sistema de feedback explícito ("isso não faz sentido") com persistência → fica para iteração futura
+- Recalibração dos perfis hardcoded
+- Mudanças no payload enviado à IA
