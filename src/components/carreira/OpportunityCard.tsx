@@ -104,9 +104,15 @@ export default function OpportunityCard({ opportunity: op, onApply, onSave, onRe
           </Button>
         )}
         {onApply && isEdital && op.editalId && (
-          <Button size="sm" variant="default" className="h-7 text-xs px-2 ml-auto" onClick={() => onApply(op)}>
-            <ClipboardList className="h-3 w-3 mr-1" /> Candidatar
-          </Button>
+          alreadyApplied ? (
+            <Button size="sm" variant="outline" className="h-7 text-xs px-2 ml-auto" disabled>
+              <ClipboardList className="h-3 w-3 mr-1" /> Já candidatado
+            </Button>
+          ) : (
+            <Button size="sm" variant="default" className="h-7 text-xs px-2 ml-auto" onClick={() => onApply(op)}>
+              <ClipboardList className="h-3 w-3 mr-1" /> Candidatar
+            </Button>
+          )
         )}
         {onSave && op.origem === "ai" && (
           <Button size="sm" variant="outline" className="h-7 text-xs px-2 ml-auto" onClick={() => onSave(op)}>
