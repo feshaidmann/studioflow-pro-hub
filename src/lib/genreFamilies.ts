@@ -68,6 +68,24 @@ const GENRE_TO_FAMILIES: Map<string, Set<string>> = (() => {
   return m;
 })();
 
+/** Rótulos pt-BR amigáveis para cada chave de família. */
+export const FAMILY_LABELS: Record<string, string> = {
+  pop: "Pop",
+  rock: "Rock",
+  urban: "Urbano",
+  "brazilian-roots": "Raízes Brasileiras",
+  electronic: "Eletrônico",
+  acoustic: "Acústico",
+  "funk-br": "Funk BR",
+};
+
+/** Retorna as famílias (chaves) de um gênero, ou [] se não estiver mapeado. */
+export function getFamilies(genre: string): string[] {
+  const k = normalizeGenreName(genre);
+  const set = GENRE_TO_FAMILIES.get(k);
+  return set ? Array.from(set) : [];
+}
+
 /** True se ambos os gêneros compartilham pelo menos uma família. */
 export function sameFamily(a: string, b: string): boolean {
   const na = normalizeGenreName(a);
