@@ -103,13 +103,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     ...principalItems,
     gestaoItems[0], // Finanças
     gestaoItems[1], // Agenda
+    gestaoItems[4], // Carreira (Editais + Palcos)
   ];
 
   // Drawer "Mais" — ferramentas ordenadas pela jornada do artista
   const toolDrawerItems = [
     gestaoItems[2], // DNA Musical    — entenda a faixa primeiro
     gestaoItems[3], // Criativo       — materiais com base no DNA
-    gestaoItems[4], // Carreira       — editais + palcos unificados
     gestaoItems[5], // Profissionais  — equipe conforme necessidade
   ];
 
