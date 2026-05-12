@@ -674,6 +674,7 @@ export function useMusicDNA(): UseMusicDNAReturn {
         catalogGenreCount,
         strictGenreUsed,
         classifierHint,
+      };
     },
 
     onSuccess: (data) => {
