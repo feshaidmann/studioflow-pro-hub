@@ -45,6 +45,7 @@ import { spotifyFeaturesFromDiagnosis, FEATURE_DESCRIPTIONS, type MusicDnaBenchm
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { NeighborDetailDialog } from "@/components/music-dna/NeighborDetailDialog";
+import { GenreMismatchHint } from "@/components/music-dna/GenreMismatchHint";
 // AcousticMatchPanel deixou de ser usado no resultado público (mantido no codebase para uso futuro/admin).
 import {
   Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList,
