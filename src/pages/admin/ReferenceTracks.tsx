@@ -251,6 +251,18 @@ export default function ReferenceTracks() {
         automaticamente para preservar privacidade.
       </p>
 
+      <Tabs defaultValue="import" className="w-full">
+        <TabsList>
+          <TabsTrigger value="import">Importação & lotes</TabsTrigger>
+          <TabsTrigger value="coverage">Cobertura por gênero</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="coverage" className="mt-4">
+          <ReferenceCoverageReport />
+        </TabsContent>
+
+        <TabsContent value="import" className="mt-4 space-y-6">
+
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2"><Upload className="h-4 w-4" /> Importar CSV</CardTitle>
