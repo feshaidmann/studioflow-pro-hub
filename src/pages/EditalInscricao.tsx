@@ -27,6 +27,7 @@ interface EditalInfo {
   link: string | null;
   orgao: string | null;
   area: string | null;
+  tipo?: string | null;
 }
 
 export default function EditalInscricao() {
@@ -63,7 +64,7 @@ export default function EditalInscricao() {
       setLoadingEdital(true);
       const { data } = await supabase
         .from("editais")
-        .select("id, titulo, link, orgao, area")
+        .select("id, titulo, link, orgao, area, tipo")
         .eq("id", id)
         .single();
       setEdital(data as any);
@@ -234,10 +235,38 @@ export default function EditalInscricao() {
   if (!edital) {
     return (
       <div className="p-4 md:p-6 max-w-4xl mx-auto">
-        <p className="text-muted-foreground">Edital não encontrado.</p>
+        <p className="text-muted-foreground">Oportunidade não encontrada.</p>
         <Button variant="ghost" onClick={() => navigate("/carreira")} className="mt-4">
           <ArrowLeft className="h-4 w-4 mr-1.5" /> Voltar
         </Button>
+      </div>
+    );
+  }
+
+  // Guarda: palcos não usam o assistente de inscrição (que é para editais de fomento)
+  if (edital.tipo === "palco") {
+    return (
+      <div className="p-4 md:p-6 max-w-4xl mx-auto space-y-4">
+        <Button variant="ghost" size="sm" onClick={() => navigate("/carreira")}>
+          <ArrowLeft className="h-4 w-4 mr-1.5" /> Voltar para Carreira
+        </Button>
+        <Card>
+          <CardContent className="py-10 text-center space-y-4">
+            <ClipboardList className="h-10 w-10 text-muted-foreground/40 mx-auto" />
+            <div>
+              <h2 className="text-base font-semibold">{edital.titulo}</h2>
+              {edital.orgao && <p className="text-sm text-muted-foreground">{edital.orgao}</p>}
+            </div>
+            <p className="text-sm text-muted-foreground max-w-md mx-auto">
+              Esta oportunidade é um palco/festival — o acompanhamento é direto pelo regulamento oficial. Use a aba <strong>Minhas inscrições</strong> em Carreira para atualizar o status.
+            </p>
+            {edital.link && (
+              <Button asChild>
+                <a href={edital.link} target="_blank" rel="noopener noreferrer">Abrir regulamento oficial</a>
+              </Button>
+            )}
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -281,6 +310,12 @@ export default function EditalInscricao() {
           {progress > 0 && (
             <Badge variant="outline" className="shrink-0">{progress}%</Badge>
           )}
+          {application && (application.status === "interesse" || application.status === "preparando") && (
+            <Button size="sm" variant="outline" onClick={handleMarkAsInscrito} disabled={updateApplication.isPending}>
+              <ClipboardList className="h-3.5 w-3.5 mr-1.5" />
+              Marcar inscrito
+            </Button>
+          )}
         </div>
       </div>
 
@@ -289,11 +324,11 @@ export default function EditalInscricao() {
 
       {/* Banner: 100% complete — mark as inscrito */}
       {progress === 100 && application && application.status !== "inscrito" && application.status !== "resultado" && (
-        <Card className="border-green-200 bg-green-500/5">
+        <Card className="border-success/30 bg-success/5">
           <CardContent className="py-3 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
-              <Check className="h-4 w-4 text-green-600" />
-              <p className="text-sm font-medium text-green-700">Formulário completo!</p>
+              <Check className="h-4 w-4 text-success" />
+              <p className="text-sm font-medium text-success">Formulário completo!</p>
             </div>
             <Button size="sm" onClick={handleMarkAsInscrito} disabled={updateApplication.isPending}>
               <ClipboardList className="h-3.5 w-3.5 mr-1.5" />

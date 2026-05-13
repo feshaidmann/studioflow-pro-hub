@@ -19,9 +19,10 @@ const EXAMPLES = [
 
 interface Props {
   onResults: (results: Opportunity[]) => void;
+  projectId?: string | null;
 }
 
-export default function AISearchPanel({ onResults }: Props) {
+export default function AISearchPanel({ onResults, projectId }: Props) {
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [classification, setClassification] = useState<string | null>(null);
@@ -33,7 +34,7 @@ export default function AISearchPanel({ onResults }: Props) {
     setClassification(null);
     try {
       const { data, error } = await supabase.functions.invoke("oportunidades-search", {
-        body: { query: q },
+        body: { query: q, project_id: projectId || null },
       });
       if (error) throw error;
 

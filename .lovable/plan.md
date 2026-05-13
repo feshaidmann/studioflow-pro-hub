@@ -1,64 +1,80 @@
-## Objetivo
 
-Suíte de testes Vitest cobrindo a lógica do `GenreMismatchHint` com casos derivados de cenários reais de produtores. Garantir que pares dentro da mesma família (Pop ↔ Pop BR, Rock ↔ Grunge, Sertanejo Raiz ↔ Universitário, etc.) **não** disparam alerta, e que divergências reais (Pop ↔ Heavy Metal, Bossa Nova ↔ Trap, Funk Carioca ↔ Country) **continuam** sinalizadas.
+# Plano: 7 correções prioritárias do módulo Carreira
 
-## Arquivos novos
+Cobre os 7 itens do diagnóstico anterior, em ordem de execução para minimizar retrabalho.
 
-### 1. `src/lib/__tests__/genreFamilies.test.ts`
-Testes unitários puros (sem React) sobre `normalizeGenreName`, `sameFamily`, `getFamilies`:
-- `normalizeGenreName`: remove acentos/sufixos regionais (`"Pop Brasileiro"` → `"pop"`, `"Sertanejo Universitário"` → `"sertanejo"`, `"Eletrônica / House"` → `"eletronica"`).
-- `sameFamily` (cases positivos): Pop ↔ Pop Brasileiro, Rock ↔ Grunge, Rock Alternativo BR ↔ Indie BR, Sertanejo Raiz ↔ Sertanejo Universitário, Hip-Hop ↔ Trap BR, Samba ↔ Pagode, Bossa Nova ↔ Jazz, Synth-Pop ↔ Eletrônica.
-- `sameFamily` (cases negativos): Pop ↔ Heavy Metal, Bossa Nova ↔ Trap BR, Funk Carioca ↔ Country, Sertanejo ↔ Hip-Hop, Forró ↔ Eletrônica.
-- `getFamilies`: retorna lista correta para gêneros mapeados; `[]` para gênero desconhecido.
+## 1. Separar palco de edital (corrige bug semântico)
 
-### 2. `src/components/music-dna/__tests__/GenreMismatchHint.test.tsx`
-Testes de comportamento de renderização (alerta sim/não), mockando `useGenreMismatchCalibration` para retornar thresholds-padrão fixos (`score 0.92 / gap 0.05`) e `submitFeedback` no-op.
+**Problema:** palcos salvos vão para a tabela `editais` e abrem `EditalInscricao` (assistente IA de fomento) — sem sentido para festival/showcase.
 
-Estrutura: array `CASES` com fixtures inspiradas em sessões reais já vistas pelos produtores:
+**O que fazer (frontend-only, sem migração):**
+- Em `Carreira.tsx`, na lista "Minhas inscrições", detectar se o registro veio de palco (via `session_key` que começa sem padrão de edital, ou via `area === "Música" && tipo === "palco"` na tabela). Como `useEditalApplications` faz join com `editais`, expor `tipo` no select.
+- Para palcos: o card da inscrição não navega para `/editais/inscricao/:id`. Em vez disso abre o `OpportunityDetailSheet` reutilizando `op.raw`. CTA principal é "Abrir oficial" + status menu.
+- Adicionar guarda em `EditalInscricao.tsx`: se `editais.tipo === 'palco'`, mostrar empty-state "Esta oportunidade é um palco/festival — acompanhamento direto do regulamento" + botão voltar.
 
-```ts
-type Case = {
-  name: string;
-  declared: string;
-  detected: string;
-  top1: number;
-  top2: number;
-  runnerUp?: string;
-  shouldAlert: boolean;
-};
-```
+## 2. Loading visível ao "Marcar interesse" + toast com link
 
-Casos `shouldAlert: false` (silenciado):
-- Pop ↔ Pop Brasileiro (top1 0.95, gap 0.10) — mesma família.
-- Rock ↔ Grunge (0.94 / gap 0.08).
-- Sertanejo Raiz ↔ Sertanejo Universitário (0.96 / gap 0.12).
-- Hip-Hop ↔ Trap BR (0.93 / gap 0.07).
-- Samba ↔ Pagode (0.97 / gap 0.15).
-- Pop ↔ Synth-Pop (mesma família "pop").
-- Score abaixo do limiar: declared Rock, detected Pop, 0.89 / gap 0.08 (não alerta).
-- Gap insuficiente: declared Rock, detected Pop, 0.95 / gap 0.03 (não alerta).
-- Runner-up na mesma família do declared: declared Pop, detected Trap BR (0.93), runnerUp "Pop Brasileiro" (0.86).
+**O que fazer:**
+- Passar `pending?: boolean` para `OpportunityCard` e exibir spinner no botão "Candidatar/Marcar interesse" quando `interestPending === op.key`.
+- Trocar `setTab("inscricoes")` por `toast.success("Interesse registrado", { action: { label: "Ver pipeline", onClick: () => setTab("inscricoes") } })`. Usuário continua descobrindo.
+- Mesmo fluxo no `OpportunityDetailSheet` (botão com loading).
 
-Casos `shouldAlert: true` (alerta legítimo):
-- Pop ↔ Heavy Metal (0.94 / gap 0.10).
-- Bossa Nova ↔ Trap BR (0.93 / gap 0.09).
-- Funk Carioca ↔ Country (0.95 / gap 0.12).
-- Sertanejo Universitário ↔ Hip-Hop (0.94 / gap 0.08), runnerUp Eletrônica.
-- Forró / Piseiro ↔ Heavy Metal (0.96 / gap 0.20).
+## 3. Deep-link `?op=<key>` reabrindo o sheet
 
-Implementação:
-- `vi.mock("@/hooks/useGenreMismatchCalibration", ...)` com `getThresholds: () => ({ scoreThreshold: 0.92, gapThreshold: 0.05 })` e `submitFeedback: vi.fn()`, `submitting: false`.
-- Loop `it.each(CASES)` que monta `hint = { detected, score: top1, runnerUp: runnerUp ? { genre: runnerUp, score: top2 } : { genre: "outro", score: top2 }, top3: [] }` e renderiza `<GenreMismatchHint hint={...} declared={declared} />`.
-- `shouldAlert ? expect(screen.queryByText(/Sugestão do classificador/i)).toBeInTheDocument() : ...not.toBeInTheDocument()`.
+**O que fazer:**
+- Em `Carreira.tsx`, ao abrir o sheet salvar `op` no URL: `setSearchParams({...current, op: <key>})`.
+- No mount, ler `op` da URL e procurar em `allOpportunities`. Se achar, abrir o sheet automaticamente. Se a lista ainda não carregou, aguardar `loading=false` (efeito separado).
+- Ao fechar, remover `op` do URL.
 
-### 3. (Opcional, mesmo arquivo) `describe("calibração")` 
-Um teste extra mocka thresholds elevados (`0.97 / 0.10`) para confirmar que aumentando o limiar (efeito do feedback "Falso alerta") um caso antes alertado deixa de alertar — sem tocar no banco.
+## 4. Seção "Pra você" no topo de Descobrir
+
+**O que fazer:**
+- Importar `useMatchEditais` + `usePalcos.matchByPerfil`.
+- Resolver projeto ativo: usar `useProjects` (contexto) + perfil cultural do projeto (já presente em `ProjectCulturalProfile`/tabela). Para o MVP da seção: usar `profile` (specialties, city) como proxy se não houver projeto selecionado.
+- Renderizar até 6 cards com badge "Pra você" (calculado deterministicamente, **sem IA**) acima da lista filtrada, dentro de um collapsible "Recomendados para o seu perfil". Esconder se filtros estão ativos.
+- Adicionar payload `project_id` (ativo) no `AISearchPanel.handleSearch`.
+
+## 5. Cores hardcoded → tokens semânticos
+
+**O que fazer:**
+- Em `index.css`, garantir tokens `--success`, `--warning`, `--info` (HSL). Verificar se já existem; senão adicionar.
+- Em `OpportunityCard.tsx` e `useEditalApplications.ts` (constantes `APPLICATION_STATUS_COLORS`/`RESULTADO_COLORS`), substituir `bg-green-500/20`, `bg-amber-500/25`, `bg-red-500/25`, etc. por classes utilitárias compostas com tokens (`bg-success/15 text-success-foreground border-success/30`, etc.).
+
+## 6. "Marcar como inscrito" sempre + EditalResultModal
+
+**O que fazer:**
+- Em `EditalInscricao.tsx`, exibir o botão "Marcar como inscrito" no header (próximo ao badge de progresso) sempre que `application.status` esteja em `interesse`/`preparando`. Manter o banner verde de 100% como reforço.
+- Em `Carreira.tsx`, na lista de inscrições, quando `status === 'inscrito'`, mostrar mais um item no `ApplicationStatusMenu` ou um botão "Registrar resultado" que monta `<EditalResultModal>` (já existe). Após salvar, status vira `resultado` e os campos `resultado/valor_aprovado` ficam visíveis no card.
+
+## 7. Chips de filtros ativos no mobile + esconder toggle irrelevante
+
+**O que fazer:**
+- Componente novo `ActiveFiltersChips` que recebe `filters` e `onClear(field)`. Renderiza chips só dos campos ≠ default.
+- Renderizar logo abaixo do `MobileStickyHeader` quando `tab === 'descobrir'`.
+- Esconder/ocultar `OpportunityFilters` controles que não fazem sentido em "inscricoes" — solução simples: chips só aparecem em descobrir; sheet de filtros no header também só em descobrir.
+
+## Observabilidade
+
+Adicionar `trackAppEvent` em:
+- `carreira_recommended_clicked` (clique em "Pra você")
+- `carreira_deep_link_opened` (?op=…)
+- `carreira_result_recorded`
+
+## Arquivos afetados
+
+- `src/pages/Carreira.tsx` (refator — extrair `useCarreiraFilters`, adicionar `?op=`, "Pra você", chips, integração `EditalResultModal`)
+- `src/pages/EditalInscricao.tsx` (guarda palco + botão sempre visível)
+- `src/components/carreira/OpportunityCard.tsx` (loading prop + tokens)
+- `src/components/carreira/OpportunityDetailSheet.tsx` (loading prop)
+- `src/components/carreira/ActiveFiltersChips.tsx` (novo)
+- `src/components/carreira/RecommendedSection.tsx` (novo)
+- `src/components/carreira/AISearchPanel.tsx` (passar `project_id`)
+- `src/hooks/useEditalApplications.ts` (cores → tokens; expor `edital.tipo` no select)
+- `src/index.css` (tokens success/warning/info se faltarem)
+- (opcional) `src/hooks/useCarreiraFilters.ts` (extração)
 
 ## Fora de escopo
-- Datasets de áudio reais / WAV embutidos.
-- Testes do hook `useGenreMismatchCalibration` (banco) — separáveis em outra suíte.
-- Testes da Edge Function.
-- Mudanças em código de produção.
 
-## Como rodar
-`bunx vitest run src/lib/__tests__/genreFamilies.test.ts src/components/music-dna/__tests__/GenreMismatchHint.test.tsx`
+- Migração de schema separando palcos da tabela `editais` (descrita no diagnóstico como ideal mas exige plano dedicado e migração de dados — fica para iteração seguinte).
+- Notificações de prazo (`useNotifications` push de "X dias para fechar") — vale plano separado para configurar agendamento.
+- Export CSV exposto em `/carreira` (trivial mas fora dos 7 priorizados).

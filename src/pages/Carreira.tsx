@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Trophy, ClipboardList, ListFilter, ExternalLink, Calendar, RotateCcw } from "lucide-react";
+import { Trophy, ClipboardList, ListFilter, ExternalLink, Calendar, RotateCcw, Award } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -15,6 +15,7 @@ import {
   useCreateApplication,
   useUpdateApplication,
   type ApplicationStatus,
+  type EditalApplication,
 } from "@/hooks/useEditalApplications";
 import OpportunityCard from "@/components/carreira/OpportunityCard";
 import OpportunityFilters, {
@@ -26,6 +27,9 @@ import OpportunityFilters, {
 import OpportunityDetailSheet from "@/components/carreira/OpportunityDetailSheet";
 import ApplicationStatusMenu from "@/components/carreira/ApplicationStatusMenu";
 import AISearchPanel from "@/components/carreira/AISearchPanel";
+import ActiveFiltersChips from "@/components/carreira/ActiveFiltersChips";
+import RecommendedSection from "@/components/carreira/RecommendedSection";
+import EditalResultModal from "@/components/editais/EditalResultModal";
 import {
   editalToOpportunity,
   palcoToOpportunity,
@@ -35,6 +39,8 @@ import { MobileStickyHeader } from "@/components/ui/mobile-sticky-header";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useProfile } from "@/contexts/ProfileContext";
+import { useProjects } from "@/contexts/ProjectContext";
 import { trackAppEvent } from "@/lib/analytics";
 
 function normalize(s: string) {
@@ -87,6 +93,8 @@ export default function Carreira() {
   const isMobile = useIsMobile();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { profile } = useProfile();
+  const { projects } = useProjects();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [filters, setFilters] = useState<CarreiraFilters>(() => readFiltersFromURL(searchParams));
@@ -96,6 +104,7 @@ export default function Carreira() {
   );
   const [detailOp, setDetailOp] = useState<Opportunity | null>(null);
   const [interestPending, setInterestPending] = useState<string | null>(null);
+  const [resultApp, setResultApp] = useState<EditalApplication | null>(null);
 
   const { editais, loading: loadingEditais, saveResults: saveEditais, deleteEdital } = useEditais();
   const { palcosCurados, loadingCurados, saveResults: savePalcos } = usePalcos();
@@ -103,13 +112,17 @@ export default function Carreira() {
   const createApp = useCreateApplication();
   const updateApp = useUpdateApplication();
 
-  // Persistência URL ↔ filtros + tab
+  // Projeto ativo: primeiro não concluído (proxy) — usado para busca IA + recomendações
+  const activeProject = useMemo(() => projects.find((p) => !p.completed) || null, [projects]);
+
+  // Persistência URL ↔ filtros + tab + op
   useEffect(() => {
     const next = writeFiltersToURL(filters, searchParams);
     if (tab === "inscricoes") next.set("tab", "inscricoes"); else next.delete("tab");
+    if (detailOp) next.set("op", `${detailOp.tipo}:${detailOp.key}`); else next.delete("op");
     setSearchParams(next, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters, tab]);
+  }, [filters, tab, detailOp]);
 
   // Lista unificada
   const allOpportunities: Opportunity[] = useMemo(() => {
@@ -126,6 +139,19 @@ export default function Carreira() {
       return true;
     });
   }, [editais, palcosCurados, aiResults]);
+
+  // Reabrir sheet via deep-link ?op=tipo:key
+  useEffect(() => {
+    const opParam = searchParams.get("op");
+    if (!opParam || detailOp) return;
+    if (loadingEditais || loadingCurados) return;
+    const found = allOpportunities.find((o) => `${o.tipo}:${o.key}` === opParam);
+    if (found) {
+      setDetailOp(found);
+      void trackAppEvent("carreira_deep_link_opened", { opportunity_type: found.tipo });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allOpportunities, loadingEditais, loadingCurados]);
 
   const filtered = useMemo(() => {
     const q = normalize(filters.query);
@@ -148,7 +174,7 @@ export default function Carreira() {
       })
       .filter((o) => {
         if (filters.genero === "todos") return true;
-        if (o.tipo !== "palco") return true; // gênero só restringe palcos
+        if (o.tipo !== "palco") return true;
         const gs = (o.generos || []).map((g) => normalize(g));
         return gs.includes(normalize(filters.genero));
       })
@@ -178,7 +204,6 @@ export default function Carreira() {
   }, [allOpportunities, filters]);
 
   const appliedKeys = useMemo(() => {
-    // Considera tanto edital_id quanto session_key (para palcos salvos como edital tipo=palco)
     const set = new Set<string>();
     for (const a of applications) {
       if (a.edital_id) set.add(a.edital_id);
@@ -188,7 +213,6 @@ export default function Carreira() {
 
   const isAlreadyApplied = useCallback((op: Opportunity) => {
     if (op.editalId && appliedKeys.has(op.editalId)) return true;
-    // Match por título+organizador para palcos curados/AI ainda não associados
     return applications.some(
       (a) => a.edital?.titulo === op.titulo && (a.edital?.orgao || "") === op.organizador,
     );
@@ -208,12 +232,10 @@ export default function Carreira() {
     if (!user) return null;
     if (op.editalId) return op.editalId;
 
-    // Constrói session_key estável
     const key = op.tipo === "edital"
       ? ((op.raw as any).session_key || sessionKeyFor(op.titulo, op.organizador))
       : sessionKeyFor(op.titulo, op.organizador);
 
-    // Tenta encontrar antes de inserir
     const { data: existing } = await supabase
       .from("editais")
       .select("id")
@@ -222,7 +244,6 @@ export default function Carreira() {
       .maybeSingle();
     if (existing?.id) return existing.id as string;
 
-    // Salva via hook apropriado
     if (op.tipo === "edital") {
       await saveEditais([op.raw as any]);
     } else {
@@ -239,8 +260,9 @@ export default function Carreira() {
 
   const handleInterest = async (op: Opportunity) => {
     if (isAlreadyApplied(op)) {
-      toast.info("Esta oportunidade já está no seu pipeline.");
-      setTab("inscricoes");
+      toast.info("Esta oportunidade já está no seu pipeline.", {
+        action: { label: "Ver", onClick: () => setTab("inscricoes") },
+      });
       return;
     }
     setInterestPending(op.key);
@@ -257,7 +279,9 @@ export default function Carreira() {
         opportunity_title: op.titulo,
         origem: op.origem,
       });
-      setTab("inscricoes");
+      toast.success(op.tipo === "edital" ? "Candidatura iniciada" : "Interesse registrado", {
+        action: { label: "Ver pipeline", onClick: () => setTab("inscricoes") },
+      });
     } catch {
       // toast tratado pelo hook
     } finally {
@@ -297,6 +321,30 @@ export default function Carreira() {
     void trackAppEvent("carreira_application_status_changed", { status });
   };
 
+  const handleApplicationClick = (a: EditalApplication) => {
+    if (a.edital?.tipo === "palco") {
+      // Reabre como sheet em vez do assistente de inscrição
+      const op: Opportunity = {
+        key: a.edital_id,
+        tipo: "palco",
+        titulo: a.edital.titulo,
+        organizador: a.edital.orgao || "",
+        estado: a.edital.estado,
+        status: a.edital.status || "Indefinido",
+        prazo: a.edital.prazo,
+        link: a.edital.link,
+        valor: null,
+        resumo: a.edital.resumo || null,
+        editalId: a.edital_id,
+        origem: "saved",
+        raw: a.edital as any,
+      };
+      setDetailOp(op);
+    } else {
+      navigate(`/editais/inscricao/${a.edital_id}`);
+    }
+  };
+
   const loading = loadingEditais || loadingCurados;
 
   const FiltersSidebar = (
@@ -312,19 +360,21 @@ export default function Carreira() {
       <MobileStickyHeader
         title="Carreira"
         cta={
-          <Sheet>
-            <SheetTrigger asChild>
-              <Button variant="outline" size="sm" className="h-8">
-                <ListFilter className="h-3.5 w-3.5 mr-1" /> Filtros
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="left" className="w-[300px] overflow-y-auto">
-              <SheetHeader><SheetTitle>Filtros</SheetTitle></SheetHeader>
-              <div className="mt-4">
-                <OpportunityFilters filters={filters} onChange={setFilters} />
-              </div>
-            </SheetContent>
-          </Sheet>
+          tab === "descobrir" ? (
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button variant="outline" size="sm" className="h-8">
+                  <ListFilter className="h-3.5 w-3.5 mr-1" /> Filtros
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="w-[300px] overflow-y-auto">
+                <SheetHeader><SheetTitle>Filtros</SheetTitle></SheetHeader>
+                <div className="mt-4">
+                  <OpportunityFilters filters={filters} onChange={setFilters} />
+                </div>
+              </SheetContent>
+            </Sheet>
+          ) : null
         }
       />
 
@@ -355,14 +405,36 @@ export default function Carreira() {
           <div className="grid grid-cols-1 md:grid-cols-[260px_1fr] gap-4">
             <div className="hidden md:flex flex-col gap-4">
               {FiltersSidebar}
-              <AISearchPanel onResults={handleAIResults} />
+              <AISearchPanel onResults={handleAIResults} projectId={activeProject?.id || null} />
             </div>
 
             <div className="md:hidden">
-              <AISearchPanel onResults={handleAIResults} />
+              <AISearchPanel onResults={handleAIResults} projectId={activeProject?.id || null} />
             </div>
 
             <div>
+              {/* Pra você (esconde quando filtros ativos) */}
+              {!totalActive && !loading && (
+                <RecommendedSection
+                  editais={editais}
+                  palcos={palcosCurados}
+                  perfil={{
+                    estado: profile?.state || profile?.city || activeProject?.artistState || null,
+                    specialties: profile?.specialties || [],
+                    generos: [activeProject?.genre, profile?.primary_genre].filter(Boolean) as string[],
+                  }}
+                  onOpen={handleOpenDetail}
+                  onApply={handleInterest}
+                  isApplied={isAlreadyApplied}
+                  pendingKey={interestPending}
+                />
+              )}
+
+              {/* Chips de filtros ativos */}
+              {totalActive && (
+                <ActiveFiltersChips filters={filters} onChange={setFilters} className="mb-3" />
+              )}
+
               <div className="flex items-center justify-between mb-3 text-xs text-muted-foreground gap-2 flex-wrap">
                 <span>{filtered.length} oportunidade(s){totalActive ? " com filtros aplicados" : ""}</span>
                 <div className="flex items-center gap-1">
@@ -410,8 +482,9 @@ export default function Carreira() {
                       key={`${op.tipo}-${op.key}`}
                       opportunity={op}
                       onClick={handleOpenDetail}
-                      onApply={op.tipo === "edital" && op.editalId ? handleInterest : undefined}
+                      onApply={op.editalId || op.origem !== "saved" ? handleInterest : undefined}
                       alreadyApplied={isAlreadyApplied(op)}
+                      pending={interestPending === op.key}
                       onSave={op.origem === "ai" ? handleSave : undefined}
                       onRemove={op.origem === "saved" ? handleRemove : undefined}
                     />
@@ -439,51 +512,81 @@ export default function Carreira() {
             </Card>
           ) : (
             <div className="space-y-2">
-              {applications.map((a) => (
-                <Card
-                  key={a.id}
-                  className="rounded-[0.875rem] cursor-pointer hover:bg-card/80 transition-colors"
-                  onClick={() => navigate(`/editais/inscricao/${a.id}`)}
-                >
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between gap-3 flex-wrap">
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2 flex-wrap mb-1">
-                          <ApplicationStatusMenu
-                            status={a.status as ApplicationStatus}
-                            onChange={(s) => handleStatusChange(a.id, s)}
-                          />
-                          {a.edital?.estado && <span className="text-[11px] text-muted-foreground">{a.edital.estado}</span>}
+              {applications.map((a) => {
+                const isPalco = a.edital?.tipo === "palco";
+                return (
+                  <Card
+                    key={a.id}
+                    className="rounded-[0.875rem] cursor-pointer hover:bg-card/80 transition-colors"
+                    onClick={() => handleApplicationClick(a)}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between gap-3 flex-wrap">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 flex-wrap mb-1">
+                            <ApplicationStatusMenu
+                              status={a.status as ApplicationStatus}
+                              onChange={(s) => handleStatusChange(a.id, s)}
+                            />
+                            {isPalco && (
+                              <Badge variant="outline" className="text-[10px] bg-warning/15 text-warning-foreground border-warning/40">
+                                Palco
+                              </Badge>
+                            )}
+                            {a.edital?.estado && <span className="text-[11px] text-muted-foreground">{a.edital.estado}</span>}
+                            {a.resultado && (
+                              <Badge variant="outline" className="text-[10px]">
+                                {a.resultado === "aprovado" ? "Aprovado" : a.resultado === "reprovado" ? "Reprovado" : a.resultado === "lista_espera" ? "Lista de espera" : "Desistência"}
+                                {a.valor_aprovado ? ` · R$ ${a.valor_aprovado.toLocaleString("pt-BR")}` : ""}
+                              </Badge>
+                            )}
+                          </div>
+                          <h3 className="text-sm font-semibold leading-snug truncate">
+                            {a.edital?.titulo || "Oportunidade removida"}
+                          </h3>
+                          {a.edital?.orgao && (
+                            <p className="text-xs text-muted-foreground truncate">{a.edital.orgao}</p>
+                          )}
                         </div>
-                        <h3 className="text-sm font-semibold leading-snug truncate">
-                          {a.edital?.titulo || "Edital removido"}
-                        </h3>
-                        {a.edital?.orgao && (
-                          <p className="text-xs text-muted-foreground truncate">{a.edital.orgao}</p>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        {a.edital?.prazo && (
-                          <span className="text-[11px] text-muted-foreground inline-flex items-center gap-1">
-                            <Calendar className="h-3 w-3" />
-                            {a.edital.prazo}
-                          </span>
-                        )}
-                        {a.edital?.link && (
-                          <Button variant="ghost" size="icon" className="h-7 w-7" asChild onClick={(e) => e.stopPropagation()}>
-                            <a href={a.edital.link} target="_blank" rel="noopener noreferrer">
-                              <ExternalLink className="h-3.5 w-3.5" />
-                            </a>
+                        <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
+                          {a.edital?.prazo && (
+                            <span className="text-[11px] text-muted-foreground inline-flex items-center gap-1">
+                              <Calendar className="h-3 w-3" />
+                              {a.edital.prazo}
+                            </span>
+                          )}
+                          {a.edital?.link && (
+                            <Button variant="ghost" size="icon" className="h-7 w-7" asChild>
+                              <a href={a.edital.link} target="_blank" rel="noopener noreferrer">
+                                <ExternalLink className="h-3.5 w-3.5" />
+                              </a>
+                            </Button>
+                          )}
+                          {a.status === "inscrito" && !a.resultado && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-7 text-xs"
+                              onClick={() => setResultApp(a)}
+                            >
+                              <Award className="h-3 w-3 mr-1" /> Registrar resultado
+                            </Button>
+                          )}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 text-xs"
+                            onClick={() => handleApplicationClick(a)}
+                          >
+                            <ClipboardList className="h-3 w-3 mr-1" />
+                            {isPalco ? "Detalhes" : "Abrir"}
                           </Button>
-                        )}
-                        <Button variant="outline" size="sm" className="h-7 text-xs">
-                          <ClipboardList className="h-3 w-3 mr-1" /> Abrir
-                        </Button>
+                        </div>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           )}
         </TabsContent>
@@ -493,10 +596,25 @@ export default function Carreira() {
         opportunity={detailOp}
         open={!!detailOp}
         onOpenChange={(o) => !o && setDetailOp(null)}
-        onApply={(op) => { void handleInterest(op); setDetailOp(null); }}
+        onApply={(op) => { void handleInterest(op); }}
         onSave={detailOp?.origem === "ai" ? (op) => { void handleSave(op); } : undefined}
         alreadyApplied={detailOp ? isAlreadyApplied(detailOp) : false}
+        pending={detailOp ? interestPending === detailOp.key : false}
       />
+
+      {resultApp && (
+        <EditalResultModal
+          application={resultApp}
+          open={!!resultApp}
+          onOpenChange={(o) => {
+            if (!o) {
+              setResultApp(null);
+              void trackAppEvent("carreira_result_recorded", {});
+              void refetchApps();
+            }
+          }}
+        />
+      )}
     </div>
   );
 }
