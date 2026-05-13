@@ -133,6 +133,8 @@ export function useEditalApplications() {
           area: r.area,
           tipo: r.tipo === "palco" ? "palco" : "fomento",
           resumo: r.resumo,
+          link_status: r.link_status,
+          link_checked_at: r.link_checked_at,
         },
       }));
     },
