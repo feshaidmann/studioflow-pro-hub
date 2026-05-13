@@ -1,12 +1,12 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Music2, CheckCircle2, AlertTriangle, AlertCircle } from "lucide-react";
+import { Music2, CheckCircle2, AlertTriangle, AlertCircle, type LucideIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import type { ProjectWithHealth, ProjectHealth } from "@/hooks/useProjectAlerts";
 import { StatusBadge } from "./StatusBadge";
 
-const HEALTH_CONFIG: Record<ProjectHealth, { label: string; color: string; icon: React.ElementType; variant: "success" | "warning" | "critical" }> = {
+const HEALTH_CONFIG: Record<ProjectHealth, { label: string; color: string; icon: LucideIcon; variant: "success" | "warning" | "critical" }> = {
   organizado: { label: "Organizado", color: "text-success", icon: CheckCircle2, variant: "success" },
   atencao: { label: "Atenção", color: "text-warning", icon: AlertCircle, variant: "warning" },
   critico: { label: "Crítico", color: "text-destructive", icon: AlertTriangle, variant: "critical" },
