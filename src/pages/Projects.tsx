@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { DatePickerField } from "@/components/ui/date-picker-field";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -453,7 +453,7 @@ export default function Projects() {
     setEditDialogOpen(true);
   };
 
-  const handleEditProject = () => {
+  const handleEditProject = async () => {
     if ((editForm.projectType === "ep" || editForm.projectType === "album") && (!editForm.trackCount || Number(editForm.trackCount) < 1)) { toast.error(t("projects.trackCount") + " é obrigatório para EP/Álbum"); return; }
     let uploadDateStr = "";
     if (editForm.uploadDate) {
@@ -476,11 +476,11 @@ export default function Projects() {
       audienceSizeAtStart: editForm.audienceSize || null,
       ...(isLancado ? { completed: true } : {}),
     };
-    updateProject(editForm.id, updates);
+    await updateProject(editForm.id, updates);
     if (selectedProject?.id === editForm.id) setSelectedProject((prev) => prev ? { ...prev, ...updates } : null);
     setEditDialogOpen(false);
     if (isLancado && !wasAlreadyCompleted) {
-      handleLancadoCompletion(editForm.id, editForm.name);
+      await handleLancadoCompletion(editForm.id, editForm.name);
     } else {
       toast.success("Projeto atualizado! Confira as mudanças na timeline.");
     }
