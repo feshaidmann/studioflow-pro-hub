@@ -25,6 +25,9 @@ export interface Opportunity {
   editalId?: string | null;
   /** Origem do registro: salvo no banco, curado ou resultado de IA */
   origem: "saved" | "curated" | "ai";
+  /** Status do link oficial */
+  linkStatus?: "ok" | "broken" | "unknown";
+  linkCheckedAt?: string | null;
   /** Dados crus para handlers que precisam do shape original */
   raw: Edital | PalcoCurado;
 }
@@ -44,6 +47,8 @@ export function editalToOpportunity(e: Edital): Opportunity {
     area: e.area,
     editalId: e.id,
     origem: e.id ? "saved" : "ai",
+    linkStatus: (e as any).link_status as Opportunity["linkStatus"],
+    linkCheckedAt: (e as any).link_checked_at ?? null,
     raw: e,
   };
 }
@@ -62,9 +67,10 @@ export function palcoToOpportunity(p: PalcoCurado, origem: "curated" | "ai" = "c
     resumo: p.resumo,
     generos: p.generos,
     porteOuTipo: p.tipo_palco,
-    // palcos_curados.id é o opportunity_id usado no pipeline
     editalId: p.id || null,
     origem,
+    linkStatus: (p as any).link_status as Opportunity["linkStatus"],
+    linkCheckedAt: (p as any).link_checked_at ?? null,
     raw: p,
   };
 }
