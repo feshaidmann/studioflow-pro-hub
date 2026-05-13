@@ -459,11 +459,11 @@ export type Database = {
           created_at: string
           data_inscricao: string | null
           data_resultado: string | null
-          edital_id: string
           id: string
           licoes_aprendidas: string | null
           motivo_recusa: string | null
           notas: string
+          opportunity_id: string
           project_id: string | null
           resultado: string | null
           status: string
@@ -476,11 +476,11 @@ export type Database = {
           created_at?: string
           data_inscricao?: string | null
           data_resultado?: string | null
-          edital_id: string
           id?: string
           licoes_aprendidas?: string | null
           motivo_recusa?: string | null
           notas?: string
+          opportunity_id: string
           project_id?: string | null
           resultado?: string | null
           status?: string
@@ -493,11 +493,11 @@ export type Database = {
           created_at?: string
           data_inscricao?: string | null
           data_resultado?: string | null
-          edital_id?: string
           id?: string
           licoes_aprendidas?: string | null
           motivo_recusa?: string | null
           notas?: string
+          opportunity_id?: string
           project_id?: string | null
           resultado?: string | null
           status?: string
@@ -509,7 +509,7 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "edital_applications_edital_id_fkey"
-            columns: ["edital_id"]
+            columns: ["opportunity_id"]
             isOneToOne: false
             referencedRelation: "editais"
             referencedColumns: ["id"]
@@ -2421,6 +2421,33 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      list_user_applications: {
+        Args: never
+        Returns: {
+          area: string
+          created_at: string
+          data_inscricao: string
+          data_resultado: string
+          estado: string
+          id: string
+          licoes_aprendidas: string
+          link: string
+          motivo_recusa: string
+          notas: string
+          opportunity_id: string
+          orgao: string
+          prazo: string
+          project_id: string
+          resultado: string
+          resumo: string
+          status: string
+          tipo: string
+          titulo: string
+          updated_at: string
+          user_id: string
+          valor_aprovado: number
+        }[]
       }
       recalcular_benchmark_genero: {
         Args: { p_genero: string }
