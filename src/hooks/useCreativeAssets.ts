@@ -185,7 +185,7 @@ export function useCreativeAssets() {
     for (let i = 0; i < paramsList.length; i++) {
       onProgress?.(i + 1, paramsList.length);
       const result = await generate(paramsList[i]);
-      results.push(result);
+      results.push(result && result.imageBase64 ? { imageBase64: result.imageBase64 } : null);
       if (i < paramsList.length - 1) {
         await new Promise((r) => setTimeout(r, 2000));
       }
