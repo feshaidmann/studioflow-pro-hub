@@ -89,6 +89,7 @@ export function useCreativeAssets() {
     releaseDate?: string;
     additionalText?: string;
     noText?: boolean;
+    debug?: boolean;
   }) => {
     if (!user) return null;
     setGenerating(true);
@@ -120,6 +121,7 @@ export function useCreativeAssets() {
           releaseDate: params.releaseDate,
           additionalText: params.additionalText,
           noText: params.noText,
+          debug: params.debug,
         }),
       });
 
@@ -156,7 +158,7 @@ export function useCreativeAssets() {
         return null;
       }
 
-      return body as { imageBase64: string };
+      return body as { imageBase64?: string; debug?: boolean; [k: string]: any };
     } catch (e: any) {
       toast({ title: "Erro inesperado", description: e.message, variant: "destructive" });
       return null;
@@ -183,7 +185,7 @@ export function useCreativeAssets() {
     for (let i = 0; i < paramsList.length; i++) {
       onProgress?.(i + 1, paramsList.length);
       const result = await generate(paramsList[i]);
-      results.push(result);
+      results.push(result && result.imageBase64 ? { imageBase64: result.imageBase64 } : null);
       if (i < paramsList.length - 1) {
         await new Promise((r) => setTimeout(r, 2000));
       }

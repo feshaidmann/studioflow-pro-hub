@@ -39,6 +39,7 @@ import { AIQuotaBadge } from "@/components/ui/ai-quota-badge";
 import { trackEvent } from "@/lib/analytics";
 import { markChecklistItem } from "@/hooks/useReleaseChecklist";
 import { useAuth } from "@/contexts/AuthContext";
+import { DebugPromptPanel, type DebugPromptPayload } from "@/components/creative/DebugPromptPanel";
 
 // Mapeia formato gerado → chave do Checklist de Lançamento
 const FORMAT_TO_CHECKLIST_KEY: Record<string, string> = {
@@ -259,6 +260,8 @@ export default function Creative() {
   const [additionalText, setAdditionalText] = useState("");
   const [noText, setNoText] = useState<boolean>(initialPrefs.noText ?? false);
   const [trackDetailsOpen, setTrackDetailsOpen] = useState(false);
+  const [debugMode, setDebugMode] = useState(false);
+  const [debugPayload, setDebugPayload] = useState<DebugPromptPayload | null>(null);
 
   // ── Estilo e referência ───────────────────────────────────────────────
   const [style, setStyle] = useState<string | null>(initialPrefs.style ?? null);
@@ -413,7 +416,8 @@ export default function Creative() {
   // trackName, artistName), que controlam tipografia de forma explícita.
   const contextPrompt = prompt;
 
-  const handleGenerate = useCallback(async () => {
+  const handleGenerate = useCallback(async (opts?: { debug?: boolean }) => {
+    const useDebug = opts?.debug ?? debugMode;
     if (materialType === "legenda") {
       setStep("caption");
       return;
@@ -437,9 +441,16 @@ export default function Creative() {
       releaseDate: releaseDate || undefined,
       additionalText: additionalText.trim() || undefined,
       noText: noText || undefined,
+      debug: useDebug || undefined,
     });
 
-    if (result) {
+    if (result && (result as any).debug) {
+      setDebugPayload(result as DebugPromptPayload);
+      return;
+    }
+
+    if (result && result.imageBase64) {
+      setDebugPayload(null);
       setGeneratedImage(result.imageBase64);
       setGeneratedBase64(result.imageBase64);
       setSavedToGallery(false);
@@ -481,10 +492,10 @@ export default function Creative() {
       }
     }
   }, [
-    materialType, prompt, contextPrompt, style, selectedFormat,
+    debugMode, materialType, prompt, contextPrompt, style, selectedFormat,
     referenceImage, selectedProjectId, trackName, artistName,
     releaseDate, additionalText, noText, loopDuration, videoPreset,
-    videoIntensity, videoSpots, generate,
+    videoIntensity, videoSpots, generate, dnaSource,
   ]);
 
   const handleVariation = useCallback(async () => {
@@ -1001,7 +1012,7 @@ export default function Creative() {
                 <div className="flex justify-center"><AIQuotaBadge variant="text" /></div>
                 <Button
                   className="w-full"
-                  onClick={handleGenerate}
+                  onClick={() => handleGenerate()}
                   disabled={generating || videoRendering || !canGenerate}
                 >
                   {selectedFormat.isVideo
@@ -1009,6 +1020,43 @@ export default function Creative() {
                     : <Sparkles className="h-4 w-4 mr-1.5" />}
                   {generateLabel}
                 </Button>
+
+                <details className="text-[11px] text-muted-foreground">
+                  <summary className="cursor-pointer select-none hover:text-foreground transition-colors">
+                    Avançado
+                  </summary>
+                  <div className="mt-2 flex items-center justify-between gap-2 p-2 rounded-md border border-dashed">
+                    <div>
+                      <div className="text-xs font-medium text-foreground">Modo debug</div>
+                      <div className="text-[10px]">
+                        Mostra o prompt e diretivas enviados ao modelo, sem gerar imagem.
+                      </div>
+                    </div>
+                    <Switch checked={debugMode} onCheckedChange={setDebugMode} />
+                  </div>
+                  {debugMode && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="w-full mt-2 text-xs"
+                      onClick={() => handleGenerate({ debug: true })}
+                      disabled={generating || !canGenerate}
+                    >
+                      Ver prompt (sem gerar)
+                    </Button>
+                  )}
+                </details>
+
+                {debugPayload && (
+                  <DebugPromptPanel
+                    payload={debugPayload}
+                    onClose={() => setDebugPayload(null)}
+                    onGenerateForReal={() => {
+                      setDebugPayload(null);
+                      handleGenerate({ debug: false });
+                    }}
+                  />
+                )}
               </div>
             </div>
           )}
