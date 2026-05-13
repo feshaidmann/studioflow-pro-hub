@@ -254,16 +254,32 @@ export default function Dashboard() {
 
   const isFirstRun = projects.length === 0;
   const journeyPlan = useMemo(() => getJourneyPlan(profile?.main_pain ?? "organization", profile?.current_moment ?? "", profile?.track_view_mode ?? "basic"), [profile]);
+
+  // recentOnboardingProject reativo a mudanças de localStorage (StorageEvent + custom event)
+  const [recentOnboardingProjectId, setRecentOnboardingProjectId] = useState<string | null>(
+    () => (typeof window !== "undefined" ? localStorage.getItem("sfp_recent_onboarding_project") : null)
+  );
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === "sfp_recent_onboarding_project") setRecentOnboardingProjectId(e.newValue);
+    };
+    const onCustom = () => setRecentOnboardingProjectId(localStorage.getItem("sfp_recent_onboarding_project"));
+    window.addEventListener("storage", onStorage);
+    window.addEventListener("sfp:recent-onboarding-project-changed", onCustom);
+    return () => {
+      window.removeEventListener("storage", onStorage);
+      window.removeEventListener("sfp:recent-onboarding-project-changed", onCustom);
+    };
+  }, []);
   const recentOnboardingProject = useMemo(() => {
-    const localId = localStorage.getItem("sfp_recent_onboarding_project");
-    if (localId) {
-      const found = projects.find((p) => p.id === localId);
+    if (recentOnboardingProjectId) {
+      const found = projects.find((p) => p.id === recentOnboardingProjectId);
       if (found) return found;
     }
     const profileId = profile?.last_onboarding_project_id;
     if (profileId) return projects.find((p) => p.id === profileId) ?? null;
     return null;
-  }, [projects, profile]);
+  }, [projects, profile, recentOnboardingProjectId]);
 
   // Build "next recommended action" block
   const nextAction = useMemo(() => {
@@ -302,7 +318,7 @@ export default function Dashboard() {
             <AITaskAssistant
               ref={aiRef}
               alwaysOpen
-              contextChips={buildAIChips()}
+              contextChips={aiChips}
               context={{
                 projects: [
                   ...projects.map((p) => ({
