@@ -206,7 +206,7 @@ export default function Carreira() {
   const appliedKeys = useMemo(() => {
     const set = new Set<string>();
     for (const a of applications) {
-      if (a.edital_id) set.add(a.edital_id);
+      if (a.opportunity_id) set.add(a.opportunity_id);
     }
     return set;
   }, [applications]);
