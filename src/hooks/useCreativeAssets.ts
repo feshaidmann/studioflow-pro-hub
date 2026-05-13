@@ -158,7 +158,7 @@ export function useCreativeAssets() {
         return null;
       }
 
-      return body as { imageBase64: string };
+      return body as { imageBase64?: string; debug?: boolean; [k: string]: any };
     } catch (e: any) {
       toast({ title: "Erro inesperado", description: e.message, variant: "destructive" });
       return null;
