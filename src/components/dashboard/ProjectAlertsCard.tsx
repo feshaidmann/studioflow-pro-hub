@@ -51,49 +51,62 @@ export default function ProjectAlertsCard({ alerts, hidden }: ProjectAlertsCardP
   const borderClass = hasCritical ? "border-l-destructive" : "border-l-warning";
 
   return (
-    <Card className={cn("glass-card animate-fade-in border-l-4", borderClass)} style={{ animationDelay: "50ms" }}>
+    <Card
+      role="region"
+      aria-labelledby="region-alerts-title"
+      aria-live="polite"
+      className={cn("glass-card animate-fade-in border-l-4", borderClass)}
+      style={{ animationDelay: "50ms" }}
+    >
       <CardHeader className="pb-2">
-        <CardTitle className="text-base flex items-center gap-2">
-          <AlertTriangle className={cn("h-4 w-4", hasCritical ? "text-destructive" : "text-warning")} />
+        <CardTitle id="region-alerts-title" className="text-base flex items-center gap-2">
+          <AlertTriangle aria-hidden="true" className={cn("h-4 w-4", hasCritical ? "text-destructive" : "text-warning")} />
           Atenção Necessária
-          <StatusBadge variant={hasCritical ? "critical" : "warning"} className="ml-1">{alerts.length}</StatusBadge>
+          <StatusBadge variant={hasCritical ? "critical" : "warning"} className="ml-1" aria-label={`${alerts.length} alerta${alerts.length > 1 ? "s" : ""}`}>{alerts.length}</StatusBadge>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-1.5">
-        {visible.map((alert) => {
-          const sev = SEV_STYLE[alert.severity];
-          const SevIcon = sev.icon;
-          const CatIcon = CAT_ICON[alert.category] ?? AlertCircle;
-          return (
-            <div
-              key={alert.id}
-              className={cn(
-                "flex items-start gap-2.5 rounded-lg px-3 py-2 border border-border/40 transition-all duration-200",
-                sev.bg,
-              )}
-            >
-              <SevIcon className={cn("h-4 w-4 shrink-0 mt-0.5", sev.iconColor)} />
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5 mb-0.5">
-                  <span className="text-xs font-semibold">{alert.title}</span>
-                  <CatIcon className="h-3 w-3 text-muted-foreground shrink-0" />
+        <ul role="list" className="space-y-1.5 m-0 p-0 list-none">
+          {visible.map((alert) => {
+            const sev = SEV_STYLE[alert.severity];
+            const SevIcon = sev.icon;
+            const CatIcon = CAT_ICON[alert.category] ?? AlertCircle;
+            const sevLabel = alert.severity === "critical" ? "crítico" : alert.severity === "warning" ? "atenção" : "informativo";
+            return (
+              <li
+                key={alert.id}
+                className={cn(
+                  "flex items-start gap-2.5 rounded-lg px-3 py-2 border border-border/40 transition-all duration-200",
+                  sev.bg,
+                )}
+              >
+                <SevIcon aria-hidden="true" className={cn("h-4 w-4 shrink-0 mt-0.5", sev.iconColor)} />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5 mb-0.5">
+                    <span className="text-xs font-semibold">
+                      <span className="sr-only">{`Alerta ${sevLabel}: `}</span>
+                      {alert.title}
+                    </span>
+                    <CatIcon aria-hidden="true" className="h-3 w-3 text-muted-foreground shrink-0" />
+                  </div>
+                  <p className="text-[11px] text-muted-foreground leading-snug">{alert.description}</p>
                 </div>
-                <p className="text-[11px] text-muted-foreground leading-snug">{alert.description}</p>
-              </div>
-              <div className="flex flex-col items-end gap-1 shrink-0">
-                <Badge variant="outline" className="text-[9px]">{alert.projectName}</Badge>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-5 px-1.5 text-[10px] gap-0.5 text-primary hover:text-primary/80"
-                  onClick={() => navigate(`/projects/${alert.projectId}?tab=${CAT_TAB[alert.category] || "visao-geral"}`)}
-                >
-                  Resolver <ArrowRight className="h-2.5 w-2.5" />
-                </Button>
-              </div>
-            </div>
-          );
-        })}
+                <div className="flex flex-col items-end gap-1 shrink-0">
+                  <Badge variant="outline" className="text-[9px]">{alert.projectName}</Badge>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-5 px-1.5 text-[10px] gap-0.5 text-primary hover:text-primary/80"
+                    onClick={() => navigate(`/projects/${alert.projectId}?tab=${CAT_TAB[alert.category] || "visao-geral"}`)}
+                    aria-label={`Resolver alerta ${alert.title} no projeto ${alert.projectName}`}
+                  >
+                    Resolver <ArrowRight aria-hidden="true" className="h-2.5 w-2.5" />
+                  </Button>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
         {alerts.length > 6 && (
           <p className="text-[10px] text-muted-foreground text-center pt-1">
             +{alerts.length - 6} alerta{alerts.length - 6 > 1 ? "s" : ""}
