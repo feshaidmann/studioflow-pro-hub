@@ -107,10 +107,27 @@ export function useProjectChat(projectId: string) {
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") {
+          // Reconcile any messages that arrived between initial fetch and subscription
+          fetchMessages();
+        } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+          console.warn("[chat] realtime subscription status:", status);
+        }
+      });
 
     channelRef.current = channel;
-    return () => { supabase.removeChannel(channel); };
+
+    // Refetch when tab becomes visible again (socket may have dropped)
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") fetchMessages();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+      supabase.removeChannel(channel);
+    };
   }, [projectId, fetchMessages]);
 
   const sendMessage = useCallback(
