@@ -161,7 +161,7 @@ export default function DailyChecklist({
 
         {/* Filters row */}
         {activeTasks.length > 0 && (
-          <div className="flex flex-wrap items-center gap-1.5">
+          <div role="group" aria-label="Filtros do checklist" className="flex flex-wrap items-center gap-1.5">
             {/* Source filter chips */}
             {(() => {
               const presentSources = Array.from(new Set(activeTasks.map((t) => t.source)));
@@ -176,18 +176,22 @@ export default function DailyChecklist({
               return chips.map(({ key, label }) => {
                 const active = sourceFilter === key;
                 const meta = key !== "all" ? getSourceMeta(key) : null;
+                const count = key !== "all" ? activeTasks.filter((t) => t.source === key).length : activeTasks.length;
                 return (
                   <button
                     key={key}
+                    type="button"
+                    aria-pressed={active}
+                    aria-label={`Filtrar por ${label}, ${count} tarefa${count !== 1 ? "s" : ""}`}
                     onClick={() => setSourceFilter(active ? "all" : key)}
                     className={cn(
-                      "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium border transition-all",
+                      "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium border transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                       active ? "bg-primary/20 border-primary/50 text-primary" : "bg-secondary/50 border-border/40 text-muted-foreground hover:border-border hover:text-foreground",
                     )}
                   >
-                    {meta && <meta.icon className={cn("h-2.5 w-2.5", active ? "text-primary" : meta.color)} />}
+                    {meta && <meta.icon aria-hidden="true" className={cn("h-2.5 w-2.5", active ? "text-primary" : meta.color)} />}
                     {label}
-                    {key !== "all" && <span className="opacity-60">{activeTasks.filter((t) => t.source === key).length}</span>}
+                    {key !== "all" && <span className="opacity-60">{count}</span>}
                   </button>
                 );
               });
@@ -196,7 +200,7 @@ export default function DailyChecklist({
             {/* Project filter */}
             {projectsWithTasks.length > 1 && (
               <Select value={projectFilter} onValueChange={setProjectFilter}>
-                <SelectTrigger className="h-6 w-[110px] text-[11px] border-border/40">
+                <SelectTrigger className="h-6 w-[110px] text-[11px] border-border/40" aria-label="Filtrar por projeto">
                   <SelectValue placeholder="Projeto" />
                 </SelectTrigger>
                 <SelectContent>
@@ -214,7 +218,7 @@ export default function DailyChecklist({
               if (assignees.length < 2) return null;
               return (
                 <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
-                  <SelectTrigger className="h-6 w-[110px] text-[11px] border-border/40">
+                  <SelectTrigger className="h-6 w-[110px] text-[11px] border-border/40" aria-label="Filtrar por responsável">
                     <SelectValue placeholder="Responsável" />
                   </SelectTrigger>
                   <SelectContent>
