@@ -441,6 +441,8 @@ export default function ReferenceTracks() {
           </AlertDescription>
         </Alert>
       )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
