@@ -579,6 +579,49 @@ serve(async (req) => {
 
     // Use Nano Banana 2 when typography is required — significantly better text legibility.
     const imageModel = wantsText ? IMAGE_MODEL_TYPOGRAPHY : IMAGE_MODEL_DEFAULT;
+
+    // ── DEBUG MODE ───────────────────────────────────────────────────────
+    // Returns the exact prompts/messages that would be sent to the model
+    // without invoking it (no quota consumed, no ai_invocations insert).
+    // Useful to diagnose why the model is ignoring text directives.
+    if (debug === true) {
+      const messagesPreview = messages.map((m: any) => {
+        if (Array.isArray(m.content)) {
+          return {
+            role: m.role,
+            content: m.content.map((c: any) =>
+              c?.type === "image_url"
+                ? { type: "image_url", image_url: "[image omitted in debug]" }
+                : c
+            ),
+          };
+        }
+        return m;
+      });
+      return new Response(JSON.stringify({
+        debug: true,
+        model: imageModel,
+        wantsText: !!wantsText,
+        noText: !!noText,
+        fields: {
+          trackName: trackName ?? null,
+          artistName: artistName ?? null,
+          releaseDate: releaseDate ?? null,
+          additionalText: additionalText ?? null,
+        },
+        format,
+        width,
+        height,
+        style: style ?? null,
+        systemPrompt: systemBlocks.join("\n\n"),
+        textDirectives: textDirectiveLines,
+        userPrompt: userText,
+        messagesPreview,
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     let aiResp = await requestImage(messages, lovableKey, imageModel);
 
     if (!aiResp.ok) {
