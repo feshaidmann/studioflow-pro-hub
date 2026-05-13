@@ -19,12 +19,12 @@ export default function RecentTransactions({ transactions }: RecentTransactionsP
   if (transactions.length === 0) return null;
 
   return (
-    <Card className="glass-card animate-fade-in" style={{ animationDelay: "220ms" }}>
+    <Card role="region" aria-labelledby="region-transactions-title" className="glass-card animate-fade-in" style={{ animationDelay: "220ms" }}>
       <CardHeader className="pb-3">
-        <CardTitle className="text-base flex items-center gap-2">
-          <DollarSign className="h-4 w-4 text-primary" />
+        <CardTitle id="region-transactions-title" className="text-base flex items-center gap-2">
+          <DollarSign aria-hidden="true" className="h-4 w-4 text-primary" />
           Últimas Transações
-          <StatusBadge variant="neutral">{Math.min(transactions.length, 5)}</StatusBadge>
+          <StatusBadge variant="neutral" aria-label={`${Math.min(transactions.length, 5)} transações exibidas`}>{Math.min(transactions.length, 5)}</StatusBadge>
           <Button
             variant="ghost"
             size="sm"
@@ -32,12 +32,12 @@ export default function RecentTransactions({ transactions }: RecentTransactionsP
             onClick={() => navigate("/finance")}
             aria-label="Ver todas as transações"
           >
-            Ver todas <ArrowRight className="h-3 w-3 ml-1" />
+            Ver todas <ArrowRight aria-hidden="true" className="h-3 w-3 ml-1" />
           </Button>
         </CardTitle>
       </CardHeader>
       <CardContent className="p-0">
-        <div className="divide-y divide-border/40">
+        <ul role="list" className="divide-y divide-border/40 m-0 p-0 list-none">
           {[...transactions]
             .sort((a, b) => b.date.localeCompare(a.date))
             .slice(0, 5)
@@ -48,39 +48,49 @@ export default function RecentTransactions({ transactions }: RecentTransactionsP
               const handleClick = () => {
                 if (tx.projectId) navigate(`/projects/${tx.projectId}`);
               };
-              return (
-                <div
-                  key={tx.id}
-                  className={cn(
-                    "flex items-center gap-3 px-4 py-2.5 hover:bg-secondary/20 transition-colors",
-                    tx.projectId && "cursor-pointer",
-                  )}
-                  onClick={handleClick}
-                  role={tx.projectId ? "button" : undefined}
-                  tabIndex={tx.projectId ? 0 : undefined}
-                  onKeyDown={(e) => { if (tx.projectId && (e.key === "Enter" || e.key === " ")) handleClick(); }}
-                >
-                  <span className="text-xs text-muted-foreground font-mono-nums w-11 shrink-0">{dateStr}</span>
+              const amountStr = `R$ ${tx.amount.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
+              const ariaLabel = `${dateStr}, ${tx.description}, ${isIncome ? "receita" : "despesa"} de ${amountStr}, ${tx.paid ? "pago" : "pendente"}${projectName ? `, projeto ${projectName}` : ""}`;
+              const Inner = (
+                <>
+                  <span className="text-xs text-muted-foreground font-mono-nums w-11 shrink-0" aria-hidden="true">{dateStr}</span>
                   <div className="flex-1 min-w-0">
                     <div className="text-sm truncate">{tx.description}</div>
                     {projectName && (
                       <div className="text-[10px] text-muted-foreground truncate">{projectName}</div>
                     )}
                   </div>
-                  <span className={`text-sm font-bold font-mono-nums shrink-0 ${isIncome ? "text-success" : "text-destructive"}`}>
-                    {isIncome ? "+" : "-"}R$ {tx.amount.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                  <span aria-hidden="true" className={`text-sm font-bold font-mono-nums shrink-0 ${isIncome ? "text-success" : "text-destructive"}`}>
+                    {isIncome ? "+" : "-"}{amountStr}
                   </span>
-                  <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full border shrink-0 ${
+                  <span aria-hidden="true" className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full border shrink-0 ${
                     tx.paid
                       ? "text-success border-success/30 bg-success/10"
                       : "text-muted-foreground border-border/50 bg-secondary/30"
                   }`}>
                     {tx.paid ? "Pago" : "Pendente"}
                   </span>
-                </div>
+                </>
+              );
+              return (
+                <li key={tx.id}>
+                  {tx.projectId ? (
+                    <button
+                      type="button"
+                      onClick={handleClick}
+                      aria-label={`${ariaLabel}. Abrir projeto.`}
+                      className="w-full text-left flex items-center gap-3 px-4 py-2.5 hover:bg-secondary/20 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+                    >
+                      {Inner}
+                    </button>
+                  ) : (
+                    <div className="flex items-center gap-3 px-4 py-2.5" aria-label={ariaLabel}>
+                      {Inner}
+                    </div>
+                  )}
+                </li>
               );
             })}
-        </div>
+        </ul>
       </CardContent>
     </Card>
   );
