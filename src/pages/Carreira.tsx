@@ -315,8 +315,9 @@ export default function Carreira() {
     });
   };
 
-  const handleAIResults = (r: Opportunity[]) => {
+  const handleAIResults = (r: Opportunity[], summary: string) => {
     setAiResults(r);
+    setAiSummary(summary || "");
     void trackAppEvent("carreira_ai_search", { results_count: r.length });
   };
 
