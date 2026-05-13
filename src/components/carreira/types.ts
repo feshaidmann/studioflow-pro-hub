@@ -51,6 +51,7 @@ export function editalToOpportunity(e: Edital): Opportunity {
     origem: e.id ? "saved" : "ai",
     linkStatus: (e as any).link_status as Opportunity["linkStatus"],
     linkCheckedAt: (e as any).link_checked_at ?? null,
+    matchReason: (e as any).match_reason ?? null,
     raw: e,
   };
 }
