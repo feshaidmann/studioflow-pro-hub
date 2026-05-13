@@ -33,9 +33,9 @@ function formatDueDate(d: string | null) {
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const diff = Math.floor((date.getTime() - today.getTime()) / 86400000);
   if (diff < 0) return { label: `${Math.abs(diff)}d atraso`, color: "text-destructive", urgent: true };
-  if (diff === 0) return { label: "Hoje", color: "text-amber-400", urgent: true };
-  if (diff === 1) return { label: "Amanhã", color: "text-amber-400", urgent: true };
-  if (diff <= 7) return { label: `em ${diff}d`, color: "text-amber-400/80", urgent: false };
+  if (diff === 0) return { label: "Hoje", color: "text-warning", urgent: true };
+  if (diff === 1) return { label: "Amanhã", color: "text-warning", urgent: true };
+  if (diff <= 7) return { label: `em ${diff}d`, color: "text-warning/80", urgent: false };
   return { label: `em ${diff}d`, color: "text-muted-foreground", urgent: false };
 }
 
@@ -98,13 +98,13 @@ export default function ProjectOverviewTab({ project, progress, isOwner, onSwitc
         <Card className={cn(
           "border",
           nextAction.severity === "critical" ? "border-destructive/40 bg-destructive/5" :
-          nextAction.severity === "warning" ? "border-amber-400/40 bg-amber-400/5" :
+          nextAction.severity === "warning" ? "border-warning/40 bg-warning/5" :
           "border-primary/30 bg-primary/5",
         )}>
           <CardContent className="py-3 px-4 flex items-center gap-3">
             <ArrowRight className={cn("h-4 w-4 shrink-0",
               nextAction.severity === "critical" ? "text-destructive" :
-              nextAction.severity === "warning" ? "text-amber-400" : "text-primary"
+              nextAction.severity === "warning" ? "text-warning" : "text-primary"
             )} />
             <div className="flex-1 min-w-0">
               <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Próxima ação</p>
@@ -180,7 +180,7 @@ export default function ProjectOverviewTab({ project, progress, isOwner, onSwitc
               {fmt.format(fin.profit)}
             </p>
             {pendingTxs.length > 0 && (
-              <p className="text-[10px] text-amber-400 mt-0.5">{pendingTxs.length} pendente{pendingTxs.length > 1 ? "s" : ""}</p>
+              <p className="text-[10px] text-warning mt-0.5">{pendingTxs.length} pendente{pendingTxs.length > 1 ? "s" : ""}</p>
             )}
           </div>
         )}

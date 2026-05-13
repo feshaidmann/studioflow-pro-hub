@@ -35,12 +35,12 @@ interface MemberExtra {
 }
 
 const STATUS_CONFIG: Record<DeliveryStatus, { label: string; color: string; icon: typeof Clock }> = {
-  convidado: { label: "Convidado", color: "border-yellow-500/50 text-yellow-400", icon: Clock },
-  ativo: { label: "Ativo", color: "border-blue-500/50 text-blue-400", icon: UserCheck },
-  aguardando: { label: "Aguardando", color: "border-orange-500/50 text-orange-400", icon: Clock },
-  atrasado: { label: "Atrasado", color: "border-red-500/50 text-red-400", icon: AlertTriangle },
-  entregou: { label: "Entregou", color: "border-emerald-500/50 text-emerald-400", icon: Package },
-  concluido: { label: "Concluído", color: "border-green-500/50 text-green-400", icon: Check },
+  convidado: { label: "Convidado", color: "border-warning/40 text-warning", icon: Clock },
+  ativo: { label: "Ativo", color: "border-primary/40 text-primary", icon: UserCheck },
+  aguardando: { label: "Aguardando", color: "border-warning/40 text-warning", icon: Clock },
+  atrasado: { label: "Atrasado", color: "border-destructive/40 text-destructive", icon: AlertTriangle },
+  entregou: { label: "Entregou", color: "border-success/40 text-success", icon: Package },
+  concluido: { label: "Concluído", color: "border-success/40 text-success", icon: Check },
 };
 
 const STAGE_LABELS: Record<string, string> = {
@@ -283,7 +283,7 @@ export default function ProjectTeamTab({ projectId }: ProjectTeamTabProps) {
                   {dueDate && (
                     <span className={cn(
                       "text-[10px] flex items-center gap-0.5",
-                      daysLeft !== null && daysLeft < 0 ? "text-red-400" : daysLeft !== null && daysLeft <= 2 ? "text-yellow-400" : "text-muted-foreground"
+                      daysLeft !== null && daysLeft < 0 ? "text-destructive" : daysLeft !== null && daysLeft <= 2 ? "text-warning" : "text-muted-foreground"
                     )}>
                       <CalendarDays className="h-2.5 w-2.5" />
                       {format(new Date(dueDate), "dd/MM", { locale: ptBR })}
@@ -409,19 +409,19 @@ export default function ProjectTeamTab({ projectId }: ProjectTeamTabProps) {
                         <FileText className="h-2.5 w-2.5" /> Editar
                       </Button>
                       {effectiveStatus === "ativo" && (
-                        <Button variant="outline" size="sm" className="h-6 text-[10px] gap-1 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10"
+                        <Button variant="outline" size="sm" className="h-6 text-[10px] gap-1 border-success/40 text-success hover:bg-success/10"
                           onClick={(e) => { e.stopPropagation(); quickStatusChange(prof.id, "entregou"); }}>
                           <Package className="h-2.5 w-2.5" /> Marcar entrega
                         </Button>
                       )}
                       {effectiveStatus === "entregou" && (
-                        <Button variant="outline" size="sm" className="h-6 text-[10px] gap-1 border-green-500/30 text-green-400 hover:bg-green-500/10"
+                        <Button variant="outline" size="sm" className="h-6 text-[10px] gap-1 border-success/40 text-success hover:bg-success/10"
                           onClick={(e) => { e.stopPropagation(); quickStatusChange(prof.id, "concluido"); }}>
                           <Check className="h-2.5 w-2.5" /> Concluir
                         </Button>
                       )}
                       {(effectiveStatus === "atrasado" || effectiveStatus === "aguardando") && (
-                        <Button variant="outline" size="sm" className="h-6 text-[10px] gap-1 border-blue-500/30 text-blue-400 hover:bg-blue-500/10"
+                        <Button variant="outline" size="sm" className="h-6 text-[10px] gap-1 border-primary/40 text-primary hover:bg-primary/10"
                           onClick={(e) => { e.stopPropagation(); quickStatusChange(prof.id, "ativo"); }}>
                           <UserCheck className="h-2.5 w-2.5" /> Reativar
                         </Button>
@@ -442,7 +442,7 @@ export default function ProjectTeamTab({ projectId }: ProjectTeamTabProps) {
                       <span className="text-[10px] text-muted-foreground truncate flex-1 font-mono">/invite/{token}</span>
                     </div>
                     <Button variant="outline" size="sm" className="h-7 text-xs gap-1 w-full" onClick={() => handleCopyLink(token!)}>
-                      {isCopied ? <Check className="h-3 w-3 text-green-400" /> : <Copy className="h-3 w-3" />}
+                      {isCopied ? <Check className="h-3 w-3 text-success" /> : <Copy className="h-3 w-3" />}
                       {isCopied ? "Copiado!" : "Copiar link"}
                     </Button>
                   </div>

@@ -162,7 +162,7 @@ export function useProjectChat(projectId: string) {
         const senderName = user.email?.split("@")[0] ?? "Alguém";
         for (const uid of recipientIds) {
           supabase.functions.invoke("send-push-notification", {
-            body: { user_id: uid, title: `💬 ${project.name}`, body: `${senderName}: ${content.trim().slice(0, 80)}`, url: `/projetos/${projectId}` },
+            body: { user_id: uid, title: `💬 ${project.name}`, body: `${senderName}: ${content.trim().slice(0, 80)}`, url: `/projects/${projectId}` },
           });
         }
       }

@@ -29,7 +29,7 @@ function categorize(task: Task): "overdue" | "today" | "week" | "later" {
 
 const SECTION_META = {
   overdue: { label: "Vencidas", icon: AlertTriangle, color: "text-destructive" },
-  today: { label: "Hoje", icon: CalendarClock, color: "text-amber-400" },
+  today: { label: "Hoje", icon: CalendarClock, color: "text-warning" },
   week: { label: "Esta semana", icon: CalendarClock, color: "text-primary" },
   later: { label: "Futuras / Sem prazo", icon: ListChecks, color: "text-muted-foreground" },
 } as const;
@@ -40,8 +40,8 @@ function TaskRow({ task, onToggle, onDelete }: { task: Task; onToggle: () => voi
   const dueBadge = task.dueDate ? (() => {
     const d = daysUntil(task.dueDate);
     if (d < 0) return { label: `${Math.abs(d)}d atraso`, color: "text-destructive" };
-    if (d === 0) return { label: "Hoje", color: "text-amber-400" };
-    if (d === 1) return { label: "Amanhã", color: "text-amber-400" };
+    if (d === 0) return { label: "Hoje", color: "text-warning" };
+    if (d === 1) return { label: "Amanhã", color: "text-warning" };
     return { label: `em ${d}d`, color: "text-muted-foreground" };
   })() : null;
 

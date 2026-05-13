@@ -365,7 +365,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         };
         const label = stageLabels[data.stage] ?? data.stage;
         supabase.functions.invoke("send-push-notification", {
-          body: { user_id: user.id, title: "📁 Status atualizado", body: `${prevProject.name} avançou para ${label}`, url: `/projetos/${id}` },
+          body: { user_id: user.id, title: "📁 Status atualizado", body: `${prevProject.name} avançou para ${label}`, url: `/projects/${id}` },
         });
         trackAppEvent("project_stage_changed", {
           project_id: id,
