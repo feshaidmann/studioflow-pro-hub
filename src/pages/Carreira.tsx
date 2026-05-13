@@ -99,6 +99,7 @@ export default function Carreira() {
 
   const [filters, setFilters] = useState<CarreiraFilters>(() => readFiltersFromURL(searchParams));
   const [aiResults, setAiResults] = useState<Opportunity[]>([]);
+  const [aiSummary, setAiSummary] = useState<string>("");
   const [tab, setTab] = useState<"descobrir" | "inscricoes">(
     searchParams.get("tab") === "inscricoes" ? "inscricoes" : "descobrir"
   );
