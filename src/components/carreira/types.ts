@@ -28,6 +28,8 @@ export interface Opportunity {
   /** Status do link oficial */
   linkStatus?: "ok" | "broken" | "unknown";
   linkCheckedAt?: string | null;
+  /** Justificativa curta gerada pela IA (somente em buscas IA) */
+  matchReason?: string | null;
   /** Dados crus para handlers que precisam do shape original */
   raw: Edital | PalcoCurado;
 }
