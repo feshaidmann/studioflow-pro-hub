@@ -1,10 +1,13 @@
-import { ExternalLink, MapPin, Calendar, DollarSign, ClipboardList, Trophy, Mic2, Trash2, Loader2 } from "lucide-react";
+import { ExternalLink, MapPin, Calendar, DollarSign, ClipboardList, Trophy, Mic2, Trash2, Loader2, Sparkles, ThumbsUp, ThumbsDown, Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { TIPO_PALCO_LABELS, type TipoPalco } from "@/hooks/usePalcos";
 import type { Opportunity } from "./types";
 import { buildGoogleFallbackUrl } from "./linkHelpers";
+import { trackAppEvent } from "@/lib/analytics";
+import { useState } from "react";
 
 function formatDate(d: string | null) {
   if (!d) return null;
