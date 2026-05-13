@@ -171,6 +171,9 @@ export default function Projects() {
   const [inviteStatuses, setInviteStatuses] = useState<Record<string, string>>({});
   const [inviteIds, setInviteIds] = useState<Record<string, string>>({});
 
+  /* ── Notes debounce timer ── */
+  const notesDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   useEffect(() => {
     if (!selectedProject) return;
     supabase.from("project_invitations").select("id, professional_email, token, status").eq("project_id", selectedProject.id).then(({ data }) => {
@@ -726,7 +729,7 @@ export default function Projects() {
                         completed
                           ? "bg-success/15 border-success/40 text-success"
                           : current
-                          ? "bg-primary/15 border-primary/50 text-primary neon-glow"
+                          ? "bg-primary/15 border-primary/50 text-primary"
                           : "bg-secondary/30 border-border/50 text-muted-foreground hover:border-primary/40 hover:text-foreground"
                       )}
                     >
@@ -734,7 +737,7 @@ export default function Projects() {
                       {completed
                         ? <Check className="h-3.5 w-3.5" />
                         : current
-                        ? <div className="h-2 w-2 rounded-full bg-primary animate-pulse-neon" />
+                        ? <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
                         : <div className="h-2 w-2 rounded-full bg-border/60" />
                       }
                     </button>
@@ -766,7 +769,7 @@ export default function Projects() {
                 </Button>
               </div>
             ) : selectedProject.stage === "upload" && (
-              <Button onClick={() => setMasterAnalyzerModalOpen(true)} className="mt-4 w-full neon-glow active:scale-95 transition-transform gap-2">
+              <Button onClick={() => setMasterAnalyzerModalOpen(true)} className="mt-4 w-full active:scale-95 transition-transform gap-2">
                 <Upload className="h-4 w-4" />Analisar Master (Upload)
               </Button>
             )}
@@ -795,8 +798,13 @@ export default function Projects() {
                 value={selectedProject.notes ?? ""}
                 onChange={(e) => {
                   const val = e.target.value;
+                  // Update local state immediately for snappy UI
                   setSelectedProject((prev) => prev ? { ...prev, notes: val } : null);
-                  updateProject(selectedProject.id, { notes: val });
+                  // Debounce DB write so we don't hammer Supabase per keystroke
+                  if (notesDebounceRef.current) clearTimeout(notesDebounceRef.current);
+                  notesDebounceRef.current = setTimeout(() => {
+                    updateProject(selectedProject.id, { notes: val });
+                  }, 600);
                 }}
                 className="resize-none h-28"
               />
@@ -960,7 +968,7 @@ export default function Projects() {
                       )}
 
                       {/* Submit */}
-                      <Button onClick={handleSubmitProposal} disabled={!canContinueToProposal || wizardSaving || (proposalHasDeadlineWarning && !deadlineWarningConfirmed)} className="w-full neon-glow">
+                      <Button onClick={handleSubmitProposal} disabled={!canContinueToProposal || wizardSaving || (proposalHasDeadlineWarning && !deadlineWarningConfirmed)} className="w-full">
                         {wizardSaving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
                         {wizardSelectedEmail ? "Enviar proposta" : "Adicionar à equipe"}
                       </Button>
@@ -1326,7 +1334,7 @@ export default function Projects() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setPaymentModalOpen(false)}>Pular</Button>
-            <Button onClick={handlePaymentConfirm} className="neon-glow">Registrar</Button>
+            <Button onClick={handlePaymentConfirm}>Registrar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
