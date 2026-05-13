@@ -292,11 +292,31 @@ serve(async (req) => {
     // Clean message (remove the JSON block for display)
     const cleanMessage = messageContent.replace(/<editais_json>[\s\S]*?<\/editais_json>/, "").trim();
 
+    // ── Validar links oficiais (descarta alucinações que dão 404) ──────────
+    const linkChecks = await Promise.all(
+      editais.map(async (e: any) => {
+        if (!e.link || typeof e.link !== "string") return { ok: false, status: "unknown" as const };
+        return await checkLinkAlive(e.link);
+      }),
+    );
+    const editaisValidos: any[] = [];
+    const linkStatusByIdx: ("ok" | "broken" | "unknown")[] = [];
+    editais.forEach((e: any, i: number) => {
+      const c = linkChecks[i];
+      // Sem link → mantém (status unknown). Com link mas quebrado → descarta.
+      if (!e.link) { editaisValidos.push(e); linkStatusByIdx.push("unknown"); return; }
+      if (c.ok) { editaisValidos.push(e); linkStatusByIdx.push("ok"); return; }
+      console.warn(`[edital-search] Descartado por link inválido (${c.status}): ${e.titulo} → ${e.link}`);
+    });
+    editais = editaisValidos;
+
     const sessionKeyList = editais.map((e: any) => e.session_key).filter(Boolean);
 
     // Persist if requested
     if (save_results && editais.length > 0) {
-      const rows = editais.map((e: any) => ({
+      const rows = editais.map((e: any, i: number) => ({
+        link_status: linkStatusByIdx[i] || "unknown",
+        link_checked_at: new Date().toISOString(),
         user_id: userId,
         project_id: project_id || null,
         titulo: e.titulo || "",
