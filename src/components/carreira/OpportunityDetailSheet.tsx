@@ -1,4 +1,4 @@
-import { ExternalLink, MapPin, Calendar, DollarSign, Trophy, Mic2, ClipboardList, Tag, Users, FileText } from "lucide-react";
+import { ExternalLink, MapPin, Calendar, DollarSign, Trophy, Mic2, ClipboardList, Tag, Users, FileText, Loader2 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -25,9 +25,10 @@ interface Props {
   onApply?: (op: Opportunity) => void;
   onSave?: (op: Opportunity) => void;
   alreadyApplied?: boolean;
+  pending?: boolean;
 }
 
-export default function OpportunityDetailSheet({ opportunity: op, open, onOpenChange, onApply, onSave, alreadyApplied }: Props) {
+export default function OpportunityDetailSheet({ opportunity: op, open, onOpenChange, onApply, onSave, alreadyApplied, pending }: Props) {
   if (!op) return null;
   const isEdital = op.tipo === "edital";
   const TypeIcon = isEdital ? Trophy : Mic2;
@@ -162,8 +163,8 @@ export default function OpportunityDetailSheet({ opportunity: op, open, onOpenCh
                 <ClipboardList className="h-3.5 w-3.5 mr-1.5" /> Já no pipeline
               </Button>
             ) : (
-              <Button size="sm" className="ml-auto" onClick={() => onApply(op)}>
-                <ClipboardList className="h-3.5 w-3.5 mr-1.5" />
+              <Button size="sm" className="ml-auto" disabled={pending} onClick={() => onApply(op)}>
+                {pending ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <ClipboardList className="h-3.5 w-3.5 mr-1.5" />}
                 {isEdital ? "Iniciar candidatura" : "Marcar interesse"}
               </Button>
             )

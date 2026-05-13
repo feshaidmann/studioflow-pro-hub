@@ -1,4 +1,4 @@
-import { ExternalLink, MapPin, Calendar, DollarSign, ClipboardList, Trophy, Mic2, Trash2 } from "lucide-react";
+import { ExternalLink, MapPin, Calendar, DollarSign, ClipboardList, Trophy, Mic2, Trash2, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -17,9 +17,9 @@ function formatDate(d: string | null) {
 }
 
 function statusColor(status: string) {
-  if (status === "Aberto") return "bg-green-500/20 text-green-900 border-green-500/40";
-  if (status === "Encerrado") return "bg-red-500/15 text-red-900 border-red-500/30";
-  if (status === "Previsto") return "bg-blue-500/15 text-blue-900 border-blue-500/30";
+  if (status === "Aberto") return "bg-success/15 text-success border-success/30";
+  if (status === "Encerrado") return "bg-destructive/10 text-destructive border-destructive/25";
+  if (status === "Previsto") return "bg-primary/10 text-primary border-primary/25";
   return "bg-muted text-muted-foreground border-border";
 }
 
@@ -30,9 +30,11 @@ interface Props {
   onRemove?: (op: Opportunity) => void;
   onClick?: (op: Opportunity) => void;
   alreadyApplied?: boolean;
+  pending?: boolean;
+  recommended?: boolean;
 }
 
-export default function OpportunityCard({ opportunity: op, onApply, onSave, onRemove, onClick, alreadyApplied }: Props) {
+export default function OpportunityCard({ opportunity: op, onApply, onSave, onRemove, onClick, alreadyApplied, pending, recommended }: Props) {
   const isEdital = op.tipo === "edital";
   const TypeIcon = isEdital ? Trophy : Mic2;
   const typeLabel = isEdital
@@ -48,7 +50,6 @@ export default function OpportunityCard({ opportunity: op, onApply, onSave, onRe
       )}
       onClick={() => onClick?.(op)}
     >
-      {/* Header: badge tipo + status */}
       <div className="flex items-start justify-between gap-2 mb-2">
         <div className="flex items-center gap-1.5 flex-wrap">
           <Badge
@@ -57,7 +58,7 @@ export default function OpportunityCard({ opportunity: op, onApply, onSave, onRe
               "text-[11px] gap-1 font-medium",
               isEdital
                 ? "bg-primary/10 text-primary border-primary/30"
-                : "bg-amber-500/10 text-amber-900 border-amber-500/40"
+                : "bg-warning/15 text-warning-foreground border-warning/40"
             )}
           >
             <TypeIcon className="h-3 w-3" />
@@ -68,6 +69,11 @@ export default function OpportunityCard({ opportunity: op, onApply, onSave, onRe
           </Badge>
           {op.area && isEdital && (
             <Badge variant="secondary" className="text-[11px]">{op.area}</Badge>
+          )}
+          {recommended && (
+            <Badge variant="outline" className="text-[10px] bg-accent/10 text-accent-foreground border-accent/30">
+              Pra você
+            </Badge>
           )}
         </div>
       </div>
@@ -89,7 +95,7 @@ export default function OpportunityCard({ opportunity: op, onApply, onSave, onRe
           <span className="inline-flex items-center gap-1"><Calendar className="h-3 w-3" />Prazo: {prazoFmt}</span>
         )}
         {op.valor && (
-          <span className="inline-flex items-center gap-1 text-green-700 font-medium">
+          <span className="inline-flex items-center gap-1 text-success font-medium">
             <DollarSign className="h-3 w-3" />{op.valor}
           </span>
         )}
@@ -103,14 +109,21 @@ export default function OpportunityCard({ opportunity: op, onApply, onSave, onRe
             </a>
           </Button>
         )}
-        {onApply && isEdital && op.editalId && (
+        {onApply && (
           alreadyApplied ? (
             <Button size="sm" variant="outline" className="h-7 text-xs px-2 ml-auto" disabled>
-              <ClipboardList className="h-3 w-3 mr-1" /> Já candidatado
+              <ClipboardList className="h-3 w-3 mr-1" /> No pipeline
             </Button>
           ) : (
-            <Button size="sm" variant="default" className="h-7 text-xs px-2 ml-auto" onClick={() => onApply(op)}>
-              <ClipboardList className="h-3 w-3 mr-1" /> Candidatar
+            <Button
+              size="sm"
+              variant="default"
+              className="h-7 text-xs px-2 ml-auto"
+              disabled={pending}
+              onClick={() => onApply(op)}
+            >
+              {pending ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <ClipboardList className="h-3 w-3 mr-1" />}
+              {isEdital ? "Candidatar" : "Marcar interesse"}
             </Button>
           )
         )}
