@@ -558,13 +558,29 @@ export default function Carreira() {
                               {a.edital.prazo}
                             </span>
                           )}
-                          {a.edital?.link && (
+                          {a.edital?.link_status === "broken" ? (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-warning"
+                              asChild
+                              title="Link oficial indisponível — buscar no Google"
+                            >
+                              <a
+                                href={`https://www.google.com/search?q=${encodeURIComponent(`${a.edital?.titulo || ""} ${a.edital?.orgao || ""} edital`)}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                <ExternalLink className="h-3.5 w-3.5" />
+                              </a>
+                            </Button>
+                          ) : a.edital?.link ? (
                             <Button variant="ghost" size="icon" className="h-7 w-7" asChild>
                               <a href={a.edital.link} target="_blank" rel="noopener noreferrer">
                                 <ExternalLink className="h-3.5 w-3.5" />
                               </a>
                             </Button>
-                          )}
+                          ) : null}
                           {a.status === "inscrito" && !a.resultado && (
                             <Button
                               size="sm"
