@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { TIPO_PALCO_LABELS, type TipoPalco } from "@/hooks/usePalcos";
 import type { Opportunity } from "./types";
+import { buildGoogleFallbackUrl } from "./linkHelpers";
 
 function formatDate(d: string | null) {
   if (!d) return null;
