@@ -62,6 +62,8 @@ export function palcoToOpportunity(p: PalcoCurado, origem: "curated" | "ai" = "c
     resumo: p.resumo,
     generos: p.generos,
     porteOuTipo: p.tipo_palco,
+    // palcos_curados.id é o opportunity_id usado no pipeline
+    editalId: p.id || null,
     origem,
     raw: p,
   };

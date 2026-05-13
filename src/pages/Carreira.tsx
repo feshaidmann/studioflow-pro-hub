@@ -206,7 +206,7 @@ export default function Carreira() {
   const appliedKeys = useMemo(() => {
     const set = new Set<string>();
     for (const a of applications) {
-      if (a.edital_id) set.add(a.edital_id);
+      if (a.opportunity_id) set.add(a.opportunity_id);
     }
     return set;
   }, [applications]);
@@ -227,35 +227,38 @@ export default function Carreira() {
     !filters.hideClosed ||
     !!filters.query;
 
-  // Resolve um edital_id estável para a oportunidade. Salva no banco se necessário.
-  const ensureEditalId = useCallback(async (op: Opportunity): Promise<string | null> => {
+  // Resolve o opportunity_id (editais.id ou palcos_curados.id) e o tipo para o pipeline.
+  const ensureOpportunity = useCallback(async (op: Opportunity): Promise<{ id: string; tipo: "fomento" | "palco" } | null> => {
     if (!user) return null;
-    if (op.editalId) return op.editalId;
 
-    const key = op.tipo === "edital"
-      ? ((op.raw as any).session_key || sessionKeyFor(op.titulo, op.organizador))
-      : sessionKeyFor(op.titulo, op.organizador);
-
-    const { data: existing } = await supabase
-      .from("editais")
-      .select("id")
-      .eq("session_key", key)
-      .eq("user_id", user.id)
-      .maybeSingle();
-    if (existing?.id) return existing.id as string;
-
-    if (op.tipo === "edital") {
-      await saveEditais([op.raw as any]);
-    } else {
+    // Palco: palcos_curados.id já está em editalId (curated) ou raw.id
+    if (op.tipo === "palco") {
+      const palcoId = op.editalId || (op.raw as any).id || null;
+      if (palcoId) return { id: palcoId, tipo: "palco" };
+      // Palco vindo da IA sem id ainda — salva primeiro
       await savePalcos([op.raw as any]);
+      const { data } = await supabase
+        .from("palcos_curados")
+        .select("id")
+        .eq("nome", op.titulo)
+        .eq("organizador", op.organizador)
+        .maybeSingle();
+      return data?.id ? { id: data.id as string, tipo: "palco" } : null;
     }
-    const { data: after } = await supabase
+
+    // Edital: já salvo
+    if (op.editalId) return { id: op.editalId, tipo: "fomento" };
+
+    // Edital novo (vindo da IA): salva e busca por session_key
+    const key = (op.raw as any).session_key || sessionKeyFor(op.titulo, op.organizador);
+    await saveEditais([op.raw as any]);
+    const { data } = await supabase
       .from("editais")
       .select("id")
       .eq("session_key", key)
       .eq("user_id", user.id)
       .maybeSingle();
-    return (after?.id as string) || null;
+    return data?.id ? { id: data.id as string, tipo: "fomento" } : null;
   }, [user, saveEditais, savePalcos]);
 
   const handleInterest = async (op: Opportunity) => {
@@ -267,12 +270,12 @@ export default function Carreira() {
     }
     setInterestPending(op.key);
     try {
-      const editalId = await ensureEditalId(op);
-      if (!editalId) {
+      const resolved = await ensureOpportunity(op);
+      if (!resolved) {
         toast.error("Não foi possível registrar interesse. Tente novamente.");
         return;
       }
-      await createApp.mutateAsync({ edital_id: editalId });
+      await createApp.mutateAsync({ opportunity_id: resolved.id, tipo: resolved.tipo });
       await refetchApps();
       void trackAppEvent("carreira_interest_marked", {
         opportunity_type: op.tipo,
@@ -322,26 +325,26 @@ export default function Carreira() {
   };
 
   const handleApplicationClick = (a: EditalApplication) => {
-    if (a.edital?.tipo === "palco") {
+    if (a.tipo === "palco") {
       // Reabre como sheet em vez do assistente de inscrição
       const op: Opportunity = {
-        key: a.edital_id,
+        key: a.opportunity_id,
         tipo: "palco",
-        titulo: a.edital.titulo,
-        organizador: a.edital.orgao || "",
-        estado: a.edital.estado,
-        status: a.edital.status || "Indefinido",
-        prazo: a.edital.prazo,
-        link: a.edital.link,
+        titulo: a.edital?.titulo || "Palco",
+        organizador: a.edital?.orgao || "",
+        estado: a.edital?.estado || null,
+        status: a.edital?.status || "Indefinido",
+        prazo: a.edital?.prazo || null,
+        link: a.edital?.link || null,
         valor: null,
-        resumo: a.edital.resumo || null,
-        editalId: a.edital_id,
+        resumo: a.edital?.resumo || null,
+        editalId: a.opportunity_id,
         origem: "saved",
-        raw: a.edital as any,
+        raw: (a.edital as any) || {},
       };
       setDetailOp(op);
     } else {
-      navigate(`/editais/inscricao/${a.edital_id}`);
+      navigate(`/editais/inscricao/${a.opportunity_id}`);
     }
   };
 
@@ -513,7 +516,7 @@ export default function Carreira() {
           ) : (
             <div className="space-y-2">
               {applications.map((a) => {
-                const isPalco = a.edital?.tipo === "palco";
+                const isPalco = a.tipo === "palco";
                 return (
                   <Card
                     key={a.id}
