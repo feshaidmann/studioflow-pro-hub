@@ -1051,6 +1051,8 @@ export type Database = {
           lufs_method: string | null
           mfcc: number[] | null
           mode: string | null
+          quarantine_reason: string | null
+          quarantined: boolean
           segments_count: number | null
           source_batch: string
           spectral_bandwidth: number | null
@@ -1088,6 +1090,8 @@ export type Database = {
           lufs_method?: string | null
           mfcc?: number[] | null
           mode?: string | null
+          quarantine_reason?: string | null
+          quarantined?: boolean
           segments_count?: number | null
           source_batch?: string
           spectral_bandwidth?: number | null
@@ -1125,6 +1129,8 @@ export type Database = {
           lufs_method?: string | null
           mfcc?: number[] | null
           mode?: string | null
+          quarantine_reason?: string | null
+          quarantined?: boolean
           segments_count?: number | null
           source_batch?: string
           spectral_bandwidth?: number | null
