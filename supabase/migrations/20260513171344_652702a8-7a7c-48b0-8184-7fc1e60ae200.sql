@@ -1,0 +1,1 @@
+ALTER TABLE public.edital_applications DROP CONSTRAINT IF EXISTS edital_applications_edital_id_fkey;
