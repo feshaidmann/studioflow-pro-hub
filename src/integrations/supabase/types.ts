@@ -508,13 +508,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "edital_applications_edital_id_fkey"
-            columns: ["opportunity_id"]
-            isOneToOne: false
-            referencedRelation: "editais"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "edital_applications_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
