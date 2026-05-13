@@ -195,6 +195,7 @@ export default function Onboarding() {
         { onConflict: "user_id,source_key", ignoreDuplicates: true }
       );
       localStorage.setItem("sfp_recent_onboarding_project", projectId);
+      window.dispatchEvent(new Event("sfp:recent-onboarding-project-changed"));
       // Persist cross-device
       await supabase
         .from("profiles")
