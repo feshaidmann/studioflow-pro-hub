@@ -250,7 +250,7 @@ export default function Dashboard() {
     }
 
     return chips;
-  };
+  }, [alerts, activeTasks, projectsWithHealth, projects]);
 
   const isFirstRun = projects.length === 0;
   const journeyPlan = useMemo(() => getJourneyPlan(profile?.main_pain ?? "organization", profile?.current_moment ?? "", profile?.track_view_mode ?? "basic"), [profile]);
