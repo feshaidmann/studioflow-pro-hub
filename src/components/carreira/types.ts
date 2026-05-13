@@ -74,6 +74,7 @@ export function palcoToOpportunity(p: PalcoCurado, origem: "curated" | "ai" = "c
     origem,
     linkStatus: (p as any).link_status as Opportunity["linkStatus"],
     linkCheckedAt: (p as any).link_checked_at ?? null,
+    matchReason: (p as any).match_reason ?? null,
     raw: p,
   };
 }
