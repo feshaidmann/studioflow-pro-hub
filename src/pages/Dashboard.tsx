@@ -294,6 +294,37 @@ export default function Dashboard() {
     return null;
   }, [alerts, activeTasks, isFirstRun]);
 
+  // Memoiza o objeto de contexto da IA — evita recriação a cada render
+  const aiContext = useMemo(() => ({
+    projects: [
+      ...projects.map((p) => ({
+        id: p.id, name: p.name, artist: p.artist, stage: p.stage,
+        mixPercent: getMixPercent(p.id), projectType: p.projectType,
+        totalContractValue: p.totalContractValue, amountPaid: p.amountPaid,
+        estimatedMonths: p.estimatedMonths,
+      })),
+      ...guestProjects.filter((g) => !g.completed).map((g) => ({
+        id: g.id, name: `[Parceiro] ${g.name}`, artist: g.artist, stage: g.stage,
+        mixPercent: 0, projectType: g.project_type,
+      })),
+    ],
+    activeTasks: [
+      ...activeTasks.map((t) => ({ description: t.description, source: t.source, dueDate: t.dueDate, assignedTo: t.assignedTo, blocked: t.blocked, blockedReason: t.blockedReason, severity: t.severity })),
+      ...guestTasks.map((t) => ({ description: `[${t.projectName}] ${t.description}`, source: t.source, dueDate: t.dueDate, assignedTo: t.assignedTo, blocked: t.blocked, blockedReason: t.blockedReason, severity: t.severity })),
+    ],
+    financials,
+    professionals: professionals.map((p) => ({ name: p.name, specialty: p.specialty, bio: p.bio ?? "", active: true, phone: p.phone ?? "" })),
+    alerts: alerts.slice(0, 10).map((a) => ({ title: a.title, severity: a.severity, project: a.projectName, category: a.category })),
+    profileContext: profile ? {
+      displayName,
+      currentMoment: profile.current_moment,
+      mainPain: profile.main_pain,
+      trackViewMode: profile.track_view_mode,
+      city: profile.city,
+      origin: profile.origin,
+    } : undefined,
+  }), [projects, guestProjects, activeTasks, guestTasks, financials, professionals, alerts, profile, displayName, getMixPercent]);
+
   const aiAssistantCard = (
     <Collapsible
       defaultOpen={!isMobile && localStorage.getItem("sfp_ai_collapsed") !== "true"}
@@ -319,35 +350,7 @@ export default function Dashboard() {
               ref={aiRef}
               alwaysOpen
               contextChips={aiChips}
-              context={{
-                projects: [
-                  ...projects.map((p) => ({
-                    id: p.id, name: p.name, artist: p.artist, stage: p.stage,
-                    mixPercent: getMixPercent(p.id), projectType: p.projectType,
-                    totalContractValue: p.totalContractValue, amountPaid: p.amountPaid,
-                    estimatedMonths: p.estimatedMonths,
-                  })),
-                  ...guestProjects.filter(g => !g.completed).map((g) => ({
-                    id: g.id, name: `[Parceiro] ${g.name}`, artist: g.artist, stage: g.stage,
-                    mixPercent: 0, projectType: g.project_type,
-                  })),
-                ],
-                activeTasks: [
-                  ...activeTasks.map((t) => ({ description: t.description, source: t.source, dueDate: t.dueDate, assignedTo: t.assignedTo, blocked: t.blocked, blockedReason: t.blockedReason, severity: t.severity })),
-                  ...guestTasks.map((t) => ({ description: `[${t.projectName}] ${t.description}`, source: t.source, dueDate: t.dueDate, assignedTo: t.assignedTo, blocked: t.blocked, blockedReason: t.blockedReason, severity: t.severity })),
-                ],
-                financials,
-                professionals: professionals.map((p) => ({ name: p.name, specialty: p.specialty, bio: p.bio ?? "", active: true, phone: p.phone ?? "" })),
-                alerts: alerts.slice(0, 10).map((a) => ({ title: a.title, severity: a.severity, project: a.projectName, category: a.category })),
-                profileContext: profile ? {
-                  displayName,
-                  currentMoment: profile.current_moment,
-                  mainPain: profile.main_pain,
-                  trackViewMode: profile.track_view_mode,
-                  city: profile.city,
-                  origin: profile.origin,
-                } : undefined,
-              }}
+              context={aiContext}
               onAddTask={async (description, projectId) => {
                 const validProjectId = projectId && projects.some((p) => p.id === projectId) ? projectId : null;
                 const result = await addTask({ description, projectId: validProjectId, source: "manual" });
