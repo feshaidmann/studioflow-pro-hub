@@ -1,6 +1,7 @@
-import { useState, useEffect, useRef, useMemo, lazy, Suspense, type ReactNode } from "react";
+import { useState, useEffect, useRef, useMemo, lazy, type ReactNode } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Bot, ChevronDown } from "lucide-react";
+import { Bot, ChevronDown, FileText, Calendar, Receipt, Users } from "lucide-react";
+import LazyCardBoundary from "@/components/dashboard/LazyCardBoundary";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useNavigate } from "react-router-dom";
 import { useProjects } from "@/contexts/ProjectContext";
