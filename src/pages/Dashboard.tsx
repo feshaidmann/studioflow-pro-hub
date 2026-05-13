@@ -37,7 +37,12 @@ const UpcomingReleases = lazy(() => import("@/components/dashboard/UpcomingRelea
 const GuestProjectsList = lazy(() => import("@/components/dashboard/GuestProjectsList"));
 const EditalProgressCard = lazy(() => import("@/components/dashboard/EditalProgressCard"));
 
-const CardSkeleton = () => <Skeleton className="h-32 w-full rounded-2xl" />;
+const CardSkeleton = () => (
+  <div role="status" aria-live="polite" aria-busy="true" aria-label="Carregando seção do dashboard">
+    <Skeleton className="h-32 w-full rounded-2xl" />
+    <span className="sr-only">Carregando…</span>
+  </div>
+);
 
 export default function Dashboard() {
   const aiRef = useRef<AITaskAssistantHandle>(null);
@@ -237,13 +242,20 @@ export default function Dashboard() {
       onOpenChange={(open) => localStorage.setItem("sfp_ai_collapsed", open ? "false" : "true")}
       className={cn(isFirstRun && "hidden")}
     >
-      <Card id="ai-assistant-section" data-ai-assistant className="glass-card animate-fade-in scroll-mt-4" style={{ animationDelay: "50ms" }}>
+      <Card
+        id="ai-assistant-section"
+        data-ai-assistant
+        role="region"
+        aria-labelledby="region-ai-title"
+        className="glass-card animate-fade-in scroll-mt-4"
+        style={{ animationDelay: "50ms" }}
+      >
         <CollapsibleTrigger asChild>
           <CardHeader className="pb-3 cursor-pointer select-none hover:bg-muted/40 rounded-t-lg transition-colors">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Bot className="h-4 w-4 text-primary" />
+            <CardTitle id="region-ai-title" className="text-base flex items-center gap-2">
+              <Bot className="h-4 w-4 text-primary" aria-hidden="true" />
               <span>Assistente IA</span>
-              <ChevronDown className="ml-auto h-4 w-4 text-muted-foreground transition-transform duration-200 [[data-state=open]>&]:rotate-180" />
+              <ChevronDown aria-hidden="true" className="ml-auto h-4 w-4 text-muted-foreground transition-transform duration-200 [[data-state=open]>&]:rotate-180" />
             </CardTitle>
             {!isMobile && (
               <p className="text-xs text-muted-foreground">Pergunte qualquer coisa sobre seus projetos</p>
