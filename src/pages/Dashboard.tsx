@@ -44,8 +44,6 @@ export default function Dashboard() {
   const { projects, getMixPercent, getProjectFinancials, transactions } = useProjects();
   const { displayName, isSimpleMode, profile } = useProfile();
   const { activeTasks, completedTasks, loading: tasksLoading, addTask, toggleTask, deleteTask, updateTask, refresh: refreshTasks } = useTasks();
-  const { user } = useAuth();
-  const autoGenRef = useRef(false);
   const { professionals } = useProfessionals();
   const {
     conversations, activeConversationId, setActiveConversationId,
