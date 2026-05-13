@@ -260,6 +260,8 @@ export default function Creative() {
   const [additionalText, setAdditionalText] = useState("");
   const [noText, setNoText] = useState<boolean>(initialPrefs.noText ?? false);
   const [trackDetailsOpen, setTrackDetailsOpen] = useState(false);
+  const [debugMode, setDebugMode] = useState(false);
+  const [debugPayload, setDebugPayload] = useState<DebugPromptPayload | null>(null);
 
   // ── Estilo e referência ───────────────────────────────────────────────
   const [style, setStyle] = useState<string | null>(initialPrefs.style ?? null);
