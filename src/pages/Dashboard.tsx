@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo, type ReactNode } from "react";
+import { useState, useEffect, useRef, useMemo, lazy, Suspense, type ReactNode } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Bot, ChevronDown, ChevronUp } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -7,7 +7,6 @@ import { useProjects } from "@/contexts/ProjectContext";
 import { useProfile } from "@/contexts/ProfileContext";
 import { useTasks } from "@/hooks/useTasks";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import { scrollToAnchor } from "@/lib/scrollToAnchor";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -16,20 +15,29 @@ import { AITaskAssistant, type AITaskAssistantHandle } from "@/components/AITask
 import { useProfessionals } from "@/hooks/useProfessionals";
 import { useAIConversations } from "@/hooks/useAIConversations";
 import { useProjectAlerts } from "@/hooks/useProjectAlerts";
+import { useGuestProjects } from "@/hooks/useGuestProjects";
+import { useGuestTasks } from "@/hooks/useGuestTasks";
+import { usePendingInvites } from "@/hooks/usePendingInvites";
+import { useDailyTaskAutoGen } from "@/hooks/useDailyTaskAutoGen";
+import { Skeleton } from "@/components/ui/skeleton";
 
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import FinancialSummary from "@/components/dashboard/FinancialSummary";
 import DailyChecklist from "@/components/dashboard/DailyChecklist";
 import FirstRunEmptyState from "@/components/dashboard/FirstRunEmptyState";
-import RecentTransactions from "@/components/dashboard/RecentTransactions";
-import UpcomingReleases from "@/components/dashboard/UpcomingReleases";
 import ProjectAlertsCard from "@/components/dashboard/ProjectAlertsCard";
 import ProjectHealthList from "@/components/dashboard/ProjectHealthList";
 import PendingTeamCard from "@/components/dashboard/PendingTeamCard";
-import GuestProjectsList from "@/components/dashboard/GuestProjectsList";
-import EditalProgressCard from "@/components/dashboard/EditalProgressCard";
 import JourneyFocusCard from "@/components/dashboard/JourneyFocusCard";
 import { getJourneyPlan } from "@/lib/journeyPersonalization";
+
+// Lazy-loaded — não bloqueiam o first render do Dashboard
+const RecentTransactions = lazy(() => import("@/components/dashboard/RecentTransactions"));
+const UpcomingReleases = lazy(() => import("@/components/dashboard/UpcomingReleases"));
+const GuestProjectsList = lazy(() => import("@/components/dashboard/GuestProjectsList"));
+const EditalProgressCard = lazy(() => import("@/components/dashboard/EditalProgressCard"));
+
+const CardSkeleton = () => <Skeleton className="h-32 w-full rounded-2xl" />;
 
 export default function Dashboard() {
   const aiRef = useRef<AITaskAssistantHandle>(null);
@@ -41,8 +49,6 @@ export default function Dashboard() {
   const { projects, getMixPercent, getProjectFinancials, transactions } = useProjects();
   const { displayName, isSimpleMode, profile } = useProfile();
   const { activeTasks, completedTasks, loading: tasksLoading, addTask, toggleTask, deleteTask, updateTask, refresh: refreshTasks } = useTasks();
-  const { user } = useAuth();
-  const autoGenRef = useRef(false);
   const { professionals } = useProfessionals();
   const {
     conversations, activeConversationId, setActiveConversationId,
@@ -50,66 +56,10 @@ export default function Dashboard() {
     createConversation, saveMessage, renameConversation, deleteConversation, startNewConversation,
   } = useAIConversations();
 
-  // Fetch guest (partner) projects
-  const [guestProjects, setGuestProjects] = useState<{ id: string; name: string; artist: string; stage: string; completed: boolean; project_type: string; role: string }[]>([]);
-  const [guestTasks, setGuestTasks] = useState<{ description: string; source: string; dueDate: string | null; assignedTo: string; blocked: boolean; blockedReason: string; severity: string; projectName: string }[]>([]);
-  const [loadingGuestProjects, setLoadingGuestProjects] = useState(true);
-  const [loadingGuestTasks, setLoadingGuestTasks] = useState(true);
-
-  useEffect(() => {
-    if (!user) { setLoadingGuestProjects(false); return; }
-    setLoadingGuestProjects(true);
-    supabase.rpc("get_member_projects").then(({ data }) => {
-      if (data) setGuestProjects(data.map((d: any) => ({ id: d.id, name: d.name, artist: d.artist, stage: d.stage, completed: d.completed, project_type: d.project_type, role: d.role })));
-      setLoadingGuestProjects(false);
-    });
-  }, [user]);
-
-  // Fetch tasks for guest projects
-  useEffect(() => {
-    if (!user || guestProjects.length === 0) { setLoadingGuestTasks(false); return; }
-    const ids = guestProjects.filter(g => !g.completed).map(g => g.id);
-    if (ids.length === 0) { setLoadingGuestTasks(false); return; }
-    setLoadingGuestTasks(true);
-    supabase
-      .from("tasks")
-      .select("description, source, due_date, assigned_to, blocked, blocked_reason, severity, project_id")
-      .in("project_id", ids)
-      .eq("completed", false)
-      .eq("dismissed", false)
-      .then(({ data }) => {
-        if (data) {
-          const nameMap = Object.fromEntries(guestProjects.map(g => [g.id, g.name]));
-          setGuestTasks(data.map((t: any) => ({
-            description: t.description, source: t.source, dueDate: t.due_date, assignedTo: t.assigned_to,
-            blocked: t.blocked, blockedReason: t.blocked_reason, severity: t.severity,
-            projectName: nameMap[t.project_id] || "",
-          })));
-        }
-        setLoadingGuestTasks(false);
-      });
-  }, [user, guestProjects]);
-
-  // Fetch pending invites for alert detection
-  const [pendingInvites, setPendingInvites] = useState<{ projectId: string; professionalName: string; createdAt: string }[]>([]);
-  const [loadingInvites, setLoadingInvites] = useState(true);
-  useEffect(() => {
-    if (!user) { setLoadingInvites(false); return; }
-    setLoadingInvites(true);
-    supabase
-      .from("project_invitations")
-      .select("project_id, professional_name, created_at")
-      .eq("invited_by", user.id)
-      .eq("status", "pending")
-      .then(({ data }) => {
-        if (data) {
-          setPendingInvites(
-            data.map((d) => ({ projectId: d.project_id, professionalName: d.professional_name, createdAt: d.created_at }))
-          );
-        }
-        setLoadingInvites(false);
-      });
-  }, [user]);
+  // Hooks de domínio extraídos
+  const { projects: guestProjects, loading: loadingGuestProjects } = useGuestProjects();
+  const { tasks: guestTasks } = useGuestTasks(guestProjects);
+  const { invites: pendingInvites } = usePendingInvites();
 
   // Project alerts & health scores
   const { alerts, projectsWithHealth } = useProjectAlerts({
@@ -121,43 +71,8 @@ export default function Dashboard() {
     pendingInvites,
   });
 
-  // Auto-generate tasks once per session, with 1-hour throttle
-  useEffect(() => {
-    if (!user || projects.length === 0 || autoGenRef.current) return;
-    autoGenRef.current = true;
-    const THROTTLE_KEY = "sfp_tasks_last_gen";
-    const THROTTLE_MS = 60 * 60 * 1000;
-    const lastGen = Number(localStorage.getItem(THROTTLE_KEY) || "0");
-    if (Date.now() - lastGen < THROTTLE_MS) { refreshTasks(); return; }
-    const run = async () => {
-      try {
-        // Conta tarefas auto-geradas ativas antes
-        const { count: beforeCount } = await supabase
-          .from("tasks")
-          .select("id", { count: "exact", head: true })
-          .eq("user_id", user.id)
-          .eq("auto_generated", true)
-          .eq("completed", false)
-          .eq("dismissed", false);
-        await supabase.functions.invoke("generate-daily-tasks", { body: {} });
-        localStorage.setItem(THROTTLE_KEY, String(Date.now()));
-        const { count: afterCount } = await supabase
-          .from("tasks")
-          .select("id", { count: "exact", head: true })
-          .eq("user_id", user.id)
-          .eq("auto_generated", true)
-          .eq("completed", false)
-          .eq("dismissed", false);
-        const delta = (afterCount ?? 0) - (beforeCount ?? 0);
-        if (delta > 0) {
-          toast.info(`Checklist atualizado · ${delta} ${delta === 1 ? "nova tarefa" : "novas tarefas"}`, { duration: 4000 });
-        }
-      } catch {}
-      refreshTasks();
-    };
-    run();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id, projects.length]);
+  // Auto-geração diária de tarefas (1x por sessão, throttle de 1h)
+  useDailyTaskAutoGen(projects.length, refreshTasks);
 
   const handleRefreshTasks = async () => {
     setRefreshing(true);
@@ -193,11 +108,10 @@ export default function Dashboard() {
       (acc, t) => { if (t.type === "income") acc.totalIncome += t.amount; else acc.totalExpense += t.amount; acc.profit = acc.totalIncome - acc.totalExpense; return acc; },
       { totalIncome: 0, totalExpense: 0, profit: 0 }
     );
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedProjectId, filtered, transactions]);
+  }, [selectedProjectId, filtered, transactions, getProjectFinancials]);
 
-  // ── Build context-aware chips for AI ──
-  const buildAIChips = () => {
+  // ── Build context-aware chips for AI (memoizado para preservar igualdade referencial) ──
+  const aiChips = useMemo(() => {
     const chips: Array<{ label: string; msg: string; highlight?: boolean }> = [];
 
     // Prioritize actionable chips
@@ -242,20 +156,36 @@ export default function Dashboard() {
     }
 
     return chips;
-  };
+  }, [alerts, activeTasks, projectsWithHealth, projects]);
 
   const isFirstRun = projects.length === 0;
   const journeyPlan = useMemo(() => getJourneyPlan(profile?.main_pain ?? "organization", profile?.current_moment ?? "", profile?.track_view_mode ?? "basic"), [profile]);
+
+  // recentOnboardingProject reativo a mudanças de localStorage (StorageEvent + custom event)
+  const [recentOnboardingProjectId, setRecentOnboardingProjectId] = useState<string | null>(
+    () => (typeof window !== "undefined" ? localStorage.getItem("sfp_recent_onboarding_project") : null)
+  );
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === "sfp_recent_onboarding_project") setRecentOnboardingProjectId(e.newValue);
+    };
+    const onCustom = () => setRecentOnboardingProjectId(localStorage.getItem("sfp_recent_onboarding_project"));
+    window.addEventListener("storage", onStorage);
+    window.addEventListener("sfp:recent-onboarding-project-changed", onCustom);
+    return () => {
+      window.removeEventListener("storage", onStorage);
+      window.removeEventListener("sfp:recent-onboarding-project-changed", onCustom);
+    };
+  }, []);
   const recentOnboardingProject = useMemo(() => {
-    const localId = localStorage.getItem("sfp_recent_onboarding_project");
-    if (localId) {
-      const found = projects.find((p) => p.id === localId);
+    if (recentOnboardingProjectId) {
+      const found = projects.find((p) => p.id === recentOnboardingProjectId);
       if (found) return found;
     }
     const profileId = profile?.last_onboarding_project_id;
     if (profileId) return projects.find((p) => p.id === profileId) ?? null;
     return null;
-  }, [projects, profile]);
+  }, [projects, profile, recentOnboardingProjectId]);
 
   // Build "next recommended action" block
   const nextAction = useMemo(() => {
@@ -269,6 +199,37 @@ export default function Dashboard() {
     if (activeTasks.length > 0) return { label: activeTasks[0].description, detail: "Próxima tarefa", severity: "info" as const };
     return null;
   }, [alerts, activeTasks, isFirstRun]);
+
+  // Memoiza o objeto de contexto da IA — evita recriação a cada render
+  const aiContext = useMemo(() => ({
+    projects: [
+      ...projects.map((p) => ({
+        id: p.id, name: p.name, artist: p.artist, stage: p.stage,
+        mixPercent: getMixPercent(p.id), projectType: p.projectType,
+        totalContractValue: p.totalContractValue, amountPaid: p.amountPaid,
+        estimatedMonths: p.estimatedMonths,
+      })),
+      ...guestProjects.filter((g) => !g.completed).map((g) => ({
+        id: g.id, name: `[Parceiro] ${g.name}`, artist: g.artist, stage: g.stage,
+        mixPercent: 0, projectType: g.project_type,
+      })),
+    ],
+    activeTasks: [
+      ...activeTasks.map((t) => ({ description: t.description, source: t.source, dueDate: t.dueDate, assignedTo: t.assignedTo, blocked: t.blocked, blockedReason: t.blockedReason, severity: t.severity })),
+      ...guestTasks.map((t) => ({ description: `[${t.projectName}] ${t.description}`, source: t.source, dueDate: t.dueDate, assignedTo: t.assignedTo, blocked: t.blocked, blockedReason: t.blockedReason, severity: t.severity })),
+    ],
+    financials,
+    professionals: professionals.map((p) => ({ name: p.name, specialty: p.specialty, bio: p.bio ?? "", active: true, phone: p.phone ?? "" })),
+    alerts: alerts.slice(0, 10).map((a) => ({ title: a.title, severity: a.severity, project: a.projectName, category: a.category })),
+    profileContext: profile ? {
+      displayName,
+      currentMoment: profile.current_moment,
+      mainPain: profile.main_pain,
+      trackViewMode: profile.track_view_mode,
+      city: profile.city,
+      origin: profile.origin,
+    } : undefined,
+  }), [projects, guestProjects, activeTasks, guestTasks, financials, professionals, alerts, profile, displayName, getMixPercent]);
 
   const aiAssistantCard = (
     <Collapsible
@@ -294,36 +255,8 @@ export default function Dashboard() {
             <AITaskAssistant
               ref={aiRef}
               alwaysOpen
-              contextChips={buildAIChips()}
-              context={{
-                projects: [
-                  ...projects.map((p) => ({
-                    id: p.id, name: p.name, artist: p.artist, stage: p.stage,
-                    mixPercent: getMixPercent(p.id), projectType: p.projectType,
-                    totalContractValue: p.totalContractValue, amountPaid: p.amountPaid,
-                    estimatedMonths: p.estimatedMonths,
-                  })),
-                  ...guestProjects.filter(g => !g.completed).map((g) => ({
-                    id: g.id, name: `[Parceiro] ${g.name}`, artist: g.artist, stage: g.stage,
-                    mixPercent: 0, projectType: g.project_type,
-                  })),
-                ],
-                activeTasks: [
-                  ...activeTasks.map((t) => ({ description: t.description, source: t.source, dueDate: t.dueDate, assignedTo: t.assignedTo, blocked: t.blocked, blockedReason: t.blockedReason, severity: t.severity })),
-                  ...guestTasks.map((t) => ({ description: `[${t.projectName}] ${t.description}`, source: t.source, dueDate: t.dueDate, assignedTo: t.assignedTo, blocked: t.blocked, blockedReason: t.blockedReason, severity: t.severity })),
-                ],
-                financials,
-                professionals: professionals.map((p) => ({ name: p.name, specialty: p.specialty, bio: p.bio ?? "", active: true, phone: p.phone ?? "" })),
-                alerts: alerts.slice(0, 10).map((a) => ({ title: a.title, severity: a.severity, project: a.projectName, category: a.category })),
-                profileContext: profile ? {
-                  displayName,
-                  currentMoment: profile.current_moment,
-                  mainPain: profile.main_pain,
-                  trackViewMode: profile.track_view_mode,
-                  city: profile.city,
-                  origin: profile.origin,
-                } : undefined,
-              }}
+              contextChips={aiChips}
+              context={aiContext}
               onAddTask={async (description, projectId) => {
                 const validProjectId = projectId && projects.some((p) => p.id === projectId) ? projectId : null;
                 const result = await addTask({ description, projectId: validProjectId, source: "manual" });
@@ -371,10 +304,10 @@ export default function Dashboard() {
     alerts: <div id="alerts-section"><ProjectAlertsCard alerts={alerts} hidden={isFirstRun} /></div>,
     team: <PendingTeamCard hidden={isFirstRun} />,
     projects: <ProjectHealthList projects={projectsWithHealth} hidden={isFirstRun} />,
-    editais: <EditalProgressCard hidden={isFirstRun} />,
-    releases: <div id="releases-section"><UpcomingReleases projects={projects} getMixPercent={getMixPercent} hidden={isFirstRun} /></div>,
+    editais: <Suspense fallback={<CardSkeleton />}><EditalProgressCard hidden={isFirstRun} /></Suspense>,
+    releases: <div id="releases-section"><Suspense fallback={<CardSkeleton />}><UpcomingReleases projects={projects} getMixPercent={getMixPercent} hidden={isFirstRun} /></Suspense></div>,
     finance: <FinancialSummary financials={financials} isSimpleMode={isSimpleMode} />,
-    transactions: !isSimpleMode ? <RecentTransactions transactions={transactions} /> : null,
+    transactions: !isSimpleMode ? <Suspense fallback={<CardSkeleton />}><RecentTransactions transactions={transactions} /></Suspense> : null,
   };
 
   return (
@@ -434,7 +367,9 @@ export default function Dashboard() {
       {isMobile && aiAssistantCard}
 
       {/* 3b. Projetos como parceiro */}
-      <GuestProjectsList projects={guestProjects} loading={loadingGuestProjects} />
+      <Suspense fallback={<CardSkeleton />}>
+        <GuestProjectsList projects={guestProjects} loading={loadingGuestProjects} />
+      </Suspense>
     </div>
   );
 }

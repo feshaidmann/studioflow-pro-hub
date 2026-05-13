@@ -1,44 +1,81 @@
-## Objetivo
+# Refatoração do Dashboard — 8 melhorias por prioridade técnica
 
-Garantir que novas mensagens do chat do projeto apareçam automaticamente, sem necessidade de refresh.
+Ordenado de **maior risco/impacto técnico → polimento visual**, para que cada fase deixe o código mais sólido antes da próxima.
 
-## Diagnóstico atual
+---
 
-- `project_messages` já está em `supabase_realtime` e tem `REPLICA IDENTITY FULL` (migração `20260513174344`).
-- `useProjectChat` já cria um canal `project-chat-${projectId}` e escuta `INSERT/UPDATE`.
-- Pontos frágeis identificados:
-  1. O `subscribe()` é chamado sem callback de status — falhas (RLS/CHANNEL_ERROR/TIMED_OUT) ficam silenciosas.
-  2. O `fetchMessages` roda em paralelo ao `subscribe`; uma mensagem que chegue durante o fetch pode ser perdida (a deduplicação por `id` ajuda, mas só no INSERT — não há reconciliação após reconexões).
-  3. Se a aba ficar em background e o socket cair, não há retry/refetch ao voltar (`visibilitychange`).
-  4. O canal é recriado sempre que `projectId` muda, mas não há proteção contra StrictMode duplicado em dev.
+## Fase 1 — Estabilidade e correção de bugs (risco alto)
 
-## Plano de implementação
+**Objetivo:** eliminar bugs silenciosos e dependências stale.
 
-### 1. `src/hooks/useProjectChat.ts`
-- Subscrever assim:
-  ```ts
-  channel.subscribe((status) => {
-    if (status === "SUBSCRIBED") {
-      // Refetch para reconciliar mensagens enviadas durante a janela
-      // entre fetchMessages() inicial e SUBSCRIBED
-      fetchMessages();
-    } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
-      console.warn("[chat] realtime subscription falhou:", status);
-    }
-  });
-  ```
-- Manter dedup por `id` no handler de INSERT (já existe).
-- Adicionar listener de `visibilitychange`: quando a aba voltar a ficar visível, chamar `fetchMessages()` para garantir consistência caso o socket tenha caído.
-- Garantir cleanup chamando `supabase.removeChannel(channel)` antes de criar novo canal (já é feito via return do effect — manter).
+1. **Corrigir `useMemo` de `financials`**
+   - Remover o `eslint-disable exhaustive-deps`.
+   - Incluir `getProjectFinancials` nas deps (envolvê-lo em `useCallback` no `ProjectContext` se necessário).
+2. **Corrigir race do `autoGenRef`**
+   - Mover `autoGenRef.current = true` para **depois** do `await`, dentro de bloco try/finally, para que reload rápido não compute delta com dado stale.
+3. **`recentOnboardingProject` reativo**
+   - Substituir leitura direta de `localStorage` no render por `useState` + listener `storage` / evento custom disparado quando a chave for limpa.
+4. **Memoizar `buildAIChips()` e `context`** passados ao `AITaskAssistant` com `useMemo`, restaurando o `React.memo` do componente filho.
 
-### 2. Validação manual (sem novas migrações)
-- Abrir o mesmo projeto em duas abas/usuários, enviar mensagem em uma e confirmar que aparece na outra sem refresh.
-- Conferir no console: `[chat] realtime subscription falhou` não deve aparecer.
+**Validação:** abrir Dashboard, recarregar com cache quente, conferir console sem warnings, verificar que toast de delta aparece apenas quando há diferença real.
+
+---
+
+## Fase 2 — Arquitetura (extração de hooks)
+
+**Objetivo:** reduzir `Dashboard.tsx` de ~440 → ~200 linhas, isolar domínio.
+
+5. **Criar hooks dedicados em `src/hooks/`:**
+   - `useGuestProjects()` → encapsula `get_member_projects` + loading/error.
+   - `useGuestTasks(projects)` → filtra `tasks` por projetos de convidado com `user_id` correto.
+   - `usePendingInvites()` → invitations pendentes do usuário.
+   - `useDailyTaskAutoGen(projects)` → encapsula a lógica de auto-geração + ref + delta.
+6. **`Dashboard.tsx`** passa a apenas compor seções; remover os 3 loading states não usados.
+
+**Validação:** comportamento idêntico, testar como owner e como convidado.
+
+---
+
+## Fase 3 — Performance
+
+**Objetivo:** reduzir bundle inicial e re-renders em cascata.
+
+7. **Lazy-load** via `React.lazy` + `Suspense` (com skeleton):
+   - `AITaskAssistant`, `EditalProgressCard`, `UpcomingReleases`, `GuestProjectsList`, `RecentTransactions`.
+8. **Mover `AITaskAssistant`** para baixo da fold (fechado por padrão no desktop também, abrir sob demanda).
+
+**Validação:** verificar redução do chunk inicial e que cada seção renderiza ao entrar no viewport.
+
+---
+
+## Fase 4 — Design System, UX, A11y e i18n
+
+**Objetivo:** alinhar ao design system macOS minimalista e WCAG AA.
+
+9. **Tokens semânticos** em `index.css` substituindo cores raw:
+   - Adicionar `--info`, `--info-foreground` (sky), `--accent-warm` (amber), `--accent-rose`, `--accent-violet` em HSL.
+   - Substituir `text-amber-400`, `text-rose-400`, `text-violet-400`, `text-sky-400` por tokens.
+   - Remover/substituir `font-mono-nums` inválido por classe utility já existente.
+10. **Hierarquia da fold** (UI apenas, sem mudar lógica):
+    - Unificar "Próxima ação" + `JourneyFocusCard` em um único hero card.
+    - Promover `DailyChecklist` para acima de `AITaskAssistant`.
+    - Corrigir margin bleeding (`-mx-4 md:-mx-6`) do header.
+    - Aumentar contraste do "98%" sobre a barra em "Próximos Lançamentos".
+    - Diferenciar visualmente badges "Pronto" vs "Organizado".
+11. **Acessibilidade:**
+    - `aria-label` em botões icon-only (`Bot`, `RefreshCw`, `Trash2`).
+    - `role="button"`, `tabIndex={0}`, `onKeyDown` (Enter/Space) em cards clicáveis.
+    - Tooltip no botão de refresh; toast também no refresh manual.
+12. **i18n:** mover strings hardcoded de Dashboard, DailyChecklist e JourneyFocusCard para `LanguageContext` (chaves pt/en).
+
+**Validação:** Lighthouse a11y ≥ 95, navegação por teclado funcional, alternar idioma EN sem strings em pt-BR no Dashboard.
+
+---
 
 ## Fora de escopo
-- Indicador "digitando…" (presence).
-- Read receipts.
-- Migração de schema adicional — publicação e replica identity já estão corretas.
+- Mudanças de schema/RLS.
+- Reescrita do `AITaskAssistant`, `JourneyFocusCard` ou `DailyChecklist` internamente (apenas props/posicionamento).
+- Novas features (somente refatoração + polimento).
 
-## Arquivos afetados
-- `src/hooks/useProjectChat.ts` (única edição)
+## Entrega
+Cada fase será um conjunto coeso de edits, com mensagem indicando qual fase foi concluída para você validar antes da próxima.

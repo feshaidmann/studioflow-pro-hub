@@ -7,7 +7,7 @@ import type { ProjectWithHealth, ProjectHealth } from "@/hooks/useProjectAlerts"
 
 const HEALTH_CONFIG: Record<ProjectHealth, { label: string; color: string; bg: string; icon: React.ElementType }> = {
   organizado: { label: "Organizado", color: "text-success", bg: "bg-success/10 border-success/30", icon: CheckCircle2 },
-  atencao: { label: "Atenção", color: "text-amber-400", bg: "bg-amber-400/10 border-amber-400/30", icon: AlertCircle },
+  atencao: { label: "Atenção", color: "text-warning", bg: "bg-warning/10 border-warning/30", icon: AlertCircle },
   critico: { label: "Crítico", color: "text-destructive", bg: "bg-destructive/10 border-destructive/30", icon: AlertTriangle },
 };
 
