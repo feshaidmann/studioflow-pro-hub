@@ -68,8 +68,8 @@ export default function ProjectAlertsCard({ alerts, hidden }: ProjectAlertsCardP
             <div
               key={alert.id}
               className={cn(
-                "flex items-start gap-2.5 rounded-lg px-3 py-2 border transition-all duration-200",
-                sev.border, sev.bg,
+                "flex items-start gap-2.5 rounded-lg px-3 py-2 border border-border/40 transition-all duration-200",
+                sev.bg,
               )}
             >
               <SevIcon className={cn("h-4 w-4 shrink-0 mt-0.5", sev.iconColor)} />
