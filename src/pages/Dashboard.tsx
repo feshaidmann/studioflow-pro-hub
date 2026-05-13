@@ -38,12 +38,6 @@ const UpcomingReleases = lazy(() => import("@/components/dashboard/UpcomingRelea
 const GuestProjectsList = lazy(() => import("@/components/dashboard/GuestProjectsList"));
 const EditalProgressCard = lazy(() => import("@/components/dashboard/EditalProgressCard"));
 
-const CardSkeleton = () => (
-  <div role="status" aria-live="polite" aria-busy="true" aria-label="Carregando seção do dashboard">
-    <Skeleton className="h-32 w-full rounded-2xl" />
-    <span className="sr-only">Carregando…</span>
-  </div>
-);
 
 export default function Dashboard() {
   const aiRef = useRef<AITaskAssistantHandle>(null);
