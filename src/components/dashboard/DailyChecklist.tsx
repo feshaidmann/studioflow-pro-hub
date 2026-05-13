@@ -109,10 +109,10 @@ export default function DailyChecklist({
   const projectsWithTasks = projects.filter((p) => activeTasks.some((t) => t.projectId === p.id));
 
   return (
-    <Card className={cn("glass-card animate-fade-in", hidden && "hidden")} style={{ animationDelay: "100ms" }}>
+    <Card role="region" aria-labelledby="region-checklist-title" className={cn("glass-card animate-fade-in", hidden && "hidden")} style={{ animationDelay: "100ms" }}>
       <CardHeader className="pb-3">
-        <CardTitle className="text-base flex items-center gap-2">
-          <Headphones className="h-4 w-4 text-primary" /> Checklist do Dia
+        <CardTitle id="region-checklist-title" className="text-base flex items-center gap-2">
+          <Headphones aria-hidden="true" className="h-4 w-4 text-primary" /> Checklist do Dia
           {activeTasks.length > 0 && (() => {
             const overdue = activeTasks.filter((t) => {
               if (!t.dueDate) return false;
@@ -124,7 +124,7 @@ export default function DailyChecklist({
               return d.getTime() === t0.getTime();
             }).length;
             const variant = overdue > 0 ? "critical" : today > 0 ? "warning" : "neutral";
-            return <StatusBadge variant={variant}>{activeTasks.length}</StatusBadge>;
+            return <StatusBadge variant={variant} aria-label={`${activeTasks.length} tarefa${activeTasks.length > 1 ? "s" : ""}${overdue ? `, ${overdue} vencida${overdue > 1 ? "s" : ""}` : ""}`}>{activeTasks.length}</StatusBadge>;
           })()}
           <div className="ml-auto flex items-center gap-1.5">
             {lastRefreshed && !refreshing && (
@@ -136,9 +136,9 @@ export default function DailyChecklist({
               variant="ghost" size="icon"
               className="h-6 w-6 text-muted-foreground hover:text-foreground"
               onClick={onRefresh} disabled={refreshing}
-              aria-label="Atualizar checklist" title="Atualizar checklist"
+              aria-label="Atualizar checklist" aria-busy={refreshing} title="Atualizar checklist"
             >
-              <RefreshCw className={cn("h-3.5 w-3.5", refreshing && "animate-spin")} />
+              <RefreshCw aria-hidden="true" className={cn("h-3.5 w-3.5", refreshing && "animate-spin")} />
             </Button>
           </div>
         </CardTitle>
@@ -146,9 +146,16 @@ export default function DailyChecklist({
       <CardContent className="space-y-2">
         {/* Add task */}
         <div className="flex gap-2">
-          <Input placeholder="Nova tarefa…" value={newTaskDesc} onChange={(e) => setNewTaskDesc(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") handleAddTask(); }} className="h-8 text-sm" />
-          <Button size="sm" className="h-8 px-2 shrink-0" onClick={handleAddTask} disabled={!newTaskDesc.trim()}>
-            <Plus className="h-3.5 w-3.5" />
+          <Input
+            aria-label="Nova tarefa"
+            placeholder="Nova tarefa…"
+            value={newTaskDesc}
+            onChange={(e) => setNewTaskDesc(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") handleAddTask(); }}
+            className="h-8 text-sm"
+          />
+          <Button size="sm" className="h-8 px-2 shrink-0" onClick={handleAddTask} disabled={!newTaskDesc.trim()} aria-label="Adicionar tarefa">
+            <Plus aria-hidden="true" className="h-3.5 w-3.5" />
           </Button>
         </div>
 
