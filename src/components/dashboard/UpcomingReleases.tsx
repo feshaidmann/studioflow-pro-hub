@@ -12,9 +12,9 @@ function formatDueDate(d: string | null) {
   const today = new Date(); today.setHours(0,0,0,0);
   const diff = Math.floor((date.getTime() - today.getTime()) / 86400000);
   if (diff < 0) return { label: `${Math.abs(diff)}d atraso`, color: "text-destructive" };
-  if (diff === 0) return { label: "Hoje", color: "text-amber-400" };
-  if (diff === 1) return { label: "Amanhã", color: "text-amber-400" };
-  if (diff <= 3) return { label: `em ${diff}d`, color: "text-amber-400/80" };
+  if (diff === 0) return { label: "Hoje", color: "text-warning" };
+  if (diff === 1) return { label: "Amanhã", color: "text-warning" };
+  if (diff <= 3) return { label: `em ${diff}d`, color: "text-warning/80" };
   return { label: `em ${diff}d`, color: "text-muted-foreground" };
 }
 

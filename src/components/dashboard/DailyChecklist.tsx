@@ -23,12 +23,12 @@ type SourceMeta = { icon: React.ElementType; color: string; label: string };
 
 function getSourceMeta(source: string): SourceMeta {
   switch (source) {
-    case "payment":        return { icon: DollarSign,    color: "text-amber-400",        label: "pagamento" };
-    case "deadline":       return { icon: CalendarClock, color: "text-rose-400",          label: "prazo" };
+    case "payment":        return { icon: DollarSign,    color: "text-warning",        label: "pagamento" };
+    case "deadline":       return { icon: CalendarClock, color: "text-destructive",          label: "prazo" };
     case "inactivity":     return { icon: Clock,         color: "text-muted-foreground",  label: "inatividade" };
     case "budget":         return { icon: BarChart2,     color: "text-orange-400",        label: "orçamento" };
-    case "invite_pending": return { icon: Mail,          color: "text-sky-400",           label: "convite" };
-    case "master_check":   return { icon: Disc3,         color: "text-violet-400",        label: "master" };
+    case "invite_pending": return { icon: Mail,          color: "text-info",           label: "convite" };
+    case "master_check":   return { icon: Disc3,         color: "text-primary",        label: "master" };
     case "release":        return { icon: Megaphone,     color: "text-green-400",         label: "lançamento" };
     default:               return { icon: Activity,      color: "text-primary",           label: source || "tarefa" };
   }
@@ -40,15 +40,15 @@ function formatDueDate(d: string | null) {
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const diff = Math.floor((date.getTime() - today.getTime()) / 86400000);
   if (diff < 0) return { label: `${Math.abs(diff)}d atraso`, color: "text-destructive" };
-  if (diff === 0) return { label: "Hoje", color: "text-amber-400" };
-  if (diff === 1) return { label: "Amanhã", color: "text-amber-400" };
-  if (diff <= 3) return { label: `em ${diff}d`, color: "text-amber-400/80" };
+  if (diff === 0) return { label: "Hoje", color: "text-warning" };
+  if (diff === 1) return { label: "Amanhã", color: "text-warning" };
+  if (diff <= 3) return { label: `em ${diff}d`, color: "text-warning/80" };
   return { label: `em ${diff}d`, color: "text-muted-foreground" };
 }
 
 const SECTION_META: Record<TaskSection, { label: string; icon: React.ElementType; color: string }> = {
   overdue: { label: "Vencidas", icon: AlertTriangle, color: "text-destructive" },
-  today:   { label: "Hoje",    icon: CalendarClock,  color: "text-amber-400" },
+  today:   { label: "Hoje",    icon: CalendarClock,  color: "text-warning" },
   week:    { label: "Esta semana", icon: CalendarClock, color: "text-primary" },
   blocked: { label: "Bloqueadas", icon: Ban, color: "text-orange-400" },
   later:   { label: "Futuras / Sem prazo", icon: Clock, color: "text-muted-foreground" },
@@ -57,8 +57,8 @@ const SECTION_ORDER: TaskSection[] = ["overdue", "today", "week", "blocked", "la
 
 const SEVERITY_BADGE: Record<string, { label: string; cls: string }> = {
   critical: { label: "Crítica", cls: "text-destructive border-destructive/30 bg-destructive/10" },
-  high:     { label: "Alta",    cls: "text-rose-400 border-rose-400/30 bg-rose-400/10" },
-  medium:   { label: "Média",   cls: "text-amber-400 border-amber-400/30 bg-amber-400/10" },
+  high:     { label: "Alta",    cls: "text-destructive border-destructive/30 bg-destructive/10" },
+  medium:   { label: "Média",   cls: "text-warning border-warning/30 bg-warning/10" },
   low:      { label: "Baixa",   cls: "text-muted-foreground border-border/30 bg-secondary/30" },
 };
 

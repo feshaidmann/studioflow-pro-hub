@@ -10,7 +10,7 @@ import type { ProjectAlert, AlertSeverity, AlertCategory } from "@/hooks/useProj
 
 const SEV_STYLE: Record<AlertSeverity, { border: string; bg: string; icon: React.ElementType; iconColor: string }> = {
   critical: { border: "border-destructive/40", bg: "bg-destructive/5", icon: AlertTriangle, iconColor: "text-destructive" },
-  warning: { border: "border-amber-400/40", bg: "bg-amber-400/5", icon: AlertCircle, iconColor: "text-amber-400" },
+  warning: { border: "border-warning/40", bg: "bg-warning/5", icon: AlertCircle, iconColor: "text-warning" },
   info: { border: "border-primary/30", bg: "bg-primary/5", icon: Info, iconColor: "text-primary" },
 };
 
@@ -47,10 +47,10 @@ export default function ProjectAlertsCard({ alerts, hidden }: ProjectAlertsCardP
   const visible = alerts.slice(0, 6);
 
   return (
-    <Card className="glass-card animate-fade-in border-amber-400/20" style={{ animationDelay: "50ms" }}>
+    <Card className="glass-card animate-fade-in border-warning/20" style={{ animationDelay: "50ms" }}>
       <CardHeader className="pb-2">
         <CardTitle className="text-base flex items-center gap-2">
-          <AlertTriangle className="h-4 w-4 text-amber-400" />
+          <AlertTriangle className="h-4 w-4 text-warning" />
           Atenção Necessária
           <Badge variant="secondary" className="text-[10px]">{alerts.length}</Badge>
         </CardTitle>

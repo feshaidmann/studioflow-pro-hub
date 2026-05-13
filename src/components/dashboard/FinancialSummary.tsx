@@ -13,7 +13,7 @@ export default function FinancialSummary({ financials, isSimpleMode }: Financial
 
   const kpis = [
     { label: "Receita Total", value: fmt.format(financials.totalIncome), icon: DollarSign, colorClass: "text-success" },
-    { label: "Investimento", value: fmt.format(financials.totalExpense), icon: Wallet, colorClass: "text-amber-400" },
+    { label: "Investimento", value: fmt.format(financials.totalExpense), icon: Wallet, colorClass: "text-warning" },
     { label: "Resultado", value: fmt.format(financials.profit), icon: TrendingUp, colorClass: financials.profit >= 0 ? "text-success" : "text-destructive" },
     ...(!isSimpleMode ? [{ label: "Margem", value: margin !== null ? `${margin.toFixed(1)}%` : "—", icon: Percent, colorClass: "text-primary" }] : []),
   ];
