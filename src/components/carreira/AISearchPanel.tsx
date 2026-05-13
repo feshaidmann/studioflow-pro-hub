@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Sparkles, Loader2, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -18,28 +18,27 @@ const EXAMPLES = [
 ];
 
 interface Props {
-  onResults: (results: Opportunity[]) => void;
+  onResults: (results: Opportunity[], summary: string) => void;
   projectId?: string | null;
 }
 
+/**
+ * Hero de busca IA do módulo Carreira. Renderiza em largura total,
+ * acima da grade — para que seja a primeira ação visível na jornada.
+ */
 export default function AISearchPanel({ onResults, projectId }: Props) {
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
-  const [classification, setClassification] = useState<string | null>(null);
 
   async function handleSearch() {
     const q = query.trim();
     if (!q || loading) return;
     setLoading(true);
-    setClassification(null);
     try {
       const { data, error } = await supabase.functions.invoke("oportunidades-search", {
         body: { query: q, project_id: projectId || null },
       });
       if (error) throw error;
-
-      const cls = data?.classification as "edital" | "palco" | "ambos" | undefined;
-      setClassification(cls ?? null);
 
       const editais = (data?.editais as Edital[] | undefined) ?? [];
       const palcos = (data?.palcos as PalcoCurado[] | undefined) ?? [];
@@ -51,10 +50,8 @@ export default function AISearchPanel({ onResults, projectId }: Props) {
 
       if (merged.length === 0) {
         toast.info("Nenhuma oportunidade encontrada para essa busca.");
-      } else {
-        toast.success(`${merged.length} oportunidade(s) encontrada(s)`);
       }
-      onResults(merged);
+      onResults(merged, String(data?.summary || ""));
     } catch (err: any) {
       console.error("AI search error:", err);
       toast.error(err.message || "Erro ao buscar com IA");
@@ -64,32 +61,43 @@ export default function AISearchPanel({ onResults, projectId }: Props) {
   }
 
   return (
-    <div className="rounded-[0.875rem] border border-border bg-card/60 backdrop-blur-sm p-4">
-      <div className="flex items-center gap-2 mb-3">
+    <div className="rounded-[0.875rem] border border-border bg-card/60 backdrop-blur-sm p-4 sm:p-5">
+      <div className="flex items-center gap-2 mb-2">
         <Sparkles className="h-4 w-4 text-primary" />
         <h3 className="text-sm font-semibold">Busca inteligente</h3>
-        {classification && (
-          <Badge variant="outline" className="text-[10px] ml-auto">
-            Detectado: {classification}
-          </Badge>
-        )}
+        <Badge variant="outline" className="text-[10px] ml-auto hidden sm:inline-flex">
+          IA · gera resumo e justifica cada resultado
+        </Badge>
       </div>
-      <p className="text-xs text-muted-foreground mb-3">
-        Descreva o que procura — a IA mistura editais e palcos automaticamente.
-      </p>
 
-      <Textarea
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder="Ex: festivais de música independente abertos no Sul…"
-        rows={2}
-        className="text-sm resize-none mb-2"
-        onKeyDown={(e) => {
-          if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) handleSearch();
-        }}
-      />
+      <div className="flex flex-col sm:flex-row gap-2">
+        <Input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="O que você procura? Ex: festivais de MPB no Sul…"
+          className="h-10 text-sm flex-1"
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              handleSearch();
+            }
+          }}
+        />
+        <Button
+          onClick={handleSearch}
+          disabled={loading || !query.trim()}
+          size="default"
+          className="h-10 sm:w-auto"
+        >
+          {loading ? (
+            <><Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> Buscando…</>
+          ) : (
+            <><Send className="h-4 w-4 mr-1.5" /> Buscar</>
+          )}
+        </Button>
+      </div>
 
-      <div className="flex flex-wrap gap-1.5 mb-3">
+      <div className="flex flex-wrap gap-1.5 mt-3">
         {EXAMPLES.map((ex) => (
           <button
             key={ex}
@@ -101,14 +109,6 @@ export default function AISearchPanel({ onResults, projectId }: Props) {
           </button>
         ))}
       </div>
-
-      <Button onClick={handleSearch} disabled={loading || !query.trim()} size="sm" className="w-full">
-        {loading ? (
-          <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> Buscando…</>
-        ) : (
-          <><Send className="h-3.5 w-3.5 mr-1.5" /> Buscar oportunidades</>
-        )}
-      </Button>
     </div>
   );
 }

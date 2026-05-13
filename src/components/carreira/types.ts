@@ -28,6 +28,8 @@ export interface Opportunity {
   /** Status do link oficial */
   linkStatus?: "ok" | "broken" | "unknown";
   linkCheckedAt?: string | null;
+  /** Justificativa curta gerada pela IA (somente em buscas IA) */
+  matchReason?: string | null;
   /** Dados crus para handlers que precisam do shape original */
   raw: Edital | PalcoCurado;
 }
@@ -49,6 +51,7 @@ export function editalToOpportunity(e: Edital): Opportunity {
     origem: e.id ? "saved" : "ai",
     linkStatus: (e as any).link_status as Opportunity["linkStatus"],
     linkCheckedAt: (e as any).link_checked_at ?? null,
+    matchReason: (e as any).match_reason ?? null,
     raw: e,
   };
 }
@@ -71,6 +74,7 @@ export function palcoToOpportunity(p: PalcoCurado, origem: "curated" | "ai" = "c
     origem,
     linkStatus: (p as any).link_status as Opportunity["linkStatus"],
     linkCheckedAt: (p as any).link_checked_at ?? null,
+    matchReason: (p as any).match_reason ?? null,
     raw: p,
   };
 }
