@@ -34,7 +34,7 @@ interface FormatGroup {
 }
 
 const FORMAT_GROUPS: FormatGroup[] = [
-  { label: "Redes Sociais", ids: ["instagram_post", "story", "reels_loop", "twitter_post"], defaultOpen: true },
+  { label: "Redes Sociais", ids: ["instagram_post", "story", "twitter_post"], defaultOpen: true },
   { label: "Streaming", ids: ["spotify_cover", "spotify_canvas", "spotify_banner", "deezer_cover", "tidal_cover", "youtube_cover"], defaultOpen: false },
   { label: "Personalizado", ids: ["custom"], defaultOpen: false },
 ];
