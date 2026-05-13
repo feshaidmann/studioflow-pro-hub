@@ -1004,7 +1004,7 @@ export default function Creative() {
                   onClick={handleGenerate}
                   disabled={generating || videoRendering || !canGenerate}
                 >
-                  {materialType === "reels" || selectedFormat.isVideo
+                  {selectedFormat.isVideo
                     ? <Video className="h-4 w-4 mr-1.5" />
                     : <Sparkles className="h-4 w-4 mr-1.5" />}
                   {generateLabel}
