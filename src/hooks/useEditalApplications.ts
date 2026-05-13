@@ -65,6 +65,8 @@ export interface EditalApplication {
     area: string | null;
     tipo: string | null;
     resumo?: string | null;
+    link_status?: "ok" | "broken" | "unknown" | null;
+    link_checked_at?: string | null;
   };
 }
 
