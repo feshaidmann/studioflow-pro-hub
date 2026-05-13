@@ -65,6 +65,8 @@ export interface EditalApplication {
     area: string | null;
     tipo: string | null;
     resumo?: string | null;
+    link_status?: "ok" | "broken" | "unknown" | null;
+    link_checked_at?: string | null;
   };
 }
 
@@ -91,6 +93,8 @@ interface RPCRow {
   prazo: string | null;
   link: string | null;
   resumo: string | null;
+  link_status: "ok" | "broken" | "unknown" | null;
+  link_checked_at: string | null;
 }
 
 export function useEditalApplications() {
@@ -129,6 +133,8 @@ export function useEditalApplications() {
           area: r.area,
           tipo: r.tipo === "palco" ? "palco" : "fomento",
           resumo: r.resumo,
+          link_status: r.link_status,
+          link_checked_at: r.link_checked_at,
         },
       }));
     },

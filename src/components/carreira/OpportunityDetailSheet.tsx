@@ -1,4 +1,4 @@
-import { ExternalLink, MapPin, Calendar, DollarSign, Trophy, Mic2, ClipboardList, Tag, Users, FileText, Loader2 } from "lucide-react";
+import { ExternalLink, MapPin, Calendar, DollarSign, Trophy, Mic2, ClipboardList, Tag, Users, FileText, Loader2, AlertTriangle, Search } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -6,6 +6,10 @@ import { Separator } from "@/components/ui/separator";
 import { TIPO_PALCO_LABELS, type TipoPalco, PORTE_LABELS, type Porte, type PalcoCurado } from "@/hooks/usePalcos";
 import type { Edital } from "@/hooks/useEditais";
 import type { Opportunity } from "./types";
+import { buildGoogleFallbackUrl, formatLinkChecked } from "./linkHelpers";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { useState } from "react";
 
 function formatDate(d: string | null) {
   if (!d) return null;
@@ -37,6 +41,27 @@ export default function OpportunityDetailSheet({ opportunity: op, open, onOpenCh
   const typeLabel = isEdital
     ? "Edital de fomento"
     : (op.porteOuTipo ? TIPO_PALCO_LABELS[op.porteOuTipo as TipoPalco] || "Palco" : "Palco");
+
+  const { toast } = useToast();
+  const [reporting, setReporting] = useState(false);
+  const linkBroken = op.linkStatus === "broken";
+  const linkCheckedLabel = formatLinkChecked(op);
+
+  async function handleReportBroken() {
+    if (!op.editalId) return;
+    setReporting(true);
+    const table = op.tipo === "edital" ? "editais" : "palcos_curados";
+    const { error } = await supabase
+      .from(table)
+      .update({ link_status: "broken", link_checked_at: new Date().toISOString() })
+      .eq("id", op.editalId);
+    setReporting(false);
+    if (error) {
+      toast({ title: "Não foi possível reportar", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({ title: "Obrigado!", description: "Marcamos o link como indisponível." });
+  }
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -145,13 +170,45 @@ export default function OpportunityDetailSheet({ opportunity: op, open, onOpenCh
           )}
         </div>
 
+        {/* Aviso de link quebrado */}
+        {linkBroken && (
+          <div className="mt-4 flex items-start gap-2 rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-warning-foreground">
+            <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0 text-warning" />
+            <div className="flex-1">
+              <div className="font-medium text-foreground">Link oficial indisponível</div>
+              <div className="text-muted-foreground">
+                A página caiu ou mudou de endereço{linkCheckedLabel ? ` (verificado em ${linkCheckedLabel})` : ""}. Use a busca para encontrar a versão atual.
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Ações fixas no rodapé */}
         <div className="sticky bottom-0 -mx-6 mt-6 px-6 py-3 bg-background/95 backdrop-blur border-t border-border flex items-center gap-2 flex-wrap">
-          {op.link && (
+          {linkBroken ? (
+            <Button variant="outline" size="sm" asChild>
+              <a href={buildGoogleFallbackUrl(op)} target="_blank" rel="noopener noreferrer">
+                <Search className="h-3.5 w-3.5 mr-1.5" /> Buscar no Google
+              </a>
+            </Button>
+          ) : op.link ? (
             <Button variant="outline" size="sm" asChild>
               <a href={op.link} target="_blank" rel="noopener noreferrer">
                 <ExternalLink className="h-3.5 w-3.5 mr-1.5" /> Abrir oficial
               </a>
+            </Button>
+          ) : null}
+          {!linkBroken && op.link && op.editalId && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-xs text-muted-foreground"
+              disabled={reporting}
+              onClick={handleReportBroken}
+              title="Reportar link quebrado"
+            >
+              {reporting ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <AlertTriangle className="h-3 w-3 mr-1" />}
+              Reportar link
             </Button>
           )}
           {onSave && op.origem === "ai" && (

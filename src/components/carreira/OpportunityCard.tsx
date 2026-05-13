@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { TIPO_PALCO_LABELS, type TipoPalco } from "@/hooks/usePalcos";
 import type { Opportunity } from "./types";
+import { buildGoogleFallbackUrl } from "./linkHelpers";
 
 function formatDate(d: string | null) {
   if (!d) return null;
@@ -102,13 +103,25 @@ export default function OpportunityCard({ opportunity: op, onApply, onSave, onRe
       </div>
 
       <div className="flex items-center gap-2 pt-2 border-t border-border/60" onClick={(e) => e.stopPropagation()}>
-        {op.link && (
+        {op.linkStatus === "broken" ? (
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-7 text-xs px-2 text-warning"
+            asChild
+            title="Link oficial indisponível — buscar no Google"
+          >
+            <a href={buildGoogleFallbackUrl(op)} target="_blank" rel="noopener noreferrer">
+              <ExternalLink className="h-3 w-3 mr-1" /> Buscar
+            </a>
+          </Button>
+        ) : op.link ? (
           <Button size="sm" variant="ghost" className="h-7 text-xs px-2" asChild>
             <a href={op.link} target="_blank" rel="noopener noreferrer">
               <ExternalLink className="h-3 w-3 mr-1" /> Abrir
             </a>
           </Button>
-        )}
+        ) : null}
         {onApply && (
           alreadyApplied ? (
             <Button size="sm" variant="outline" className="h-7 text-xs px-2 ml-auto" disabled>

@@ -3,6 +3,48 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 
 const COST_PER_CALL_USD = 0.005;
 
+// ── Validação de link oficial ─────────────────────────────────────────────
+// Faz HEAD (cai pra GET com Range se necessário). Considera vivo se status
+// final estiver na lista permitida. Timeout de 4s por URL.
+export async function checkLinkAlive(rawUrl: string): Promise<{ ok: boolean; status: number | "timeout" | "invalid" | "unknown" }> {
+  let url: URL;
+  try { url = new URL(rawUrl.trim()); }
+  catch { return { ok: false, status: "invalid" }; }
+  if (url.protocol !== "http:" && url.protocol !== "https:") return { ok: false, status: "invalid" };
+
+  const goodStatuses = new Set([200, 201, 202, 203, 204, 206, 301, 302, 303, 307, 308]);
+  const ua = "Mozilla/5.0 (compatible; StudioFlowLinkChecker/1.0; +https://app.jamsessionproject.com.br)";
+
+  async function attempt(method: "HEAD" | "GET"): Promise<number | "timeout"> {
+    try {
+      const ctrl = AbortSignal.timeout(4500);
+      const resp = await fetch(url.toString(), {
+        method,
+        redirect: "follow",
+        signal: ctrl,
+        headers: method === "GET"
+          ? { "User-Agent": ua, "Range": "bytes=0-1024", "Accept": "*/*" }
+          : { "User-Agent": ua, "Accept": "*/*" },
+      });
+      // Drena e descarta o corpo para não vazar conexões
+      try { await resp.body?.cancel(); } catch { /* noop */ }
+      return resp.status;
+    } catch (e: any) {
+      if (e?.name === "TimeoutError" || e?.name === "AbortError") return "timeout";
+      return 0;
+    }
+  }
+
+  let s = await attempt("HEAD");
+  // Alguns servidores rejeitam HEAD → tenta GET parcial
+  if (s === 405 || s === 501 || s === 0 || s === 403) s = await attempt("GET");
+
+  if (s === "timeout") return { ok: false, status: "timeout" };
+  return { ok: goodStatuses.has(s as number), status: s as number };
+}
+
+
+
 function getAdminClient() {
   return createClient(
     Deno.env.get("SUPABASE_URL")!,
@@ -292,11 +334,31 @@ serve(async (req) => {
     // Clean message (remove the JSON block for display)
     const cleanMessage = messageContent.replace(/<editais_json>[\s\S]*?<\/editais_json>/, "").trim();
 
+    // ── Validar links oficiais (descarta alucinações que dão 404) ──────────
+    const linkChecks = await Promise.all(
+      editais.map(async (e: any) => {
+        if (!e.link || typeof e.link !== "string") return { ok: false, status: "unknown" as const };
+        return await checkLinkAlive(e.link);
+      }),
+    );
+    const editaisValidos: any[] = [];
+    const linkStatusByIdx: ("ok" | "broken" | "unknown")[] = [];
+    editais.forEach((e: any, i: number) => {
+      const c = linkChecks[i];
+      // Sem link → mantém (status unknown). Com link mas quebrado → descarta.
+      if (!e.link) { editaisValidos.push(e); linkStatusByIdx.push("unknown"); return; }
+      if (c.ok) { editaisValidos.push(e); linkStatusByIdx.push("ok"); return; }
+      console.warn(`[edital-search] Descartado por link inválido (${c.status}): ${e.titulo} → ${e.link}`);
+    });
+    editais = editaisValidos;
+
     const sessionKeyList = editais.map((e: any) => e.session_key).filter(Boolean);
 
     // Persist if requested
     if (save_results && editais.length > 0) {
-      const rows = editais.map((e: any) => ({
+      const rows = editais.map((e: any, i: number) => ({
+        link_status: linkStatusByIdx[i] || "unknown",
+        link_checked_at: new Date().toISOString(),
         user_id: userId,
         project_id: project_id || null,
         titulo: e.titulo || "",

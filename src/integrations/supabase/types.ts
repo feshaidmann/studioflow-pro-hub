@@ -325,6 +325,8 @@ export type Database = {
           inferido: boolean | null
           inscrito: boolean
           link: string | null
+          link_checked_at: string | null
+          link_status: string
           orgao: string | null
           origem_url: string | null
           prazo: string | null
@@ -348,6 +350,8 @@ export type Database = {
           inferido?: boolean | null
           inscrito?: boolean
           link?: string | null
+          link_checked_at?: string | null
+          link_status?: string
           orgao?: string | null
           origem_url?: string | null
           prazo?: string | null
@@ -371,6 +375,8 @@ export type Database = {
           inferido?: boolean | null
           inscrito?: boolean
           link?: string | null
+          link_checked_at?: string | null
+          link_status?: string
           orgao?: string | null
           origem_url?: string | null
           prazo?: string | null
@@ -1204,6 +1210,8 @@ export type Database = {
           generos: string[] | null
           id: string
           link: string | null
+          link_checked_at: string | null
+          link_status: string
           nome: string
           organizador: string
           periodo_inscricao: string | null
@@ -1224,6 +1232,8 @@ export type Database = {
           generos?: string[] | null
           id?: string
           link?: string | null
+          link_checked_at?: string | null
+          link_status?: string
           nome: string
           organizador: string
           periodo_inscricao?: string | null
@@ -1244,6 +1254,8 @@ export type Database = {
           generos?: string[] | null
           id?: string
           link?: string | null
+          link_checked_at?: string | null
+          link_status?: string
           nome?: string
           organizador?: string
           periodo_inscricao?: string | null
@@ -2426,6 +2438,8 @@ export type Database = {
           id: string
           licoes_aprendidas: string
           link: string
+          link_checked_at: string
+          link_status: string
           motivo_recusa: string
           notas: string
           opportunity_id: string
