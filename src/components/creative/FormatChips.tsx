@@ -2,7 +2,7 @@ import { cn } from "@/lib/utils";
 import { FORMAT_OPTIONS, type FormatOption } from "./FormatSelector";
 import { MoreHorizontal, Video } from "lucide-react";
 
-const FEATURED_IDS = ["spotify_cover", "instagram_post", "story", "reels_loop"];
+const FEATURED_IDS = ["spotify_cover", "instagram_post", "story", "youtube_cover"];
 
 interface Props {
   selected: string;

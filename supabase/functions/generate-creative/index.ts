@@ -545,17 +545,36 @@ serve(async (req) => {
       { role: "system", content: systemBlocks.join("\n\n") },
     ];
 
-    // User message is purely the creative description
+    // Reinforce typography directly in the user turn — image models often
+    // weight user-content instructions higher than system prompts for
+    // text-rendering tasks. This dramatically improves text adherence.
+    const textDirectiveLines: string[] = [];
+    if (wantsText) {
+      textDirectiveLines.push("INSTRUÇÃO OBRIGATÓRIA DE TEXTO: a arte final DEVE conter os textos abaixo renderizados de forma legível e integrada à composição. Não entregue uma imagem sem esses textos.");
+      if (trackName) textDirectiveLines.push(`• Título da faixa (texto principal, tipografia mais destacada): «${trackName}»`);
+      if (artistName) textDirectiveLines.push(`• Nome do artista (texto secundário, claramente legível): «${artistName}»`);
+      if (releaseDate) textDirectiveLines.push(`• Data de lançamento (pequena, se couber): ${releaseDate}`);
+      if (additionalText) textDirectiveLines.push(`• Texto adicional (apoio curto): «${additionalText}»`);
+      textDirectiveLines.push("Use APENAS os textos listados acima — caractere por caractere, sem traduzir, sem abreviar, sem inventar palavras adicionais.");
+    } else if (noText) {
+      textDirectiveLines.push("INSTRUÇÃO OBRIGATÓRIA: NÃO renderize nenhum texto, letra, número, palavra, logo ou marca d'água na imagem. Composição puramente visual.");
+    }
+
+    const userText = textDirectiveLines.length
+      ? `${prompt}\n\n${textDirectiveLines.join("\n")}`
+      : prompt;
+
+    // User message is purely the creative description (+ text directive)
     if (editImageUrl) {
       messages.push({
         role: "user",
         content: [
-          { type: "text", text: prompt },
+          { type: "text", text: userText },
           { type: "image_url", image_url: { url: editImageUrl } },
         ],
       });
     } else {
-      messages.push({ role: "user", content: prompt });
+      messages.push({ role: "user", content: userText });
     }
 
     // Use Nano Banana 2 when typography is required — significantly better text legibility.

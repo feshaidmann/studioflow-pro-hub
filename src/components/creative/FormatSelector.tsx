@@ -17,7 +17,6 @@ export interface FormatOption {
 export const FORMAT_OPTIONS: FormatOption[] = [
   { id: "instagram_post", label: "Post Instagram", width: 1080, height: 1080, icon: Instagram, description: "1080×1080" },
   { id: "story", label: "Story estático", width: 1080, height: 1920, icon: Instagram, description: "1080×1920" },
-  { id: "reels_loop", label: "Reels / Shorts loop", width: 1080, height: 1920, icon: Instagram, description: "1080×1920 · vídeo", isVideo: true },
   { id: "youtube_cover", label: "Capa YouTube", width: 1920, height: 1080, icon: Youtube, description: "1920×1080" },
   { id: "spotify_cover", label: "Capa Spotify", width: 3000, height: 3000, icon: Music, description: "3000×3000" },
   { id: "spotify_canvas", label: "Canvas Spotify", width: 1080, height: 1920, icon: Music, description: "1080×1920 · loop animado", isVideo: true },
@@ -35,7 +34,7 @@ interface FormatGroup {
 }
 
 const FORMAT_GROUPS: FormatGroup[] = [
-  { label: "Redes Sociais", ids: ["instagram_post", "story", "reels_loop", "twitter_post"], defaultOpen: true },
+  { label: "Redes Sociais", ids: ["instagram_post", "story", "twitter_post"], defaultOpen: true },
   { label: "Streaming", ids: ["spotify_cover", "spotify_canvas", "spotify_banner", "deezer_cover", "tidal_cover", "youtube_cover"], defaultOpen: false },
   { label: "Personalizado", ids: ["custom"], defaultOpen: false },
 ];

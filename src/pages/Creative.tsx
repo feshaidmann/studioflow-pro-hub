@@ -46,12 +46,11 @@ const FORMAT_TO_CHECKLIST_KEY: Record<string, string> = {
   deezer_cover: "capa",
   tidal_cover: "capa",
   youtube_cover: "thumbnail",
-  reels_loop: "reels",
   story: "stories",
 };
 
 // ── Tipos de material — define formato implicitamente ─────────────────────
-type MaterialType = "capa" | "post" | "story" | "reels" | "legenda";
+type MaterialType = "capa" | "post" | "story" | "legenda";
 
 const MATERIAL_OPTIONS: Array<{
   id: MaterialType;
@@ -63,7 +62,6 @@ const MATERIAL_OPTIONS: Array<{
   { id: "capa",    label: "Capa do single",      description: "3000×3000 · Spotify, Deezer, Tidal", formatId: "spotify_cover",    icon: "🎵" },
   { id: "post",    label: "Post de lançamento",   description: "1080×1080 · Instagram feed",          formatId: "instagram_post",   icon: "📸" },
   { id: "story",   label: "Story",                description: "1080×1920 · Instagram, TikTok",       formatId: "story",            icon: "◻" },
-  { id: "reels",   label: "Reels / Shorts loop",  description: "1080×1920 · vídeo loop animado",      formatId: "reels_loop",       icon: "▶" },
   { id: "legenda", label: "Só a legenda",          description: "Texto de divulgação para qualquer canal", formatId: "",            icon: "✏" },
 ];
 
@@ -657,7 +655,6 @@ export default function Creative() {
         : "Renderizando vídeo…";
     }
     if (materialType === "legenda") return "Criar legenda";
-    if (materialType === "reels") return "Gerar Vídeo Loop";
     if (referenceImage) return "Gerar a partir da referência";
     return `Gerar ${MATERIAL_OPTIONS.find((m) => m.id === materialType)?.label ?? "arte"}`;
   })();
@@ -1007,7 +1004,7 @@ export default function Creative() {
                   onClick={handleGenerate}
                   disabled={generating || videoRendering || !canGenerate}
                 >
-                  {materialType === "reels" || selectedFormat.isVideo
+                  {selectedFormat.isVideo
                     ? <Video className="h-4 w-4 mr-1.5" />
                     : <Sparkles className="h-4 w-4 mr-1.5" />}
                   {generateLabel}
