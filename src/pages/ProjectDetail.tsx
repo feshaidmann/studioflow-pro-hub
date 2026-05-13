@@ -42,17 +42,21 @@ export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { t } = useLanguage();
-  const { projects, getMixPercent, getProjectFinancials, professionals, transactions } = useProjects();
+  const { projects, getMixPercent, getProjectFinancials, professionals, transactions, loading: projectsLoading } = useProjects();
   const [activeTab, setActiveTab] = useState("overview");
   const [aiSheetOpen, setAiSheetOpen] = useState(false);
   const { activeTasks } = useTasks();
 
   const ownerProject = projects.find((p) => p.id === id);
   const [guestProject, setGuestProject] = useState<ProjectView | null>(null);
-  const [guestLoading, setGuestLoading] = useState(!ownerProject);
+  const [guestLoading, setGuestLoading] = useState(false);
   const [isOwner, setIsOwner] = useState(!!ownerProject);
 
   useEffect(() => {
+    // Wait for the projects context to finish loading before deciding owner vs guest.
+    // Otherwise an owner refreshing the page is briefly classified as guest and the
+    // RPC returns no row → "Projeto não encontrado".
+    if (projectsLoading) return;
     if (ownerProject) { setIsOwner(true); setGuestLoading(false); return; }
     if (!id) { setGuestLoading(false); return; }
     setGuestLoading(true);
@@ -64,7 +68,7 @@ export default function ProjectDetail() {
       }
       setGuestLoading(false);
     });
-  }, [id, ownerProject]);
+  }, [id, ownerProject, projectsLoading]);
 
   const project: ProjectView | null = ownerProject
     ? { id: ownerProject.id, name: ownerProject.name, artist: ownerProject.artist, stage: ownerProject.stage, completed: ownerProject.completed, projectType: ownerProject.projectType }
