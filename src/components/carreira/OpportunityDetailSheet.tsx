@@ -42,6 +42,27 @@ export default function OpportunityDetailSheet({ opportunity: op, open, onOpenCh
     ? "Edital de fomento"
     : (op.porteOuTipo ? TIPO_PALCO_LABELS[op.porteOuTipo as TipoPalco] || "Palco" : "Palco");
 
+  const { toast } = useToast();
+  const [reporting, setReporting] = useState(false);
+  const linkBroken = op.linkStatus === "broken";
+  const linkCheckedLabel = formatLinkChecked(op);
+
+  async function handleReportBroken() {
+    if (!op.editalId) return;
+    setReporting(true);
+    const table = op.tipo === "edital" ? "editais" : "palcos_curados";
+    const { error } = await supabase
+      .from(table)
+      .update({ link_status: "broken", link_checked_at: new Date().toISOString() })
+      .eq("id", op.editalId);
+    setReporting(false);
+    if (error) {
+      toast({ title: "Não foi possível reportar", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({ title: "Obrigado!", description: "Marcamos o link como indisponível." });
+  }
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-full sm:max-w-lg overflow-y-auto">
