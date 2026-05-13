@@ -311,10 +311,10 @@ export default function Dashboard() {
     alerts: <div id="alerts-section"><ProjectAlertsCard alerts={alerts} hidden={isFirstRun} /></div>,
     team: <PendingTeamCard hidden={isFirstRun} />,
     projects: <ProjectHealthList projects={projectsWithHealth} hidden={isFirstRun} />,
-    editais: <Suspense fallback={<CardSkeleton />}><EditalProgressCard hidden={isFirstRun} /></Suspense>,
-    releases: <div id="releases-section"><Suspense fallback={<CardSkeleton />}><UpcomingReleases projects={projects} getMixPercent={getMixPercent} hidden={isFirstRun} /></Suspense></div>,
+    editais: <LazyCardBoundary title="Editais e Oportunidades" icon={FileText} minHeight="8rem"><EditalProgressCard hidden={isFirstRun} /></LazyCardBoundary>,
+    releases: <div id="releases-section"><LazyCardBoundary title="Próximos lançamentos" icon={Calendar} minHeight="8rem"><UpcomingReleases projects={projects} getMixPercent={getMixPercent} hidden={isFirstRun} /></LazyCardBoundary></div>,
     finance: <FinancialSummary financials={financials} isSimpleMode={isSimpleMode} />,
-    transactions: !isSimpleMode ? <Suspense fallback={<CardSkeleton />}><RecentTransactions transactions={transactions} /></Suspense> : null,
+    transactions: !isSimpleMode ? <LazyCardBoundary title="Transações recentes" icon={Receipt} minHeight="8rem"><RecentTransactions transactions={transactions} /></LazyCardBoundary> : null,
   };
 
   // Render checklist + alerts inline (above AI), then the rest from journeyPlan order
