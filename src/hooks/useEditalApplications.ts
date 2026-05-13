@@ -38,7 +38,10 @@ export const RESULTADO_COLORS: Record<ResultadoType, string> = {
 export interface EditalApplication {
   id: string;
   user_id: string;
+  opportunity_id: string;
+  /** Alias retrocompatível para opportunity_id */
   edital_id: string;
+  tipo: "fomento" | "palco";
   project_id: string | null;
   status: ApplicationStatus;
   notas: string;
@@ -50,6 +53,7 @@ export interface EditalApplication {
   licoes_aprendidas: string | null;
   created_at: string;
   updated_at: string;
+  /** Sintetizado pela RPC list_user_applications (edital ou palco) */
   edital?: {
     id: string;
     titulo: string;
@@ -64,23 +68,72 @@ export interface EditalApplication {
   };
 }
 
+interface RPCRow {
+  id: string;
+  user_id: string;
+  opportunity_id: string;
+  tipo: "fomento" | "palco";
+  status: ApplicationStatus;
+  notas: string;
+  data_inscricao: string | null;
+  data_resultado: string | null;
+  resultado: ResultadoType | null;
+  valor_aprovado: number | null;
+  motivo_recusa: string | null;
+  licoes_aprendidas: string | null;
+  project_id: string | null;
+  created_at: string;
+  updated_at: string;
+  titulo: string | null;
+  orgao: string | null;
+  estado: string | null;
+  area: string | null;
+  prazo: string | null;
+  link: string | null;
+  resumo: string | null;
+}
+
 export function useEditalApplications() {
   const { user } = useAuth();
 
-  const query = useQuery({
+  return useQuery({
     queryKey: ["edital-applications", user?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("edital_applications")
-        .select("*, edital:editais(id, titulo, orgao, estado, status, prazo, link, area, tipo, resumo)")
-        .order("updated_at", { ascending: false });
+      const { data, error } = await supabase.rpc("list_user_applications" as any);
       if (error) throw error;
-      return (data || []) as unknown as EditalApplication[];
+      return ((data || []) as RPCRow[]).map((r): EditalApplication => ({
+        id: r.id,
+        user_id: r.user_id,
+        opportunity_id: r.opportunity_id,
+        edital_id: r.opportunity_id,
+        tipo: r.tipo,
+        project_id: r.project_id,
+        status: r.status,
+        notas: r.notas,
+        data_inscricao: r.data_inscricao,
+        data_resultado: r.data_resultado,
+        resultado: r.resultado,
+        valor_aprovado: r.valor_aprovado,
+        motivo_recusa: r.motivo_recusa,
+        licoes_aprendidas: r.licoes_aprendidas,
+        created_at: r.created_at,
+        updated_at: r.updated_at,
+        edital: {
+          id: r.opportunity_id,
+          titulo: r.titulo || "Oportunidade removida",
+          orgao: r.orgao,
+          estado: r.estado,
+          status: r.tipo === "palco" ? (r.area || null) : null,
+          prazo: r.prazo,
+          link: r.link,
+          area: r.area,
+          tipo: r.tipo === "palco" ? "palco" : "fomento",
+          resumo: r.resumo,
+        },
+      }));
     },
     enabled: !!user,
   });
-
-  return query;
 }
 
 export function useCreateApplication() {
@@ -88,13 +141,20 @@ export function useCreateApplication() {
   const { user } = useAuth();
 
   return useMutation({
-    mutationFn: async (params: { edital_id: string; project_id?: string | null; notas?: string; data_inscricao?: string | null }) => {
+    mutationFn: async (params: {
+      opportunity_id: string;
+      tipo: "fomento" | "palco";
+      project_id?: string | null;
+      notas?: string;
+      data_inscricao?: string | null;
+    }) => {
       if (!user) throw new Error("Not authenticated");
       const { data, error } = await supabase
         .from("edital_applications")
         .insert({
           user_id: user.id,
-          edital_id: params.edital_id,
+          opportunity_id: params.opportunity_id,
+          tipo: params.tipo,
           project_id: params.project_id || null,
           notas: params.notas || "",
           status: "interesse",
