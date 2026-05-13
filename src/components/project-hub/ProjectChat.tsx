@@ -352,12 +352,12 @@ export default function ProjectChat({ projectId, isOwner = false }: ProjectChatP
                       {(msg.is_pending || msg.linked_task_id) && (
                         <div className="flex gap-1 mt-1.5">
                           {msg.is_pending && !msg.is_resolved && (
-                            <Badge variant="outline" className="text-[8px] h-4 gap-0.5 border-yellow-500/50 text-yellow-500 bg-yellow-500/10">
+                            <Badge variant="outline" className="text-[8px] h-4 gap-0.5 border-warning/50 text-warning bg-warning/10">
                               <AlertCircle className="h-2 w-2" /> Pendente
                             </Badge>
                           )}
                           {msg.is_resolved && (
-                            <Badge variant="outline" className="text-[8px] h-4 gap-0.5 border-green-500/50 text-green-500 bg-green-500/10">
+                            <Badge variant="outline" className="text-[8px] h-4 gap-0.5 border-success/50 text-success bg-success/10">
                               <CheckCircle2 className="h-2 w-2" /> Resolvido
                             </Badge>
                           )}
@@ -413,13 +413,13 @@ export default function ProjectChat({ projectId, isOwner = false }: ProjectChatP
                     {!msg.is_pending && (
                       <Button variant="ghost" size="sm" className="h-6 text-[10px] gap-1 px-2"
                         onClick={() => { togglePending(msg.id, true); setActionMenuId(null); toast.success("Marcado como pendência"); }}>
-                        <AlertCircle className="h-2.5 w-2.5 text-yellow-500" /> Pendência
+                        <AlertCircle className="h-2.5 w-2.5 text-warning" /> Pendência
                       </Button>
                     )}
                     {msg.is_pending && !msg.is_resolved && (
                       <Button variant="ghost" size="sm" className="h-6 text-[10px] gap-1 px-2"
                         onClick={() => { toggleResolved(msg.id, true); setActionMenuId(null); toast.success("Resolvido! ✅"); }}>
-                        <CheckCircle2 className="h-2.5 w-2.5 text-green-500" /> Resolver
+                        <CheckCircle2 className="h-2.5 w-2.5 text-success" /> Resolver
                       </Button>
                     )}
                     {!msg.linked_task_id && (
