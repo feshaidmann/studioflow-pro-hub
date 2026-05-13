@@ -304,10 +304,10 @@ export default function Dashboard() {
     alerts: <div id="alerts-section"><ProjectAlertsCard alerts={alerts} hidden={isFirstRun} /></div>,
     team: <PendingTeamCard hidden={isFirstRun} />,
     projects: <ProjectHealthList projects={projectsWithHealth} hidden={isFirstRun} />,
-    editais: <EditalProgressCard hidden={isFirstRun} />,
-    releases: <div id="releases-section"><UpcomingReleases projects={projects} getMixPercent={getMixPercent} hidden={isFirstRun} /></div>,
+    editais: <Suspense fallback={<CardSkeleton />}><EditalProgressCard hidden={isFirstRun} /></Suspense>,
+    releases: <div id="releases-section"><Suspense fallback={<CardSkeleton />}><UpcomingReleases projects={projects} getMixPercent={getMixPercent} hidden={isFirstRun} /></Suspense></div>,
     finance: <FinancialSummary financials={financials} isSimpleMode={isSimpleMode} />,
-    transactions: !isSimpleMode ? <RecentTransactions transactions={transactions} /> : null,
+    transactions: !isSimpleMode ? <Suspense fallback={<CardSkeleton />}><RecentTransactions transactions={transactions} /></Suspense> : null,
   };
 
   return (
@@ -367,7 +367,9 @@ export default function Dashboard() {
       {isMobile && aiAssistantCard}
 
       {/* 3b. Projetos como parceiro */}
-      <GuestProjectsList projects={guestProjects} loading={loadingGuestProjects} />
+      <Suspense fallback={<CardSkeleton />}>
+        <GuestProjectsList projects={guestProjects} loading={loadingGuestProjects} />
+      </Suspense>
     </div>
   );
 }
