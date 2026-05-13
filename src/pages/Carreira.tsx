@@ -657,5 +657,6 @@ export default function Carreira() {
         />
       )}
     </div>
+    </TooltipProvider>
   );
 }
