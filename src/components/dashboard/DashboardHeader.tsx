@@ -20,15 +20,15 @@ export default function DashboardHeader({ displayName, projects, selectedProject
   return (
     <div className="rounded-xl bg-card/40 backdrop-blur-md p-4 -mx-4 md:-mx-6 md:px-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
       <div>
-        <h1 className="text-2xl md:text-3xl font-bold text-foreground">Dashboard</h1>
+        <h1 id="dashboard-title" className="text-2xl md:text-3xl font-bold text-foreground">Dashboard</h1>
         <p className="text-muted-foreground text-sm mt-1">
           Olá, {displayName} 👋{focus ? ` Seu foco hoje é ${focus}.` : ""}
         </p>
       </div>
       <div className="flex items-center gap-2 flex-wrap">
         <Select value={selectedProjectId} onValueChange={onSelectProject}>
-          <SelectTrigger className="w-full sm:w-[180px] bg-card/60">
-            <Filter className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
+          <SelectTrigger className="w-full sm:w-[180px] bg-card/60" aria-label="Filtrar projeto exibido no dashboard">
+            <Filter className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" aria-hidden="true" />
             <SelectValue placeholder="Filtrar projeto" />
           </SelectTrigger>
           <SelectContent>

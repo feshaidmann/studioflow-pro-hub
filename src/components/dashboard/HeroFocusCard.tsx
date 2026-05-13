@@ -57,16 +57,20 @@ export default function HeroFocusCard({
   };
 
   return (
-    <Card className={cn("glass-card animate-fade-in overflow-hidden border-l-4", borderClass)}>
+    <Card
+      role="region"
+      aria-labelledby="region-hero-title"
+      className={cn("glass-card animate-fade-in overflow-hidden border-l-4", borderClass)}
+    >
       <CardContent className="p-4 md:p-5 space-y-4">
         {/* Linha 1: identificação + plano */}
         <div className="flex items-start gap-3">
           <div className="h-10 w-10 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
-            <Sparkles className="h-5 w-5" />
+            <Sparkles className="h-5 w-5" aria-hidden="true" />
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-xs text-muted-foreground">Plano inicial personalizado</p>
-            <h2 className="text-lg md:text-xl font-semibold text-foreground leading-tight">
+            <h2 id="region-hero-title" className="text-lg md:text-xl font-semibold text-foreground leading-tight">
               {name}, {plan.headline.toLowerCase()}
             </h2>
             <p className="text-sm text-muted-foreground leading-relaxed mt-1">
@@ -79,16 +83,14 @@ export default function HeroFocusCard({
         {nextAction ? (() => {
           const { Icon, color, variant } = SEV_ICON[nextAction.severity];
           return (
-            <div
-              role="button"
-              tabIndex={0}
-              aria-label={`Próxima ação: ${nextAction.label}. Pressione Enter para resolver com IA.`}
+            <button
+              type="button"
+              aria-label={`Próxima ação: ${nextAction.label}${nextAction.detail ? `. ${nextAction.detail}` : ""}. Resolver com IA.`}
               onClick={handleResolve}
-              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleResolve(); } }}
-              className="flex items-center gap-3 rounded-xl border border-border/60 bg-card/60 px-3 py-2 cursor-pointer hover:bg-muted/40 transition-colors focus:outline-none focus:ring-2 focus:ring-ring"
+              className="w-full text-left flex items-center gap-3 rounded-xl border border-border/60 bg-card/60 px-3 py-2 hover:bg-muted/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
               <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center shrink-0">
-                <Icon className={cn("h-4 w-4", color)} />
+                <Icon className={cn("h-4 w-4", color)} aria-hidden="true" />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5 mb-0.5">
@@ -100,12 +102,12 @@ export default function HeroFocusCard({
                   <p className="text-xs text-muted-foreground truncate">{nextAction.detail}</p>
                 )}
               </div>
-              <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
-            </div>
+              <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden="true" />
+            </button>
           );
         })() : projectCount > 0 ? (
-          <div className="flex items-center gap-2 rounded-xl border border-success/30 bg-success/5 px-3 py-2">
-            <CheckCircle2 className="h-4 w-4 text-success shrink-0" />
+          <div role="status" className="flex items-center gap-2 rounded-xl border border-success/30 bg-success/5 px-3 py-2">
+            <CheckCircle2 className="h-4 w-4 text-success shrink-0" aria-hidden="true" />
             <p className="text-sm text-foreground">Tudo em dia. Sem ações urgentes agora.</p>
           </div>
         ) : null}
@@ -116,33 +118,36 @@ export default function HeroFocusCard({
             type="button"
             onClick={() => setDetailsOpen((v) => !v)}
             aria-expanded={detailsOpen}
-            className="text-[11px] text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
+            aria-controls="hero-context"
+            className="text-[11px] text-muted-foreground hover:text-foreground inline-flex items-center gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
           >
             {detailsOpen ? "Ocultar contexto" : "Ver contexto do plano"}
-            <ChevronDown className={cn("h-3 w-3 transition-transform", detailsOpen && "rotate-180")} />
+            <ChevronDown className={cn("h-3 w-3 transition-transform", detailsOpen && "rotate-180")} aria-hidden="true" />
           </button>
-          {detailsOpen && (
-            <div className="grid grid-cols-2 gap-2 text-xs mt-2">
-              <div className="rounded-xl bg-muted/50 border border-border p-3">
-                <span className="text-muted-foreground">Momento</span>
-                <p className="font-medium text-foreground truncate">{momentLabels[profile?.current_moment ?? ""] ?? "produção"}</p>
+          <div id="hero-context" hidden={!detailsOpen}>
+            {detailsOpen && (
+              <div className="grid grid-cols-2 gap-2 text-xs mt-2">
+                <div className="rounded-xl bg-muted/50 border border-border p-3">
+                  <span className="text-muted-foreground">Momento</span>
+                  <p className="font-medium text-foreground truncate">{momentLabels[profile?.current_moment ?? ""] ?? "produção"}</p>
+                </div>
+                <div className="rounded-xl bg-muted/50 border border-border p-3">
+                  <span className="text-muted-foreground">Foco</span>
+                  <p className="font-medium text-foreground truncate">{painLabels[profile?.main_pain ?? ""] ?? "organização"}</p>
+                </div>
               </div>
-              <div className="rounded-xl bg-muted/50 border border-border p-3">
-                <span className="text-muted-foreground">Foco</span>
-                <p className="font-medium text-foreground truncate">{painLabels[profile?.main_pain ?? ""] ?? "organização"}</p>
-              </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
         {/* Linha 4: CTAs */}
         <div className="flex flex-col sm:flex-row gap-2">
           <Button className="gap-2" onClick={() => navigate(plan.primaryPath)} aria-label={plan.primaryLabel}>
-            {plan.primaryLabel} <ArrowRight className="h-4 w-4" />
+            {plan.primaryLabel} <ArrowRight className="h-4 w-4" aria-hidden="true" />
           </Button>
           <Button variant="outline" onClick={() => navigate(plan.secondaryPath)}>{plan.secondaryLabel}</Button>
           <Button variant="secondary" className="gap-2" onClick={() => onAskAI(plan.aiPrompt)} aria-label="Perguntar à IA">
-            <Bot className="h-4 w-4" /> Perguntar à IA
+            <Bot className="h-4 w-4" aria-hidden="true" /> Perguntar à IA
           </Button>
         </div>
       </CardContent>
