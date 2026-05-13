@@ -360,9 +360,9 @@ export default function Dashboard() {
         .filter(Boolean)}
 
       {/* Projetos como parceiro */}
-      <Suspense fallback={<CardSkeleton />}>
+      <LazyCardBoundary title="Projetos como parceiro" icon={Users} minHeight="8rem">
         <GuestProjectsList projects={guestProjects} loading={loadingGuestProjects} />
-      </Suspense>
+      </LazyCardBoundary>
     </div>
   );
 }
