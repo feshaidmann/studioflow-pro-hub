@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { useProjects } from "@/contexts/ProjectContext";
 import type { Transaction } from "@/data/mockData";
 import { cn } from "@/lib/utils";
+import { StatusBadge } from "./StatusBadge";
 
 interface RecentTransactionsProps {
   transactions: Transaction[];
@@ -23,11 +24,13 @@ export default function RecentTransactions({ transactions }: RecentTransactionsP
         <CardTitle className="text-base flex items-center gap-2">
           <DollarSign className="h-4 w-4 text-primary" />
           Últimas Transações
+          <StatusBadge variant="neutral">{Math.min(transactions.length, 5)}</StatusBadge>
           <Button
             variant="ghost"
             size="sm"
             className="ml-auto text-xs text-muted-foreground hover:text-primary h-7 px-2"
             onClick={() => navigate("/finance")}
+            aria-label="Ver todas as transações"
           >
             Ver todas <ArrowRight className="h-3 w-3 ml-1" />
           </Button>

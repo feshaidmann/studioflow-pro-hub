@@ -5,6 +5,7 @@ import { Rocket, Plus, Calendar, ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import type { Project } from "@/data/mockData";
+import { StatusBadge } from "./StatusBadge";
 
 function formatDueDate(d: string | null) {
   if (!d) return null;
@@ -42,11 +43,13 @@ export default function UpcomingReleases({ projects, getMixPercent, hidden }: Up
         <CardTitle className="text-base flex items-center gap-2">
           <Rocket className="h-4 w-4 text-primary" />
           Próximos Lançamentos
+          {upcomingReleases.length > 0 && <StatusBadge variant="neutral">{upcomingReleases.length}</StatusBadge>}
           <Button
             variant="ghost"
             size="sm"
             className="ml-auto text-xs text-muted-foreground hover:text-primary h-7 px-2"
             onClick={() => navigate("/projects")}
+            aria-label="Ver todos os projetos"
           >
             Ver projetos <ArrowRight className="h-3 w-3 ml-1" />
           </Button>
