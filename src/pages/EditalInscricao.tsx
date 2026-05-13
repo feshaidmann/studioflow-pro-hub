@@ -27,6 +27,7 @@ interface EditalInfo {
   link: string | null;
   orgao: string | null;
   area: string | null;
+  tipo?: string | null;
 }
 
 export default function EditalInscricao() {
@@ -63,7 +64,7 @@ export default function EditalInscricao() {
       setLoadingEdital(true);
       const { data } = await supabase
         .from("editais")
-        .select("id, titulo, link, orgao, area")
+        .select("id, titulo, link, orgao, area, tipo")
         .eq("id", id)
         .single();
       setEdital(data as any);
