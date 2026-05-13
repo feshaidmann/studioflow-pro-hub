@@ -518,64 +518,6 @@ export default function Carreira() {
               ))}
             </div>
           )}
-              <div className="flex items-center justify-between mb-3 text-xs text-muted-foreground gap-2 flex-wrap">
-                <span>{filtered.length} oportunidade(s){totalActive ? " com filtros aplicados" : ""}</span>
-                <div className="flex items-center gap-1">
-                  {totalActive && (
-                    <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setFilters({ ...DEFAULT_FILTERS })}>
-                      <RotateCcw className="h-3 w-3 mr-1" /> Limpar filtros
-                    </Button>
-                  )}
-                  {aiResults.length > 0 && (
-                    <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setAiResults([])}>
-                      Limpar resultados da IA
-                    </Button>
-                  )}
-                </div>
-              </div>
-
-              {loading ? (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                  {Array.from({ length: 4 }).map((_, i) => (
-                    <Skeleton key={i} className="h-44 rounded-[0.875rem]" />
-                  ))}
-                </div>
-              ) : filtered.length === 0 ? (
-                <Card className="rounded-[0.875rem]">
-                  <CardContent className="py-12 text-center text-sm text-muted-foreground space-y-3">
-                    {totalActive ? (
-                      <>
-                        <p>Nenhuma oportunidade combina com esses filtros.</p>
-                        <Button size="sm" variant="outline" onClick={() => setFilters({ ...DEFAULT_FILTERS })}>
-                          <RotateCcw className="h-3.5 w-3.5 mr-1.5" /> Limpar filtros
-                        </Button>
-                      </>
-                    ) : (
-                      <p>
-                        Nenhuma oportunidade encontrada.<br />
-                        Use a busca inteligente {isMobile ? "acima" : "ao lado"} para descobrir editais e palcos novos.
-                      </p>
-                    )}
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                  {filtered.map((op) => (
-                    <OpportunityCard
-                      key={`${op.tipo}-${op.key}`}
-                      opportunity={op}
-                      onClick={handleOpenDetail}
-                      onApply={op.editalId || op.origem !== "saved" ? handleInterest : undefined}
-                      alreadyApplied={isAlreadyApplied(op)}
-                      pending={interestPending === op.key}
-                      onSave={op.origem === "ai" ? handleSave : undefined}
-                      onRemove={op.origem === "saved" ? handleRemove : undefined}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
         </TabsContent>
 
         <TabsContent value="inscricoes" className="mt-4">
