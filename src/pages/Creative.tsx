@@ -39,6 +39,7 @@ import { AIQuotaBadge } from "@/components/ui/ai-quota-badge";
 import { trackEvent } from "@/lib/analytics";
 import { markChecklistItem } from "@/hooks/useReleaseChecklist";
 import { useAuth } from "@/contexts/AuthContext";
+import { DebugPromptPanel, type DebugPromptPayload } from "@/components/creative/DebugPromptPanel";
 
 // Mapeia formato gerado → chave do Checklist de Lançamento
 const FORMAT_TO_CHECKLIST_KEY: Record<string, string> = {
