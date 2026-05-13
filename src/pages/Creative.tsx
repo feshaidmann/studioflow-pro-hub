@@ -416,7 +416,8 @@ export default function Creative() {
   // trackName, artistName), que controlam tipografia de forma explícita.
   const contextPrompt = prompt;
 
-  const handleGenerate = useCallback(async () => {
+  const handleGenerate = useCallback(async (opts?: { debug?: boolean }) => {
+    const useDebug = opts?.debug ?? debugMode;
     if (materialType === "legenda") {
       setStep("caption");
       return;
@@ -440,9 +441,16 @@ export default function Creative() {
       releaseDate: releaseDate || undefined,
       additionalText: additionalText.trim() || undefined,
       noText: noText || undefined,
+      debug: useDebug || undefined,
     });
 
-    if (result) {
+    if (result && (result as any).debug) {
+      setDebugPayload(result as DebugPromptPayload);
+      return;
+    }
+
+    if (result && result.imageBase64) {
+      setDebugPayload(null);
       setGeneratedImage(result.imageBase64);
       setGeneratedBase64(result.imageBase64);
       setSavedToGallery(false);
@@ -484,10 +492,10 @@ export default function Creative() {
       }
     }
   }, [
-    materialType, prompt, contextPrompt, style, selectedFormat,
+    debugMode, materialType, prompt, contextPrompt, style, selectedFormat,
     referenceImage, selectedProjectId, trackName, artistName,
     releaseDate, additionalText, noText, loopDuration, videoPreset,
-    videoIntensity, videoSpots, generate,
+    videoIntensity, videoSpots, generate, dnaSource,
   ]);
 
   const handleVariation = useCallback(async () => {
