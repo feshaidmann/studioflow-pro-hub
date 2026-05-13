@@ -13,10 +13,10 @@ export const APPLICATION_STATUS_LABELS: Record<ApplicationStatus, string> = {
 };
 
 export const APPLICATION_STATUS_COLORS: Record<ApplicationStatus, string> = {
-  interesse: "bg-blue-500/25 text-blue-900 border-blue-500/50 font-semibold",
-  preparando: "bg-amber-500/25 text-amber-900 border-amber-500/50 font-semibold",
-  inscrito: "bg-green-500/25 text-green-900 border-green-500/50 font-semibold",
-  resultado: "bg-purple-500/15 text-purple-700 border-purple-200",
+  interesse: "bg-primary/15 text-primary border-primary/30 font-medium",
+  preparando: "bg-warning/20 text-warning-foreground border-warning/40 font-medium",
+  inscrito: "bg-success/20 text-success border-success/40 font-medium",
+  resultado: "bg-accent/15 text-accent-foreground border-accent/30 font-medium",
 };
 
 export type ResultadoType = "aprovado" | "reprovado" | "lista_espera" | "desistencia";
@@ -29,9 +29,9 @@ export const RESULTADO_LABELS: Record<ResultadoType, string> = {
 };
 
 export const RESULTADO_COLORS: Record<ResultadoType, string> = {
-  aprovado: "bg-green-500/25 text-green-900 border-green-500/50 font-semibold",
-  reprovado: "bg-red-500/25 text-red-900 border-red-500/50 font-semibold",
-  lista_espera: "bg-amber-500/25 text-amber-900 border-amber-500/50 font-semibold",
+  aprovado: "bg-success/20 text-success border-success/40 font-medium",
+  reprovado: "bg-destructive/15 text-destructive border-destructive/30 font-medium",
+  lista_espera: "bg-warning/20 text-warning-foreground border-warning/40 font-medium",
   desistencia: "bg-muted text-muted-foreground border-border",
 };
 
@@ -59,6 +59,8 @@ export interface EditalApplication {
     prazo: string | null;
     link: string | null;
     area: string | null;
+    tipo: string | null;
+    resumo?: string | null;
   };
 }
 
@@ -70,7 +72,7 @@ export function useEditalApplications() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("edital_applications")
-        .select("*, edital:editais(id, titulo, orgao, estado, status, prazo, link, area)")
+        .select("*, edital:editais(id, titulo, orgao, estado, status, prazo, link, area, tipo, resumo)")
         .order("updated_at", { ascending: false });
       if (error) throw error;
       return (data || []) as unknown as EditalApplication[];
