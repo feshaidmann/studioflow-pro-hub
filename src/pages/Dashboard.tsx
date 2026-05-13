@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo, type ReactNode } from "react";
+import { useState, useEffect, useRef, useMemo, lazy, Suspense, type ReactNode } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Bot, ChevronDown, ChevronUp } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -19,20 +19,25 @@ import { useGuestProjects } from "@/hooks/useGuestProjects";
 import { useGuestTasks } from "@/hooks/useGuestTasks";
 import { usePendingInvites } from "@/hooks/usePendingInvites";
 import { useDailyTaskAutoGen } from "@/hooks/useDailyTaskAutoGen";
+import { Skeleton } from "@/components/ui/skeleton";
 
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import FinancialSummary from "@/components/dashboard/FinancialSummary";
 import DailyChecklist from "@/components/dashboard/DailyChecklist";
 import FirstRunEmptyState from "@/components/dashboard/FirstRunEmptyState";
-import RecentTransactions from "@/components/dashboard/RecentTransactions";
-import UpcomingReleases from "@/components/dashboard/UpcomingReleases";
 import ProjectAlertsCard from "@/components/dashboard/ProjectAlertsCard";
 import ProjectHealthList from "@/components/dashboard/ProjectHealthList";
 import PendingTeamCard from "@/components/dashboard/PendingTeamCard";
-import GuestProjectsList from "@/components/dashboard/GuestProjectsList";
-import EditalProgressCard from "@/components/dashboard/EditalProgressCard";
 import JourneyFocusCard from "@/components/dashboard/JourneyFocusCard";
 import { getJourneyPlan } from "@/lib/journeyPersonalization";
+
+// Lazy-loaded — não bloqueiam o first render do Dashboard
+const RecentTransactions = lazy(() => import("@/components/dashboard/RecentTransactions"));
+const UpcomingReleases = lazy(() => import("@/components/dashboard/UpcomingReleases"));
+const GuestProjectsList = lazy(() => import("@/components/dashboard/GuestProjectsList"));
+const EditalProgressCard = lazy(() => import("@/components/dashboard/EditalProgressCard"));
+
+const CardSkeleton = () => <Skeleton className="h-32 w-full rounded-2xl" />;
 
 export default function Dashboard() {
   const aiRef = useRef<AITaskAssistantHandle>(null);
