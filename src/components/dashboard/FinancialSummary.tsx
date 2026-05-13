@@ -26,12 +26,12 @@ export default function FinancialSummary({ financials, isSimpleMode }: Financial
   ];
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 animate-fade-in">
+    <section role="region" aria-label="Resumo financeiro" className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 animate-fade-in">
       {kpis.map(({ label, value, icon: Icon, colorClass, aria }, i) => (
         <Card key={label} className="glass-card" style={{ animationDelay: `${i * 60}ms` }} aria-label={aria}>
           <CardContent className="p-3 sm:p-4 flex items-center gap-2 sm:gap-3">
             <div className={`p-1.5 sm:p-2 rounded-lg bg-card/60 shrink-0 ${colorClass}`}>
-              <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <Icon aria-hidden="true" className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             </div>
             <div className="min-w-0">
               <p className="text-[10px] sm:text-xs text-muted-foreground truncate">{label}</p>
@@ -40,6 +40,6 @@ export default function FinancialSummary({ financials, isSimpleMode }: Financial
           </CardContent>
         </Card>
       ))}
-    </div>
+    </section>
   );
 }
