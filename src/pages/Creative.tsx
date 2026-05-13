@@ -1012,7 +1012,7 @@ export default function Creative() {
                 <div className="flex justify-center"><AIQuotaBadge variant="text" /></div>
                 <Button
                   className="w-full"
-                  onClick={handleGenerate}
+                  onClick={() => handleGenerate()}
                   disabled={generating || videoRendering || !canGenerate}
                 >
                   {selectedFormat.isVideo
