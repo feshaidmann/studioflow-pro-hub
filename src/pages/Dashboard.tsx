@@ -124,40 +124,49 @@ export default function Dashboard() {
   // Auto-generate tasks once per session, with 1-hour throttle
   useEffect(() => {
     if (!user || projects.length === 0 || autoGenRef.current) return;
-    autoGenRef.current = true;
     const THROTTLE_KEY = "sfp_tasks_last_gen";
     const THROTTLE_MS = 60 * 60 * 1000;
     const lastGen = Number(localStorage.getItem(THROTTLE_KEY) || "0");
-    if (Date.now() - lastGen < THROTTLE_MS) { refreshTasks(); return; }
+    if (Date.now() - lastGen < THROTTLE_MS) {
+      autoGenRef.current = true;
+      refreshTasks();
+      return;
+    }
+    autoGenRef.current = true;
     const run = async () => {
       try {
-        // Conta tarefas auto-geradas ativas antes
-        const { count: beforeCount } = await supabase
+        // Conta tarefas auto-geradas ativas antes — capturado ANTES de qualquer await
+        const beforeRes = await supabase
           .from("tasks")
           .select("id", { count: "exact", head: true })
           .eq("user_id", user.id)
           .eq("auto_generated", true)
           .eq("completed", false)
           .eq("dismissed", false);
+        const beforeCount = beforeRes.count ?? 0;
         await supabase.functions.invoke("generate-daily-tasks", { body: {} });
         localStorage.setItem(THROTTLE_KEY, String(Date.now()));
-        const { count: afterCount } = await supabase
+        const afterRes = await supabase
           .from("tasks")
           .select("id", { count: "exact", head: true })
           .eq("user_id", user.id)
           .eq("auto_generated", true)
           .eq("completed", false)
           .eq("dismissed", false);
-        const delta = (afterCount ?? 0) - (beforeCount ?? 0);
+        const delta = (afterRes.count ?? 0) - beforeCount;
         if (delta > 0) {
           toast.info(`Checklist atualizado · ${delta} ${delta === 1 ? "nova tarefa" : "novas tarefas"}`, { duration: 4000 });
         }
-      } catch {}
-      refreshTasks();
+      } catch (err) {
+        console.warn("[dashboard] auto-gen falhou", err);
+        // libera retry em próxima montagem
+        autoGenRef.current = false;
+      } finally {
+        refreshTasks();
+      }
     };
     run();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id, projects.length]);
+  }, [user, projects.length, refreshTasks]);
 
   const handleRefreshTasks = async () => {
     setRefreshing(true);
@@ -193,11 +202,10 @@ export default function Dashboard() {
       (acc, t) => { if (t.type === "income") acc.totalIncome += t.amount; else acc.totalExpense += t.amount; acc.profit = acc.totalIncome - acc.totalExpense; return acc; },
       { totalIncome: 0, totalExpense: 0, profit: 0 }
     );
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedProjectId, filtered, transactions]);
+  }, [selectedProjectId, filtered, transactions, getProjectFinancials]);
 
-  // ── Build context-aware chips for AI ──
-  const buildAIChips = () => {
+  // ── Build context-aware chips for AI (memoizado para preservar igualdade referencial) ──
+  const aiChips = useMemo(() => {
     const chips: Array<{ label: string; msg: string; highlight?: boolean }> = [];
 
     // Prioritize actionable chips
