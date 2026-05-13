@@ -28,6 +28,7 @@ import OpportunityFilters, {
 import OpportunityDetailSheet from "@/components/carreira/OpportunityDetailSheet";
 import ApplicationStatusMenu from "@/components/carreira/ApplicationStatusMenu";
 import AISearchPanel from "@/components/carreira/AISearchPanel";
+import AdvancedFiltersSheet from "@/components/carreira/AdvancedFiltersSheet";
 import ActiveFiltersChips from "@/components/carreira/ActiveFiltersChips";
 import RecommendedSection from "@/components/carreira/RecommendedSection";
 import EditalResultModal from "@/components/editais/EditalResultModal";
