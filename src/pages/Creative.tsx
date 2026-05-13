@@ -655,7 +655,6 @@ export default function Creative() {
         : "Renderizando vídeo…";
     }
     if (materialType === "legenda") return "Criar legenda";
-    if (materialType === "reels") return "Gerar Vídeo Loop";
     if (referenceImage) return "Gerar a partir da referência";
     return `Gerar ${MATERIAL_OPTIONS.find((m) => m.id === materialType)?.label ?? "arte"}`;
   })();
