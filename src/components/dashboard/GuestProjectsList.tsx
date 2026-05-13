@@ -29,15 +29,24 @@ export default function GuestProjectsList({ projects, loading }: GuestProjectsLi
 
   if (loading) {
     return (
-      <Card className="glass-card animate-fade-in" style={{ animationDelay: "80ms" }}>
+      <Card
+        role="region"
+        aria-labelledby="region-guest-projects-title"
+        aria-busy="true"
+        className="glass-card animate-fade-in"
+        style={{ animationDelay: "80ms" }}
+      >
         <CardHeader className="pb-2">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Users className="h-4 w-4 text-primary" />
+          <CardTitle id="region-guest-projects-title" className="text-base flex items-center gap-2">
+            <Users aria-hidden="true" className="h-4 w-4 text-primary" />
             Projetos como Parceiro
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <DataSkeleton lines={2} />
+          <div role="status" aria-live="polite" aria-label="Carregando projetos como parceiro">
+            <DataSkeleton lines={2} />
+            <span className="sr-only">Carregando…</span>
+          </div>
         </CardContent>
       </Card>
     );
@@ -48,36 +57,41 @@ export default function GuestProjectsList({ projects, loading }: GuestProjectsLi
   if (active.length === 0) return null;
 
   return (
-    <Card className="glass-card animate-fade-in" style={{ animationDelay: "80ms" }}>
+    <Card role="region" aria-labelledby="region-guest-projects-title" className="glass-card animate-fade-in" style={{ animationDelay: "80ms" }}>
       <CardHeader className="pb-2">
-        <CardTitle className="text-base flex items-center gap-2">
-          <Users className="h-4 w-4 text-primary" />
+        <CardTitle id="region-guest-projects-title" className="text-base flex items-center gap-2">
+          <Users aria-hidden="true" className="h-4 w-4 text-primary" />
           Projetos como Parceiro
-          <StatusBadge variant="neutral">{active.length}</StatusBadge>
+          <StatusBadge variant="neutral" aria-label={`${active.length} projeto${active.length > 1 ? "s" : ""} como parceiro`}>{active.length}</StatusBadge>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-1.5">
-        {active.map((p) => (
-          <div
-            key={p.id}
-            className="flex items-center gap-3 rounded-lg px-3 py-2.5 border border-border/40 bg-card/60 cursor-pointer hover:-translate-y-0.5 transition-all duration-200"
-            onClick={() => navigate(`/projects/${p.id}`)}
-          >
-            <Music2 className="h-4 w-4 text-primary shrink-0" />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{p.name}</p>
-              <p className="text-[11px] text-muted-foreground">{p.artist || "—"}</p>
-            </div>
-            <div className="flex items-center gap-1.5 shrink-0">
-              <Badge variant="secondary" className="text-[10px]">
-                {STAGE_LABEL[p.stage] ?? p.stage}
-              </Badge>
-              <Badge className="text-[9px] bg-primary/10 text-primary border border-primary/30">
-                {p.role || "Colaborador"}
-              </Badge>
-            </div>
-          </div>
-        ))}
+        <ul role="list" className="space-y-1.5 m-0 p-0 list-none">
+          {active.map((p) => (
+            <li key={p.id}>
+              <button
+                type="button"
+                className="w-full text-left flex items-center gap-3 rounded-lg px-3 py-2.5 border border-border/40 bg-card/60 hover:-translate-y-0.5 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                aria-label={`Abrir projeto ${p.name}${p.artist ? ` de ${p.artist}` : ""}, estágio ${STAGE_LABEL[p.stage] ?? p.stage}, papel ${p.role || "Colaborador"}`}
+                onClick={() => navigate(`/projects/${p.id}`)}
+              >
+                <Music2 aria-hidden="true" className="h-4 w-4 text-primary shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{p.name}</p>
+                  <p className="text-[11px] text-muted-foreground">{p.artist || "—"}</p>
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <Badge variant="secondary" className="text-[10px]">
+                    {STAGE_LABEL[p.stage] ?? p.stage}
+                  </Badge>
+                  <Badge className="text-[9px] bg-primary/10 text-primary border border-primary/30">
+                    {p.role || "Colaborador"}
+                  </Badge>
+                </div>
+              </button>
+            </li>
+          ))}
+        </ul>
       </CardContent>
     </Card>
   );
