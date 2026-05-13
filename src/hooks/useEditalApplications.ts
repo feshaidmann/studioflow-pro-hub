@@ -93,6 +93,8 @@ interface RPCRow {
   prazo: string | null;
   link: string | null;
   resumo: string | null;
+  link_status: "ok" | "broken" | "unknown" | null;
+  link_checked_at: string | null;
 }
 
 export function useEditalApplications() {
