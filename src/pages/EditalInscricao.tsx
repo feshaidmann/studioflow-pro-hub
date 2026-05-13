@@ -167,7 +167,7 @@ export default function EditalInscricao() {
 
   // Calculate progress
   const progress = useMemo(() => {
-    if (!extractedFields?.campos.length) return 0;
+    if (!extractedFields?.campos?.length) return 0;
     const filled = extractedFields.campos.filter((c) => formValues[c.nome]?.trim()).length;
     return Math.round((filled / extractedFields.campos.length) * 100);
   }, [extractedFields, formValues]);
