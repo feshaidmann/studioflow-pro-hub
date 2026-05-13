@@ -89,6 +89,7 @@ export function useCreativeAssets() {
     releaseDate?: string;
     additionalText?: string;
     noText?: boolean;
+    debug?: boolean;
   }) => {
     if (!user) return null;
     setGenerating(true);
@@ -120,6 +121,7 @@ export function useCreativeAssets() {
           releaseDate: params.releaseDate,
           additionalText: params.additionalText,
           noText: params.noText,
+          debug: params.debug,
         }),
       });
 
