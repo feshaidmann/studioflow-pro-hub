@@ -354,36 +354,42 @@ export default function Carreira() {
 
   const loading = loadingEditais || loadingCurados;
 
-  const FiltersSidebar = (
-    <OpportunityFilters
-      filters={filters}
-      onChange={setFilters}
-      className="rounded-[0.875rem] border border-border bg-card/60 backdrop-blur-sm p-4"
-    />
+  // Conta filtros "avançados" (vão pro Sheet) — usados só para o badge
+  const advancedActiveCount =
+    (filters.status !== "todos" ? 1 : 0) +
+    (filters.estado !== "todos" ? 1 : 0) +
+    (filters.genero !== "todos" ? 1 : 0) +
+    (filters.deadline !== "todos" ? 1 : 0);
+
+  // Chips horizontais de tipo (filtro principal — sempre visível)
+  const TipoChips = (
+    <div className="flex items-center gap-1 rounded-full border border-border bg-card/60 backdrop-blur-sm p-0.5">
+      {[
+        { v: "todos" as const, l: "Todas" },
+        { v: "edital" as const, l: "Editais" },
+        { v: "palco" as const, l: "Palcos" },
+      ].map((o) => (
+        <button
+          key={o.v}
+          type="button"
+          onClick={() => setFilters({ ...filters, tipo: o.v })}
+          className={
+            "text-xs px-3 py-1 rounded-full transition-colors " +
+            (filters.tipo === o.v
+              ? "bg-primary text-primary-foreground"
+              : "text-muted-foreground hover:text-foreground")
+          }
+        >
+          {o.l}
+        </button>
+      ))}
+    </div>
   );
 
   return (
+    <TooltipProvider delayDuration={200}>
     <div className="space-y-4 pb-8">
-      <MobileStickyHeader
-        title="Carreira"
-        cta={
-          tab === "descobrir" ? (
-            <Sheet>
-              <SheetTrigger asChild>
-                <Button variant="outline" size="sm" className="h-8">
-                  <ListFilter className="h-3.5 w-3.5 mr-1" /> Filtros
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="left" className="w-[300px] overflow-y-auto">
-                <SheetHeader><SheetTitle>Filtros</SheetTitle></SheetHeader>
-                <div className="mt-4">
-                  <OpportunityFilters filters={filters} onChange={setFilters} />
-                </div>
-              </SheetContent>
-            </Sheet>
-          ) : null
-        }
-      />
+      <MobileStickyHeader title="Carreira" />
 
       <div className="hidden md:flex items-center justify-between">
         <div>
@@ -408,40 +414,110 @@ export default function Carreira() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="descobrir" className="mt-4">
-          <div className="grid grid-cols-1 md:grid-cols-[260px_1fr] gap-4">
-            <div className="hidden md:flex flex-col gap-4">
-              {FiltersSidebar}
-              <AISearchPanel onResults={handleAIResults} projectId={activeProject?.id || null} />
-            </div>
+        <TabsContent value="descobrir" className="mt-4 space-y-4">
+          {/* 1. Hero IA — primeira ação visível */}
+          <AISearchPanel onResults={handleAIResults} projectId={activeProject?.id || null} />
 
-            <div className="md:hidden">
-              <AISearchPanel onResults={handleAIResults} projectId={activeProject?.id || null} />
+          {/* 2. Resumo da IA (se houver) */}
+          {aiResults.length > 0 && aiSummary && (
+            <div className="rounded-[0.875rem] border border-primary/30 bg-primary/5 p-3 text-xs text-foreground inline-flex items-start gap-2 w-full">
+              <Sparkles className="h-3.5 w-3.5 text-primary mt-0.5 shrink-0" />
+              <span className="flex-1">{aiSummary}</span>
+              <button
+                type="button"
+                onClick={() => { setAiResults([]); setAiSummary(""); }}
+                className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
+                title="Limpar resultados da IA"
+              >
+                <X className="h-3 w-3" />
+              </button>
             </div>
+          )}
 
-            <div>
-              {/* Pra você (esconde quando filtros ativos) */}
-              {!totalActive && !loading && (
-                <RecommendedSection
-                  editais={editais}
-                  palcos={palcosCurados}
-                  perfil={{
-                    estado: profile?.state || profile?.city || activeProject?.artistState || null,
-                    specialties: profile?.specialties || [],
-                    generos: [activeProject?.genre, profile?.primary_genre].filter(Boolean) as string[],
-                  }}
-                  onOpen={handleOpenDetail}
-                  onApply={handleInterest}
-                  isApplied={isAlreadyApplied}
-                  pendingKey={interestPending}
+          {/* 3. Filtros principais — chips + sheet avançado */}
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div className="flex items-center gap-2 flex-wrap">
+              {TipoChips}
+              <AdvancedFiltersSheet
+                filters={filters}
+                onChange={setFilters}
+                activeCount={advancedActiveCount}
+              />
+            </div>
+            {totalActive && (
+              <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setFilters({ ...DEFAULT_FILTERS })}>
+                <RotateCcw className="h-3 w-3 mr-1" /> Limpar
+              </Button>
+            )}
+          </div>
+
+          {totalActive && (
+            <ActiveFiltersChips filters={filters} onChange={setFilters} />
+          )}
+
+          {/* 4. Pra você — só quando não há filtros nem busca IA */}
+          {!totalActive && !loading && aiResults.length === 0 && (
+            <RecommendedSection
+              editais={editais}
+              palcos={palcosCurados}
+              perfil={{
+                estado: profile?.state || profile?.city || activeProject?.artistState || null,
+                specialties: profile?.specialties || [],
+                generos: [activeProject?.genre, profile?.primary_genre].filter(Boolean) as string[],
+              }}
+              onOpen={handleOpenDetail}
+              onApply={handleInterest}
+              isApplied={isAlreadyApplied}
+              pendingKey={interestPending}
+            />
+          )}
+
+          {/* 5. Contador */}
+          <div className="text-xs text-muted-foreground">
+            {filtered.length} oportunidade(s){totalActive ? " com filtros aplicados" : ""}
+          </div>
+
+          {/* 6. Grade */}
+          {loading ? (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <Skeleton key={i} className="h-44 rounded-[0.875rem]" />
+              ))}
+            </div>
+          ) : filtered.length === 0 ? (
+            <Card className="rounded-[0.875rem]">
+              <CardContent className="py-12 text-center text-sm text-muted-foreground space-y-3">
+                {totalActive ? (
+                  <>
+                    <p>Nenhuma oportunidade combina com esses filtros.</p>
+                    <Button size="sm" variant="outline" onClick={() => setFilters({ ...DEFAULT_FILTERS })}>
+                      <RotateCcw className="h-3.5 w-3.5 mr-1.5" /> Limpar filtros
+                    </Button>
+                  </>
+                ) : (
+                  <p>
+                    Nenhuma oportunidade encontrada.<br />
+                    Use a busca inteligente acima para descobrir editais e palcos novos.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+              {filtered.map((op) => (
+                <OpportunityCard
+                  key={`${op.tipo}-${op.key}`}
+                  opportunity={op}
+                  onClick={handleOpenDetail}
+                  onApply={op.editalId || op.origem !== "saved" ? handleInterest : undefined}
+                  alreadyApplied={isAlreadyApplied(op)}
+                  pending={interestPending === op.key}
+                  onSave={op.origem === "ai" ? handleSave : undefined}
+                  onRemove={op.origem === "saved" ? handleRemove : undefined}
                 />
-              )}
-
-              {/* Chips de filtros ativos */}
-              {totalActive && (
-                <ActiveFiltersChips filters={filters} onChange={setFilters} className="mb-3" />
-              )}
-
+              ))}
+            </div>
+          )}
               <div className="flex items-center justify-between mb-3 text-xs text-muted-foreground gap-2 flex-wrap">
                 <span>{filtered.length} oportunidade(s){totalActive ? " com filtros aplicados" : ""}</span>
                 <div className="flex items-center gap-1">
