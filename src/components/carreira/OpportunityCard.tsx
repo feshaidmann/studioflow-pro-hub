@@ -45,6 +45,18 @@ export default function OpportunityCard({ opportunity: op, onApply, onSave, onRe
     ? "Edital"
     : (op.porteOuTipo ? TIPO_PALCO_LABELS[op.porteOuTipo as TipoPalco] || "Palco" : "Palco");
   const prazoFmt = formatDate(op.prazo);
+  const isBroken = op.linkStatus === "broken";
+  const [feedback, setFeedback] = useState<"up" | "down" | null>(null);
+
+  const sendFeedback = (verdict: "up" | "down") => {
+    if (feedback) return;
+    setFeedback(verdict);
+    void trackAppEvent("carreira_ai_feedback", {
+      verdict,
+      opportunity_type: op.tipo,
+      opportunity_key: op.key,
+    });
+  };
 
   return (
     <div
@@ -71,13 +83,22 @@ export default function OpportunityCard({ opportunity: op, onApply, onSave, onRe
           <Badge variant="outline" className={cn("text-[11px]", statusColor(op.status))}>
             {op.status}
           </Badge>
-          {op.area && isEdital && (
-            <Badge variant="secondary" className="text-[11px]">{op.area}</Badge>
-          )}
           {recommended && (
             <Badge variant="outline" className="text-[10px] bg-accent/10 text-accent-foreground border-accent/30">
               Pra você
             </Badge>
+          )}
+          {isBroken && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="text-[10px] inline-flex items-center gap-1 text-muted-foreground border border-border rounded-full px-1.5 py-0.5">
+                  <Search className="h-2.5 w-2.5" /> link oficial fora do ar
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>
+                Verificamos o link periodicamente — quando voltar, o botão de abrir aparece de novo.
+              </TooltipContent>
+            </Tooltip>
           )}
         </div>
       </div>
@@ -85,6 +106,13 @@ export default function OpportunityCard({ opportunity: op, onApply, onSave, onRe
       <h3 className="text-sm font-semibold leading-snug mb-1 line-clamp-2">{op.titulo}</h3>
       {op.organizador && (
         <p className="text-xs text-muted-foreground mb-2 line-clamp-1">{op.organizador}</p>
+      )}
+
+      {op.matchReason && op.origem === "ai" && (
+        <p className="text-xs text-primary/90 mb-2 line-clamp-2 inline-flex items-start gap-1">
+          <Sparkles className="h-3 w-3 mt-0.5 shrink-0" />
+          <span>{op.matchReason}</span>
+        </p>
       )}
 
       {op.resumo && (
@@ -105,17 +133,11 @@ export default function OpportunityCard({ opportunity: op, onApply, onSave, onRe
         )}
       </div>
 
-      <div className="flex items-center gap-2 pt-2 border-t border-border/60" onClick={(e) => e.stopPropagation()}>
-        {op.linkStatus === "broken" ? (
-          <Button
-            size="sm"
-            variant="ghost"
-            className="h-7 text-xs px-2 text-warning"
-            asChild
-            title="Link oficial indisponível — buscar no Google"
-          >
+      <div className="flex items-center gap-1.5 pt-2 border-t border-border/60" onClick={(e) => e.stopPropagation()}>
+        {isBroken ? (
+          <Button size="sm" variant="ghost" className="h-7 text-xs px-2 text-muted-foreground" asChild>
             <a href={buildGoogleFallbackUrl(op)} target="_blank" rel="noopener noreferrer">
-              <ExternalLink className="h-3 w-3 mr-1" /> Buscar
+              <Search className="h-3 w-3 mr-1" /> Buscar no Google
             </a>
           </Button>
         ) : op.link ? (
@@ -125,34 +147,70 @@ export default function OpportunityCard({ opportunity: op, onApply, onSave, onRe
             </a>
           </Button>
         ) : null}
-        {onApply && (
-          alreadyApplied ? (
-            <Button size="sm" variant="outline" className="h-7 text-xs px-2 ml-auto" disabled>
-              <ClipboardList className="h-3 w-3 mr-1" /> No pipeline
+
+        {op.origem === "ai" && (
+          <div className="flex items-center gap-0.5 text-muted-foreground">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className={cn("h-7 w-7", feedback === "up" && "text-success")}
+                  onClick={() => sendFeedback("up")}
+                  disabled={!!feedback}
+                >
+                  <ThumbsUp className="h-3 w-3" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Útil para mim</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className={cn("h-7 w-7", feedback === "down" && "text-destructive")}
+                  onClick={() => sendFeedback("down")}
+                  disabled={!!feedback}
+                >
+                  <ThumbsDown className="h-3 w-3" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Não é o que procuro</TooltipContent>
+            </Tooltip>
+          </div>
+        )}
+
+        <div className="ml-auto flex items-center gap-1.5">
+          {onApply && (
+            alreadyApplied ? (
+              <Button size="sm" variant="outline" className="h-7 text-xs px-2" disabled>
+                <ClipboardList className="h-3 w-3 mr-1" /> No pipeline
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                variant="default"
+                className="h-7 text-xs px-2"
+                disabled={pending}
+                onClick={() => onApply(op)}
+              >
+                {pending ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <ClipboardList className="h-3 w-3 mr-1" />}
+                {isEdital ? "Candidatar" : "Marcar interesse"}
+              </Button>
+            )
+          )}
+          {onSave && op.origem === "ai" && (
+            <Button size="sm" variant="outline" className="h-7 text-xs px-2" onClick={() => onSave(op)}>
+              Salvar
             </Button>
-          ) : (
-            <Button
-              size="sm"
-              variant="default"
-              className="h-7 text-xs px-2 ml-auto"
-              disabled={pending}
-              onClick={() => onApply(op)}
-            >
-              {pending ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <ClipboardList className="h-3 w-3 mr-1" />}
-              {isEdital ? "Candidatar" : "Marcar interesse"}
+          )}
+          {onRemove && op.origem === "saved" && (
+            <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive" onClick={() => onRemove(op)}>
+              <Trash2 className="h-3.5 w-3.5" />
             </Button>
-          )
-        )}
-        {onSave && op.origem === "ai" && (
-          <Button size="sm" variant="outline" className="h-7 text-xs px-2 ml-auto" onClick={() => onSave(op)}>
-            Salvar
-          </Button>
-        )}
-        {onRemove && op.origem === "saved" && (
-          <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive ml-auto" onClick={() => onRemove(op)}>
-            <Trash2 className="h-3.5 w-3.5" />
-          </Button>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );
