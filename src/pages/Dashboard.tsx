@@ -1,6 +1,7 @@
-import { useState, useEffect, useRef, useMemo, lazy, Suspense, type ReactNode } from "react";
+import { useState, useEffect, useRef, useMemo, lazy, type ReactNode } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Bot, ChevronDown } from "lucide-react";
+import { Bot, ChevronDown, FileText, Calendar, Receipt, Users } from "lucide-react";
+import LazyCardBoundary from "@/components/dashboard/LazyCardBoundary";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useNavigate } from "react-router-dom";
 import { useProjects } from "@/contexts/ProjectContext";
@@ -37,12 +38,6 @@ const UpcomingReleases = lazy(() => import("@/components/dashboard/UpcomingRelea
 const GuestProjectsList = lazy(() => import("@/components/dashboard/GuestProjectsList"));
 const EditalProgressCard = lazy(() => import("@/components/dashboard/EditalProgressCard"));
 
-const CardSkeleton = () => (
-  <div role="status" aria-live="polite" aria-busy="true" aria-label="Carregando seção do dashboard">
-    <Skeleton className="h-32 w-full rounded-2xl" />
-    <span className="sr-only">Carregando…</span>
-  </div>
-);
 
 export default function Dashboard() {
   const aiRef = useRef<AITaskAssistantHandle>(null);
@@ -316,10 +311,10 @@ export default function Dashboard() {
     alerts: <div id="alerts-section"><ProjectAlertsCard alerts={alerts} hidden={isFirstRun} /></div>,
     team: <PendingTeamCard hidden={isFirstRun} />,
     projects: <ProjectHealthList projects={projectsWithHealth} hidden={isFirstRun} />,
-    editais: <Suspense fallback={<CardSkeleton />}><EditalProgressCard hidden={isFirstRun} /></Suspense>,
-    releases: <div id="releases-section"><Suspense fallback={<CardSkeleton />}><UpcomingReleases projects={projects} getMixPercent={getMixPercent} hidden={isFirstRun} /></Suspense></div>,
+    editais: <LazyCardBoundary title="Editais e Oportunidades" icon={FileText} minHeight="8rem"><EditalProgressCard hidden={isFirstRun} /></LazyCardBoundary>,
+    releases: <div id="releases-section"><LazyCardBoundary title="Próximos lançamentos" icon={Calendar} minHeight="8rem"><UpcomingReleases projects={projects} getMixPercent={getMixPercent} hidden={isFirstRun} /></LazyCardBoundary></div>,
     finance: <FinancialSummary financials={financials} isSimpleMode={isSimpleMode} />,
-    transactions: !isSimpleMode ? <Suspense fallback={<CardSkeleton />}><RecentTransactions transactions={transactions} /></Suspense> : null,
+    transactions: !isSimpleMode ? <LazyCardBoundary title="Transações recentes" icon={Receipt} minHeight="8rem"><RecentTransactions transactions={transactions} /></LazyCardBoundary> : null,
   };
 
   // Render checklist + alerts inline (above AI), then the rest from journeyPlan order
@@ -365,9 +360,9 @@ export default function Dashboard() {
         .filter(Boolean)}
 
       {/* Projetos como parceiro */}
-      <Suspense fallback={<CardSkeleton />}>
+      <LazyCardBoundary title="Projetos como parceiro" icon={Users} minHeight="8rem">
         <GuestProjectsList projects={guestProjects} loading={loadingGuestProjects} />
-      </Suspense>
+      </LazyCardBoundary>
     </div>
   );
 }

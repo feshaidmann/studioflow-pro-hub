@@ -1,139 +1,73 @@
 ## Objetivo
 
-Tornar o Dashboard navegável e compreensível por leitores de tela e teclado. Cobre todos os cards (incluindo os lazy-loaded), botões icon-only, áreas clicáveis, anúncios dinâmicos e foco visível. Apenas frontend — sem mudanças em hooks, dados ou negócio.
+Padronizar como os 4 cards lazy-loaded do Dashboard (`EditalProgressCard`, `UpcomingReleases`, `RecentTransactions`, `GuestProjectsList`) se comportam enquanto carregam, quando falham ao baixar o chunk, e quando o componente lança erro em runtime — com retry e mensagens amigáveis em pt-BR.
 
----
+## Problema atual
 
-## 1. Estrutura semântica do Dashboard
+- O `Suspense` usa um `CardSkeleton` genérico (apenas um retângulo cinza), igual em todos os cards — não comunica o que está carregando.
+- Não há `ErrorBoundary`. Se o `import()` falhar (rede instável, deploy novo invalidando o chunk) ou o componente lançar, o Dashboard inteiro quebra ou mostra tela em branco.
+- Sem retry: o usuário precisa recarregar a página inteira.
 
-`src/pages/Dashboard.tsx`:
-- Envolver o conteúdo em `<main id="main" aria-labelledby="dashboard-title">`.
-- `DashboardHeader` mantém o `<h1>Dashboard</h1>` (já existe) + `id="dashboard-title"`.
-- Cada `<Card>` usado como seção do dashboard recebe `role="region"` + `aria-labelledby` apontando para o id do título do card. IDs estáveis: `region-hero`, `region-alerts`, `region-checklist`, `region-ai`, `region-projects`, `region-team`, `region-editais`, `region-releases`, `region-finance`, `region-transactions`, `region-guest-projects`.
-- Suspense com `fallback` ganha `role="status" aria-live="polite" aria-label="Carregando…"` em `CardSkeleton`.
-- Adicionar `<a href="#main" className="sr-only focus:not-sr-only ...">Pular para o conteúdo</a>` no início.
+## Solução
 
----
+### 1. Novo componente `LazyCardBoundary` (wrapper único)
 
-## 2. Componentes lazy-loaded
+`src/components/dashboard/LazyCardBoundary.tsx` — combina `ErrorBoundary` + `Suspense` + skeleton tipado + UI de erro com retry. Substitui o uso direto de `<Suspense>` no Dashboard.
 
-### `EditalProgressCard.tsx`
-- `<Card role="region" aria-labelledby="region-editais-title">` + `<CardTitle id="region-editais-title">`.
-- Estado de carregamento atual retorna `null`; trocar por `<Card role="status" aria-live="polite" aria-busy="true">` com skeleton, ou usar fallback no Suspense (já é o caso) — basta garantir `aria-busy` no Suspense fallback.
-- Bloco "Nearest deadline" recebe `role="status"` quando `daysLeft <= 3` (urgente).
-- Botão "Ver pipeline completo" ganha `aria-label="Ver pipeline completo de editais"`.
+Props:
+- `title: string` — rótulo amigável ("Próximos lançamentos", "Editais", etc.) usado no skeleton e na mensagem de erro.
+- `icon?: LucideIcon` — opcional, mostrado no skeleton e no erro.
+- `minHeight?: string` — para evitar layout shift (ex.: `"8rem"`).
+- `children` — o componente lazy.
 
-### `RecentTransactions.tsx`
-- Header com `aria-labelledby`.
-- Lista vira `<ul role="list">` e cada linha `<li>`. Linha clicável vira `<button>` semântico (não `<div>` com role) — substitui `role/tabIndex/onKeyDown` por `<button type="button" className="...w-full text-left">` quando `tx.projectId`. Quando não navegável, `<div>` simples sem role.
-- Cada linha ganha `aria-label` resumindo: "{descrição}, {valor formatado}, {receita/despesa}, {pago/pendente}, {projeto se houver}, {data}".
-- Status "Pago/Pendente" usa `<span role="status">` ou `aria-label` no badge para reforçar.
-- Botão "Ver todas" → `aria-label="Ver todas as transações"`.
+Comportamento:
+- **Loading**: skeleton no formato de Card real (header com ícone + título + linhas de conteúdo), `role="status"`, `aria-busy="true"`, `aria-label="Carregando {title}"`.
+- **Erro**: Card com ícone `AlertCircle`, título "Não foi possível carregar {title}", descrição curta ("Verifique sua conexão e tente novamente."), botão **Tentar novamente** que reseta o boundary e força nova tentativa do `import()`.
+- **Retry inteligente**: usa `key` interno incrementado no clique para remontar o `Suspense`; se for erro de chunk (`ChunkLoadError` / mensagem com "Failed to fetch dynamically imported module"), oferece também botão **Recarregar página** como fallback.
+- Loga o erro no console com prefixo `[LazyCardBoundary:{title}]`.
 
-### `UpcomingReleases.tsx`
-- Header com `aria-labelledby`.
-- Lista vira `<ul role="list">` e cada item vira `<li>` contendo `<button type="button">` (substitui o `<div onClick>`). Adicionar `aria-label="Abrir {nome} de {artista}, estágio {stageLabel}, {mixPct}% de mix, {prazo}"`.
-- Barra de progresso vira `<div role="progressbar" aria-valuenow={mixPct} aria-valuemin={0} aria-valuemax={100} aria-label="Progresso do mix">`.
-- Estado vazio: `<p>` ok; CTA já tem texto.
-- Botão "Ver projetos" → `aria-label`.
+### 2. `ErrorBoundary` interno
 
-### `GuestProjectsList.tsx`
-- Header com `aria-labelledby`.
-- Cada cartão de projeto vira `<button>` com `aria-label="Abrir projeto {name} de {artist}, estágio {STAGE_LABEL}, papel {role}"`. Remove cursor-pointer-only div.
-- DataSkeleton no loading: wrapper com `role="status" aria-live="polite" aria-label="Carregando projetos como parceiro"`.
+Implementado no mesmo arquivo como class component (React não tem hook nativo para isso). Reseta via `key` controlado pelo wrapper — não precisa de `react-error-boundary` (evita nova dependência).
 
----
+### 3. `CardSkeleton` tipado
 
-## 3. Demais cards do Dashboard (a11y completa)
+Substitui o `CardSkeleton` atual de `Dashboard.tsx`. Renderiza estrutura de Card (header com ícone+título placeholder usando o `title` real, 3 linhas de Skeleton no body), mantendo paridade visual com o card final.
 
-### `ProjectAlertsCard.tsx`
-- `Card role="region" aria-labelledby="region-alerts-title"` + `aria-live="polite"` (alertas surgem após cálculo).
-- Lista de alertas vira `<ul role="list">`, cada alerta `<li>`.
-- Botão "Resolver" recebe `aria-label="Resolver alerta {alert.title} no projeto {alert.projectName}"`.
-- Ícone severidade fica `aria-hidden="true"` (informação já está no texto/label).
+### 4. Atualização de `Dashboard.tsx`
 
-### `DailyChecklist.tsx`
-- `Card role="region" aria-labelledby="region-checklist-title"`.
-- `<ul role="list">` para tasks; cada `<li>` com `aria-label` derivado.
-- Checkbox shadcn já é acessível; adicionar `aria-label={\`Marcar tarefa como concluída: ${task.description}\`}` quando não há `<label>` visível associado.
-- Filtros (chips de fonte) viram `role="group" aria-label="Filtrar por origem"`. Cada chip `<button>` ganha `aria-pressed={active}`.
-- Selects de Projeto/Responsável recebem `aria-label` ("Filtrar por projeto", "Filtrar por responsável").
-- Inputs: `<Input>` recebe `aria-label="Nova tarefa"`. Botão Plus recebe `aria-label="Adicionar tarefa"`.
-- Botões de ação por linha (bot/ban/shield/delete) já têm `title`; adicionar `aria-label` equivalente.
-- Botão Refresh já recebeu `aria-label` na fase anterior — reforçar com `aria-busy={refreshing}`.
-- Quando `lastRefreshed` muda após refresh manual, anunciar via toast (já é o caso).
+Trocar os 4 blocos `<Suspense fallback={<CardSkeleton />}>` por:
 
-### `ProjectHealthList.tsx`
-- `Card role="region" aria-labelledby="region-projects-title"`.
-- Lista vira `<ul role="list">`. Cada item já é `role="button"`/`tabIndex={0}` — converter para `<button type="button" className="w-full text-left ...">` (semântico real).
-- StatusBadge de saúde fica visualmente colorido + texto; ícone vira `aria-hidden`.
+```tsx
+<LazyCardBoundary title="Editais" icon={FileText} minHeight="8rem">
+  <EditalProgressCard hidden={isFirstRun} />
+</LazyCardBoundary>
+```
 
-### `PendingTeamCard.tsx`
-- `Card role="region" aria-labelledby="region-team-title"`.
-- Itens já são `<button>` — adicionar `aria-label` com contexto completo: "Convite pendente para {nome} ({papel}) no projeto {projeto}, há {N} dias".
-- Aplicar `StatusBadge` (consistência com outros cards).
+Aplicado a:
+- `editais` → "Editais e Oportunidades", ícone `FileText`
+- `releases` → "Próximos lançamentos", ícone `Calendar`
+- `transactions` → "Transações recentes", ícone `Receipt`
+- `guestProjects` (em outras seções do Dashboard, se houver `<Suspense>`) → "Projetos como parceiro", ícone `Users`
 
-### `FinancialSummary.tsx`
-- Wrapper recebe `role="region" aria-label="Resumo financeiro"`.
-- Cada KPI card vira `<article aria-label={...}>` (já adicionado `aria-label` na fase anterior). Ícones `aria-hidden`.
+Remover o `CardSkeleton` antigo do topo de `Dashboard.tsx`.
 
-### `HeroFocusCard.tsx`
-- Já tem `role="button"` no bloco "Próxima ação". Garantir `aria-pressed` não aplicável; manter `aria-label` descritivo. Ícones `aria-hidden`.
-- Botão "Ver contexto do plano" ganha `aria-controls="hero-context"` apontando para o div com id="hero-context".
-- CTAs (Button) já têm texto visível — ok.
+### 5. Mensagens em pt-BR
 
-### `DashboardHeader.tsx`
-- `<h1>` já existe; adicionar `id="dashboard-title"`.
-- `Select` recebe `aria-label="Filtrar projeto exibido"`.
-- Botão "Novo Projeto" já tem texto.
+- Loading sr-only: `"Carregando {title}…"`
+- Erro título: `"Não foi possível carregar {title}"`
+- Erro descrição (genérico): `"Algo deu errado ao buscar esta seção. Tente novamente."`
+- Erro descrição (chunk): `"Não conseguimos baixar esta parte do app. Verifique sua conexão."`
+- Botões: `"Tentar novamente"` / `"Recarregar página"`
 
-### `FirstRunEmptyState.tsx`
-- `<Card role="region" aria-labelledby="empty-state-title">` + `<h2 id="empty-state-title">`.
-- Cada step do checklist vira `<li>` dentro de `<ul role="list">`. Container clicável vira `<button>` semântico para evitar duplo `onClick` no div + button interno (refator: o item fica `<li>` com 2 botões: o principal "Abrir ação" e o de toggle, separados por `e.stopPropagation` — ou substituir por `role="group"` mais claro).
-- Barra de progresso vira `role="progressbar" aria-valuenow aria-valuemin aria-valuemax aria-label="Progresso do checklist de início"`.
+## Fora de escopo
 
----
+- Cards não-lazy (`DailyChecklist`, `ProjectAlertsCard`, etc.) — eles já têm seus próprios estados de loading.
+- Retry de chamadas de dados dentro dos componentes (responsabilidade dos hooks).
+- Telemetria/analytics dos erros — apenas console.log.
+- Tradução EN (sistema bilíngue): chaves podem ser adicionadas depois; agora usa strings pt-BR diretas para manter consistência com o resto do Dashboard.
 
-## 4. Foco e teclado
+## Arquivos
 
-- Adicionar `focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2` em todos os elementos clicáveis customizados (cards convertidos para `<button>`). Tailwind/shadcn `Button` já tem.
-- `Esc` no Collapsible do AI Assistant (já é Radix — ok).
-- Skip link no topo (item 1).
-
----
-
-## 5. ARIA dinâmico
-
-- `Dashboard.tsx`: ao concluir refresh manual do checklist, manter `toast.success` (já anuncia via Sonner que tem `aria-live`).
-- `ProjectAlertsCard`: container com `aria-live="polite"` para que novos alertas sejam anunciados.
-- Skeleton de loading dos lazy: `role="status" aria-live="polite" aria-busy="true" aria-label="Carregando seção"`.
-
----
-
-## 6. Out of scope
-
-- Refatoração visual de cards.
-- Mudanças no `AITaskAssistant` interno (componente compartilhado, fora do escopo deste passo).
-- i18n das strings de aria-label novas (ficam em pt-BR; tarefa de migração futura).
-- Testes automatizados de a11y.
-
----
-
-## Resumo de arquivos editados
-
-- `src/pages/Dashboard.tsx` (skip link + main + region wrappers)
-- `src/components/dashboard/CardSkeleton` (inline em Dashboard.tsx — adicionar `role="status"`)
-- `src/components/dashboard/HeroFocusCard.tsx`
-- `src/components/dashboard/DashboardHeader.tsx`
-- `src/components/dashboard/ProjectAlertsCard.tsx`
-- `src/components/dashboard/DailyChecklist.tsx`
-- `src/components/dashboard/ProjectHealthList.tsx`
-- `src/components/dashboard/PendingTeamCard.tsx`
-- `src/components/dashboard/FinancialSummary.tsx`
-- `src/components/dashboard/FirstRunEmptyState.tsx`
-- `src/components/dashboard/EditalProgressCard.tsx` *(lazy)*
-- `src/components/dashboard/RecentTransactions.tsx` *(lazy)*
-- `src/components/dashboard/UpcomingReleases.tsx` *(lazy)*
-- `src/components/dashboard/GuestProjectsList.tsx` *(lazy)*
-
-Sem mudanças em `index.css`, `tailwind.config.ts` ou hooks.
+- **Criar**: `src/components/dashboard/LazyCardBoundary.tsx`
+- **Editar**: `src/pages/Dashboard.tsx` (remover `CardSkeleton` local, trocar 4 `<Suspense>` por `<LazyCardBoundary>`, importar ícones lucide adicionais se necessário)
