@@ -38,43 +38,53 @@ export default function EditalProgressCard({ hidden }: { hidden?: boolean }) {
   if (hidden || isLoading || stats.total === 0) return null;
 
   return (
-    <Card className="animate-fade-in">
+    <Card role="region" aria-labelledby="region-editais-title" className="animate-fade-in">
       <CardHeader className="pb-2 pt-4 px-4">
-        <CardTitle className="text-sm flex items-center gap-1.5">
-          <FileText className="h-3.5 w-3.5 text-primary" />
+        <CardTitle id="region-editais-title" className="text-sm flex items-center gap-1.5">
+          <FileText aria-hidden="true" className="h-3.5 w-3.5 text-primary" />
           Editais em andamento
         </CardTitle>
       </CardHeader>
       <CardContent className="px-4 pb-3 space-y-2.5">
         {/* Status chips */}
-        <div className="flex flex-wrap gap-1.5">
+        <ul role="list" className="flex flex-wrap gap-1.5 m-0 p-0 list-none">
           {(["interesse", "preparando", "inscrito", "resultado"] as ApplicationStatus[]).map((s) => {
             const count = stats.byStatus[s] || 0;
             if (count === 0) return null;
             return (
-              <Badge key={s} variant="outline" className={APPLICATION_STATUS_COLORS[s] + " text-[10px]"}>
-                {APPLICATION_STATUS_LABELS[s]}: {count}
-              </Badge>
+              <li key={s}>
+                <Badge variant="outline" className={APPLICATION_STATUS_COLORS[s] + " text-[10px]"}
+                  aria-label={`${APPLICATION_STATUS_LABELS[s]}: ${count}`}>
+                  {APPLICATION_STATUS_LABELS[s]}: {count}
+                </Badge>
+              </li>
             );
           })}
           {stats.aprovados > 0 && (
-            <Badge variant="outline" className="bg-green-500/25 text-green-900 border-green-500/50 font-semibold text-[10px]">
-              <Award className="h-3 w-3 mr-0.5" />
-              {stats.aprovados} aprovado{stats.aprovados > 1 ? "s" : ""}
-            </Badge>
+            <li>
+              <Badge variant="outline" className="bg-green-500/25 text-green-900 border-green-500/50 font-semibold text-[10px]"
+                aria-label={`${stats.aprovados} aprovado${stats.aprovados > 1 ? "s" : ""}`}>
+                <Award aria-hidden="true" className="h-3 w-3 mr-0.5" />
+                {stats.aprovados} aprovado{stats.aprovados > 1 ? "s" : ""}
+              </Badge>
+            </li>
           )}
-        </div>
+        </ul>
 
         {/* Nearest deadline */}
         {stats.nearestDeadline && (
-          <div className={`flex items-center gap-2 text-xs rounded-md px-2.5 py-1.5 ${
-            stats.nearestDeadline.daysLeft <= 3
-              ? "bg-destructive/10 text-destructive"
-              : stats.nearestDeadline.daysLeft <= 7
-              ? "bg-warning/10 text-warning"
-              : "bg-muted text-muted-foreground"
-          }`}>
-            <Clock className="h-3 w-3 shrink-0" />
+          <div
+            role={stats.nearestDeadline.daysLeft <= 3 ? "status" : undefined}
+            aria-live={stats.nearestDeadline.daysLeft <= 3 ? "polite" : undefined}
+            className={`flex items-center gap-2 text-xs rounded-md px-2.5 py-1.5 ${
+              stats.nearestDeadline.daysLeft <= 3
+                ? "bg-destructive/10 text-destructive"
+                : stats.nearestDeadline.daysLeft <= 7
+                ? "bg-warning/10 text-warning"
+                : "bg-muted text-muted-foreground"
+            }`}
+          >
+            <Clock aria-hidden="true" className="h-3 w-3 shrink-0" />
             <span className="truncate flex-1">
               {stats.nearestDeadline.daysLeft === 0
                 ? "Vence hoje"
@@ -92,9 +102,10 @@ export default function EditalProgressCard({ hidden }: { hidden?: boolean }) {
           size="sm"
           className="text-xs text-primary w-full justify-center"
           onClick={() => navigate("/carreira")}
+          aria-label="Ver pipeline completo de editais"
         >
           Ver pipeline completo
-          <ArrowRight className="h-3 w-3 ml-1" />
+          <ArrowRight aria-hidden="true" className="h-3 w-3 ml-1" />
         </Button>
       </CardContent>
     </Card>
