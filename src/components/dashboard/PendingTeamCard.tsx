@@ -96,74 +96,85 @@ export default function PendingTeamCard({ hidden }: { hidden?: boolean }) {
   const overdueDeliveries = deliveries.filter((d) => d.daysUntilDue !== null && d.daysUntilDue < 0);
 
   return (
-    <Card className="glass-card animate-fade-in border-warning/20">
+    <Card role="region" aria-labelledby="region-team-title" className="glass-card animate-fade-in border-l-4 border-l-warning">
       <CardHeader className="pb-2">
-        <CardTitle className="text-sm flex items-center gap-2">
-          <Users className="h-4 w-4 text-warning" />
+        <CardTitle id="region-team-title" className="text-sm flex items-center gap-2">
+          <Users aria-hidden="true" className="h-4 w-4 text-warning" />
           Equipe pendente
-          <Badge variant="secondary" className="text-[10px]">{totalPending}</Badge>
+          <Badge variant="secondary" className="text-[10px]" aria-label={`${totalPending} pendência${totalPending > 1 ? "s" : ""}`}>{totalPending}</Badge>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-2">
-        {/* Pending invites */}
-        {invites.map((inv) => (
-          <button
-            key={inv.id}
-            onClick={() => navigate(`/projects/${inv.projectId}`)}
-            className="w-full flex items-center gap-2 rounded-lg px-3 py-2 hover:bg-muted/40 transition-colors text-left"
-          >
-            <Clock className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-medium truncate">
-                {inv.professionalName}
-                {inv.professionalRole && <span className="text-muted-foreground font-normal"> · {inv.professionalRole}</span>}
-              </p>
-              <p className="text-[10px] text-muted-foreground truncate">{inv.projectName}</p>
-            </div>
-            <Badge variant="outline" className={cn(
-              "text-[9px] shrink-0",
-              inv.daysWaiting > 3 ? "border-warning/40 text-warning" : "border-border"
-            )}>
-              {inv.daysWaiting === 0 ? "Hoje" : `${inv.daysWaiting}d sem resposta`}
-            </Badge>
-          </button>
-        ))}
+        <ul role="list" className="space-y-2 m-0 p-0 list-none">
+          {/* Pending invites */}
+          {invites.map((inv) => (
+            <li key={inv.id}>
+              <button
+                type="button"
+                onClick={() => navigate(`/projects/${inv.projectId}`)}
+                className="w-full flex items-center gap-2 rounded-lg px-3 py-2 hover:bg-muted/40 transition-colors text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                aria-label={`Convite pendente para ${inv.professionalName}${inv.professionalRole ? ` (${inv.professionalRole})` : ""} no projeto ${inv.projectName}, ${inv.daysWaiting === 0 ? "criado hoje" : `há ${inv.daysWaiting} dia${inv.daysWaiting > 1 ? "s" : ""} sem resposta`}`}
+              >
+                <Clock aria-hidden="true" className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium truncate">
+                    {inv.professionalName}
+                    {inv.professionalRole && <span className="text-muted-foreground font-normal"> · {inv.professionalRole}</span>}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground truncate">{inv.projectName}</p>
+                </div>
+                <Badge variant="outline" className={cn(
+                  "text-[9px] shrink-0",
+                  inv.daysWaiting > 3 ? "border-warning/40 text-warning" : "border-border"
+                )}>
+                  {inv.daysWaiting === 0 ? "Hoje" : `${inv.daysWaiting}d sem resposta`}
+                </Badge>
+              </button>
+            </li>
+          ))}
 
-        {/* Overdue/upcoming deliveries */}
-        {deliveries.slice(0, 5).map((del, i) => (
-          <button
-            key={`del-${i}`}
-            onClick={() => navigate(`/projects/${del.projectId}`)}
-            className="w-full flex items-center gap-2 rounded-lg px-3 py-2 hover:bg-muted/40 transition-colors text-left"
-          >
-            {del.daysUntilDue !== null && del.daysUntilDue < 0 ? (
-              <AlertTriangle className="h-3.5 w-3.5 text-destructive shrink-0" />
-            ) : (
-              <Clock className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-            )}
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-medium truncate">
-                {del.memberName}
-                {del.role && <span className="text-muted-foreground font-normal"> · {del.role}</span>}
-              </p>
-              <p className="text-[10px] text-muted-foreground truncate">{del.projectName}</p>
-            </div>
-            <Badge variant="outline" className={cn(
-              "text-[9px] shrink-0",
-              del.daysUntilDue !== null && del.daysUntilDue < 0
-                ? "border-destructive/40 text-destructive"
-                : del.daysUntilDue !== null && del.daysUntilDue <= 3
-                  ? "border-warning/40 text-warning"
-                  : "border-border"
-            )}>
-              {del.daysUntilDue !== null && del.daysUntilDue < 0
-                ? `${Math.abs(del.daysUntilDue)}d atrasado`
-                : del.daysUntilDue !== null
-                  ? `${del.daysUntilDue}d restantes`
-                  : "Sem prazo"}
-            </Badge>
-          </button>
-        ))}
+          {/* Overdue/upcoming deliveries */}
+          {deliveries.slice(0, 5).map((del, i) => {
+            const overdue = del.daysUntilDue !== null && del.daysUntilDue < 0;
+            return (
+              <li key={`del-${i}`}>
+                <button
+                  type="button"
+                  onClick={() => navigate(`/projects/${del.projectId}`)}
+                  className="w-full flex items-center gap-2 rounded-lg px-3 py-2 hover:bg-muted/40 transition-colors text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  aria-label={`Entrega de ${del.memberName}${del.role ? ` (${del.role})` : ""} no projeto ${del.projectName}, ${overdue ? `${Math.abs(del.daysUntilDue!)} dias atrasada` : del.daysUntilDue !== null ? `${del.daysUntilDue} dias restantes` : "sem prazo"}`}
+                >
+                  {overdue ? (
+                    <AlertTriangle aria-hidden="true" className="h-3.5 w-3.5 text-destructive shrink-0" />
+                  ) : (
+                    <Clock aria-hidden="true" className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium truncate">
+                      {del.memberName}
+                      {del.role && <span className="text-muted-foreground font-normal"> · {del.role}</span>}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground truncate">{del.projectName}</p>
+                  </div>
+                  <Badge variant="outline" className={cn(
+                    "text-[9px] shrink-0",
+                    overdue
+                      ? "border-destructive/40 text-destructive"
+                      : del.daysUntilDue !== null && del.daysUntilDue <= 3
+                        ? "border-warning/40 text-warning"
+                        : "border-border"
+                  )}>
+                    {overdue
+                      ? `${Math.abs(del.daysUntilDue!)}d atrasado`
+                      : del.daysUntilDue !== null
+                        ? `${del.daysUntilDue}d restantes`
+                        : "Sem prazo"}
+                  </Badge>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
       </CardContent>
     </Card>
   );
