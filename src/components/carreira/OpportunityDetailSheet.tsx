@@ -170,13 +170,45 @@ export default function OpportunityDetailSheet({ opportunity: op, open, onOpenCh
           )}
         </div>
 
+        {/* Aviso de link quebrado */}
+        {linkBroken && (
+          <div className="mt-4 flex items-start gap-2 rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-warning-foreground">
+            <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0 text-warning" />
+            <div className="flex-1">
+              <div className="font-medium text-foreground">Link oficial indisponível</div>
+              <div className="text-muted-foreground">
+                A página caiu ou mudou de endereço{linkCheckedLabel ? ` (verificado em ${linkCheckedLabel})` : ""}. Use a busca para encontrar a versão atual.
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Ações fixas no rodapé */}
         <div className="sticky bottom-0 -mx-6 mt-6 px-6 py-3 bg-background/95 backdrop-blur border-t border-border flex items-center gap-2 flex-wrap">
-          {op.link && (
+          {linkBroken ? (
+            <Button variant="outline" size="sm" asChild>
+              <a href={buildGoogleFallbackUrl(op)} target="_blank" rel="noopener noreferrer">
+                <Search className="h-3.5 w-3.5 mr-1.5" /> Buscar no Google
+              </a>
+            </Button>
+          ) : op.link ? (
             <Button variant="outline" size="sm" asChild>
               <a href={op.link} target="_blank" rel="noopener noreferrer">
                 <ExternalLink className="h-3.5 w-3.5 mr-1.5" /> Abrir oficial
               </a>
+            </Button>
+          ) : null}
+          {!linkBroken && op.link && op.editalId && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-xs text-muted-foreground"
+              disabled={reporting}
+              onClick={handleReportBroken}
+              title="Reportar link quebrado"
+            >
+              {reporting ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <AlertTriangle className="h-3 w-3 mr-1" />}
+              Reportar link
             </Button>
           )}
           {onSave && op.origem === "ai" && (
