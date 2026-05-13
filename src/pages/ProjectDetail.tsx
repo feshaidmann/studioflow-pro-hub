@@ -79,7 +79,7 @@ export default function ProjectDetail() {
   // Use the higher of stage-based or mix-based progress so the bar always reflects actual stage
   const progress = Math.max(stageProgress, mixProgress);
 
-  if (guestLoading) {
+  if (projectsLoading || guestLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-muted-foreground text-sm">Carregando projeto…</div>
