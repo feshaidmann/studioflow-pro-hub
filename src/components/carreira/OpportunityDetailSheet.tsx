@@ -1,4 +1,4 @@
-import { ExternalLink, MapPin, Calendar, DollarSign, Trophy, Mic2, ClipboardList, Tag, Users, FileText, Loader2 } from "lucide-react";
+import { ExternalLink, MapPin, Calendar, DollarSign, Trophy, Mic2, ClipboardList, Tag, Users, FileText, Loader2, AlertTriangle, Search } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -6,6 +6,10 @@ import { Separator } from "@/components/ui/separator";
 import { TIPO_PALCO_LABELS, type TipoPalco, PORTE_LABELS, type Porte, type PalcoCurado } from "@/hooks/usePalcos";
 import type { Edital } from "@/hooks/useEditais";
 import type { Opportunity } from "./types";
+import { buildGoogleFallbackUrl, formatLinkChecked } from "./linkHelpers";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { useState } from "react";
 
 function formatDate(d: string | null) {
   if (!d) return null;
