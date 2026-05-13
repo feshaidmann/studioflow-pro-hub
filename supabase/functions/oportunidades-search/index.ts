@@ -122,10 +122,67 @@ serve(async (req) => {
       else palcos = r.data?.palcos || [];
     }
 
+    // Enriquecimento IA: gera resumo da busca + match_reason por item.
+    // Falha silenciosa — se o LLM falhar, mantém os resultados sem enriquecimento.
+    let summary = "";
+    try {
+      const items = [
+        ...editais.map((e: any, i: number) => ({
+          ref: `e${i}`, tipo: "edital",
+          titulo: e.titulo, org: e.orgao, estado: e.estado, prazo: e.prazo, area: e.area,
+        })),
+        ...palcos.map((p: any, i: number) => ({
+          ref: `p${i}`, tipo: "palco",
+          titulo: p.nome, org: p.organizador, estado: p.estado, prazo: p.prazo,
+          generos: p.generos, porte: p.tipo_palco,
+        })),
+      ];
+      if (items.length > 0) {
+        const enrichResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${LOVABLE_API_KEY}` },
+          body: JSON.stringify({
+            model: "google/gemini-2.5-flash-lite",
+            messages: [
+              {
+                role: "system",
+                content:
+                  "Você ajuda artistas musicais a entender por que um edital ou palco combina (ou não) com a busca deles. Responda APENAS em JSON válido com a forma {\"summary\":\"frase única em pt-BR, máx 140 chars, descrevendo o que foi encontrado\",\"reasons\":{\"<ref>\":\"frase única em pt-BR, máx 90 chars, dizendo por que esta oportunidade aparece para esta busca\"}}. Use linguagem direta, sem marketing, sem emoji.",
+              },
+              {
+                role: "user",
+                content: JSON.stringify({ query, items }),
+              },
+            ],
+            response_format: { type: "json_object" },
+            temperature: 0.2,
+          }),
+        });
+        if (enrichResp.ok) {
+          const enrichData = await enrichResp.json();
+          const txt = enrichData?.choices?.[0]?.message?.content || "{}";
+          const parsed = JSON.parse(txt);
+          summary = String(parsed.summary || "").slice(0, 200);
+          const reasons: Record<string, string> = parsed.reasons || {};
+          editais.forEach((e: any, i: number) => {
+            const r = reasons[`e${i}`];
+            if (r) e.match_reason = String(r).slice(0, 140);
+          });
+          palcos.forEach((p: any, i: number) => {
+            const r = reasons[`p${i}`];
+            if (r) p.match_reason = String(r).slice(0, 140);
+          });
+        }
+      }
+    } catch (e) {
+      console.error("enrichment failed:", e);
+    }
+
     return new Response(
       JSON.stringify({
         classification: cls.intent,
         reason: cls.reason,
+        summary,
         editais,
         palcos,
         errors: Object.keys(errors).length ? errors : undefined,
