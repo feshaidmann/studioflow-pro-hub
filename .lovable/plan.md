@@ -1,55 +1,50 @@
-# Modo Debug do Criativo
+# Relatório de cobertura por gênero (Music DNA References)
 
-Objetivo: permitir que você veja exatamente o `system prompt`, as diretivas de texto e o `user prompt` que a edge function `generate-creative` envia ao modelo, junto com metadados (modelo usado, `wantsText`, `noText`, `trackName`, `artistName`, etc.) — para diagnosticar por que o texto está sendo ignorado.
+Adicionar uma seção "Relatório de Cobertura" na página `/admin/reference-tracks` que mostra, por gênero, a saúde do catálogo de referências e o impacto provável na qualidade dos resultados do RPC `find_nearest_reference_tracks`.
 
-## 1. Edge function `generate-creative/index.ts`
+## 1. RPC novo: `report_reference_coverage`
 
-- Aceitar um novo campo opcional no body: `debug: boolean`.
-- Quando `debug === true`:
-  - Montar normalmente `systemBlocks`, `textDirectiveLines`, `userText`, `imageModel`.
-  - **Não** chamar o modelo nem consumir cota.
-  - Responder `200` com:
-    ```json
-    {
-      "debug": true,
-      "model": "<imageModel>",
-      "wantsText": true|false,
-      "noText": true|false,
-      "fields": { "trackName": "...", "artistName": "...", "releaseDate": "...", "additionalText": "..." },
-      "systemPrompt": "<conteúdo final do system>",
-      "textDirectives": ["...", "..."],
-      "userPrompt": "<userText final, igual ao enviado>",
-      "messagesPreview": [ { "role": "system", "content": "..." }, { "role": "user", "content": "..." } ]
-    }
-    ```
-- Manter o caminho normal intacto quando `debug` é falso/ausente.
+`SECURITY DEFINER`, retorna uma linha por gênero (inclui `''` para "sem gênero"):
 
-## 2. Página `src/pages/Creative.tsx`
+Colunas:
+- `genre`
+- **Cobertura simples**
+  - `total`, `active`, `quarantined`
+  - `healthy_pct` = active / total
+  - `distinct_bands_active`
+- **Cobertura de dimensões técnicas** (sobre as 15 dimensões usadas pelo RPC: lufs, dynamic_range, centroid, rolloff, flatness, zcr, bandwidth, tempo, energy, danceability, valence, acousticness, instrumentalness, liveness, speechiness)
+  - `avg_dims_filled` (média entre faixas ativas)
+  - `pct_above_floor` = % de ativas com `dims_used >= 8` (piso atual do RPC)
+- **Diversidade de artistas**
+  - `tracks_per_band_avg`, `tracks_per_band_max`
+  - `monopoly_risk` = `tracks_per_band_max / NULLIF(active, 0)` (alto = um único artista pode dominar antes do cap de 2)
+- **Saúde estatística** (desvio padrão entre as faixas ativas)
+  - `lufs_stddev`, `bpm_stddev`, `centroid_stddev`, `dr_stddev`
+- **Score de qualidade estimado** (0–100, transparente):
+  - `quality_score` = `100 * (0.30·healthy_pct + 0.25·min(active/30, 1) + 0.25·pct_above_floor + 0.20·(1 − min(monopoly_risk, 1)))`
+  - Heurística: gênero precisa ter catálogo saudável + amostra ≥30 + dimensões completas + sem monopólio.
+- `quality_label`: "Crítico" (<40), "Frágil" (40–60), "Aceitável" (60–80), "Sólido" (≥80)
 
-- Adicionar um toggle “Modo debug (não gera imagem)” perto do botão Gerar, escondido atrás de um `details`/accordion “Avançado” para não poluir a UI.
-- Quando ativo, ao clicar em Gerar:
-  - Enviar `debug: true` no payload existente (mesma função).
-  - Em vez de exibir imagem, abrir um painel `DebugPromptPanel` com:
-    - Modelo escolhido + flags `wantsText`/`noText`.
-    - Campos detectados (`trackName`, `artistName`, ...).
-    - System prompt (textarea read-only, monoespaçada, com botão Copiar).
-    - Diretivas de texto (lista).
-    - User prompt final (textarea read-only + Copiar).
-  - Botão “Gerar de verdade agora” que reenvia o mesmo payload sem `debug`.
+Acesso: somente `admin` (checagem com `has_role(auth.uid(),'admin')`).
 
-## 3. Componente novo
+## 2. UI: aba "Cobertura" em `/admin/reference-tracks`
 
-`src/components/creative/DebugPromptPanel.tsx`
-- Props: payload de debug retornado pela função.
-- Usa tokens semânticos (`bg-muted`, `text-muted-foreground`, `border`), respeitando o tema light macOS já memorizado.
-- Sem dependências novas.
+- Tabs no topo do admin: "Faixas" (atual) | **"Cobertura"** (novo).
+- Painel "Cobertura":
+  - Cards de resumo no topo: total ativo, total quarentenado, % saudável global, gêneros críticos.
+  - Tabela ordenável por gênero com chips coloridos para `quality_label`.
+  - Cada linha expansível mostrando os blocos das 4 métricas.
+  - Botão "Atualizar" (re-roda o RPC) e "Exportar CSV" (pt-BR, `;`, UTF-8 BOM, via `papaparse`, em `/admin`).
+  - Banner explicando como o `quality_score` é calculado (transparência) e como interpretar (linkando para o RPC `find_nearest_reference_tracks`).
 
-## 4. Validação
-
-- Rodar com texto desabilitado e habilitado (com e sem `trackName`/`artistName`) e conferir no painel se as diretivas aparecem ou se o prompt está degenerando para “puramente visual” por falta dos campos — hipótese principal levantada na análise anterior.
+## 3. Onde plugar
+- `src/pages/AdminReferenceTracks.tsx`: adicionar Tabs, novo componente `ReferenceCoverageReport`.
+- `src/components/admin/ReferenceCoverageReport.tsx`: tabela + export.
+- Hook `useReferenceCoverageReport` que chama `supabase.rpc('report_reference_coverage')`.
 
 ## Detalhes técnicos
 
-- `messagesPreview` corta o `image_url` em modo edição para evitar resposta gigante (substitui por `"[image omitted]"`).
-- Como `debug` curto-circuita antes do `requestImage`, não há custo de IA nem entrada em `ai_invocations`.
-- Nenhuma mudança em RLS, banco, ou contratos públicos.
+- O RPC só lê de `music_reference_tracks` — sem custo de IA, sem cron.
+- Stddev/avg calculados em uma única CTE para escalar para qualquer volume.
+- A contagem de "dimensões preenchidas" verifica `IS NOT NULL` em cada uma das 15 colunas espelhando o cálculo do `find_nearest_reference_tracks`, garantindo que as duas métricas conversem.
+- Sem mudança em RLS de tabelas existentes; o RPC já força admin internamente.
