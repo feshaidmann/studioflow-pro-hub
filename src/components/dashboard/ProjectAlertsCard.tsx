@@ -6,12 +6,13 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { StatusBadge } from "./StatusBadge";
 import type { ProjectAlert, AlertSeverity, AlertCategory } from "@/hooks/useProjectAlerts";
 
-const SEV_STYLE: Record<AlertSeverity, { border: string; bg: string; icon: React.ElementType; iconColor: string }> = {
-  critical: { border: "border-destructive/40", bg: "bg-destructive/5", icon: AlertTriangle, iconColor: "text-destructive" },
-  warning: { border: "border-warning/40", bg: "bg-warning/5", icon: AlertCircle, iconColor: "text-warning" },
-  info: { border: "border-primary/30", bg: "bg-primary/5", icon: Info, iconColor: "text-primary" },
+const SEV_STYLE: Record<AlertSeverity, { bg: string; icon: React.ElementType; iconColor: string }> = {
+  critical: { bg: "bg-destructive/5", icon: AlertTriangle, iconColor: "text-destructive" },
+  warning: { bg: "bg-warning/5", icon: AlertCircle, iconColor: "text-warning" },
+  info: { bg: "bg-primary/5", icon: Info, iconColor: "text-primary" },
 };
 
 const CAT_ICON: Record<AlertCategory, React.ElementType> = {
@@ -46,13 +47,16 @@ export default function ProjectAlertsCard({ alerts, hidden }: ProjectAlertsCardP
   // Show max 6 alerts
   const visible = alerts.slice(0, 6);
 
+  const hasCritical = alerts.some((a) => a.severity === "critical");
+  const borderClass = hasCritical ? "border-l-destructive" : "border-l-warning";
+
   return (
-    <Card className="glass-card animate-fade-in border-warning/20" style={{ animationDelay: "50ms" }}>
+    <Card className={cn("glass-card animate-fade-in border-l-4", borderClass)} style={{ animationDelay: "50ms" }}>
       <CardHeader className="pb-2">
         <CardTitle className="text-base flex items-center gap-2">
-          <AlertTriangle className="h-4 w-4 text-warning" />
+          <AlertTriangle className={cn("h-4 w-4", hasCritical ? "text-destructive" : "text-warning")} />
           Atenção Necessária
-          <Badge variant="secondary" className="text-[10px]">{alerts.length}</Badge>
+          <StatusBadge variant={hasCritical ? "critical" : "warning"} className="ml-1">{alerts.length}</StatusBadge>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-1.5">
@@ -64,8 +68,8 @@ export default function ProjectAlertsCard({ alerts, hidden }: ProjectAlertsCardP
             <div
               key={alert.id}
               className={cn(
-                "flex items-start gap-2.5 rounded-lg px-3 py-2 border transition-all duration-200",
-                sev.border, sev.bg,
+                "flex items-start gap-2.5 rounded-lg px-3 py-2 border border-border/40 transition-all duration-200",
+                sev.bg,
               )}
             >
               <SevIcon className={cn("h-4 w-4 shrink-0 mt-0.5", sev.iconColor)} />

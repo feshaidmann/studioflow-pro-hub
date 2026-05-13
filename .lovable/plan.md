@@ -1,81 +1,97 @@
-# Refatoração do Dashboard — 8 melhorias por prioridade técnica
+## Objetivo
 
-Ordenado de **maior risco/impacto técnico → polimento visual**, para que cada fase deixe o código mais sólido antes da próxima.
+Tornar a "above-the-fold" do Dashboard imediatamente legível: 1 herói com a próxima ação, checklist como segundo bloco e IA logo abaixo no desktop. Padronizar **badges de status** (crítico / atenção / ok / info) e **estados visuais** (vazio, carregando, sucesso, alerta) em todos os cards.
 
----
-
-## Fase 1 — Estabilidade e correção de bugs (risco alto)
-
-**Objetivo:** eliminar bugs silenciosos e dependências stale.
-
-1. **Corrigir `useMemo` de `financials`**
-   - Remover o `eslint-disable exhaustive-deps`.
-   - Incluir `getProjectFinancials` nas deps (envolvê-lo em `useCallback` no `ProjectContext` se necessário).
-2. **Corrigir race do `autoGenRef`**
-   - Mover `autoGenRef.current = true` para **depois** do `await`, dentro de bloco try/finally, para que reload rápido não compute delta com dado stale.
-3. **`recentOnboardingProject` reativo**
-   - Substituir leitura direta de `localStorage` no render por `useState` + listener `storage` / evento custom disparado quando a chave for limpa.
-4. **Memoizar `buildAIChips()` e `context`** passados ao `AITaskAssistant` com `useMemo`, restaurando o `React.memo` do componente filho.
-
-**Validação:** abrir Dashboard, recarregar com cache quente, conferir console sem warnings, verificar que toast de delta aparece apenas quando há diferença real.
+Apenas frontend/presentation — nenhuma mudança em schema, RLS, hooks de dados ou regras de negócio.
 
 ---
 
-## Fase 2 — Arquitetura (extração de hooks)
+## 1. Nova hierarquia da fold (Dashboard.tsx)
 
-**Objetivo:** reduzir `Dashboard.tsx` de ~440 → ~200 linhas, isolar domínio.
+Ordem atual (desktop): `Header → JourneyFocusCard → NextAction → AIAssistant → seções dinâmicas → GuestProjects`.
 
-5. **Criar hooks dedicados em `src/hooks/`:**
-   - `useGuestProjects()` → encapsula `get_member_projects` + loading/error.
-   - `useGuestTasks(projects)` → filtra `tasks` por projetos de convidado com `user_id` correto.
-   - `usePendingInvites()` → invitations pendentes do usuário.
-   - `useDailyTaskAutoGen(projects)` → encapsula a lógica de auto-geração + ref + delta.
-6. **`Dashboard.tsx`** passa a apenas compor seções; remover os 3 loading states não usados.
+Ordem proposta (desktop):
 
-**Validação:** comportamento idêntico, testar como owner e como convidado.
+```text
+1. DashboardHeader (saudação + filtro de projeto)         [unchanged]
+2. HeroFocusCard  ← NOVO: funde JourneyFocusCard + "Próxima ação"
+   ├─ Linha 1: saudação + plano personalizado
+   ├─ Linha 2: chip de "Próxima ação" (clicável → IA) com ícone severity
+   └─ Linha 3: 3 CTAs (primary path, secondary path, "Perguntar IA")
+3. ProjectAlertsCard (somente se houver crítico/warning)
+4. DailyChecklist  ← promovido acima da IA
+5. AIAssistant collapsible (default aberto desktop, fechado mobile)
+6. Demais seções via journeyPlan.sections (projects, editais, releases, finance…)
+7. GuestProjectsList
+```
 
----
+Mobile: o `AIAssistant` continua após o checklist (já é o comportamento). O `HeroFocusCard` colapsa o bloco de chips de momento/foco em um botão "ver detalhes" para reduzir scroll.
 
-## Fase 3 — Performance
-
-**Objetivo:** reduzir bundle inicial e re-renders em cascata.
-
-7. **Lazy-load** via `React.lazy` + `Suspense` (com skeleton):
-   - `AITaskAssistant`, `EditalProgressCard`, `UpcomingReleases`, `GuestProjectsList`, `RecentTransactions`.
-8. **Mover `AITaskAssistant`** para baixo da fold (fechado por padrão no desktop também, abrir sob demanda).
-
-**Validação:** verificar redução do chunk inicial e que cada seção renderiza ao entrar no viewport.
-
----
-
-## Fase 4 — Design System, UX, A11y e i18n
-
-**Objetivo:** alinhar ao design system macOS minimalista e WCAG AA.
-
-9. **Tokens semânticos** em `index.css` substituindo cores raw:
-   - Adicionar `--info`, `--info-foreground` (sky), `--accent-warm` (amber), `--accent-rose`, `--accent-violet` em HSL.
-   - Substituir `text-amber-400`, `text-rose-400`, `text-violet-400`, `text-sky-400` por tokens.
-   - Remover/substituir `font-mono-nums` inválido por classe utility já existente.
-10. **Hierarquia da fold** (UI apenas, sem mudar lógica):
-    - Unificar "Próxima ação" + `JourneyFocusCard` em um único hero card.
-    - Promover `DailyChecklist` para acima de `AITaskAssistant`.
-    - Corrigir margin bleeding (`-mx-4 md:-mx-6`) do header.
-    - Aumentar contraste do "98%" sobre a barra em "Próximos Lançamentos".
-    - Diferenciar visualmente badges "Pronto" vs "Organizado".
-11. **Acessibilidade:**
-    - `aria-label` em botões icon-only (`Bot`, `RefreshCw`, `Trash2`).
-    - `role="button"`, `tabIndex={0}`, `onKeyDown` (Enter/Space) em cards clicáveis.
-    - Tooltip no botão de refresh; toast também no refresh manual.
-12. **i18n:** mover strings hardcoded de Dashboard, DailyChecklist e JourneyFocusCard para `LanguageContext` (chaves pt/en).
-
-**Validação:** Lighthouse a11y ≥ 95, navegação por teclado funcional, alternar idioma EN sem strings em pt-BR no Dashboard.
+Arquivos:
+- Criar `src/components/dashboard/HeroFocusCard.tsx` (funde `JourneyFocusCard` + bloco "Próxima ação" inline atual em `Dashboard.tsx`).
+- Remover o uso de `JourneyFocusCard` e o bloco `nextAction` de `Dashboard.tsx`; manter `JourneyFocusCard.tsx` no repo (sem uso) ou deletar — proponho deletar para evitar dead code.
+- Reordenar JSX em `Dashboard.tsx` conforme acima. Promover `DailyChecklist` para fora do loop `journeyPlan.sections.map(...)` e renderizar antes do `AIAssistant`. O loop continua para os demais (`alerts`, `team`, `projects`, `editais`, `releases`, `finance`, `transactions`), filtrando `checklist` e `alerts` quando já renderizados acima.
 
 ---
 
-## Fora de escopo
-- Mudanças de schema/RLS.
-- Reescrita do `AITaskAssistant`, `JourneyFocusCard` ou `DailyChecklist` internamente (apenas props/posicionamento).
-- Novas features (somente refatoração + polimento).
+## 2. Sistema de badges de status (novo componente)
 
-## Entrega
-Cada fase será um conjunto coeso de edits, com mensagem indicando qual fase foi concluída para você validar antes da próxima.
+Criar `src/components/dashboard/StatusBadge.tsx` com 4 variantes mapeadas a tokens semânticos:
+
+| Variante     | Token             | Uso                                |
+|--------------|-------------------|------------------------------------|
+| `critical`   | destructive       | Vencido, bloqueio crítico          |
+| `warning`    | warning           | Hoje/em 1-3d, orçamento estourando |
+| `info`       | primary / info    | Próximo passo, lembrete            |
+| `success`    | success           | Tudo em dia, KPI positivo          |
+| `neutral`    | muted             | Contagens, tags genéricas          |
+
+API: `<StatusBadge variant="critical" icon={AlertTriangle}>3 críticos</StatusBadge>`. Usa `cva` com classes `bg-{token}/10 text-{token} border-{token}/30`. Substitui os `Badge variant="outline" className="...bg-destructive/10..."` espalhados em `DailyChecklist`, `ProjectAlertsCard`, `ProjectHealthList`, `FinancialSummary`, `HeroFocusCard`.
+
+---
+
+## 3. Estados visuais por card
+
+Padronizar 4 estados em todos os cards do Dashboard:
+
+| Estado     | Tratamento visual                                                                 |
+|------------|-----------------------------------------------------------------------------------|
+| Loading    | `<CardSkeleton />` já existente; cards não-lazy ganham `Skeleton` interno         |
+| Vazio      | Ícone + microcopy + CTA pequeno (ex.: checklist "Nenhuma tarefa. 🎉" já existe)   |
+| Saudável   | Borda neutra, badge `success` no header quando aplicável                          |
+| Alerta     | Borda lateral 4px no token (`border-l-4 border-l-destructive/warning/primary`)    |
+
+Ajustes específicos:
+- **HeroFocusCard:** borda esquerda colorida conforme severity da próxima ação (destructive / warning / primary / success quando não há ação pendente).
+- **ProjectAlertsCard:** já usa `border-warning/20`; trocar para `border-l-4 border-l-warning` e remover bordas internas redundantes nos itens (manter apenas `bg-{sev}/5`).
+- **DailyChecklist:** header ganha `StatusBadge` com a contagem + variante derivada (overdue → critical, today → warning, else neutral). Atual `<Badge variant="secondary">` é trocado.
+- **FinancialSummary:** KPI "Resultado" ganha pequena seta ↑/↓ ao lado do valor; "Margem" ganha cor variando por faixa (`<10%` warning, `<0%` destructive, senão success). Adicionar `aria-label` por card.
+- **ProjectHealthList:** badge de % de saúde já existe — mapear para `StatusBadge` (≥80 success, 50-79 warning, <50 critical).
+- **UpcomingReleases / EditalProgressCard / RecentTransactions / GuestProjectsList:** header padronizado com `StatusBadge` neutra de contagem, e estado vazio com ícone+microcopy alinhado ao restante.
+
+---
+
+## 4. Acessibilidade e i18n (escopo desta fase)
+
+- `aria-label` em todos os botões icon-only do Hero, Checklist e Alerts.
+- `role="button"`, `tabIndex={0}` e `onKeyDown` (Enter/Space) no card "Próxima ação" agora dentro do Hero.
+- Tooltip no botão de refresh do Checklist ("Atualizar checklist").
+- Strings novas adicionadas ao `LanguageContext` (pt/en) — somente strings introduzidas pelos novos componentes; não migrar strings legadas neste passo.
+
+---
+
+## Out of scope
+
+- Mudanças em hooks (`useTasks`, `useProjectAlerts`, etc.) e qualquer query/RLS.
+- Migração completa de i18n das strings legadas do Dashboard.
+- Redesign de `AITaskAssistant` interno ou de seções fora do Dashboard.
+
+---
+
+## Detalhes técnicos (resumo de arquivos)
+
+- **Novo:** `src/components/dashboard/HeroFocusCard.tsx`, `src/components/dashboard/StatusBadge.tsx`.
+- **Editado:** `src/pages/Dashboard.tsx` (reordenar JSX + remover bloco nextAction inline + usar HeroFocusCard), `src/components/dashboard/DailyChecklist.tsx`, `src/components/dashboard/ProjectAlertsCard.tsx`, `src/components/dashboard/FinancialSummary.tsx`, `src/components/dashboard/ProjectHealthList.tsx`, `src/components/dashboard/UpcomingReleases.tsx`, `src/components/dashboard/EditalProgressCard.tsx`, `src/components/dashboard/RecentTransactions.tsx`, `src/components/dashboard/GuestProjectsList.tsx`, `src/contexts/LanguageContext.tsx` (apenas chaves novas).
+- **Removido:** `src/components/dashboard/JourneyFocusCard.tsx` (substituído pelo Hero).
+
+Sem alterações em `index.css`/`tailwind.config.ts` — os tokens `destructive`, `warning`, `success`, `info`, `primary` já existem.

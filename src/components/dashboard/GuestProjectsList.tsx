@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Users, Music2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { DataSkeleton } from "@/components/ui/data-skeleton";
+import { StatusBadge } from "./StatusBadge";
 
 interface GuestProject {
   id: string;
@@ -52,6 +53,7 @@ export default function GuestProjectsList({ projects, loading }: GuestProjectsLi
         <CardTitle className="text-base flex items-center gap-2">
           <Users className="h-4 w-4 text-primary" />
           Projetos como Parceiro
+          <StatusBadge variant="neutral">{active.length}</StatusBadge>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-1.5">

@@ -18,6 +18,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import type { AITaskAssistantHandle } from "@/components/AITaskAssistant";
 import type { Task, TaskSection } from "@/hooks/useTasks";
 import { groupTasks } from "@/hooks/useTasks";
+import { StatusBadge } from "./StatusBadge";
 
 type SourceMeta = { icon: React.ElementType; color: string; label: string };
 
@@ -112,14 +113,31 @@ export default function DailyChecklist({
       <CardHeader className="pb-3">
         <CardTitle className="text-base flex items-center gap-2">
           <Headphones className="h-4 w-4 text-primary" /> Checklist do Dia
-          {activeTasks.length > 0 && <Badge variant="secondary" className="text-xs">{activeTasks.length}</Badge>}
+          {activeTasks.length > 0 && (() => {
+            const overdue = activeTasks.filter((t) => {
+              if (!t.dueDate) return false;
+              return new Date(t.dueDate + "T12:00:00") < new Date(new Date().setHours(0, 0, 0, 0));
+            }).length;
+            const today = activeTasks.filter((t) => {
+              if (!t.dueDate) return false;
+              const d = new Date(t.dueDate + "T12:00:00"); const t0 = new Date(); t0.setHours(0, 0, 0, 0);
+              return d.getTime() === t0.getTime();
+            }).length;
+            const variant = overdue > 0 ? "critical" : today > 0 ? "warning" : "neutral";
+            return <StatusBadge variant={variant}>{activeTasks.length}</StatusBadge>;
+          })()}
           <div className="ml-auto flex items-center gap-1.5">
             {lastRefreshed && !refreshing && (
-              <span className="text-[11px] text-muted-foreground font-mono-nums">
+              <span className="text-[11px] text-muted-foreground font-mono-nums" aria-label={`Última atualização ${lastRefreshed.toLocaleTimeString("pt-BR")}`}>
                 {lastRefreshed.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
               </span>
             )}
-            <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-foreground" onClick={onRefresh} disabled={refreshing}>
+            <Button
+              variant="ghost" size="icon"
+              className="h-6 w-6 text-muted-foreground hover:text-foreground"
+              onClick={onRefresh} disabled={refreshing}
+              aria-label="Atualizar checklist" title="Atualizar checklist"
+            >
               <RefreshCw className={cn("h-3.5 w-3.5", refreshing && "animate-spin")} />
             </Button>
           </div>

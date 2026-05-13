@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo, lazy, Suspense, type ReactNode } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Bot, ChevronDown, ChevronUp } from "lucide-react";
+import { Bot, ChevronDown } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useNavigate } from "react-router-dom";
 import { useProjects } from "@/contexts/ProjectContext";
@@ -28,7 +28,7 @@ import FirstRunEmptyState from "@/components/dashboard/FirstRunEmptyState";
 import ProjectAlertsCard from "@/components/dashboard/ProjectAlertsCard";
 import ProjectHealthList from "@/components/dashboard/ProjectHealthList";
 import PendingTeamCard from "@/components/dashboard/PendingTeamCard";
-import JourneyFocusCard from "@/components/dashboard/JourneyFocusCard";
+import HeroFocusCard, { type NextAction } from "@/components/dashboard/HeroFocusCard";
 import { getJourneyPlan } from "@/lib/journeyPersonalization";
 
 // Lazy-loaded — não bloqueiam o first render do Dashboard
@@ -188,15 +188,15 @@ export default function Dashboard() {
   }, [projects, profile, recentOnboardingProjectId]);
 
   // Build "next recommended action" block
-  const nextAction = useMemo(() => {
+  const nextAction = useMemo<NextAction | null>(() => {
     if (isFirstRun) return null;
     const critical = alerts.find((a) => a.severity === "critical");
-    if (critical) return { label: critical.title, detail: critical.projectName, severity: "critical" as const };
+    if (critical) return { label: critical.title, detail: critical.projectName, severity: "critical" };
     const urgentTask = activeTasks.find((t) => t.source === "deadline" || t.source === "payment");
-    if (urgentTask) return { label: urgentTask.description, detail: "Tarefa urgente", severity: "warning" as const };
+    if (urgentTask) return { label: urgentTask.description, detail: "Tarefa urgente", severity: "warning" };
     const warning = alerts.find((a) => a.severity === "warning");
-    if (warning) return { label: warning.title, detail: warning.projectName, severity: "warning" as const };
-    if (activeTasks.length > 0) return { label: activeTasks[0].description, detail: "Próxima tarefa", severity: "info" as const };
+    if (warning) return { label: warning.title, detail: warning.projectName, severity: "warning" };
+    if (activeTasks.length > 0) return { label: activeTasks[0].description, detail: "Próxima tarefa", severity: "info" };
     return null;
   }, [alerts, activeTasks, isFirstRun]);
 
@@ -310,6 +310,9 @@ export default function Dashboard() {
     transactions: !isSimpleMode ? <Suspense fallback={<CardSkeleton />}><RecentTransactions transactions={transactions} /></Suspense> : null,
   };
 
+  // Render checklist + alerts inline (above AI), then the rest from journeyPlan order
+  const inlineSections = new Set(["checklist", "alerts"]);
+
   return (
     <div className="p-4 md:p-6 space-y-5 max-w-6xl mx-auto">
       <DashboardHeader
@@ -320,53 +323,36 @@ export default function Dashboard() {
         mainPain={profile?.main_pain}
       />
 
-      <JourneyFocusCard
+      <HeroFocusCard
         displayName={displayName}
         profile={profile}
         projectCount={projects.length}
+        nextAction={nextAction}
+        isMobile={isMobile}
         onAskAI={(message) => { aiRef.current?.sendMessage(message); scrollToAI(); }}
+        onResolveNextAction={(action) => {
+          aiRef.current?.sendMessage(`Preciso de ajuda com: ${action.label}. ${action.detail ? `Contexto: ${action.detail}` : ""} O que devo fazer?`);
+          scrollToAI();
+        }}
       />
 
-      {/* Next recommended action — click sends to AI */}
-      {nextAction && (
-        <Card
-          onClick={() => {
-            aiRef.current?.sendMessage(`Preciso de ajuda com: ${nextAction.label}. ${nextAction.detail ? `Contexto: ${nextAction.detail}` : ""} O que devo fazer?`);
-            scrollToAI();
-          }}
-          className={cn(
-            "glass-card animate-fade-in cursor-pointer transition-colors hover:bg-muted/30 border-l-4",
-            nextAction.severity === "critical" ? "border-l-destructive" :
-            nextAction.severity === "warning" ? "border-l-warning" :
-            "border-l-primary"
-          )}
-        >
-          <CardContent className="p-3 md:p-4 flex items-center gap-3">
-            <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center shrink-0">
-              <Bot className={cn(
-                "h-4 w-4",
-                nextAction.severity === "critical" ? "text-destructive" :
-                nextAction.severity === "warning" ? "text-warning" : "text-primary"
-              )} />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs text-muted-foreground">Próxima ação · clique para resolver com IA</p>
-              <p className="text-sm font-medium truncate">{nextAction.label}</p>
-              {!isMobile && nextAction.detail && <p className="text-xs text-muted-foreground">{nextAction.detail}</p>}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      {/* 1. Alertas críticos primeiro */}
+      {dashboardSections.alerts}
 
-      {/* AI Assistant — desktop: prominent; mobile: after checklist */}
+      {/* 2. Checklist do dia */}
+      {dashboardSections.checklist}
+
+      {/* 3. Assistente IA — desktop: aqui; mobile: depois do checklist (já é o caso) */}
       {!isMobile && aiAssistantCard}
-
-      {journeyPlan.sections.map((section) => dashboardSections[section]).filter(Boolean)}
-
-      {/* AI Assistant on mobile — after checklist */}
       {isMobile && aiAssistantCard}
 
-      {/* 3b. Projetos como parceiro */}
+      {/* 4. Demais seções na ordem do journeyPlan, exceto as já renderizadas acima */}
+      {journeyPlan.sections
+        .filter((s) => !inlineSections.has(s))
+        .map((section) => dashboardSections[section])
+        .filter(Boolean)}
+
+      {/* Projetos como parceiro */}
       <Suspense fallback={<CardSkeleton />}>
         <GuestProjectsList projects={guestProjects} loading={loadingGuestProjects} />
       </Suspense>
