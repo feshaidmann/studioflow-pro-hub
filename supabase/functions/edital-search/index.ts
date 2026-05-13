@@ -3,6 +3,48 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 
 const COST_PER_CALL_USD = 0.005;
 
+// ── Validação de link oficial ─────────────────────────────────────────────
+// Faz HEAD (cai pra GET com Range se necessário). Considera vivo se status
+// final estiver na lista permitida. Timeout de 4s por URL.
+export async function checkLinkAlive(rawUrl: string): Promise<{ ok: boolean; status: number | "timeout" | "invalid" | "unknown" }> {
+  let url: URL;
+  try { url = new URL(rawUrl.trim()); }
+  catch { return { ok: false, status: "invalid" }; }
+  if (url.protocol !== "http:" && url.protocol !== "https:") return { ok: false, status: "invalid" };
+
+  const goodStatuses = new Set([200, 201, 202, 203, 204, 206, 301, 302, 303, 307, 308]);
+  const ua = "Mozilla/5.0 (compatible; StudioFlowLinkChecker/1.0; +https://app.jamsessionproject.com.br)";
+
+  async function attempt(method: "HEAD" | "GET"): Promise<number | "timeout"> {
+    try {
+      const ctrl = AbortSignal.timeout(4500);
+      const resp = await fetch(url.toString(), {
+        method,
+        redirect: "follow",
+        signal: ctrl,
+        headers: method === "GET"
+          ? { "User-Agent": ua, "Range": "bytes=0-1024", "Accept": "*/*" }
+          : { "User-Agent": ua, "Accept": "*/*" },
+      });
+      // Drena e descarta o corpo para não vazar conexões
+      try { await resp.body?.cancel(); } catch { /* noop */ }
+      return resp.status;
+    } catch (e: any) {
+      if (e?.name === "TimeoutError" || e?.name === "AbortError") return "timeout";
+      return 0;
+    }
+  }
+
+  let s = await attempt("HEAD");
+  // Alguns servidores rejeitam HEAD → tenta GET parcial
+  if (s === 405 || s === 501 || s === 0 || s === 403) s = await attempt("GET");
+
+  if (s === "timeout") return { ok: false, status: "timeout" };
+  return { ok: goodStatuses.has(s as number), status: s as number };
+}
+
+
+
 function getAdminClient() {
   return createClient(
     Deno.env.get("SUPABASE_URL")!,
