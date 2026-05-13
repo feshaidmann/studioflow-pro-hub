@@ -1020,6 +1020,43 @@ export default function Creative() {
                     : <Sparkles className="h-4 w-4 mr-1.5" />}
                   {generateLabel}
                 </Button>
+
+                <details className="text-[11px] text-muted-foreground">
+                  <summary className="cursor-pointer select-none hover:text-foreground transition-colors">
+                    Avançado
+                  </summary>
+                  <div className="mt-2 flex items-center justify-between gap-2 p-2 rounded-md border border-dashed">
+                    <div>
+                      <div className="text-xs font-medium text-foreground">Modo debug</div>
+                      <div className="text-[10px]">
+                        Mostra o prompt e diretivas enviados ao modelo, sem gerar imagem.
+                      </div>
+                    </div>
+                    <Switch checked={debugMode} onCheckedChange={setDebugMode} />
+                  </div>
+                  {debugMode && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="w-full mt-2 text-xs"
+                      onClick={() => handleGenerate({ debug: true })}
+                      disabled={generating || !canGenerate}
+                    >
+                      Ver prompt (sem gerar)
+                    </Button>
+                  )}
+                </details>
+
+                {debugPayload && (
+                  <DebugPromptPanel
+                    payload={debugPayload}
+                    onClose={() => setDebugPayload(null)}
+                    onGenerateForReal={() => {
+                      setDebugPayload(null);
+                      handleGenerate({ debug: false });
+                    }}
+                  />
+                )}
               </div>
             </div>
           )}
