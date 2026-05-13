@@ -92,7 +92,7 @@ function writeFiltersToURL(f: CarreiraFilters, sp: URLSearchParams): URLSearchPa
 }
 
 export default function Carreira() {
-  const isMobile = useIsMobile();
+  
   const navigate = useNavigate();
   const { user } = useAuth();
   const { profile } = useProfile();
