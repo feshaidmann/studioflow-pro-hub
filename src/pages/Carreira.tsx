@@ -516,7 +516,7 @@ export default function Carreira() {
           ) : (
             <div className="space-y-2">
               {applications.map((a) => {
-                const isPalco = a.edital?.tipo === "palco";
+                const isPalco = a.tipo === "palco";
                 return (
                   <Card
                     key={a.id}
