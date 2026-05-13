@@ -2466,6 +2466,28 @@ export type Database = {
         Args: { p_genero: string }
         Returns: undefined
       }
+      report_reference_coverage: {
+        Args: never
+        Returns: {
+          active: number
+          avg_dims_filled: number
+          bpm_stddev: number
+          centroid_stddev: number
+          distinct_bands_active: number
+          dr_stddev: number
+          genre: string
+          healthy_pct: number
+          lufs_stddev: number
+          monopoly_risk: number
+          pct_above_floor: number
+          quality_label: string
+          quality_score: number
+          quarantined: number
+          total: number
+          tracks_per_band_avg: number
+          tracks_per_band_max: number
+        }[]
+      }
       upsert_reference_tracks: {
         Args: { p_rows: Json }
         Returns: {
