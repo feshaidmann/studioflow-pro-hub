@@ -22,7 +22,7 @@ const translations: Record<string, string> = {
   "nav.editais": "Editais",
   "nav.palcos": "Palcos",
   "nav.carreira": "Carreira",
-  "nav.creative": "Criativo",
+  "nav.visualDirection": "Direção Visual",
   "nav.trackintel": "Track Intelligence",
   "nav.logout": "Sair",
   "nav.more": "Mais",
