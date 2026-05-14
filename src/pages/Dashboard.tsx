@@ -187,17 +187,8 @@ export default function Dashboard() {
   }, [projects, profile, recentOnboardingProjectId]);
 
   // Build "next recommended action" block
-  const nextAction = useMemo<NextAction | null>(() => {
-    if (isFirstRun) return null;
-    const critical = alerts.find((a) => a.severity === "critical");
-    if (critical) return { label: critical.title, detail: critical.projectName, severity: "critical" };
-    const urgentTask = activeTasks.find((t) => t.source === "deadline" || t.source === "payment");
-    if (urgentTask) return { label: urgentTask.description, detail: "Tarefa urgente", severity: "warning" };
-    const warning = alerts.find((a) => a.severity === "warning");
-    if (warning) return { label: warning.title, detail: warning.projectName, severity: "warning" };
-    if (activeTasks.length > 0) return { label: activeTasks[0].description, detail: "Próxima tarefa", severity: "info" };
-    return null;
-  }, [alerts, activeTasks, isFirstRun]);
+  // (kept for AI context only; previously fed HeroFocusCard which was removed)
+
 
   // Memoiza o objeto de contexto da IA — evita recriação a cada render
   const aiContext = useMemo(() => ({
