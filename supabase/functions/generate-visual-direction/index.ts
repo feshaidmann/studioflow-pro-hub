@@ -265,7 +265,15 @@ serve(async (req) => {
       generatePaletteAndCopy(profile, lovableKey),
     ]);
 
-    const images = imagesRaw.filter((i) => i.url);
+    // Sobe data URLs para storage para evitar JSONB gigante (statement_timeout).
+    const imagesWithStorage = await Promise.all(
+      imagesRaw.map(async (img) => {
+        if (!img.url) return img;
+        const publicUrl = await uploadDataUrlToStorage(img.url, supabase, project_id);
+        return { ...img, url: publicUrl };
+      }),
+    );
+    const images = imagesWithStorage.filter((i) => i.url);
     if (images.length === 0) {
       return new Response(JSON.stringify({
         error: "Não foi possível gerar imagens. Tente novamente em instantes (créditos de IA podem estar esgotados).",
