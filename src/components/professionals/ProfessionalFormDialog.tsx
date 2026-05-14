@@ -189,20 +189,40 @@ export function ProfessionalFormDialog({ open, onOpenChange, editTarget, existin
             </div>
             <div className="space-y-1">
               <Label>Especialidade</Label>
-              <Select value={specialtyMode} onValueChange={setSpecialtyMode}>
+              <Select
+                value={specialtyMode}
+                onValueChange={(v) => {
+                  setSpecialtyMode(v);
+                  setSpecialtyError("");
+                }}
+              >
                 <SelectTrigger><SelectValue placeholder="Selecionar..." /></SelectTrigger>
                 <SelectContent>
-                  {SPECIALTY_VALUES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                  <SelectItem value={SPECIALTY_NONE}>Nenhuma</SelectItem>
+                  {SPECIALTY_OPTIONS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                  <SelectItem value={SPECIALTY_OTHER}>Outro…</SelectItem>
                 </SelectContent>
               </Select>
-              {specialtyMode === "Outro" && (
-                <Input
-                  className="mt-1"
-                  value={customSpecialty}
-                  onChange={(e) => setCustomSpecialty(e.target.value.slice(0, 100))}
-                  placeholder="Descreva a especialidade"
-                  maxLength={100}
-                />
+              {specialtyMode === SPECIALTY_OTHER && (
+                <>
+                  <Input
+                    className="mt-1"
+                    value={customSpecialty}
+                    onChange={(e) => {
+                      setCustomSpecialty(e.target.value.slice(0, CUSTOM_SPECIALTY_MAX));
+                      if (specialtyError) setSpecialtyError("");
+                    }}
+                    placeholder="Descreva a especialidade"
+                    maxLength={CUSTOM_SPECIALTY_MAX}
+                    aria-invalid={!!specialtyError}
+                  />
+                  {specialtyError && (
+                    <p className="text-xs text-destructive">{specialtyError}</p>
+                  )}
+                  <p className="text-[10px] text-muted-foreground">
+                    {customSpecialty.length}/{CUSTOM_SPECIALTY_MAX}
+                  </p>
+                </>
               )}
             </div>
           </div>
