@@ -2287,6 +2287,47 @@ export type Database = {
         }
         Relationships: []
       }
+      visual_briefing_shares: {
+        Row: {
+          briefing_id: string
+          created_at: string
+          created_by: string
+          expires_at: string
+          id: string
+          revoked_at: string | null
+          token: string
+          view_count: number
+        }
+        Insert: {
+          briefing_id: string
+          created_at?: string
+          created_by: string
+          expires_at: string
+          id?: string
+          revoked_at?: string | null
+          token: string
+          view_count?: number
+        }
+        Update: {
+          briefing_id?: string
+          created_at?: string
+          created_by?: string
+          expires_at?: string
+          id?: string
+          revoked_at?: string | null
+          token?: string
+          view_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "visual_briefing_shares_briefing_id_fkey"
+            columns: ["briefing_id"]
+            isOneToOne: false
+            referencedRelation: "visual_briefings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       visual_briefings: {
         Row: {
           approved_copy: string

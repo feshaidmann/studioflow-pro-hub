@@ -44,6 +44,7 @@ const MusicDNA = lazy(() => import("@/pages/MusicDNA"));
 const Carreira = lazy(() => import("@/pages/Carreira"));
 const EditalInscricao = lazy(() => import("@/pages/EditalInscricao"));
 const VisualDirection = lazy(() => import("@/pages/VisualDirection"));
+const VisualBriefingShare = lazy(() => import("@/pages/VisualBriefingShare"));
 
 const queryClient = new QueryClient(); // singleton
 
@@ -125,6 +126,7 @@ const App = () => (
                       <Route path="/onboarding" element={<OnboardingRouter />} />
                       <Route path="/u/:username" element={<PublicProfile />} />
                       <Route path="/invite/:token" element={<InviteResponse />} />
+                      <Route path="/briefing/share/:token" element={<VisualBriefingShare />} />
                       
                       <Route path="/legal" element={<Legal />} />
                       <Route path="/*" element={<AppRoutes />} />
