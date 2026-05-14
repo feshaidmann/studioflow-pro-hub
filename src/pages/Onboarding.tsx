@@ -144,6 +144,13 @@ export default function Onboarding() {
           >
             {submitting ? "Salvando..." : <>Começar <ArrowRight className="h-4 w-4" /></>}
           </Button>
+
+          {/* Status acessível para leitores de tela */}
+          <div role="status" aria-live="polite" aria-atomic="true" className="sr-only">
+            {saveStatus === "saving" && "Salvando suas informações..."}
+            {saveStatus === "success" && "Salvo com sucesso. Redirecionando para o painel."}
+            {saveStatus === "error" && "Não foi possível salvar. Tente novamente."}
+          </div>
         </div>
       </div>
     </div>
