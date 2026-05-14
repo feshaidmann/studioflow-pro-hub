@@ -139,8 +139,21 @@ export function ProfessionalFormDialog({ open, onOpenChange, editTarget, existin
           </div>
           <div className="space-y-1">
             <Label htmlFor="email">E-mail *</Label>
-            <Input id="email" type="email" {...register("email")} placeholder="email@exemplo.com" />
+            <Input
+              id="email"
+              type="email"
+              {...register("email")}
+              placeholder="email@exemplo.com"
+              aria-invalid={isDuplicate || !!errors.email}
+              aria-describedby={isDuplicate ? "email-duplicate-hint" : undefined}
+              className={isDuplicate ? "border-amber-500/60 focus-visible:ring-amber-500/40" : undefined}
+            />
             {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
+            {isDuplicate && !errors.email && (
+              <p id="email-duplicate-hint" className="text-[11px] text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                <AlertTriangle className="h-3 w-3" /> Este e-mail já existe na sua agenda.
+              </p>
+            )}
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
