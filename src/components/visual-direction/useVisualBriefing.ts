@@ -122,9 +122,23 @@ export function useVisualBriefing(projectId: string | undefined): UseVisualBrief
           .single();
         if (error) throw error;
         if (seq === requestSeqRef.current) {
-          const next = data as unknown as VisualBriefing;
-          setBriefing(next);
-          setLastSavedAt(next.updated_at ?? new Date().toISOString());
+          const server = data as unknown as VisualBriefing;
+          // Merge: keep local state authoritative for fields NOT in this patch,
+          // only adopt server values for fields we just sent (plus metadata).
+          // This prevents a stale server row from clobbering optimistic local
+          // changes whose previous persist may have failed/timed out.
+          setBriefing((prev) => {
+            const base = prev ?? server;
+            const merged: VisualBriefing = { ...base };
+            for (const key of Object.keys(patch) as (keyof Patch)[]) {
+              (merged as any)[key] = (server as any)[key];
+            }
+            merged.id = server.id;
+            merged.updated_at = server.updated_at ?? merged.updated_at;
+            merged.version = server.version ?? merged.version;
+            return merged;
+          });
+          setLastSavedAt(server.updated_at ?? new Date().toISOString());
           setStatus("saved");
         }
       } else {
