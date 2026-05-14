@@ -1,33 +1,58 @@
 ## Objetivo
-Melhorar a acessibilidade do card colapsável "Perfil Cultural do Projeto" com foco automático ao expandir, `aria-labelledby` e navegação por teclado correta.
+
+Encurtar drasticamente o onboarding (de 6 para 2 passos) e limpar o dashboard de elementos derivados de "momento" e "dor" que deixam de existir.
 
 ## Mudanças
-**Arquivo:** `src/components/project-hub/ProjectCulturalProfile.tsx`
 
-1. **IDs estáveis** via `useId()`:
-   - `headerId` → aplicado ao `<CardTitle>` (heading visível).
-   - `panelId` → aplicado ao `CollapsibleContent`.
+### 1. Onboarding (`src/pages/Onboarding.tsx`) — reescrito
 
-2. **Trigger (header clicável):**
-   - `aria-controls={panelId}` e `aria-expanded` (Radix já gerencia, mas explicitar via `data-state`).
-   - Garantir que seja um `<button>` real (Radix `CollapsibleTrigger asChild` + elemento botão) — Enter/Space já funcionam nativamente.
-   - `aria-labelledby={headerId}` no trigger para anunciar o título como nome acessível.
+Apenas **1 passo de formulário + 1 confirmação opcional** (recomendo eliminar a tela de confirmação — é só 4 campos):
 
-3. **Painel:**
-   - `<CollapsibleContent id={panelId} role="region" aria-labelledby={headerId}>`.
-   - `tabIndex={-1}` + `ref` para receber foco programático.
+Campos coletados:
+- **Nome completo** (novo, obrigatório) → coluna `full_name`
+- **Nome artístico** (obrigatório) → `display_name`
+- **WhatsApp** (obrigatório, máscara BR) → `whatsapp`
+- **Email** (somente leitura, pré-preenchido com `user.email`) → exibido como confirmação visual, não enviado
+- Combo "Eu sou…" **REMOVIDO** (decisão: manter `user_type='artist'` fixo, conforme memória)
 
-4. **Foco automático ao expandir:**
-   - Estado controlado `open` (`useState(false)`).
-   - `useEffect` observa `open`: quando `true`, aguarda o próximo frame (`requestAnimationFrame`) e chama `panelRef.current?.focus({ preventScroll: false })`.
-   - Quando recolher, devolver foco ao trigger (`triggerRef.current?.focus()`) — apenas se o foco atual estiver dentro do painel, para não roubar foco do usuário.
+Campos REMOVIDOS:
+- Momento (`current_moment`)
+- Tipo de projeto (`projectType`) e nome do projeto inicial
+- Dor principal (`main_pain`)
+- Modo (`track_view_mode`) — assume default `basic`
+- Estado/cidade — sai do onboarding (continua editável em Configurações)
+- Bloco "Vamos criar / Plano inicial"
 
-5. **Navegação por teclado:**
-   - Manter Tab order natural: trigger → primeiro Badge de área → demais controles → botão Salvar.
-   - Garantir que `Esc` dentro do painel recolha o card (handler `onKeyDown` no painel: se `key === "Escape"`, `setOpen(false)` e foca trigger).
-   - Badges clicáveis (áreas/estados): adicionar `role="button"`, `tabIndex={0}` e `onKeyDown` (Enter/Space) — atualmente só respondem a clique de mouse.
+Efeitos colaterais:
+- **Não cria projeto automático** nem tarefas iniciais (`MOMENT_TASKS`/`PAIN_TASKS` ficam mortos — manter os mapas no arquivo apenas se usados em outro lugar; remover se órfãos).
+- `updateProfile` salva: `full_name`, `display_name`, `whatsapp`, `user_type:'artist'`, `track_view_mode:'basic'`, `onboarding_version: 3`, `onboarding_completed: true`.
+- Redireciona para `/dashboard`.
+- Mantém analytics `onboarding_completed` (sem campos descontinuados).
 
-6. **Sem alterações de lógica/dados** — apenas a11y/UX.
+### 2. Banco — migration
+
+Adicionar coluna `full_name TEXT NOT NULL DEFAULT ''` em `profiles`. Demais colunas (`current_moment`, `main_pain`, `track_view_mode`) permanecem para não quebrar dados antigos / outros consumidores; deixarão de ser preenchidas em novos cadastros.
+
+### 3. Dashboard — remover hero
+
+- `src/pages/Dashboard.tsx`: remover import e uso de `HeroFocusCard` (linhas ~32 e ~333) e qualquer `nextAction`/`onResolveNextAction` que existia só para alimentá-lo.
+- Apagar `src/components/dashboard/HeroFocusCard.tsx`.
+- Conferir `src/lib/journeyPersonalization.ts` — se só era consumido pelo HeroFocusCard, remover; senão manter.
+- Layout do dashboard começa direto pelos blocos seguintes (FirstRunEmptyState segue intacto para usuários sem projetos).
+
+### 4. Onboarding convidado
+
+`src/pages/OnboardingGuest.tsx` será revisado para alinhar à nova lista de campos (mesmos 3 + email read-only), sem papel/momento/dor.
+
+## Detalhes técnicos
+
+- WhatsApp: máscara `(99) 99999-9999`, validação simples (10–11 dígitos). Sem verificação por SMS.
+- `ProfileContext` exporta um `full_name` opcional; tipos vêm do regenerador automático após a migration.
+- `onboarding_version: 3` permite migrar usuários antigos no futuro se quisermos forçar coleta de `full_name`.
+- Remoções no Onboarding apagam: `MOMENTS`, `PROJECT_TYPES`, `MODES`, `PAINS`, `PROJECT_NAME_MAP`, `TRACK_TEMPLATES`, `MOMENT_TASKS`, `PAIN_TASKS`, `SummaryRow`, e `addProject`/`useProjects` import.
 
 ## Fora de escopo
-Refatoração de outros componentes; mudança visual além do necessário para foco visível (manter `focus-visible` tokens já existentes do shadcn).
+
+- Backfill de `full_name` para perfis existentes (ficam com string vazia até o próprio usuário editar).
+- Reformular Configurações para expor edição dos novos campos (já existe edição de perfil; só somar `full_name` ali em outra iteração se necessário).
+- Mexer em `current_moment`/`main_pain` em outros módulos que ainda os leiam — ficam com fallback ("organization" / "").
