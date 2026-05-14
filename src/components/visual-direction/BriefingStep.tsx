@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Download, Link2, ExternalLink, RefreshCw, FileText, Share2, Loader2 } from "lucide-react";
+import { Download, Link2, RefreshCw, FileText, Share2, Loader2 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Popover, PopoverContent, PopoverTrigger,
