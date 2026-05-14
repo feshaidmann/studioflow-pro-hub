@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   ChevronLeft, Music2, Pencil, MessageSquare,
-  LayoutDashboard, Users, ListChecks, DollarSign, Rocket, FolderOpen, Sparkles,
+  LayoutDashboard, Users, ListChecks, DollarSign, Rocket, FolderOpen, Sparkles, Palette,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { scrollToAnchor } from "@/lib/scrollToAnchor";
