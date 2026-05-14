@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Download, Link2, ExternalLink } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Download, Link2, ExternalLink, RefreshCw, FileText } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";

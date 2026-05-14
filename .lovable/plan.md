@@ -1,84 +1,28 @@
 ## Objetivo
 
-Adicionar uma nova aba **"Direção Visual"** no `ProjectDetail` que mostra status atual do briefing visual do projeto, progresso pelas 4 etapas do stepper, e um card de sugestão via IA que pré-preenche o perfil artístico com base no contexto do projeto (gênero, artista, biografia, DNA musical se houver).
+Manter o botão de exportar PDF já existente em `BriefingStep` e adicionar uma área visível que exibe o link e um preview do arquivo retornado pela edge function `export-visual-briefing`.
 
-## Mudanças
+## Estado atual
 
-### 1. Novo componente: `ProjectVisualDirectionTab.tsx`
-Local: `src/components/project-hub/ProjectVisualDirectionTab.tsx`. Renderizado dentro da nova aba (somente owner).
+- `BriefingStep.tsx` já tem o botão "Baixar PDF" que invoca `export-visual-briefing`, salva `pdf_url` em `visual_briefings` e abre em nova aba.
+- Quando existe `pdf_url`, o usuário consegue só "Copiar link" — mas o link em si não é mostrado e não há preview embutido.
 
-Carrega `visual_briefings` do projeto via `useVisualBriefing(projectId)` (hook já existe). Renderiza:
+## Mudanças (somente `BriefingStep.tsx`)
 
-- **Header com status badge** derivado do `current_step`:
-  - sem registro → "Não iniciado" (neutro)
-  - `profile` → "Rascunho" (secondary)
-  - `generation` → "Em geração" (primary)
-  - `review` → "Em revisão" (primary)
-  - `briefing` → "Pronto" (success)
-- **Barra de progresso** (`<Progress />`) com `value = (stepIndex+1)/4 * 100`. Texto "Etapa N de 4 — {label}".
-- **Resumo de conteúdo** (quando aplicável): contagem de imagens aprovadas, paleta (mini swatches), copy aprovada truncada.
-- **Card de sugestão IA** (visível apenas no estado "Não iniciado" ou "Rascunho" e quando `artistic_profile` ainda está vazio):
-  - Texto explicativo curto + botão **"Sugerir com IA"**.
-  - Ao clicar: chama edge function `suggest-visual-direction` enviando `{ project_id }`. Mostra `Loader2` durante a chamada.
-  - Resposta: pré-popula via `updateProfile(...)` (autosave do hook cuida da persistência) e exibe toast de sucesso. Trata 429/402 mostrando mensagem clara.
-- **Botão CTA "Abrir Direção Visual"** que navega para `/projects/:id/direcao-visual` (página completa permanece a UX principal de edição).
+1. **Card "PDF gerado"** que aparece quando `pdfUrl` existe (após exportar ou se `briefing.pdf_url` já estiver salvo):
+   - URL truncada exibida em `font-mono text-xs` com tooltip do link completo.
+   - Badge informando que o link expira em 1h (a edge function gera signed URL com TTL de 3600s).
+   - Botões: "Abrir em nova aba" (`<a target="_blank">`), "Copiar link" (já existe), "Regenerar" (chama `handleExport` novamente).
 
-### 2. Atualizar `ProjectDetail.tsx`
-- Adicionar import `Palette` (lucide) e o novo `ProjectVisualDirectionTab`.
-- Adicionar entrada `{ value: "visual", label: "Visual", icon: Palette }` ao array de tabs do owner.
-- Trocar `grid-cols-6` por `grid-cols-7` na `TabsList` quando `isOwner`.
-- Adicionar `<TabsContent value="visual"><ProjectVisualDirectionTab projectId={project.id} project={project} /></TabsContent>`.
-- Não adicionar para colaborador (mantém escopo do dono).
+2. **Preview embutido** opcional via `<iframe src={pdfUrl} className="w-full h-[480px] rounded-md border border-border" title="Preview do briefing PDF" />`, dentro de um `<details>` colapsável "Ver preview" para não pesar o render por padrão.
 
-### 3. Nova edge function: `suggest-visual-direction`
-Local: `supabase/functions/suggest-visual-direction/index.ts`. `verify_jwt = false` herdado.
+3. **Estado vazio**: quando ainda não foi gerado, manter o layout atual (apenas o botão "Baixar PDF") sem placeholder extra.
 
-- CORS padrão (`npm:@supabase/supabase-js@2/cors`).
-- Valida JWT do header Authorization (extrai `user_id`).
-- Body: `{ project_id: string }` validado com Zod.
-- Carrega contexto do banco com client `service_role`:
-  - `projects` (name, artist, project_type, stage)
-  - `profiles` (primary_genre, bio, city, state, specialties)
-  - `music_dna_analyses` mais recente do projeto (se houver) → genre, valence, energy, tempo_bpm
-- Usa Lovable AI Gateway (`@ai-sdk/openai-compatible` + `ai`) com `google/gemini-3-flash-preview` e `Output.object` (Zod) para devolver `ArtisticProfile`:
-  ```ts
-  { tone: string, references: string[], target_audience: string,
-    color_keywords: string[], mood_keywords: string[], notes: string }
-  ```
-- Loga em `ai_invocations` com `function_name='suggest-visual-direction'`.
-- Trata 429/402 e devolve status apropriado.
+4. **Acessibilidade**: `aria-label` no link e no iframe; o botão regenerar reusa o estado `exporting`.
 
-### 4. i18n (mínimo)
-Adicionar em `src/contexts/LanguageContext.tsx` chaves `visual.tab.label`, `visual.status.*`, `visual.suggest.cta`, `visual.suggest.error` (PT/EN). A aba já mostra o ícone como fallback no mobile.
+## Fora de escopo
 
-## Fora do escopo
-- Não mexer em `useVisualBriefing` (hook já expõe `updateProfile` que basta para aplicar a sugestão).
-- Não tocar no fluxo do stepper na página `/direcao-visual`.
-- Sem gating Pro (decisão anterior: manter sempre Pro).
-- Sem novas migrations (`current_step` já existe).
-
-## Detalhes técnicos
-
-```text
-ProjectDetail tabs (owner)
-┌──────┬──────┬──────┬──────┬──────┬───────┬────────┐
-│Visão │Tarefa│Equipe│Arquiv│Finanç│Lançam.│ Visual │  ← nova
-└──────┴──────┴──────┴──────┴──────┴───────┴────────┘
-
-ProjectVisualDirectionTab
-┌────────────────────────────────────────┐
-│ [Status badge]  Etapa N de 4 — label   │
-│ ▓▓▓▓░░░░░░  50%                        │
-│ • 4 imagens aprovadas                  │
-│ • Paleta: ■■■■■                        │
-│ • Copy: "..."                          │
-├────────────────────────────────────────┤
-│ ✨ Sugerir com IA                      │  (só se vazio)
-│ Cria um rascunho com base no projeto.  │
-│ [Sugerir com IA]                       │
-├────────────────────────────────────────┤
-│           [Abrir Direção Visual →]     │
-└────────────────────────────────────────┘
-```
-
-Arquivos tocados: 4 (1 novo componente, 1 nova edge function, ProjectDetail, LanguageContext).
+- Edge function `export-visual-briefing` (já funcional).
+- Migrações ou novas tabelas.
+- Pro gating do export (separado, conforme conversado).
+- Outros steps do stepper.
