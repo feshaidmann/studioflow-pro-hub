@@ -90,8 +90,23 @@ export default function ProjectCulturalProfile({ projectId }: { projectId: strin
     }
   };
 
+  const keywordButtonsRef = useRef<Record<string, HTMLButtonElement | null>>({});
+  const newKeywordInputRef = useRef<HTMLInputElement>(null);
+
   const removeKeyword = (kw: string) => {
+    const list = perfil.palavras_chave;
+    const idx = list.indexOf(kw);
     setPerfil((p) => ({ ...p, palavras_chave: p.palavras_chave.filter((k) => k !== kw) }));
+    // Mover foco para o próximo chip remanescente, ou anterior, ou para o input.
+    const next = list[idx + 1] ?? list[idx - 1] ?? null;
+    requestAnimationFrame(() => {
+      delete keywordButtonsRef.current[kw];
+      if (next && keywordButtonsRef.current[next]) {
+        keywordButtonsRef.current[next]?.focus();
+      } else {
+        newKeywordInputRef.current?.focus();
+      }
+    });
   };
 
   const save = async () => {
