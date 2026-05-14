@@ -1,72 +1,132 @@
 ## Objetivo
 
-Criar testes de regressão para `ProfessionalDetailModal` cobrindo o toggle de dados financeiros.
+Substituir o módulo "Criativo" (que gera ativos finais para publicação) pelo módulo **Direção Visual**, que gera um **briefing estruturado** para o artista enviar a um designer. A IA produz apenas referências e rascunhos. O módulo roda **em paralelo à produção musical** — não está atrelado a nenhum stage do projeto.
 
-## Arquivo
+---
 
-`src/components/professionals/ProfessionalDetailModal.test.tsx` (vitest + @testing-library/react já configurados).
+## 1. Remoções
 
-## Estratégia de mocks
+Apagar do app:
 
-O componente depende de vários contextos/hooks externos. Mockamos por módulo via `vi.mock` para isolar o toggle:
+- `src/pages/Creative.tsx`
+- `src/components/creative/` inteiro (CaptionGeneratorCard, FormatSelector, FormatChips, ImagePreview, GalleryLightbox, StyleChips, ReferenceImageUpload, QuickTemplates, VideoEffectPicker, VideoLoopGenerator, videoLayers, DebugPromptPanel, DeriveBatchDialog)
+- `src/hooks/useCreativeAssets.ts`
+- Rota `/criativo` em `src/App.tsx`
+- Item de menu `nav.creative` / `/criativo` em `src/components/AppLayout.tsx` (incluindo lazy preload)
+- Edge function `supabase/functions/generate-creative/` + `supabase--delete_edge_functions(["generate-creative"])`
 
-- `@/contexts/AuthContext` → `useAuth` retornando `{ user, loading }` controlável por teste (variável module-scoped).
-- `@/contexts/ProjectContext` → `useProjects` retornando `{ projects: [] }`.
-- `@/hooks/useProfessionalMetrics` → `useProfessionalMetrics` retornando `{ metrics, loading: false }` controlável.
-- `react-router-dom` → manter `Link` real via `MemoryRouter` (envolver `render`) e mockar apenas `useNavigate` se necessário (importação parcial).
-- `localStorage` é nativo do `jsdom`; limpar em `beforeEach`.
+Manter as tabelas `creative_assets` e `creative_captions` no banco como histórico (não dropar nesta entrega).
 
-Helper:
-```ts
-const baseProfessional = { id: "p1", name: "Maria", active: true, ... };
-const renderModal = () => render(
-  <MemoryRouter>
-    <ProfessionalDetailModal professional={baseProfessional} onClose={() => {}} onEdit={() => {}} />
-  </MemoryRouter>
-);
-```
+---
 
-## Casos de teste
+## 2. Banco
 
-### 1. Visibilidade do botão conforme dados financeiros
+Migration única:
 
-- **Sem dados** (`avgFee: null`, `avgDeliveryDays: null`, `collaborationHistory: []`) → `queryByRole("button", { name: /mostrar dados financeiros/i })` é `null`.
-- **Com `avgFee`** → botão presente.
-- **Com `avgDeliveryDays`** → botão presente.
-- **Com histórico contendo `fee > 0`** → botão presente.
-- **Com histórico contendo `deliveryDueDate`** → botão presente.
-- **Enquanto `metrics.loading: true`** → botão ausente.
+- Tabela `visual_briefings` (project_id, user_id, version, artistic_profile jsonb, generated_images jsonb, approved_images jsonb, generated_palette jsonb, copy_options jsonb, approved_copy, designer_notes, regeneration_count, pdf_url, timestamps).
+- RLS: `auth.uid() = user_id` para ALL.
+- CHECK `regeneration_count <= 5`.
+- Trigger `update_updated_at_column` em UPDATE.
+- Bucket privado de Storage `briefings` com policy de leitura/escrita por owner via path `{user_id}/...`.
 
-### 2. Toggle alterna painel e ARIA consistentes
+**Sem** alteração de stages do projeto. **Sem** novo valor `identidade_visual`.
 
-- Estado inicial: `aria-expanded="false"`, painel `#prof-financial-panel` ausente, label "Mostrar dados financeiros".
-- Click no botão → `aria-expanded="true"`, painel renderizado com valores formatados (`R$1.500`, `5d`), label "Ocultar...".
-- Segundo click → volta ao estado inicial. Garante idempotência.
+---
 
-### 3. Persistência por usuário (`localStorage`)
+## 3. Edge Functions
 
-- **Mesmo usuário entre montagens:** logar `user.id="u1"`, abrir, ligar toggle, desmontar, remontar → toggle volta ligado e `localStorage["professionals.show_financial:u1"] === "1"`.
-- **Slot anônimo separado:** com `u1` ligar; depois remontar com `user=null` (e `loading=false`) → toggle inicia desligado (lê `:anon`); ao ligar e remontar com `u1` novamente → ainda ligado (não sobrescreveu slot do `u1`).
-- **Troca de usuário em runtime:** montar com `u1` ligado salvo previamente; rerender mudando o mock para `u2` (sem nada salvo) → toggle precisa virar desligado **sem** gravar `u2` no storage (só grava após interação). Verificar `localStorage.getItem("professionals.show_financial:u2") === null`.
-- **Não cria entrada parasita:** primeira montagem com `u3` novo, sem clicar no toggle → `localStorage.getItem("professionals.show_financial:u3") === null`.
-- **Não vaza durante `auth.loading`:** montar com `loading: true`; clicar não deve produzir gravação ainda; resolver para `u4` → estado é hidratado do `:u4` (vazio → `false`) sem gravar.
+### `generate-visual-direction` (POST)
 
-### 4. Smoke de logout/login (cenário do bug original)
+- Input: `{ project_id, artistic_profile, briefing_id? }`. Valida `genres`, `moods` (≥1) e `artist_refs` — senão `400`.
+- Imagens: 6 chamadas paralelas a `google/gemini-3.1-flash-image-preview` via Lovable AI Gateway (`LOVABLE_API_KEY`). Cada prompt monta `genres + moods + artist_refs + identity_phrase` com variação de estilo e `style_tag` (ex.: "Escuro · urbano", "P&B · grão analógico", "Cinematográfico", "Editorial", "Documental", "Onírico"). Label fixo "Referência de estilo".
+- Paleta + copy: 1 chamada a `google/gemini-3-flash-preview` com `Output.object` (zod) retornando `{ palette: { colors[], rationale }, copy_options: [{id,label,text}×3] }`. System prompt: copywriter musical, tom autoral, JSON válido.
+- Persiste em `visual_briefings`. Se `briefing_id` veio no body é regeneração — incrementa `regeneration_count` (guard `<= 5`, senão `429`). Retorna o registro.
+- Trata 402/429 do gateway com mensagem clara para o cliente.
 
-- Pré-popular `localStorage["professionals.show_financial:u1"] = "1"` e `:anon = "0"`.
-- Renderizar com `u1` → toggle inicia ligado.
-- Rerender com `user=null` → toggle inicia desligado (slot anon).
-- Rerender com `u1` → volta ligado. Confirma não-reciclagem visual entre slots.
+### `export-visual-briefing` (POST)
+
+- Input: `{ briefing_id }`. Valida ownership.
+- Gera PDF com `npm:jspdf` (header com artista + projeto + data; seções Gênero/Mood/Referências/Direção Estética com imagens + label "Referência de estilo"/Paleta com swatches/Copy aprovada/Notas; footer "Gerado via StudioFlow Pro · Direção Visual").
+- Upload em `briefings/{user_id}/{briefing_id}.pdf` no bucket privado. Gera signed URL (1h), grava `pdf_url`, retorna URL.
+
+---
+
+## 4. Frontend — `src/components/visual-direction/`
+
+- `VisualDirectionPage.tsx` — stepper de 4 etapas (`profile | generation | review | briefing`), barra de progresso, persiste `briefingId` em estado.
+- `ArtisticProfileStep.tsx` — formulário (genres tag-input com sugestões, máx 4; moods multi-select máx 3; artist_refs textarea obrigatório; external_refs opcional; palette presets JSP + hex custom até 3 cores; identity_phrase 120 chars). Botão "Próximo" desabilitado até campos obrigatórios preenchidos.
+- `GenerationStep.tsx` — chama edge function, exibe loading com Sonner. Grid 3×2 com label fixo "Referência de estilo", seleção com borda dourada e checkmark. Botão "Regenerar imagens (N/5)" desabilitado em 5 com tooltip "Limite atingido para esta sessão". Paleta com swatches + rationale. 3 cards de copy A/B/C, seleção exclusiva.
+- `ReviewStep.tsx` — chips removíveis das imagens, swatches read-only, copy editável inline com botão "✏ Editar", textarea `designer_notes`. **AlertDialog** se `approved_copy === texto original` ao clicar em "Gerar briefing →".
+- `BriefingStep.tsx` — card consolidado, "⬇ Baixar PDF" (chama `export-visual-briefing`), "🔗 Copiar link" com Sonner. Banner CTA marketplace com botão "Encontrar designer" desabilitado + tooltip "Em breve".
+
+Página: `src/pages/VisualDirection.tsx` (lê `:id` do projeto, valida ownership, monta `VisualDirectionPage`).
+
+Rota: `/projeto/:id/direcao-visual` em `src/App.tsx` (lazy).
+
+---
+
+## 5. Como o usuário entra no módulo
+
+Sem trigger por stage. Três pontos de entrada paralelos:
+
+1. **Sidebar** (substitui o item criativo antigo) — ícone `Palette`, label "Direção Visual". Path computado: `/projeto/${currentProjectId}/direcao-visual`.
+   - Sem projeto ativo → desabilitado, tooltip "Abra um projeto para usar este módulo".
+   - `plan: 'free'` → badge "Pro" + abre modal de upgrade existente em vez de navegar.
+2. **Aba dentro do ProjectDetail** — adicionar uma aba "Direção Visual" na navegação interna do projeto (ao lado de Visão Geral, Tarefas etc.) que abre o módulo no contexto do projeto. Disponível em **qualquer stage**.
+3. **Card de sugestão suave** no ProjectOverviewTab — mostrar um card "Já pensou na identidade visual? Comece o briefing em paralelo à produção" com CTA para o módulo. Sem dependência de stage; some quando já existe um `visual_briefings` para o projeto.
+
+Adicionar chaves PT/EN em `LanguageContext` (`nav.visualDirection`, `tabs.visualDirection`, `visualDirection.suggestionTitle`, etc).
+
+---
+
+## 6. Tokens & regras inegociáveis
+
+- Reutilizar tokens HSL semânticos do `index.css` (light mode, conforme memória). Cores específicas (`#C9A84C`, `#8B6FD4`, `#3DB882`, `#2D9CDB`, `#080810`) entram **apenas** como presets de paleta no formulário e como swatches do briefing — **não** como background do app.
+- Nenhum botão de "publicar / postar / enviar para rede social".
+- Label "Referência de estilo" presente na grid, nos chips do Review e no PDF.
+- Edge function rejeita `400` sem `genres`/`moods`/`artist_refs`.
+- Módulo só funciona com `project_id` válido.
+- `regeneration_count <= 5` enforced no banco (CHECK) e na edge function.
+
+---
+
+## 7. Memória
+
+Ao final, atualizar `mem://index.md`:
+
+- Adicionar entrada `Direção Visual` (novo módulo, tabela `visual_briefings`, edge functions, regra de só-rascunho, **roda em paralelo à produção, não é stage**).
+- Adicionar constraint: módulo criativo antigo (`/criativo`) removido — não recriar.
+- **Não** alterar `Project Workflow` (continua 6 stages).
+
+---
 
 ## Detalhes técnicos
 
-- Usar `userEvent.setup()` para cliques.
-- Para mutar o retorno de `useAuth` entre testes/rerenders sem recriar mocks: módulo de mock exporta uma função que lê de uma variável `let currentAuth = { user: null, loading: false }`; testes ajustam essa variável e chamam `rerender(...)` no resultado.
-- `beforeEach`: `localStorage.clear()`, resetar `currentAuth` e `currentMetrics`.
-- Não há necessidade de testar formatação de moeda detalhada; basta presença do bloco "Cachê médio"/"Prazo médio".
+```text
+Banco
+  visual_briefings (RLS owner-only, CHECK regeneration_count<=5)
+  storage bucket "briefings" (privado, signed URLs)
 
-## Fora de escopo
+Edge functions
+  generate-visual-direction  → Lovable AI (gemini-3.1-flash-image-preview ×6 + gemini-3-flash-preview Output.object)
+  export-visual-briefing     → jspdf + storage upload + signed URL
 
-- Testes de outros toggles ou de `ProfessionalDetailModal` para campos não-financeiros.
-- Cross-tab sync (`storage` event) — não implementado no componente.
-- Testes E2E via browser; ficam só os unitários com jsdom.
+Frontend
+  src/pages/VisualDirection.tsx
+  src/components/visual-direction/{VisualDirectionPage,ArtisthapProfileStep,GenerationStep,ReviewStep,BriefingStep,StylePresets}.tsx
+  Rota /projeto/:id/direcao-visual
+  Sidebar item "Direção Visual"
+  Aba "Direção Visual" no ProjectDetail
+  Card de sugestão no ProjectOverviewTab (sem gating de stage)
+
+Removidos
+  /criativo (rota, page, components, hook, edge function generate-creative)
+```
+
+---
+
+## Ordem de execução (em sequência, no mesmo ciclo)
+
+1. Migration (`visual_briefings` + bucket `briefings`) → aguardar aprovação.
+2. Edge functions (`generate-visual-direction`, `export-visual-briefing`) + remoção do módulo antigo (arquivos + `delete_edge_functions(["generate-creative"])`).
+3. Componentes React, página, rota, sidebar, aba no ProjectDetail, card de sugestão no Overview, atualização de memória.
