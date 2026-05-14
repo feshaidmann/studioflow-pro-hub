@@ -215,6 +215,37 @@ export default function BriefingStep({ briefing, onBack }: Props) {
         </div>
       )}
 
+      {shareUrl && (
+        <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 space-y-2">
+          <div className="flex items-start justify-between gap-3 flex-wrap">
+            <div className="flex items-start gap-2 min-w-0">
+              <Share2 className="h-4 w-4 mt-0.5 text-primary shrink-0" />
+              <div className="min-w-0">
+                <p className="text-sm font-medium">Link de compartilhamento</p>
+                <a
+                  href={shareUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block font-mono text-xs text-muted-foreground hover:text-foreground underline truncate max-w-[420px]"
+                >
+                  {shareUrl}
+                </a>
+              </div>
+            </div>
+            {shareExpires && (
+              <Badge variant="outline" className="text-[10px] shrink-0">
+                Expira em {new Date(shareExpires).toLocaleString("pt-BR")}
+              </Badge>
+            )}
+          </div>
+          <div className="flex justify-end">
+            <Button variant="ghost" size="sm" onClick={handleCopyShareUrl}>
+              <Link2 className="h-4 w-4 mr-1.5" /> Copiar
+            </Button>
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Button variant="ghost" size="sm" onClick={onBack}>← Editar revisão</Button>
         <div className="flex flex-wrap gap-2">
@@ -223,18 +254,41 @@ export default function BriefingStep({ briefing, onBack }: Props) {
             {exporting ? "Gerando…" : pdfUrl ? "Regenerar PDF" : "Baixar PDF"}
           </Button>
           <Button variant="outline" size="sm" onClick={handleCopyLink} disabled={!pdfUrl}>
-            <Link2 className="h-4 w-4 mr-1.5" /> Copiar link
+            <Link2 className="h-4 w-4 mr-1.5" /> Copiar link PDF
           </Button>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span>
-                <Button size="sm" disabled className="opacity-60 cursor-not-allowed">
-                  <ExternalLink className="h-4 w-4 mr-1.5" /> Enviar a designer
-                </Button>
-              </span>
-            </TooltipTrigger>
-            <TooltipContent>Em breve — marketplace de designers parceiros</TooltipContent>
-          </Tooltip>
+
+          <Popover open={sharePopoverOpen} onOpenChange={setSharePopoverOpen}>
+            <PopoverTrigger asChild>
+              <Button size="sm" disabled={creatingShare || exporting}>
+                {creatingShare ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Share2 className="h-4 w-4 mr-1.5" />}
+                Compartilhar
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-64 space-y-3">
+              <div>
+                <Label className="text-xs">Validade do link</Label>
+                <RadioGroup
+                  value={String(shareTtl)}
+                  onValueChange={(v) => setShareTtl(Number(v))}
+                  className="mt-2 space-y-1.5"
+                >
+                  {TTL_PRESETS.map((p) => (
+                    <div key={p.value} className="flex items-center gap-2">
+                      <RadioGroupItem value={String(p.value)} id={`ttl-${p.value}`} />
+                      <Label htmlFor={`ttl-${p.value}`} className="text-xs font-normal cursor-pointer">{p.label}</Label>
+                    </div>
+                  ))}
+                </RadioGroup>
+              </div>
+              <Button size="sm" className="w-full" onClick={handleCreateShare} disabled={creatingShare}>
+                {creatingShare ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Share2 className="h-4 w-4 mr-1.5" />}
+                Gerar link
+              </Button>
+              <p className="text-[10px] text-muted-foreground">
+                Quem tiver o link verá o briefing e o PDF até a data de expiração.
+              </p>
+            </PopoverContent>
+          </Popover>
         </div>
       </div>
     </div>
