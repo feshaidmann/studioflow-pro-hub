@@ -108,6 +108,7 @@ export default function ProjectDetail() {
     { value: "files", label: "Arquivos", icon: FolderOpen },
     { value: "finance", label: "Financeiro", icon: DollarSign },
     { value: "release", label: "Lançamento", icon: Rocket },
+    { value: "visual", label: "Visual", icon: Palette },
   ];
 
   // Collaborator tabs
