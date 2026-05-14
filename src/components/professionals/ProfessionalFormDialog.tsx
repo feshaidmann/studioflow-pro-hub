@@ -97,12 +97,9 @@ export function ProfessionalFormDialog({ open, onOpenChange, editTarget, existin
 
     const finalSpecialty = specialtyMode === "Outro" ? customSpecialty.trim() : specialtyMode;
 
-    if (!editTarget) {
-      const dup = existingEmails.find((e) => e.toLowerCase() === values.email.toLowerCase());
-      if (dup && !duplicateWarning) {
-        setDuplicateWarning(values.email);
-        return;
-      }
+    // Block submit if duplicate detected and user hasn't explicitly acknowledged it
+    if (!editTarget && isDuplicate && !acknowledgedDuplicate) {
+      return;
     }
 
     setSubmitting(true);
