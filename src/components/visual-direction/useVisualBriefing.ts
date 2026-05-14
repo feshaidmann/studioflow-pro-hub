@@ -10,17 +10,14 @@ const PROFILE_DEBOUNCE_MS = 400;
 const REVIEW_DEBOUNCE_MS = 600;
 const STEP_DEBOUNCE_MS = 200;
 
-type Patch = Partial<
-  Pick<
-    VisualBriefing,
-    | "artistic_profile"
-    | "generated_images"
-    | "approved_images"
-    | "approved_copy"
-    | "designer_notes"
-    | "current_step" as never
-  >
-> & { current_step?: StepKey };
+type Patch = Partial<{
+  artistic_profile: ArtisticProfile;
+  generated_images: GeneratedImage[];
+  approved_images: GeneratedImage[];
+  approved_copy: string;
+  designer_notes: string;
+  current_step: StepKey;
+}>;
 
 interface UseVisualBriefingResult {
   briefing: VisualBriefing | null;
