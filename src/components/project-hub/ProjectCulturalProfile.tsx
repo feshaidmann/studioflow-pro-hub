@@ -239,7 +239,13 @@ export default function ProjectCulturalProfile({ projectId }: { projectId: strin
                     {kw}
                     <button
                       type="button"
-                      ref={(el) => { keywordButtonsRef.current[kw] = el; }}
+                      ref={(el) => {
+                        if (el) {
+                          keywordButtonsRef.current[kw] = el;
+                        } else {
+                          delete keywordButtonsRef.current[kw];
+                        }
+                      }}
                       aria-label={`Remover palavra-chave ${kw}`}
                       onClick={() => removeKeyword(kw)}
                       onKeyDown={(e) => {
