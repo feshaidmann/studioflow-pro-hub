@@ -29,7 +29,6 @@ import FirstRunEmptyState from "@/components/dashboard/FirstRunEmptyState";
 import ProjectAlertsCard from "@/components/dashboard/ProjectAlertsCard";
 import ProjectHealthList from "@/components/dashboard/ProjectHealthList";
 import PendingTeamCard from "@/components/dashboard/PendingTeamCard";
-import HeroFocusCard, { type NextAction } from "@/components/dashboard/HeroFocusCard";
 import { getJourneyPlan } from "@/lib/journeyPersonalization";
 
 // Lazy-loaded — não bloqueiam o first render do Dashboard
