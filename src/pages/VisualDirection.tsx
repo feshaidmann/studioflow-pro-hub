@@ -14,6 +14,27 @@ import { useVisualBriefing } from "@/components/visual-direction/useVisualBriefi
 
 const VALID_STEPS: StepKey[] = ["profile", "generation", "review", "briefing"];
 
+// pt-BR aliases para deep-link compartilhável
+const STEP_TO_SLUG: Record<StepKey, string> = {
+  profile: "perfil",
+  generation: "geracao",
+  review: "revisao",
+  briefing: "briefing",
+};
+const SLUG_TO_STEP: Record<string, StepKey> = {
+  perfil: "profile",
+  geracao: "generation",
+  // aceita variações comuns
+  "geração": "generation",
+  revisao: "review",
+  "revisão": "review",
+  briefing: "briefing",
+  // também aceita as chaves internas (compatibilidade retroativa)
+  profile: "profile",
+  generation: "generation",
+  review: "review",
+};
+
 export default function VisualDirection() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -32,23 +53,34 @@ export default function VisualDirection() {
   useEffect(() => {
     if (loading || restoredRef.current) return;
     restoredRef.current = true;
-    const urlStep = searchParams.get("step") as StepKey | null;
+    const raw = searchParams.get("step");
+    const urlStep = raw ? SLUG_TO_STEP[raw.toLowerCase()] : null;
     if (!urlStep || !VALID_STEPS.includes(urlStep) || urlStep === step) return;
     // Guard: don't jump to steps the user can't be on yet
     const hasImages = (briefing?.generated_images ?? []).length > 0;
     const hasSelection = (briefing?.generated_images ?? []).some((i) => i.selected);
-    if (urlStep === "generation" && !hasImages) return;
-    if (urlStep === "review" && !hasSelection) return;
-    if (urlStep === "briefing" && !briefing?.approved_copy) return;
+    if (urlStep === "generation" && !hasImages) {
+      toast.info("Gere as referências antes de abrir esta etapa");
+      return;
+    }
+    if (urlStep === "review" && !hasSelection) {
+      toast.info("Selecione ao menos uma referência antes de revisar");
+      return;
+    }
+    if (urlStep === "briefing" && !briefing?.approved_copy) {
+      toast.info("Conclua a revisão antes de abrir o briefing");
+      return;
+    }
     setStep(urlStep);
   }, [loading, briefing, searchParams, step, setStep]);
 
-  // Keep URL in sync with current step (replace, not push, to avoid history spam)
+  // Keep URL in sync with current step using pt-BR slug (replace, not push)
   useEffect(() => {
     if (loading) return;
-    if (searchParams.get("step") === step) return;
+    const desiredSlug = STEP_TO_SLUG[step];
+    if (searchParams.get("step") === desiredSlug) return;
     const next = new URLSearchParams(searchParams);
-    next.set("step", step);
+    next.set("step", desiredSlug);
     setSearchParams(next, { replace: true });
   }, [step, loading, searchParams, setSearchParams]);
 
