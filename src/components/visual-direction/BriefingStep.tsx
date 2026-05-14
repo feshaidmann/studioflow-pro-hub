@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Download, Link2, ExternalLink } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Download, Link2, ExternalLink, RefreshCw, FileText } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -122,12 +123,52 @@ export default function BriefingStep({ briefing, onBack }: Props) {
         )}
       </div>
 
+      {pdfUrl && (
+        <div className="rounded-xl border border-border bg-card p-4 space-y-3">
+          <div className="flex items-start justify-between gap-3 flex-wrap">
+            <div className="flex items-start gap-2 min-w-0">
+              <FileText className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
+              <div className="min-w-0">
+                <p className="text-sm font-medium">PDF gerado</p>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <a
+                      href={pdfUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label="Abrir PDF do briefing em nova aba"
+                      className="block font-mono text-xs text-muted-foreground hover:text-foreground underline truncate max-w-[420px]"
+                    >
+                      {pdfUrl}
+                    </a>
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-[480px] break-all">{pdfUrl}</TooltipContent>
+                </Tooltip>
+              </div>
+            </div>
+            <Badge variant="outline" className="text-[10px] shrink-0">Link expira em 1h</Badge>
+          </div>
+
+          <details className="group">
+            <summary className="cursor-pointer text-xs text-muted-foreground hover:text-foreground select-none">
+              Ver preview
+            </summary>
+            <iframe
+              src={pdfUrl}
+              title="Preview do briefing PDF"
+              aria-label="Preview do briefing PDF"
+              className="w-full h-[480px] rounded-md border border-border mt-2 bg-background"
+            />
+          </details>
+        </div>
+      )}
+
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Button variant="ghost" size="sm" onClick={onBack}>← Editar revisão</Button>
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" size="sm" onClick={handleExport} disabled={exporting}>
-            <Download className="h-4 w-4 mr-1.5" />
-            {exporting ? "Gerando…" : "Baixar PDF"}
+            {pdfUrl ? <RefreshCw className={`h-4 w-4 mr-1.5 ${exporting ? "animate-spin" : ""}`} /> : <Download className="h-4 w-4 mr-1.5" />}
+            {exporting ? "Gerando…" : pdfUrl ? "Regenerar PDF" : "Baixar PDF"}
           </Button>
           <Button variant="outline" size="sm" onClick={handleCopyLink} disabled={!pdfUrl}>
             <Link2 className="h-4 w-4 mr-1.5" /> Copiar link
