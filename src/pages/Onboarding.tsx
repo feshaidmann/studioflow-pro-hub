@@ -23,6 +23,7 @@ export default function Onboarding() {
   const navigate = useNavigate();
 
   const [submitting, setSubmitting] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "success" | "error">("idle");
   const [fullName, setFullName] = useState("");
   const [artistName, setArtistName] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
