@@ -1,134 +1,37 @@
 import { useState, useRef, useEffect } from "react";
 import { trackAppEvent } from "@/lib/analytics";
 import { useNavigate, Navigate } from "react-router-dom";
-import {
-  Music, Mic2, ArrowRight, MapPin, Check, Layers,
-  Lightbulb, Disc3, Radio, Rocket,
-  FileMusic, Album, ListMusic,
-  FolderKanban, Users, Clock, DollarSign, Upload,
-} from "lucide-react";
+import { Music, ArrowRight, User, Mic2, Phone, Mail } from "lucide-react";
 import { useProfile } from "@/contexts/ProfileContext";
 import { useAuth } from "@/contexts/AuthContext";
-import { useProjects } from "@/contexts/ProjectContext";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { BRAZIL_STATES, TOP_CITIES_BY_UF } from "@/constants/brazilStates";
 
-/* ── option maps ────────────────────────────────────────────── */
-
-const MOMENTS = [
-  { value: "idea", label: "Tenho uma ideia", icon: Lightbulb, stage: "inicio", impact: "Seu projeto começa em organização criativa." },
-  { value: "producing", label: "Já estou produzindo", icon: Disc3, stage: "gravacao", impact: "Vamos priorizar gravação, arranjo e entregas." },
-  { value: "ready", label: "Tenho música pronta", icon: Radio, stage: "master", impact: "O projeto já nasce em masterização." },
-  { value: "launching", label: "Quero lançar", icon: Rocket, stage: "upload", impact: "Seu plano começa focado em distribuição." },
-] as const;
-
-const PROJECT_TYPES = [
-  { value: "single", label: "Single", icon: FileMusic, desc: "1 faixa" },
-  { value: "ep", label: "EP", icon: ListMusic, desc: "2–6 faixas" },
-  { value: "album", label: "Álbum", icon: Album, desc: "7+ faixas" },
-  { value: "beat", label: "Beat", icon: Mic2, desc: "Produção instrumental" },
-  { value: "feat", label: "Feat", icon: Users, desc: "Colaboração com outro artista" },
-] as const;
-
-const MODES = [
-  { value: "basic" as const, label: "Simples", emoji: "🎯", desc: "Interface limpa, foco em projetos e tarefas." },
-  { value: "advanced" as const, label: "Completo", emoji: "⚡", desc: "Tudo habilitado: tracks, financeiro detalhado, dados." },
-];
-
-const PAINS = [
-  { value: "organization", label: "Organização", icon: FolderKanban, impact: "Não sei por onde começar — tenho muita coisa ao mesmo tempo." },
-  { value: "team", label: "Equipe", icon: Users, impact: "Perco o controle de quem deve entregar o quê e quando." },
-  { value: "deadlines", label: "Prazos", icon: Clock, impact: "As datas aparecem de surpresa e sempre tem coisa atrasada." },
-  { value: "finance", label: "Financeiro", icon: DollarSign, impact: "Não sei quanto já gastei nem o que ainda vai custar." },
-  { value: "launch", label: "Lançamento", icon: Upload, impact: "Tenho música pronta mas não sei como lançar do jeito certo." },
-] as const;
-
-const PROJECT_NAME_MAP: Record<string, string> = {
-  single: "Meu Single",
-  ep: "Meu EP",
-  album: "Meu Álbum",
-  beat: "Meu Beat",
-  feat: "Meu Feat",
-};
-
-const TRACK_TEMPLATES: Record<string, string[]> = {
-  single: ["Voz Principal", "Instrumental / Beat", "Referência", "Master Bus"],
-  ep: ["Faixa 1", "Faixa 2", "Faixa 3", "Master Bus"],
-  album: ["Pré-produção", "Faixas principais", "Interlúdios / versões", "Master Bus"],
-  beat: ["Melodia Principal", "Drums / Batida", "Bass", "Master Bus"],
-  feat: ["Voz Principal", "Voz Feat", "Instrumental", "Master Bus"],
-};
-
-const PAIN_TASKS: Record<string, { description: string; task_area: string; severity?: string }[]> = {
-  organization: [
-    { description: "Definir a próxima etapa do projeto", task_area: "geral", severity: "high" },
-    { description: "Organizar referências e arquivos principais", task_area: "geral" },
-    { description: "Listar pendências para avançar esta semana", task_area: "geral" },
-  ],
-  team: [
-    { description: "Listar quem falta para finalizar o projeto", task_area: "equipe", severity: "high" },
-    { description: "Convidar um parceiro para o projeto", task_area: "equipe" },
-    { description: "Definir responsável pela próxima entrega", task_area: "equipe" },
-  ],
-  deadlines: [
-    { description: "Definir o próximo prazo realista do projeto", task_area: "geral", severity: "high" },
-    { description: "Marcar a próxima entrega crítica no checklist", task_area: "geral" },
-    { description: "Separar pendências que podem atrasar o lançamento", task_area: "geral" },
-  ],
-  finance: [
-    { description: "Definir orçamento estimado do projeto", task_area: "financeiro", severity: "high" },
-    { description: "Registrar investimento inicial", task_area: "financeiro" },
-    { description: "Anotar previsão de receita ou cachê", task_area: "financeiro" },
-  ],
-  launch: [
-    { description: "Definir data prevista de lançamento", task_area: "lancamento", severity: "high" },
-    { description: "Conferir LUFS/True Peak antes do upload", task_area: "lancamento" },
-    { description: "Preparar capa e texto curto de divulgação", task_area: "lancamento" },
-  ],
-};
-
-const MOMENT_TASKS: Record<string, { description: string; task_area: string; severity?: string }[]> = {
-  idea: [{ description: "Transformar a ideia em estrutura de música", task_area: "gravacao", severity: "high" }],
-  producing: [{ description: "Definir o que falta gravar ou editar", task_area: "gravacao", severity: "high" }],
-  ready: [{ description: "Rodar uma análise técnica da faixa pronta", task_area: "lancamento", severity: "high" }],
-  launching: [{ description: "Revisar checklist de distribuição antes do envio", task_area: "lancamento", severity: "high" }],
-};
-
-/* ── component ──────────────────────────────────────────────── */
+function maskWhatsapp(value: string) {
+  const digits = value.replace(/\D/g, "").slice(0, 11);
+  if (digits.length <= 2) return digits;
+  if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+  if (digits.length <= 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+}
 
 export default function Onboarding() {
   const { updateProfile, loading: profileLoading, profile } = useProfile();
   const { user, loading: authLoading } = useAuth();
-  const { addProject } = useProjects();
   const navigate = useNavigate();
 
-  const [step, setStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
-
-  // Step data
-  const [moment, setMoment] = useState("");
-  const [projectType, setProjectType] = useState("");
-  const [projectName, setProjectName] = useState("");
-  const [viewMode, setViewMode] = useState<"basic" | "advanced">("basic");
-  const [pain, setPain] = useState("");
+  const [fullName, setFullName] = useState("");
   const [artistName, setArtistName] = useState("");
-  const [stateUf, setStateUf] = useState("");
-  const [city, setCity] = useState("");
-  const [customCity, setCustomCity] = useState(false);
-
-  const nameRef = useRef<HTMLInputElement>(null);
+  const [whatsapp, setWhatsapp] = useState("");
+  const fullNameRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (step === 1) setTimeout(() => nameRef.current?.focus(), 300);
-  }, [step]);
+    setTimeout(() => fullNameRef.current?.focus(), 200);
+  }, []);
 
-  /* ── guards ─────────────────────────────────────────────── */
   if (authLoading || profileLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -139,403 +42,110 @@ export default function Onboarding() {
   if (!user) return <Navigate to="/auth" replace />;
   if (profile?.onboarding_completed) return <Navigate to="/dashboard" replace />;
 
-  /* ── navigation ─────────────────────────────────────────── */
-  // Order: 1 Identidade → 2 Momento → 3 Tipo → 4 Dor → 5 Modo → 6 Confirmação
-  const canAdvance: Record<number, boolean> = {
-    1: !!artistName.trim(),
-    2: !!moment,
-    3: !!projectType,
-    4: !!pain,
-    5: true,
-    6: true,
-  };
+  const whatsappDigits = whatsapp.replace(/\D/g, "");
+  const canSubmit =
+    fullName.trim().length >= 2 &&
+    artistName.trim().length >= 1 &&
+    whatsappDigits.length >= 10;
 
-  const handleNext = () => { if (canAdvance[step]) setStep((s) => s + 1); };
-  const handleBack = () => setStep((s) => Math.max(1, s - 1));
-
-  /* ── confirm ────────────────────────────────────────────── */
   const handleConfirm = async () => {
+    if (!canSubmit || submitting) return;
     setSubmitting(true);
-    const name = artistName.trim() || "Artista";
-    const selectedMoment = MOMENTS.find((m) => m.value === moment);
-    const stage = selectedMoment?.stage || "inicio";
-    const finalProjectName = projectName.trim() || PROJECT_NAME_MAP[projectType] || "Meu Projeto";
-
-    // Create project
-    let projectId: string | null = null;
     try {
-      const project = await addProject({
-        name: finalProjectName,
-        artist: name,
-        bpm: 120,
-        key: "C",
-        stage,
-        projectType: projectType as "single" | "ep" | "album" | "beat" | "feat",
-        templateTracks: TRACK_TEMPLATES[projectType] ?? TRACK_TEMPLATES.single,
+      await updateProfile({
+        full_name: fullName.trim(),
+        display_name: artistName.trim(),
+        whatsapp: whatsapp.trim(),
+        user_type: "artist",
+        track_view_mode: "basic",
+        onboarding_version: 3,
+        onboarding_completed: true,
       });
-      projectId = project?.id ?? null;
-    } catch {
-      toast.error("Erro ao criar projeto, mas seu perfil foi salvo.");
+      trackAppEvent("onboarding_completed", { onboarding_version: 3 });
+      navigate("/dashboard", { replace: true });
+    } catch (err) {
+      toast.error("Não foi possível salvar. Tente novamente.");
+      setSubmitting(false);
     }
-
-    if (projectId) {
-      const starterTasks = [...(MOMENT_TASKS[moment] ?? []), ...(PAIN_TASKS[pain] ?? [])].slice(0, 4);
-      await supabase.from("tasks").upsert(
-        starterTasks.map((task, index) => ({
-          user_id: user.id,
-          project_id: projectId,
-          description: task.description,
-          auto_generated: true,
-          source: "onboarding",
-          source_key: `onboarding:${projectId}:${moment}:${pain}:${index}`,
-          source_module: "onboarding",
-          task_area: task.task_area,
-          severity: task.severity ?? "medium",
-        })),
-        { onConflict: "user_id,source_key", ignoreDuplicates: true }
-      );
-      localStorage.setItem("sfp_recent_onboarding_project", projectId);
-      window.dispatchEvent(new Event("sfp:recent-onboarding-project-changed"));
-      // Persist cross-device
-      await supabase
-        .from("profiles")
-        .update({ last_onboarding_project_id: projectId })
-        .eq("id", user.id);
-    }
-
-    // Update profile
-    await updateProfile({
-      display_name: name,
-      city: city.trim(),
-      state: stateUf || null,
-      user_type: "artist",
-      track_view_mode: viewMode,
-      current_moment: moment,
-      main_pain: pain,
-      onboarding_version: 2,
-      onboarding_completed: true,
-    });
-
-    trackAppEvent("onboarding_completed", {
-      moment,
-      pain,
-      state: stateUf || null,
-      view_mode: viewMode,
-      project_type: projectType,
-      created_project: !!projectId,
-      project_id: projectId ?? null,
-    });
-
-    navigate(projectId ? `/projects/${projectId}` : "/dashboard", { replace: true });
   };
-
-  /* ── step labels ────────────────────────────────────────── */
-  const stepLabels = ["Identidade", "Momento", "Tipo", "Desafio", "Modo", "Pronto"];
-  const selectedMoment = MOMENTS.find((m) => m.value === moment);
-  const selectedPain = PAINS.find((p) => p.value === pain);
-  const selectedProjectType = PROJECT_TYPES.find((t) => t.value === projectType);
-  const planItems = [
-    selectedMoment?.impact,
-    selectedPain?.impact,
-    projectType ? `${TRACK_TEMPLATES[projectType]?.length ?? 4} trilhas iniciais para ${selectedProjectType?.label}.` : null,
-    pain ? `${Math.min(4, ((MOMENT_TASKS[moment] ?? []).length + (PAIN_TASKS[pain] ?? []).length))} tarefas iniciais já contextualizadas.` : null,
-  ].filter(Boolean) as string[];
-
-  /* ── render helpers ─────────────────────────────────────── */
-  const OptionCard = ({
-    selected,
-    onClick,
-    icon: Icon,
-    label,
-    desc,
-    emoji,
-  }: {
-    selected: boolean;
-    onClick: () => void;
-    icon?: React.ElementType;
-    label: string;
-    desc?: string;
-    emoji?: string;
-  }) => (
-    <button
-      onClick={onClick}
-      className={cn(
-        "w-full rounded-xl border p-4 text-left transition-all",
-        selected ? "border-primary bg-primary/10" : "border-border hover:border-primary/40 hover:bg-card/80"
-      )}
-    >
-      <div className="flex items-center gap-3">
-        {emoji ? (
-          <span className="text-2xl">{emoji}</span>
-        ) : Icon ? (
-          <Icon className={cn("h-5 w-5 shrink-0", selected ? "text-primary" : "text-muted-foreground")} />
-        ) : null}
-        <div className="flex-1 min-w-0">
-          <p className={cn("text-sm font-semibold", selected ? "text-primary" : "text-foreground")}>{label}</p>
-          {desc && <p className="text-xs text-muted-foreground leading-snug mt-0.5">{desc}</p>}
-        </div>
-        {selected && <Check className="h-4 w-4 text-primary shrink-0" />}
-      </div>
-    </button>
-  );
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="w-full max-w-sm space-y-6 animate-fade-in">
-
-        {/* Logo */}
         <div className="text-center space-y-2">
           <div className="mx-auto h-14 w-14 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center">
             <Music className="h-7 w-7 text-primary" />
           </div>
           <h1 className="text-2xl font-bold text-foreground">StudioFlow</h1>
-          <p className="text-muted-foreground text-sm">Vamos montar seu plano inicial</p>
+          <p className="text-muted-foreground text-sm">Só precisamos de alguns dados pra começar.</p>
         </div>
 
-        {/* Progress */}
-        <div className="flex items-center gap-1">
-          {stepLabels.map((label, i) => {
-            const idx = i + 1;
-            const isActive = step === idx;
-            const isDone = step > idx;
-            return (
-              <div key={label} className="flex-1 flex flex-col items-center gap-1">
-                <div
-                  className={cn(
-                    "h-1.5 w-full rounded-full transition-all duration-300",
-                    isDone ? "bg-primary" : isActive ? "bg-primary/60" : "bg-muted"
-                  )}
-                />
-                <span className={cn("text-[8px] font-medium leading-tight", isActive ? "text-primary" : "text-muted-foreground")}>
-                  {label}
-                </span>
-              </div>
-            );
-          })}
-        </div>
+        <div className="glass-card rounded-2xl p-6 space-y-4 border border-border">
+          <div className="space-y-1.5">
+            <Label htmlFor="fullName" className="text-xs text-muted-foreground flex items-center gap-1">
+              <User className="h-3 w-3" /> Nome completo *
+            </Label>
+            <Input
+              ref={fullNameRef}
+              id="fullName"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              placeholder="Ex: João da Silva"
+              maxLength={120}
+              autoComplete="name"
+            />
+          </div>
 
-        {/* Card */}
-        <div className="glass-card rounded-2xl p-6 space-y-5 border border-border">
+          <div className="space-y-1.5">
+            <Label htmlFor="artistName" className="text-xs text-muted-foreground flex items-center gap-1">
+              <Mic2 className="h-3 w-3" /> Nome artístico *
+            </Label>
+            <Input
+              id="artistName"
+              value={artistName}
+              onChange={(e) => setArtistName(e.target.value)}
+              placeholder="Ex: Mc João, Ana Castela…"
+              maxLength={60}
+            />
+          </div>
 
-          {/* STEP 1 — Identidade */}
-          {step === 1 && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <Mic2 className="h-4 w-4 text-primary" />
-                <p className="text-sm font-semibold text-foreground">Como você quer ser chamado?</p>
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="artistName" className="text-xs text-muted-foreground">Nome artístico ou apelido *</Label>
-                <Input
-                  ref={nameRef}
-                  id="artistName"
-                  value={artistName}
-                  onChange={(e) => setArtistName(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter" && canAdvance[1]) handleNext(); }}
-                  placeholder="Ex: Mc João, Ana Castela, Seu Jorge…"
-                  className="text-base"
-                  maxLength={60}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs text-muted-foreground flex items-center gap-1">
-                  <MapPin className="h-3 w-3" /> Estado <span className="text-muted-foreground/50">(opcional)</span>
-                </Label>
-                <Select value={stateUf} onValueChange={(v) => { setStateUf(v); setCity(""); setCustomCity(false); }}>
-                  <SelectTrigger><SelectValue placeholder="Selecione seu estado" /></SelectTrigger>
-                  <SelectContent className="max-h-72">
-                    {BRAZIL_STATES.map((s) => (
-                      <SelectItem key={s.uf} value={s.uf}>{s.name} ({s.uf})</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              {stateUf && !customCity && (
-                <div className="space-y-1.5 animate-fade-in">
-                  <Label className="text-xs text-muted-foreground">Cidade <span className="text-muted-foreground/50">(opcional)</span></Label>
-                  <Select value={city} onValueChange={(v) => { if (v === "__other") { setCustomCity(true); setCity(""); } else setCity(v); }}>
-                    <SelectTrigger><SelectValue placeholder="Selecione sua cidade" /></SelectTrigger>
-                    <SelectContent className="max-h-72">
-                      {(TOP_CITIES_BY_UF[stateUf] ?? []).map((c) => (
-                        <SelectItem key={c} value={c}>{c}</SelectItem>
-                      ))}
-                      <SelectItem value="__other">Outra cidade…</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-              {stateUf && customCity && (
-                <div className="space-y-1.5 animate-fade-in">
-                  <Label htmlFor="city" className="text-xs text-muted-foreground">Digite sua cidade</Label>
-                  <Input
-                    id="city"
-                    value={city}
-                    onChange={(e) => setCity(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === "Enter" && canAdvance[1]) handleNext(); }}
-                    placeholder="Ex: Pirassununga"
-                    maxLength={60}
-                    autoFocus
-                  />
-                  <button type="button" onClick={() => { setCustomCity(false); setCity(""); }} className="text-[11px] text-primary hover:underline">← Voltar para lista</button>
-                </div>
-              )}
-              <Button onClick={handleNext} disabled={!canAdvance[1]} className="w-full gap-2" size="lg">
-                Próximo <ArrowRight className="h-4 w-4" />
-              </Button>
-            </div>
-          )}
+          <div className="space-y-1.5">
+            <Label htmlFor="whatsapp" className="text-xs text-muted-foreground flex items-center gap-1">
+              <Phone className="h-3 w-3" /> WhatsApp *
+            </Label>
+            <Input
+              id="whatsapp"
+              value={whatsapp}
+              onChange={(e) => setWhatsapp(maskWhatsapp(e.target.value))}
+              placeholder="(11) 91234-5678"
+              inputMode="tel"
+              autoComplete="tel"
+            />
+          </div>
 
-          {/* STEP 2 — Momento */}
-          {step === 2 && (
-            <div className="space-y-4">
-              <p className="text-sm font-semibold text-foreground">Onde você está agora?</p>
-              <div className="space-y-2.5">
-                {MOMENTS.map((m) => (
-                  <OptionCard key={m.value} selected={moment === m.value} onClick={() => setMoment(m.value)} icon={m.icon} label={m.label} desc={m.impact} />
-                ))}
-              </div>
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={handleBack} className="flex-1" size="lg">Voltar</Button>
-                <Button onClick={handleNext} disabled={!canAdvance[2]} className="flex-1 gap-2" size="lg">
-                  Próximo <ArrowRight className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          )}
+          <div className="space-y-1.5">
+            <Label htmlFor="email" className="text-xs text-muted-foreground flex items-center gap-1">
+              <Mail className="h-3 w-3" /> Email
+            </Label>
+            <Input
+              id="email"
+              value={user.email ?? ""}
+              readOnly
+              disabled
+              className="bg-muted/50"
+            />
+          </div>
 
-          {/* STEP 3 — Tipo de projeto */}
-          {step === 3 && (
-            <div className="space-y-4">
-              <p className="text-sm font-semibold text-foreground">Que tipo de projeto?</p>
-              <div className="space-y-2.5">
-                {PROJECT_TYPES.map((t) => (
-                  <OptionCard key={t.value} selected={projectType === t.value} onClick={() => setProjectType(t.value)} icon={t.icon} label={t.label} desc={t.desc} />
-                ))}
-              </div>
-              {projectType && (
-                <div className="space-y-1.5 animate-fade-in">
-                  <Label htmlFor="proj-name" className="text-xs text-muted-foreground">
-                    Nome do projeto <span className="text-muted-foreground/50">(opcional)</span>
-                  </Label>
-                  <Input
-                    id="proj-name"
-                    value={projectName}
-                    onChange={(e) => setProjectName(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === "Enter") handleNext(); }}
-                    placeholder={PROJECT_NAME_MAP[projectType] ?? "Meu Projeto"}
-                    maxLength={60}
-                  />
-                </div>
-              )}
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={handleBack} className="flex-1" size="lg">Voltar</Button>
-                <Button onClick={handleNext} disabled={!canAdvance[3]} className="flex-1 gap-2" size="lg">
-                  Próximo <ArrowRight className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {/* STEP 4 — Maior dor */}
-          {step === 4 && (
-            <div className="space-y-4">
-              <p className="text-sm font-semibold text-foreground">O que mais te trava hoje?</p>
-              <p className="text-xs text-muted-foreground">Seu dashboard vai priorizar exatamente isso.</p>
-              <div className="space-y-2.5">
-                {PAINS.map((p) => (
-                  <OptionCard key={p.value} selected={pain === p.value} onClick={() => setPain(p.value)} icon={p.icon} label={p.label} desc={p.impact} />
-                ))}
-              </div>
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={handleBack} className="flex-1" size="lg">Voltar</Button>
-                <Button onClick={handleNext} disabled={!canAdvance[4]} className="flex-1 gap-2" size="lg">
-                  Próximo <ArrowRight className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {/* STEP 5 — Modo */}
-          {step === 5 && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <Layers className="h-4 w-4 text-primary" />
-                <p className="text-sm font-semibold text-foreground">Como quer usar o StudioFlow?</p>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Padrão: Simples. Você pode mudar em Configurações a qualquer momento.
-              </p>
-              <div className="space-y-2.5">
-                {MODES.map((m) => (
-                  <OptionCard key={m.value} selected={viewMode === m.value} onClick={() => setViewMode(m.value)} emoji={m.emoji} label={m.label} desc={m.desc} />
-                ))}
-              </div>
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={handleBack} className="flex-1" size="lg">Voltar</Button>
-                <Button onClick={handleNext} className="flex-1 gap-2" size="lg">
-                  Próximo <ArrowRight className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {/* STEP 6 — Confirmação */}
-          {step === 6 && (
-            <div className="space-y-5">
-              <div className="space-y-1">
-                <p className="text-sm font-semibold text-foreground">Seu StudioFlow vai começar assim</p>
-                <p className="text-xs text-muted-foreground">Este plano define projeto, dashboard, checklist e IA.</p>
-              </div>
-
-              <div className="rounded-xl border border-border p-4 space-y-2.5">
-                <SummaryRow label="Nome" value={artistName.trim() || "—"} />
-                {city.trim() && <SummaryRow label="Cidade" value={city.trim()} />}
-                <SummaryRow label="Momento" value={MOMENTS.find((m) => m.value === moment)?.label || "—"} />
-                <SummaryRow
-                  label="Projeto"
-                  value={`${PROJECT_TYPES.find((t) => t.value === projectType)?.label || "—"} — "${projectName.trim() || PROJECT_NAME_MAP[projectType] || "Meu Projeto"}"`}
-                />
-                <SummaryRow label="Foco" value={PAINS.find((p) => p.value === pain)?.label || "—"} />
-                <SummaryRow label="Modo" value={viewMode === "basic" ? "🎯 Simples" : "⚡ Completo"} />
-              </div>
-
-              <div className="rounded-xl bg-muted/50 border border-border p-4 space-y-2">
-                <p className="text-xs font-semibold text-foreground">Vamos criar</p>
-                <ul className="space-y-1.5">
-                  {planItems.map((item) => (
-                    <li key={item} className="flex gap-2 text-xs text-muted-foreground leading-snug">
-                      <Check className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" />
-                      <span>{item}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              <p className="text-[11px] text-muted-foreground/70 text-center">
-                Depois disso, a IA já entende seu momento sem você repetir contexto.
-              </p>
-
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={handleBack} className="flex-1" size="lg">Voltar</Button>
-                <Button onClick={handleConfirm} disabled={submitting} className="flex-1 gap-2" size="lg">
-                  {submitting ? "Criando..." : <>Começar <ArrowRight className="h-4 w-4" /></>}
-                </Button>
-              </div>
-            </div>
-          )}
+          <Button
+            onClick={handleConfirm}
+            disabled={!canSubmit || submitting}
+            className="w-full gap-2"
+            size="lg"
+          >
+            {submitting ? "Salvando..." : <>Começar <ArrowRight className="h-4 w-4" /></>}
+          </Button>
         </div>
       </div>
-    </div>
-  );
-}
-
-/* ── small helpers ──────────────────────────────────────────── */
-
-function SummaryRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-center justify-between">
-      <span className="text-xs text-muted-foreground">{label}</span>
-      <span className="text-sm font-medium text-right max-w-[60%] truncate">{value}</span>
     </div>
   );
 }
