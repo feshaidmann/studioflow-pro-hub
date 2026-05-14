@@ -90,8 +90,23 @@ export default function ProjectCulturalProfile({ projectId }: { projectId: strin
     }
   };
 
+  const keywordButtonsRef = useRef<Record<string, HTMLButtonElement | null>>({});
+  const newKeywordInputRef = useRef<HTMLInputElement>(null);
+
   const removeKeyword = (kw: string) => {
+    const list = perfil.palavras_chave;
+    const idx = list.indexOf(kw);
     setPerfil((p) => ({ ...p, palavras_chave: p.palavras_chave.filter((k) => k !== kw) }));
+    // Mover foco para o próximo chip remanescente, ou anterior, ou para o input.
+    const next = list[idx + 1] ?? list[idx - 1] ?? null;
+    requestAnimationFrame(() => {
+      delete keywordButtonsRef.current[kw];
+      if (next && keywordButtonsRef.current[next]) {
+        keywordButtonsRef.current[next]?.focus();
+      } else {
+        newKeywordInputRef.current?.focus();
+      }
+    });
   };
 
   const save = async () => {
@@ -224,9 +239,16 @@ export default function ProjectCulturalProfile({ projectId }: { projectId: strin
                     {kw}
                     <button
                       type="button"
+                      ref={(el) => { keywordButtonsRef.current[kw] = el; }}
                       aria-label={`Remover palavra-chave ${kw}`}
                       onClick={() => removeKeyword(kw)}
-                      className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
+                      onKeyDown={(e) => {
+                        if (e.key === "Backspace" || e.key === "Delete") {
+                          e.preventDefault();
+                          removeKeyword(kw);
+                        }
+                      }}
+                      className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 rounded-sm"
                     >
                       <X className="h-3 w-3" aria-hidden="true" />
                     </button>
@@ -235,6 +257,7 @@ export default function ProjectCulturalProfile({ projectId }: { projectId: strin
               </div>
               <div className="flex gap-2 mt-2">
                 <Input
+                  ref={newKeywordInputRef}
                   value={newKeyword}
                   onChange={(e) => setNewKeyword(e.target.value)}
                   placeholder="Ex: edital audiovisual, lei aldir blanc"
