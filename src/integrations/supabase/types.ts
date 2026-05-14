@@ -2294,6 +2294,7 @@ export type Database = {
           artistic_profile: Json
           copy_options: Json
           created_at: string
+          current_step: string
           designer_notes: string
           generated_images: Json
           generated_palette: Json
@@ -2311,6 +2312,7 @@ export type Database = {
           artistic_profile?: Json
           copy_options?: Json
           created_at?: string
+          current_step?: string
           designer_notes?: string
           generated_images?: Json
           generated_palette?: Json
@@ -2328,6 +2330,7 @@ export type Database = {
           artistic_profile?: Json
           copy_options?: Json
           created_at?: string
+          current_step?: string
           designer_notes?: string
           generated_images?: Json
           generated_palette?: Json

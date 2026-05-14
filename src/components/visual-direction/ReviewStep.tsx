@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -13,17 +13,28 @@ interface Props {
   briefing: VisualBriefing;
   onRemoveImage: (id: string) => void;
   onSave: (data: { approved_copy: string; designer_notes: string }) => Promise<void>;
+  onChange?: (data: { approved_copy?: string; designer_notes?: string }) => void;
   onBack: () => void;
   saving?: boolean;
 }
 
-export default function ReviewStep({ briefing, onRemoveImage, onSave, onBack, saving }: Props) {
+export default function ReviewStep({ briefing, onRemoveImage, onSave, onChange, onBack, saving }: Props) {
   const selected = (briefing.generated_images ?? []).filter((i) => i.selected);
   const palette = briefing.generated_palette;
   const initialCopy = useMemo<CopyOption | undefined>(() => briefing.copy_options?.[0], [briefing.copy_options]);
   const [copy, setCopy] = useState(briefing.approved_copy || initialCopy?.text || "");
   const [notes, setNotes] = useState(briefing.designer_notes || "");
   const [confirmOpen, setConfirmOpen] = useState(false);
+
+  const firstRender = useRef(true);
+  useEffect(() => {
+    if (firstRender.current) {
+      firstRender.current = false;
+      return;
+    }
+    onChange?.({ approved_copy: copy, designer_notes: notes });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [copy, notes]);
 
   const isUnchangedFromOriginal = briefing.copy_options?.some((c) => c.text.trim() === copy.trim());
 
