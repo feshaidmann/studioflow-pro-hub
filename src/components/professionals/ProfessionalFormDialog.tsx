@@ -210,31 +210,47 @@ export function ProfessionalFormDialog({ open, onOpenChange, editTarget, existin
             </div>
           </div>
 
-          {duplicateWarning && (
-            <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 space-y-2">
+          {isDuplicate && (
+            <div
+              role="alert"
+              className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 space-y-2"
+            >
               <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
                 <AlertTriangle className="h-4 w-4" />
                 <p className="text-sm font-medium">E-mail já cadastrado</p>
               </div>
-              <p className="text-xs text-muted-foreground">
-                Já existe um contato com <strong>{duplicateWarning}</strong> na sua agenda.
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Já existe um contato com <strong>{trimmedEmail}</strong> na sua agenda.
+                Recomendamos editar o contato existente para manter o histórico de projetos e avaliações
+                vinculado a uma única ficha.
               </p>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2 pt-1">
                 {onRequestEdit && (
-                  <Button type="button" variant="outline" size="sm" onClick={() => { onRequestEdit(duplicateWarning); onOpenChange(false); }}>
-                    Editar existente
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => { onRequestEdit(trimmedEmail); onOpenChange(false); }}
+                  >
+                    Editar contato existente
                   </Button>
                 )}
-                <Button type="button" size="sm" onClick={() => setDuplicateWarning(null)}>
-                  Cadastrar mesmo assim
+                <Button
+                  type="button"
+                  variant={acknowledgedDuplicate ? "secondary" : "ghost"}
+                  size="sm"
+                  onClick={() => setAcknowledgedDuplicate((v) => !v)}
+                  aria-pressed={acknowledgedDuplicate}
+                >
+                  {acknowledgedDuplicate ? "✓ Vou cadastrar mesmo assim" : "Cadastrar mesmo assim"}
                 </Button>
               </div>
             </div>
           )}
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-            <Button type="submit" disabled={submitting || !!duplicateWarning}>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>Cancelar</Button>
+            <Button type="submit" disabled={submitting || (isDuplicate && !acknowledgedDuplicate)}>
               {submitting ? "Salvando..." : editTarget ? "Salvar alterações" : "Cadastrar"}
             </Button>
           </DialogFooter>
