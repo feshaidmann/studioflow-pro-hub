@@ -61,10 +61,17 @@ export function ProfessionalFormDialog({ open, onOpenChange, editTarget, existin
   const activeValue = watch("active");
   const globalValue = watch("allow_global_listing");
   const phoneValue = watch("phone");
+  const emailValue = watch("email");
+
+  const trimmedEmail = (emailValue || "").trim().toLowerCase();
+  const isDuplicate =
+    !editTarget &&
+    trimmedEmail.length > 0 &&
+    existingEmails.some((e) => e.toLowerCase() === trimmedEmail);
 
   useEffect(() => {
     if (!open) return;
-    setDuplicateWarning(null);
+    setAcknowledgedDuplicate(false);
     if (editTarget) {
       reset({
         name: editTarget.name,
