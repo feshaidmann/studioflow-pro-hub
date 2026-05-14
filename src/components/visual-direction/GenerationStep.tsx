@@ -15,6 +15,7 @@ export default function GenerationStep({ briefing, onToggleImage, onRegenerate, 
   const images = briefing.generated_images ?? [];
   const selectedCount = images.filter((i) => i.selected).length;
   const regenLeft = 5 - (briefing.regeneration_count ?? 0);
+  const partialFailure = !regenerating && images.length > 0 && images.length < 6;
 
   return (
     <div className="space-y-5">
@@ -22,15 +23,33 @@ export default function GenerationStep({ briefing, onToggleImage, onRegenerate, 
         ⚠️ Todas as imagens são <strong>Referências de estilo</strong> geradas por IA — não são arte final. Servem para alinhar a direção visual com seu designer.
       </div>
 
+      {regenerating && (
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+          Gerando referências de estilo… isso leva ~10–20s.
+        </div>
+      )}
+
+      {partialFailure && (
+        <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+          Apenas {images.length} de 6 referências foram geradas. Tente regenerar para completar o conjunto.
+        </div>
+      )}
+
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-        {images.map((img) => (
+        {regenerating && images.length === 0
+          ? Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="aspect-square rounded-lg bg-muted animate-pulse border border-border" aria-hidden="true" />
+            ))
+          : images.map((img) => (
           <button
             key={img.id}
             type="button"
             onClick={() => onToggleImage(img.id)}
+            disabled={regenerating}
             className={`relative group rounded-lg overflow-hidden border-2 transition-all aspect-square bg-muted ${
               img.selected ? "border-primary ring-2 ring-primary/30" : "border-border hover:border-foreground/30"
-            }`}
+            } ${regenerating ? "opacity-60" : ""}`}
             aria-pressed={!!img.selected}
             aria-label={`${img.selected ? "Desmarcar" : "Selecionar"} referência: ${img.style_tag}`}
           >
