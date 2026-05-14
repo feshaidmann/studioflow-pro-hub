@@ -177,23 +177,23 @@ describe("ProfessionalDetailModal — comportamento do toggle", () => {
 
   it("inicia oculto, expande e recolhe mantendo aria-expanded coerente", async () => {
     const user = userEvent.setup();
-    const { container } = renderModal();
+    renderModal();
     const btn = screen.getByRole("button", { name: /mostrar dados financeiros/i });
 
     expect(btn).toHaveAttribute("aria-expanded", "false");
-    expect(container.querySelector("#prof-financial-panel")).toBeNull();
+    expect(document.getElementById("prof-financial-panel")).toBeNull();
 
     await user.click(btn);
     const expanded = screen.getByRole("button", { name: /ocultar dados financeiros/i });
     expect(expanded).toHaveAttribute("aria-expanded", "true");
-    expect(container.querySelector("#prof-financial-panel")).not.toBeNull();
+    expect(document.getElementById("prof-financial-panel")).not.toBeNull();
     expect(screen.getByText(/cachê médio/i)).toBeInTheDocument();
     expect(screen.getByText(/prazo médio/i)).toBeInTheDocument();
 
     await user.click(expanded);
     const collapsed = screen.getByRole("button", { name: /mostrar dados financeiros/i });
     expect(collapsed).toHaveAttribute("aria-expanded", "false");
-    expect(container.querySelector("#prof-financial-panel")).toBeNull();
+    expect(document.getElementById("prof-financial-panel")).toBeNull();
   });
 });
 
