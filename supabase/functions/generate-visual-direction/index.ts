@@ -93,6 +93,36 @@ async function generateImageOnce(prompt: string, lovableKey: string): Promise<st
   }
 }
 
+// Faz upload de uma data URL para o bucket creative-assets e retorna a URL pública.
+// Evita persistir base64 enorme em JSONB (causa statement_timeout no Postgres).
+async function uploadDataUrlToStorage(
+  dataUrl: string,
+  supabase: ReturnType<typeof createClient>,
+  projectId: string,
+): Promise<string | null> {
+  try {
+    if (!dataUrl.startsWith("data:")) return dataUrl; // já é URL
+    const match = dataUrl.match(/^data:(.+?);base64,(.+)$/);
+    if (!match) return null;
+    const mime = match[1];
+    const ext = mime.split("/")[1]?.split("+")[0] ?? "png";
+    const bytes = Uint8Array.from(atob(match[2]), (c) => c.charCodeAt(0));
+    const path = `visual-direction/${projectId}/${crypto.randomUUID()}.${ext}`;
+    const { error } = await supabase.storage
+      .from("creative-assets")
+      .upload(path, bytes, { contentType: mime, upsert: false });
+    if (error) {
+      console.error("storage upload failed", error);
+      return null;
+    }
+    const { data } = supabase.storage.from("creative-assets").getPublicUrl(path);
+    return data.publicUrl;
+  } catch (e) {
+    console.error("uploadDataUrlToStorage error", e);
+    return null;
+  }
+}
+
 function tryParseJson(text: string): any | null {
   try { return JSON.parse(text); } catch (_) {}
   // Try extracting first {...} block
@@ -235,7 +265,15 @@ serve(async (req) => {
       generatePaletteAndCopy(profile, lovableKey),
     ]);
 
-    const images = imagesRaw.filter((i) => i.url);
+    // Sobe data URLs para storage para evitar JSONB gigante (statement_timeout).
+    const imagesWithStorage = await Promise.all(
+      imagesRaw.map(async (img) => {
+        if (!img.url) return img;
+        const publicUrl = await uploadDataUrlToStorage(img.url, supabase, project_id);
+        return { ...img, url: publicUrl };
+      }),
+    );
+    const images = imagesWithStorage.filter((i) => i.url);
     if (images.length === 0) {
       return new Response(JSON.stringify({
         error: "Não foi possível gerar imagens. Tente novamente em instantes (créditos de IA podem estar esgotados).",
