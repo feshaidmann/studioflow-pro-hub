@@ -75,8 +75,8 @@ export function ProfessionalDetailModal({ professional, onClose, onEdit }: Props
             </div>
             <div className="min-w-0 flex-1">
               <DialogTitle className="text-lg leading-tight truncate">{professional.name}</DialogTitle>
-              {professional.specialty && (
-                <p className="text-sm text-primary font-medium mt-0.5 truncate">{professional.specialty}</p>
+              {professional.specialty?.trim() && (
+                <p className="text-sm text-primary font-medium mt-0.5 truncate">{professional.specialty.trim()}</p>
               )}
               <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                 {professional.active

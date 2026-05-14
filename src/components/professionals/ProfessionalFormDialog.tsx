@@ -17,10 +17,12 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { SPECIALTY_OPTIONS } from "@/constants/specialtyOptions";
+import {
+  SPECIALTY_OPTIONS, SPECIALTY_NONE, SPECIALTY_OTHER, isPresetSpecialty,
+} from "@/constants/specialtyOptions";
 import { maskPhone, isValidPhone, type Professional } from "./types";
 
-const SPECIALTY_VALUES = [...SPECIALTY_OPTIONS, "Outro"] as const;
+const CUSTOM_SPECIALTY_MAX = 60;
 
 const schema = z.object({
   name: z.string().trim().min(2, "Nome obrigatório").max(100),
@@ -47,11 +49,9 @@ export function ProfessionalFormDialog({ open, onOpenChange, editTarget, existin
   const [submitting, setSubmitting] = useState(false);
   const [acknowledgedDuplicate, setAcknowledgedDuplicate] = useState(false);
 
-  const isPresetSpecialty = editTarget?.specialty
-    ? (SPECIALTY_OPTIONS as readonly string[]).includes(editTarget.specialty)
-    : true;
-  const [specialtyMode, setSpecialtyMode] = useState<string>("");
+  const [specialtyMode, setSpecialtyMode] = useState<string>(SPECIALTY_NONE);
   const [customSpecialty, setCustomSpecialty] = useState<string>("");
+  const [specialtyError, setSpecialtyError] = useState<string>("");
 
   const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -72,22 +72,31 @@ export function ProfessionalFormDialog({ open, onOpenChange, editTarget, existin
   useEffect(() => {
     if (!open) return;
     setAcknowledgedDuplicate(false);
+    setSpecialtyError("");
     if (editTarget) {
+      const stored = (editTarget.specialty || "").trim();
       reset({
         name: editTarget.name,
         email: editTarget.email,
         phone: editTarget.phone || "",
-        specialty: editTarget.specialty || "",
+        specialty: stored,
         bio: editTarget.bio || "",
         active: editTarget.active,
         allow_global_listing: editTarget.allow_global_listing,
       });
-      const preset = (SPECIALTY_OPTIONS as readonly string[]).includes(editTarget.specialty || "");
-      setSpecialtyMode(preset ? (editTarget.specialty || "") : (editTarget.specialty ? "Outro" : ""));
-      setCustomSpecialty(preset ? "" : (editTarget.specialty || ""));
+      if (!stored) {
+        setSpecialtyMode(SPECIALTY_NONE);
+        setCustomSpecialty("");
+      } else if (isPresetSpecialty(stored)) {
+        setSpecialtyMode(stored);
+        setCustomSpecialty("");
+      } else {
+        setSpecialtyMode(SPECIALTY_OTHER);
+        setCustomSpecialty(stored.slice(0, CUSTOM_SPECIALTY_MAX));
+      }
     } else {
       reset({ name: "", email: "", phone: "", specialty: "", bio: "", active: true, allow_global_listing: false });
-      setSpecialtyMode("");
+      setSpecialtyMode(SPECIALTY_NONE);
       setCustomSpecialty("");
     }
   }, [open, editTarget, reset]);
@@ -95,7 +104,16 @@ export function ProfessionalFormDialog({ open, onOpenChange, editTarget, existin
   const onSubmit = async (values: FormValues) => {
     if (!user) return;
 
-    const finalSpecialty = specialtyMode === "Outro" ? customSpecialty.trim() : specialtyMode;
+    let finalSpecialty = "";
+    if (specialtyMode === SPECIALTY_OTHER) {
+      finalSpecialty = customSpecialty.trim();
+      if (finalSpecialty.length < 2) {
+        setSpecialtyError("Descreva a especialidade (mín. 2 caracteres)");
+        return;
+      }
+    } else if (specialtyMode !== SPECIALTY_NONE) {
+      finalSpecialty = specialtyMode;
+    }
 
     // Block submit if duplicate detected and user hasn't explicitly acknowledged it
     if (!editTarget && isDuplicate && !acknowledgedDuplicate) {
@@ -171,20 +189,40 @@ export function ProfessionalFormDialog({ open, onOpenChange, editTarget, existin
             </div>
             <div className="space-y-1">
               <Label>Especialidade</Label>
-              <Select value={specialtyMode} onValueChange={setSpecialtyMode}>
+              <Select
+                value={specialtyMode}
+                onValueChange={(v) => {
+                  setSpecialtyMode(v);
+                  setSpecialtyError("");
+                }}
+              >
                 <SelectTrigger><SelectValue placeholder="Selecionar..." /></SelectTrigger>
                 <SelectContent>
-                  {SPECIALTY_VALUES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                  <SelectItem value={SPECIALTY_NONE}>Nenhuma</SelectItem>
+                  {SPECIALTY_OPTIONS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                  <SelectItem value={SPECIALTY_OTHER}>Outro…</SelectItem>
                 </SelectContent>
               </Select>
-              {specialtyMode === "Outro" && (
-                <Input
-                  className="mt-1"
-                  value={customSpecialty}
-                  onChange={(e) => setCustomSpecialty(e.target.value.slice(0, 100))}
-                  placeholder="Descreva a especialidade"
-                  maxLength={100}
-                />
+              {specialtyMode === SPECIALTY_OTHER && (
+                <>
+                  <Input
+                    className="mt-1"
+                    value={customSpecialty}
+                    onChange={(e) => {
+                      setCustomSpecialty(e.target.value.slice(0, CUSTOM_SPECIALTY_MAX));
+                      if (specialtyError) setSpecialtyError("");
+                    }}
+                    placeholder="Descreva a especialidade"
+                    maxLength={CUSTOM_SPECIALTY_MAX}
+                    aria-invalid={!!specialtyError}
+                  />
+                  {specialtyError && (
+                    <p className="text-xs text-destructive">{specialtyError}</p>
+                  )}
+                  <p className="text-[10px] text-muted-foreground">
+                    {customSpecialty.length}/{CUSTOM_SPECIALTY_MAX}
+                  </p>
+                </>
               )}
             </div>
           </div>
