@@ -49,11 +49,9 @@ export function ProfessionalFormDialog({ open, onOpenChange, editTarget, existin
   const [submitting, setSubmitting] = useState(false);
   const [acknowledgedDuplicate, setAcknowledgedDuplicate] = useState(false);
 
-  const isPresetSpecialty = editTarget?.specialty
-    ? (SPECIALTY_OPTIONS as readonly string[]).includes(editTarget.specialty)
-    : true;
-  const [specialtyMode, setSpecialtyMode] = useState<string>("");
+  const [specialtyMode, setSpecialtyMode] = useState<string>(SPECIALTY_NONE);
   const [customSpecialty, setCustomSpecialty] = useState<string>("");
+  const [specialtyError, setSpecialtyError] = useState<string>("");
 
   const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<FormValues>({
     resolver: zodResolver(schema),
