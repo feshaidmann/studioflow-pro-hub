@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   ChevronLeft, Music2, Pencil, MessageSquare,
-  LayoutDashboard, Users, ListChecks, DollarSign, Rocket, FolderOpen, Sparkles,
+  LayoutDashboard, Users, ListChecks, DollarSign, Rocket, FolderOpen, Sparkles, Palette,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { scrollToAnchor } from "@/lib/scrollToAnchor";
@@ -21,6 +21,7 @@ import ProjectChat from "@/components/project-hub/ProjectChat";
 import ProjectTasksTab from "@/components/project-hub/ProjectTasksTab";
 import ProjectFinanceTab from "@/components/project-hub/ProjectFinanceTab";
 import ProjectReleaseTab from "@/components/project-hub/ProjectReleaseTab";
+import ProjectVisualDirectionTab from "@/components/project-hub/ProjectVisualDirectionTab";
 import ProjectFilesTab from "@/components/project-hub/ProjectFilesTab";
 import CollaboratorOverviewTab from "@/components/project-hub/CollaboratorOverviewTab";
 import CollaboratorTasksTab from "@/components/project-hub/CollaboratorTasksTab";
@@ -107,6 +108,7 @@ export default function ProjectDetail() {
     { value: "files", label: "Arquivos", icon: FolderOpen },
     { value: "finance", label: "Financeiro", icon: DollarSign },
     { value: "release", label: "Lançamento", icon: Rocket },
+    { value: "visual", label: "Visual", icon: Palette },
   ];
 
   // Collaborator tabs
@@ -200,7 +202,7 @@ export default function ProjectDetail() {
 
       {/* ── Hub Tabs ── */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className={cn("w-full grid", isOwner ? "grid-cols-6" : "grid-cols-4")}>
+        <TabsList className={cn("w-full grid", isOwner ? "grid-cols-7" : "grid-cols-4")}>
           {tabs.map((tab) => {
             const Icon = tab.icon;
             return (
@@ -236,6 +238,9 @@ export default function ProjectDetail() {
                 projectName={project.name}
                 artistName={project.artist}
               />
+            </TabsContent>
+            <TabsContent value="visual">
+              <ProjectVisualDirectionTab projectId={project.id} />
             </TabsContent>
           </>
         )}

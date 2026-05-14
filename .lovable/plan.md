@@ -1,53 +1,84 @@
-# Plano — Geração de referências e Revisão editável
+## Objetivo
 
-## Estado atual (já pronto)
-- Edge function `generate-visual-direction` gera 6 imagens + paleta (4 hex + justificativa) + 3 opções de copy (A/B/C) em paralelo, com limite de 5 regenerações.
-- `GenerationStep` exibe as 6 imagens em grid, permite selecionar/desselecionar, mostra copy options em modo leitura, regenerar e avançar.
-- `ReviewStep` mostra imagens selecionadas (com remover), paleta como **swatches read-only** e textarea com `approved_copy` (edita a copy final, mas não as opções A/B/C).
-- Hook `useVisualBriefing` já tem autosave debounced para perfil/copy/notas/imagens e já suporta `current_step`.
+Adicionar uma nova aba **"Direção Visual"** no `ProjectDetail` que mostra status atual do briefing visual do projeto, progresso pelas 4 etapas do stepper, e um card de sugestão via IA que pré-preenche o perfil artístico com base no contexto do projeto (gênero, artista, biografia, DNA musical se houver).
 
-## O que falta (escopo desta tarefa)
+## Mudanças
 
-### 1. Feedback visual durante geração
-- `GenerationStep` ganha estado **skeleton** quando `regenerating` está ativo e ainda não chegaram novas imagens, ou quando estamos esperando a geração inicial (caso o passo seja forçado em `generation` sem imagens).
-- 6 cards placeholder com shimmer (`animate-pulse`) usando os tokens semânticos (`bg-muted`).
-- Mostra `Gerando referências de estilo…` em texto auxiliar.
-- Se a edge function devolver menos de 6 imagens (falha parcial), mostrar chip discreto `Algumas falharam — tente regenerar`.
+### 1. Novo componente: `ProjectVisualDirectionTab.tsx`
+Local: `src/components/project-hub/ProjectVisualDirectionTab.tsx`. Renderizado dentro da nova aba (somente owner).
 
-### 2. Paleta editável no `ReviewStep`
-- Substituir os swatches read-only por uma lista editável:
-  - Cada cor vira um chip com **swatch + input hex inline** (validação `#RRGGBB`, commit on blur/Enter, descarta inválido) + botão remover.
-  - Botão `+ Adicionar cor` (até 8 cores; default `#CCCCCC` em modo edição imediato).
-  - Campo `rationale` vira `<Textarea rows=2>` editável com placeholder.
-- Persiste via hook em `generated_palette: { colors, rationale }`.
+Carrega `visual_briefings` do projeto via `useVisualBriefing(projectId)` (hook já existe). Renderiza:
 
-### 3. Opções de copy editáveis (A/B/C)
-- Cada `copy_option` ganha um card com:
-  - `label` editável (`<Input>`, max 24 chars).
-  - `text` editável (`<Textarea rows=4>`).
-  - Botão `Usar como copy aprovada` que copia o `text` atual para `approved_copy` (sem deixar de manter a edição da option).
-- Mantém os 3 cards (A/B/C) sempre visíveis; sem adicionar/remover.
-- Persiste via hook em `copy_options`.
+- **Header com status badge** derivado do `current_step`:
+  - sem registro → "Não iniciado" (neutro)
+  - `profile` → "Rascunho" (secondary)
+  - `generation` → "Em geração" (primary)
+  - `review` → "Em revisão" (primary)
+  - `briefing` → "Pronto" (success)
+- **Barra de progresso** (`<Progress />`) com `value = (stepIndex+1)/4 * 100`. Texto "Etapa N de 4 — {label}".
+- **Resumo de conteúdo** (quando aplicável): contagem de imagens aprovadas, paleta (mini swatches), copy aprovada truncada.
+- **Card de sugestão IA** (visível apenas no estado "Não iniciado" ou "Rascunho" e quando `artistic_profile` ainda está vazio):
+  - Texto explicativo curto + botão **"Sugerir com IA"**.
+  - Ao clicar: chama edge function `suggest-visual-direction` enviando `{ project_id }`. Mostra `Loader2` durante a chamada.
+  - Resposta: pré-popula via `updateProfile(...)` (autosave do hook cuida da persistência) e exibe toast de sucesso. Trata 429/402 mostrando mensagem clara.
+- **Botão CTA "Abrir Direção Visual"** que navega para `/projects/:id/direcao-visual` (página completa permanece a UX principal de edição).
 
-### 4. Extensão do hook `useVisualBriefing`
-- `updateReview` passa a aceitar também `generated_palette` e `copy_options`. O tipo `Patch` já cobre — só precisamos expor.
-- Mantém o mesmo debounce (600ms) e o mesmo flush em troca de passo.
+### 2. Atualizar `ProjectDetail.tsx`
+- Adicionar import `Palette` (lucide) e o novo `ProjectVisualDirectionTab`.
+- Adicionar entrada `{ value: "visual", label: "Visual", icon: Palette }` ao array de tabs do owner.
+- Trocar `grid-cols-6` por `grid-cols-7` na `TabsList` quando `isOwner`.
+- Adicionar `<TabsContent value="visual"><ProjectVisualDirectionTab projectId={project.id} project={project} /></TabsContent>`.
+- Não adicionar para colaborador (mantém escopo do dono).
 
-## Arquivos afetados
-```
-src/components/visual-direction/useVisualBriefing.ts   — amplia updateReview
-src/components/visual-direction/GenerationStep.tsx     — skeleton + chip de falha parcial
-src/components/visual-direction/ReviewStep.tsx         — paleta editável + copy options editáveis
-src/pages/VisualDirection.tsx                          — passa `generating` ao GenerationStep para skeleton em regen
-```
+### 3. Nova edge function: `suggest-visual-direction`
+Local: `supabase/functions/suggest-visual-direction/index.ts`. `verify_jwt = false` herdado.
 
-## Fora de escopo
-- Regeneração por imagem individual (continua batch).
-- Upload de imagem do próprio artista como referência.
-- Mudanças na edge function (já produz tudo que precisamos).
-- Versionamento da paleta/copy editadas (sobrescreve em lugar; histórico fica em versions de regen).
+- CORS padrão (`npm:@supabase/supabase-js@2/cors`).
+- Valida JWT do header Authorization (extrai `user_id`).
+- Body: `{ project_id: string }` validado com Zod.
+- Carrega contexto do banco com client `service_role`:
+  - `projects` (name, artist, project_type, stage)
+  - `profiles` (primary_genre, bio, city, state, specialties)
+  - `music_dna_analyses` mais recente do projeto (se houver) → genre, valence, energy, tempo_bpm
+- Usa Lovable AI Gateway (`@ai-sdk/openai-compatible` + `ai`) com `google/gemini-3-flash-preview` e `Output.object` (Zod) para devolver `ArtisticProfile`:
+  ```ts
+  { tone: string, references: string[], target_audience: string,
+    color_keywords: string[], mood_keywords: string[], notes: string }
+  ```
+- Loga em `ai_invocations` com `function_name='suggest-visual-direction'`.
+- Trata 429/402 e devolve status apropriado.
+
+### 4. i18n (mínimo)
+Adicionar em `src/contexts/LanguageContext.tsx` chaves `visual.tab.label`, `visual.status.*`, `visual.suggest.cta`, `visual.suggest.error` (PT/EN). A aba já mostra o ícone como fallback no mobile.
+
+## Fora do escopo
+- Não mexer em `useVisualBriefing` (hook já expõe `updateProfile` que basta para aplicar a sugestão).
+- Não tocar no fluxo do stepper na página `/direcao-visual`.
+- Sem gating Pro (decisão anterior: manter sempre Pro).
+- Sem novas migrations (`current_step` já existe).
 
 ## Detalhes técnicos
-- Validação hex client-side com regex `^#[0-9a-fA-F]{6}$`. Inputs inválidos não disparam autosave.
-- Tudo segue o design system (light mode, `rounded-lg`, tokens semânticos). Swatches usam `style={{ backgroundColor: hex }}` (cor dinâmica de usuário, não pode virar token).
-- Sem nova lib: usa `Input`, `Textarea`, `Button`, `Badge` já presentes.
+
+```text
+ProjectDetail tabs (owner)
+┌──────┬──────┬──────┬──────┬──────┬───────┬────────┐
+│Visão │Tarefa│Equipe│Arquiv│Finanç│Lançam.│ Visual │  ← nova
+└──────┴──────┴──────┴──────┴──────┴───────┴────────┘
+
+ProjectVisualDirectionTab
+┌────────────────────────────────────────┐
+│ [Status badge]  Etapa N de 4 — label   │
+│ ▓▓▓▓░░░░░░  50%                        │
+│ • 4 imagens aprovadas                  │
+│ • Paleta: ■■■■■                        │
+│ • Copy: "..."                          │
+├────────────────────────────────────────┤
+│ ✨ Sugerir com IA                      │  (só se vazio)
+│ Cria um rascunho com base no projeto.  │
+│ [Sugerir com IA]                       │
+├────────────────────────────────────────┤
+│           [Abrir Direção Visual →]     │
+└────────────────────────────────────────┘
+```
+
+Arquivos tocados: 4 (1 novo componente, 1 nova edge function, ProjectDetail, LanguageContext).
