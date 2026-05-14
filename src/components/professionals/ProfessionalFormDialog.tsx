@@ -45,7 +45,7 @@ interface Props {
 export function ProfessionalFormDialog({ open, onOpenChange, editTarget, existingEmails, onSaved, onRequestEdit }: Props) {
   const { user } = useAuth();
   const [submitting, setSubmitting] = useState(false);
-  const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
+  const [acknowledgedDuplicate, setAcknowledgedDuplicate] = useState(false);
 
   const isPresetSpecialty = editTarget?.specialty
     ? (SPECIALTY_OPTIONS as readonly string[]).includes(editTarget.specialty)
