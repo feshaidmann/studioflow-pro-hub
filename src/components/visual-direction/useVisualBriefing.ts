@@ -37,7 +37,7 @@ interface UseVisualBriefingResult {
   lastSavedAt: string | null;
   setStep: (s: StepKey) => void;
   updateProfile: (profile: ArtisticProfile) => void;
-  updateReview: (data: { approved_copy?: string; designer_notes?: string }) => void;
+  updateReview: (data: ReviewPatch) => void;
   toggleImage: (imgId: string) => void;
   generate: (profile: ArtisticProfile, regen?: boolean) => Promise<void>;
   saveAndAdvance: (next: StepKey, extra?: Patch) => Promise<void>;
