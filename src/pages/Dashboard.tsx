@@ -320,19 +320,6 @@ export default function Dashboard() {
         mainPain={profile?.main_pain}
       />
 
-      <HeroFocusCard
-        displayName={displayName}
-        profile={profile}
-        projectCount={projects.length}
-        nextAction={nextAction}
-        isMobile={isMobile}
-        onAskAI={(message) => { aiRef.current?.sendMessage(message); scrollToAI(); }}
-        onResolveNextAction={(action) => {
-          aiRef.current?.sendMessage(`Preciso de ajuda com: ${action.label}. ${action.detail ? `Contexto: ${action.detail}` : ""} O que devo fazer?`);
-          scrollToAI();
-        }}
-      />
-
       {/* 1. Alertas críticos primeiro */}
       {dashboardSections.alerts}
 
