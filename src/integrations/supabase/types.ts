@@ -1415,6 +1415,7 @@ export type Database = {
           created_at: string
           current_moment: string
           display_name: string
+          full_name: string
           id: string
           last_onboarding_project_id: string | null
           main_pain: string
@@ -1445,6 +1446,7 @@ export type Database = {
           created_at?: string
           current_moment?: string
           display_name?: string
+          full_name?: string
           id: string
           last_onboarding_project_id?: string | null
           main_pain?: string
@@ -1475,6 +1477,7 @@ export type Database = {
           created_at?: string
           current_moment?: string
           display_name?: string
+          full_name?: string
           id?: string
           last_onboarding_project_id?: string | null
           main_pain?: string
