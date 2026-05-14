@@ -1,16 +1,15 @@
-import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, Palette, Loader2 } from "lucide-react";
 import { useProjects } from "@/contexts/ProjectContext";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import Stepper, { StepKey } from "@/components/visual-direction/Stepper";
+import Stepper from "@/components/visual-direction/Stepper";
 import ArtisticProfileStep from "@/components/visual-direction/ArtisticProfileStep";
 import GenerationStep from "@/components/visual-direction/GenerationStep";
 import ReviewStep from "@/components/visual-direction/ReviewStep";
 import BriefingStep from "@/components/visual-direction/BriefingStep";
-import { ArtisticProfile, GeneratedImage, VisualBriefing } from "@/components/visual-direction/types";
+import SaveStatus from "@/components/visual-direction/SaveStatus";
+import { useVisualBriefing } from "@/components/visual-direction/useVisualBriefing";
 
 export default function VisualDirection() {
   const { id } = useParams<{ id: string }>();
@@ -18,98 +17,23 @@ export default function VisualDirection() {
   const { projects } = useProjects();
   const project = projects.find((p) => p.id === id);
 
-  const [step, setStep] = useState<StepKey>("profile");
-  const [briefing, setBriefing] = useState<VisualBriefing | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [generating, setGenerating] = useState(false);
-  const [saving, setSaving] = useState(false);
-
-  // Load latest briefing for this project
-  useEffect(() => {
-    if (!id) return;
-    let cancelled = false;
-    (async () => {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from("visual_briefings")
-        .select("*")
-        .eq("project_id", id)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      if (cancelled) return;
-      if (error) {
-        console.error(error);
-      } else if (data) {
-        const b = data as unknown as VisualBriefing;
-        setBriefing(b);
-        if (b.approved_copy) setStep("briefing");
-        else if ((b.generated_images ?? []).some((i) => i.selected)) setStep("review");
-        else if ((b.generated_images ?? []).length > 0) setStep("generation");
-      }
-      setLoading(false);
-    })();
-    return () => { cancelled = true; };
-  }, [id]);
-
-  const handleGenerate = async (profile: ArtisticProfile, regen = false) => {
-    if (!id) return;
-    setGenerating(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("generate-visual-direction", {
-        body: { project_id: id, briefing_id: regen ? briefing?.id : undefined, artistic_profile: profile },
-      });
-      if (error) throw error;
-      const next = (data as { briefing: VisualBriefing })?.briefing;
-      if (!next) throw new Error("Resposta inválida");
-      setBriefing(next);
-      setStep("generation");
-      toast.success(regen ? "Novas referências geradas" : "Referências de estilo geradas");
-    } catch (e: any) {
-      toast.error("Falha ao gerar", { description: e?.message });
-    } finally {
-      setGenerating(false);
-    }
-  };
-
-  const updateBriefing = async (patch: Partial<VisualBriefing>) => {
-    if (!briefing) return;
-    const { data, error } = await supabase
-      .from("visual_briefings")
-      .update(patch as never)
-      .eq("id", briefing.id)
-      .select()
-      .single();
-    if (error) throw error;
-    setBriefing(data as unknown as VisualBriefing);
-  };
-
-  const toggleImage = (imgId: string) => {
-    if (!briefing) return;
-    const next = (briefing.generated_images ?? []).map((i) =>
-      i.id === imgId ? { ...i, selected: !i.selected } : i
-    );
-    setBriefing({ ...briefing, generated_images: next });
-    void updateBriefing({ generated_images: next as unknown as GeneratedImage[] }).catch(() => {});
-  };
-
-  const removeFromReview = (imgId: string) => toggleImage(imgId);
+  const {
+    briefing, step, loading, generating, status, lastSavedAt,
+    setStep, updateProfile, updateReview, toggleImage, generate,
+    saveAndAdvance, retryFlush,
+  } = useVisualBriefing(id);
 
   const handleSaveReview = async (data: { approved_copy: string; designer_notes: string }) => {
     if (!briefing) return;
-    setSaving(true);
     try {
       const approvedImages = (briefing.generated_images ?? []).filter((i) => i.selected);
-      await updateBriefing({
+      await saveAndAdvance("briefing", {
         approved_copy: data.approved_copy,
         designer_notes: data.designer_notes,
         approved_images: approvedImages,
       });
-      setStep("briefing");
     } catch (e: any) {
       toast.error("Não foi possível salvar", { description: e?.message });
-    } finally {
-      setSaving(false);
     }
   };
 
@@ -142,7 +66,10 @@ export default function VisualDirection() {
         </div>
       </div>
 
-      <Stepper current={step} />
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <Stepper current={step} />
+        <SaveStatus status={status} lastSavedAt={lastSavedAt} onRetry={() => void retryFlush()} />
+      </div>
 
       <div className="rounded-xl border border-border bg-card/40 p-4 md:p-6">
         {loading ? (
@@ -153,23 +80,25 @@ export default function VisualDirection() {
           <ArtisticProfileStep
             initial={briefing?.artistic_profile}
             loading={generating}
-            onSubmit={(p) => handleGenerate(p, !!briefing)}
+            onChange={updateProfile}
+            onSubmit={(p) => void generate(p, !!briefing?.id && (briefing.generated_images ?? []).length > 0)}
           />
         ) : step === "generation" && briefing ? (
           <GenerationStep
             briefing={briefing}
             onToggleImage={toggleImage}
-            onRegenerate={() => handleGenerate(briefing.artistic_profile, true)}
+            onRegenerate={() => void generate(briefing.artistic_profile, true)}
             onNext={() => setStep("review")}
             regenerating={generating}
           />
         ) : step === "review" && briefing ? (
           <ReviewStep
             briefing={briefing}
-            onRemoveImage={removeFromReview}
+            onRemoveImage={toggleImage}
+            onChange={updateReview}
             onSave={handleSaveReview}
             onBack={() => setStep("generation")}
-            saving={saving}
+            saving={status === "saving"}
           />
         ) : step === "briefing" && briefing ? (
           <BriefingStep briefing={briefing} onBack={() => setStep("review")} />
