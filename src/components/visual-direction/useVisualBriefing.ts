@@ -17,7 +17,16 @@ type Patch = Partial<{
   approved_copy: string;
   designer_notes: string;
   current_step: StepKey;
+  generated_palette: import("./types").PaletteResult;
+  copy_options: import("./types").CopyOption[];
 }>;
+
+export type ReviewPatch = {
+  approved_copy?: string;
+  designer_notes?: string;
+  generated_palette?: import("./types").PaletteResult;
+  copy_options?: import("./types").CopyOption[];
+};
 
 interface UseVisualBriefingResult {
   briefing: VisualBriefing | null;
@@ -28,7 +37,7 @@ interface UseVisualBriefingResult {
   lastSavedAt: string | null;
   setStep: (s: StepKey) => void;
   updateProfile: (profile: ArtisticProfile) => void;
-  updateReview: (data: { approved_copy?: string; designer_notes?: string }) => void;
+  updateReview: (data: ReviewPatch) => void;
   toggleImage: (imgId: string) => void;
   generate: (profile: ArtisticProfile, regen?: boolean) => Promise<void>;
   saveAndAdvance: (next: StepKey, extra?: Patch) => Promise<void>;
@@ -199,9 +208,9 @@ export function useVisualBriefing(projectId: string | undefined): UseVisualBrief
     queueSave({ artistic_profile: profile }, PROFILE_DEBOUNCE_MS);
   }, [queueSave]);
 
-  const updateReview = useCallback((data: { approved_copy?: string; designer_notes?: string }) => {
+  const updateReview = useCallback((data: ReviewPatch) => {
     setBriefing((prev) => (prev ? { ...prev, ...data } as VisualBriefing : prev));
-    queueSave(data, REVIEW_DEBOUNCE_MS);
+    queueSave(data as Patch, REVIEW_DEBOUNCE_MS);
   }, [queueSave]);
 
   const toggleImage = useCallback((imgId: string) => {
