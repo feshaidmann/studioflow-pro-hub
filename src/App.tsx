@@ -126,6 +126,7 @@ const App = () => (
                       <Route path="/onboarding" element={<OnboardingRouter />} />
                       <Route path="/u/:username" element={<PublicProfile />} />
                       <Route path="/invite/:token" element={<InviteResponse />} />
+                      <Route path="/briefing/share/:token" element={<VisualBriefingShare />} />
                       
                       <Route path="/legal" element={<Legal />} />
                       <Route path="/*" element={<AppRoutes />} />
