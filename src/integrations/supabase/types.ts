@@ -2287,6 +2287,60 @@ export type Database = {
         }
         Relationships: []
       }
+      visual_briefings: {
+        Row: {
+          approved_copy: string
+          approved_images: Json
+          artistic_profile: Json
+          copy_options: Json
+          created_at: string
+          designer_notes: string
+          generated_images: Json
+          generated_palette: Json
+          id: string
+          pdf_url: string | null
+          project_id: string
+          regeneration_count: number
+          updated_at: string
+          user_id: string
+          version: number
+        }
+        Insert: {
+          approved_copy?: string
+          approved_images?: Json
+          artistic_profile?: Json
+          copy_options?: Json
+          created_at?: string
+          designer_notes?: string
+          generated_images?: Json
+          generated_palette?: Json
+          id?: string
+          pdf_url?: string | null
+          project_id: string
+          regeneration_count?: number
+          updated_at?: string
+          user_id: string
+          version?: number
+        }
+        Update: {
+          approved_copy?: string
+          approved_images?: Json
+          artistic_profile?: Json
+          copy_options?: Json
+          created_at?: string
+          designer_notes?: string
+          generated_images?: Json
+          generated_palette?: Json
+          id?: string
+          pdf_url?: string | null
+          project_id?: string
+          regeneration_count?: number
+          updated_at?: string
+          user_id?: string
+          version?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       analytics_funnel_daily: {
