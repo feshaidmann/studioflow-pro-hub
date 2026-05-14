@@ -44,6 +44,7 @@ const MusicDNA = lazy(() => import("@/pages/MusicDNA"));
 const Carreira = lazy(() => import("@/pages/Carreira"));
 const EditalInscricao = lazy(() => import("@/pages/EditalInscricao"));
 const VisualDirection = lazy(() => import("@/pages/VisualDirection"));
+const VisualBriefingShare = lazy(() => import("@/pages/VisualBriefingShare"));
 
 const queryClient = new QueryClient(); // singleton
 
