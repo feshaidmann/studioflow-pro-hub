@@ -1,4 +1,4 @@
-import { useState, KeyboardEvent } from "react";
+import { useEffect, useRef, useState, KeyboardEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -10,6 +10,7 @@ import { ArtisticProfile, MOOD_OPTIONS, PALETTE_PRESETS } from "./types";
 interface Props {
   initial?: Partial<ArtisticProfile>;
   onSubmit: (profile: ArtisticProfile) => void;
+  onChange?: (profile: ArtisticProfile) => void;
   loading?: boolean;
 }
 
@@ -17,7 +18,7 @@ const MAX_GENRES = 4;
 const MAX_MOODS = 3;
 const MAX_PALETTE = 3;
 
-export default function ArtisticProfileStep({ initial, onSubmit, loading }: Props) {
+export default function ArtisticProfileStep({ initial, onSubmit, onChange, loading }: Props) {
   const [genres, setGenres] = useState<string[]>(initial?.genres ?? []);
   const [genreInput, setGenreInput] = useState("");
   const [moods, setMoods] = useState<string[]>(initial?.moods ?? []);
@@ -26,6 +27,23 @@ export default function ArtisticProfileStep({ initial, onSubmit, loading }: Prop
   const [palette, setPalette] = useState<string[]>(initial?.palette ?? []);
   const [hexInput, setHexInput] = useState("");
   const [identityPhrase, setIdentityPhrase] = useState(initial?.identity_phrase ?? "");
+
+  const firstRender = useRef(true);
+  useEffect(() => {
+    if (firstRender.current) {
+      firstRender.current = false;
+      return;
+    }
+    onChange?.({
+      genres,
+      moods,
+      artist_refs: artistRefs.trim(),
+      external_refs: externalRefs.trim() || undefined,
+      palette,
+      identity_phrase: identityPhrase.trim() || undefined,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [genres, moods, artistRefs, externalRefs, palette, identityPhrase]);
 
   const addGenre = () => {
     const v = genreInput.trim();
