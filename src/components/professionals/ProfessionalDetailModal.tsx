@@ -16,11 +16,16 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { useProjects } from "@/contexts/ProjectContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { useProfessionalMetrics } from "@/hooks/useProfessionalMetrics";
 import type { Professional } from "./types";
 import { avatarColor, avatarInitials } from "./types";
 
-const STORAGE_KEY = "professionals.show_financial";
+const STORAGE_KEY_PREFIX = "professionals.show_financial";
+const storageKeyFor = (uid?: string | null) => `${STORAGE_KEY_PREFIX}:${uid ?? "anon"}`;
+const readPref = (uid?: string | null): boolean => {
+  try { return localStorage.getItem(storageKeyFor(uid)) === "1"; } catch { return false; }
+};
 
 interface Props {
   professional: Professional | null;
@@ -31,15 +36,19 @@ interface Props {
 export function ProfessionalDetailModal({ professional, onClose, onEdit }: Props) {
   const navigate = useNavigate();
   const { projects } = useProjects();
+  const { user } = useAuth();
   const { metrics, loading } = useProfessionalMetrics(professional);
-  const [showFinancial, setShowFinancial] = useState<boolean>(() => {
-    try { return localStorage.getItem(STORAGE_KEY) === "1"; } catch { return false; }
-  });
+  const [showFinancial, setShowFinancial] = useState<boolean>(() => readPref(user?.id));
   const [inviteOpen, setInviteOpen] = useState(false);
 
+  // Re-sync when the logged-in user changes (avoid leaking previous user's preference).
   useEffect(() => {
-    try { localStorage.setItem(STORAGE_KEY, showFinancial ? "1" : "0"); } catch {}
-  }, [showFinancial]);
+    setShowFinancial(readPref(user?.id));
+  }, [user?.id]);
+
+  useEffect(() => {
+    try { localStorage.setItem(storageKeyFor(user?.id), showFinancial ? "1" : "0"); } catch {}
+  }, [showFinancial, user?.id]);
 
   if (!professional) return null;
 
