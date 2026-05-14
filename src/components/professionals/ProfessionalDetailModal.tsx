@@ -122,17 +122,24 @@ export function ProfessionalDetailModal({ professional, onClose, onEdit }: Props
           </div>
 
           {/* Toggle financeiro */}
-          {!loading && metrics && (metrics.avgFee !== null || metrics.avgDeliveryDays !== null) && (
+          {!loading && metrics && (
+            metrics.avgFee !== null ||
+            metrics.avgDeliveryDays !== null ||
+            metrics.collaborationHistory.some((h) => h.fee > 0 || !!h.deliveryDueDate)
+          ) && (
             <div>
               <button
-                onClick={() => setShowFinancial(!showFinancial)}
+                type="button"
+                onClick={() => setShowFinancial((v) => !v)}
+                aria-expanded={showFinancial}
+                aria-controls="prof-financial-panel"
                 className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
               >
                 {showFinancial ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
                 {showFinancial ? "Ocultar dados financeiros" : "Mostrar dados financeiros"}
               </button>
-              {showFinancial && (
-                <div className="flex gap-2 mt-2">
+              {showFinancial && (metrics.avgFee !== null || metrics.avgDeliveryDays !== null) && (
+                <div id="prof-financial-panel" className="flex gap-2 mt-2">
                   {metrics.avgFee !== null && (
                     <div className="flex-1 rounded-lg bg-muted/30 border border-border/40 p-2.5 text-center">
                       <p className="text-sm font-bold text-primary">
