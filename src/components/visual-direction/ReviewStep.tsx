@@ -1,30 +1,47 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { X } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { X, Plus, ArrowDownToLine } from "lucide-react";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { VisualBriefing, CopyOption } from "./types";
+import { VisualBriefing, CopyOption, PaletteResult } from "./types";
 
 interface Props {
   briefing: VisualBriefing;
   onRemoveImage: (id: string) => void;
   onSave: (data: { approved_copy: string; designer_notes: string }) => Promise<void>;
-  onChange?: (data: { approved_copy?: string; designer_notes?: string }) => void;
+  onChange?: (data: {
+    approved_copy?: string;
+    designer_notes?: string;
+    generated_palette?: PaletteResult;
+    copy_options?: CopyOption[];
+  }) => void;
   onBack: () => void;
   saving?: boolean;
 }
 
+const HEX_RE = /^#[0-9a-fA-F]{6}$/;
+const MAX_COLORS = 8;
+
 export default function ReviewStep({ briefing, onRemoveImage, onSave, onChange, onBack, saving }: Props) {
   const selected = (briefing.generated_images ?? []).filter((i) => i.selected);
-  const palette = briefing.generated_palette;
   const initialCopy = useMemo<CopyOption | undefined>(() => briefing.copy_options?.[0], [briefing.copy_options]);
+
   const [copy, setCopy] = useState(briefing.approved_copy || initialCopy?.text || "");
   const [notes, setNotes] = useState(briefing.designer_notes || "");
+  const [palette, setPalette] = useState<PaletteResult>(
+    briefing.generated_palette ?? { colors: [], rationale: "" }
+  );
+  const [copyOptions, setCopyOptions] = useState<CopyOption[]>(briefing.copy_options ?? []);
   const [confirmOpen, setConfirmOpen] = useState(false);
+
+  // Per-color local hex draft (so invalid input doesn't autosave)
+  const [hexDrafts, setHexDrafts] = useState<Record<number, string>>({});
 
   const firstRender = useRef(true);
   useEffect(() => {
@@ -32,19 +49,52 @@ export default function ReviewStep({ briefing, onRemoveImage, onSave, onChange, 
       firstRender.current = false;
       return;
     }
-    onChange?.({ approved_copy: copy, designer_notes: notes });
+    onChange?.({
+      approved_copy: copy,
+      designer_notes: notes,
+      generated_palette: palette,
+      copy_options: copyOptions,
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [copy, notes]);
+  }, [copy, notes, palette, copyOptions]);
 
-  const isUnchangedFromOriginal = briefing.copy_options?.some((c) => c.text.trim() === copy.trim());
+  const isUnchangedFromOriginal = copyOptions.some((c) => c.text.trim() === copy.trim());
 
   const handleNext = () => {
     if (isUnchangedFromOriginal) setConfirmOpen(true);
     else void onSave({ approved_copy: copy, designer_notes: notes });
   };
 
+  const commitColor = (idx: number, raw: string) => {
+    const v = raw.trim().startsWith("#") ? raw.trim() : `#${raw.trim()}`;
+    if (!HEX_RE.test(v)) {
+      // revert draft
+      setHexDrafts((d) => ({ ...d, [idx]: palette.colors[idx] ?? "" }));
+      return;
+    }
+    setPalette((p) => ({ ...p, colors: p.colors.map((c, i) => (i === idx ? v.toLowerCase() : c)) }));
+    setHexDrafts((d) => {
+      const { [idx]: _, ...rest } = d;
+      return rest;
+    });
+  };
+
+  const removeColor = (idx: number) => {
+    setPalette((p) => ({ ...p, colors: p.colors.filter((_, i) => i !== idx) }));
+  };
+
+  const addColor = () => {
+    if (palette.colors.length >= MAX_COLORS) return;
+    setPalette((p) => ({ ...p, colors: [...p.colors, "#cccccc"] }));
+  };
+
+  const updateOption = (idx: number, patch: Partial<CopyOption>) => {
+    setCopyOptions((opts) => opts.map((o, i) => (i === idx ? { ...o, ...patch } : o)));
+  };
+
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
+      {/* Imagens aprovadas */}
       <div className="space-y-2">
         <Label>Imagens aprovadas ({selected.length})</Label>
         {selected.length === 0 ? (
@@ -71,35 +121,107 @@ export default function ReviewStep({ briefing, onRemoveImage, onSave, onChange, 
         )}
       </div>
 
-      {palette?.colors?.length > 0 && (
-        <div className="space-y-2">
-          <Label>Paleta sugerida</Label>
-          <div className="flex flex-wrap gap-2">
-            {palette.colors.map((hex) => (
-              <div key={hex} className="flex flex-col items-center gap-1">
-                <div className="w-12 h-12 rounded-md border border-border" style={{ backgroundColor: hex }} aria-label={hex} />
-                <span className="text-[10px] text-muted-foreground font-mono">{hex}</span>
-              </div>
-            ))}
-          </div>
-          {palette.rationale && <p className="text-xs text-muted-foreground italic">{palette.rationale}</p>}
+      {/* Paleta editável */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <Label>Paleta ({palette.colors.length}/{MAX_COLORS})</Label>
+          <Button type="button" variant="outline" size="sm" onClick={addColor} disabled={palette.colors.length >= MAX_COLORS}>
+            <Plus className="h-3.5 w-3.5 mr-1" /> Adicionar cor
+          </Button>
         </div>
-      )}
 
+        {palette.colors.length === 0 ? (
+          <p className="text-xs text-muted-foreground">Sem cores ainda — adicione manualmente ou regenere as referências.</p>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {palette.colors.map((hex, idx) => {
+              const draft = hexDrafts[idx] ?? hex;
+              const invalid = !HEX_RE.test(draft);
+              return (
+                <div key={idx} className="flex items-center gap-1.5 rounded-md border border-border bg-card pl-1 pr-1.5 py-1">
+                  <div
+                    className="w-7 h-7 rounded shrink-0 border border-border"
+                    style={{ backgroundColor: HEX_RE.test(hex) ? hex : "#cccccc" }}
+                    aria-label={`Cor ${hex}`}
+                  />
+                  <Input
+                    value={draft}
+                    onChange={(e) => setHexDrafts((d) => ({ ...d, [idx]: e.target.value }))}
+                    onBlur={(e) => commitColor(idx, e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+                      if (e.key === "Escape") setHexDrafts((d) => ({ ...d, [idx]: hex }));
+                    }}
+                    spellCheck={false}
+                    className={`h-7 w-24 font-mono text-xs px-2 ${invalid ? "border-destructive text-destructive" : ""}`}
+                    aria-label={`Cor ${idx + 1} em hexadecimal`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeColor(idx)}
+                    aria-label={`Remover cor ${hex}`}
+                    className="p-0.5 text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        <Textarea
+          rows={2}
+          value={palette.rationale ?? ""}
+          onChange={(e) => setPalette((p) => ({ ...p, rationale: e.target.value }))}
+          placeholder="Justificativa da paleta (opcional)…"
+          className="text-xs"
+        />
+      </div>
+
+      {/* Opções de copy editáveis */}
+      <div className="space-y-2">
+        <Label>Opções de copy</Label>
+        <div className="grid gap-3 md:grid-cols-3">
+          {copyOptions.length === 0 ? (
+            <p className="text-xs text-muted-foreground col-span-full">Nenhuma opção gerada — regenere as referências.</p>
+          ) : copyOptions.map((opt, idx) => (
+            <div key={opt.id ?? idx} className="rounded-lg border border-border bg-card p-3 space-y-2">
+              <div className="flex items-center gap-1.5">
+                <Badge variant="outline" className="text-[10px] shrink-0">{opt.id}</Badge>
+                <Input
+                  value={opt.label}
+                  onChange={(e) => updateOption(idx, { label: e.target.value.slice(0, 24) })}
+                  className="h-7 text-xs"
+                  placeholder="Tom"
+                  aria-label={`Rótulo da opção ${opt.id}`}
+                />
+              </div>
+              <Textarea
+                rows={4}
+                value={opt.text}
+                onChange={(e) => updateOption(idx, { text: e.target.value })}
+                className="text-xs"
+                aria-label={`Texto da opção ${opt.id}`}
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="w-full h-7 text-[11px]"
+                onClick={() => setCopy(opt.text)}
+              >
+                <ArrowDownToLine className="h-3 w-3 mr-1" /> Usar como copy aprovada
+              </Button>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Copy aprovada final */}
       <div className="space-y-2">
         <Label htmlFor="approved-copy">Copy aprovada (edite à vontade)</Label>
         <Textarea id="approved-copy" rows={4} value={copy} onChange={(e) => setCopy(e.target.value)} />
-        {briefing.copy_options?.length > 0 && (
-          <div className="flex flex-wrap gap-1.5">
-            <span className="text-[11px] text-muted-foreground">Usar sugestão:</span>
-            {briefing.copy_options.map((c) => (
-              <button key={c.id} type="button" onClick={() => setCopy(c.text)}
-                className="text-[11px] px-2 py-0.5 rounded-full border border-border hover:bg-muted">
-                {c.id} · {c.label}
-              </button>
-            ))}
-          </div>
-        )}
       </div>
 
       <div className="space-y-2">
@@ -120,7 +242,7 @@ export default function ReviewStep({ briefing, onRemoveImage, onSave, onChange, 
           <AlertDialogHeader>
             <AlertDialogTitle>Usar a copy gerada sem editar?</AlertDialogTitle>
             <AlertDialogDescription>
-              A copy aprovada está idêntica à sugestão da IA. Recomendamos personalizar com a sua voz antes de enviar ao designer.
+              A copy aprovada está idêntica a uma das sugestões da IA. Recomendamos personalizar com a sua voz antes de enviar ao designer.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
