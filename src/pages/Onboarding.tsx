@@ -52,6 +52,7 @@ export default function Onboarding() {
   const handleConfirm = async () => {
     if (!canSubmit || submitting) return;
     setSubmitting(true);
+    setSaveStatus("saving");
     try {
       await updateProfile({
         full_name: fullName.trim(),
@@ -63,8 +64,10 @@ export default function Onboarding() {
         onboarding_completed: true,
       });
       trackAppEvent("onboarding_completed", { onboarding_version: 3 });
+      setSaveStatus("success");
       navigate("/dashboard", { replace: true });
     } catch (err) {
+      setSaveStatus("error");
       toast.error("Não foi possível salvar. Tente novamente.");
       setSubmitting(false);
     }
