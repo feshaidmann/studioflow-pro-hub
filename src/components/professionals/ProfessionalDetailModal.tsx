@@ -155,7 +155,7 @@ export function ProfessionalDetailModal({ professional, onClose, onEdit }: Props
             <div>
               <button
                 type="button"
-                onClick={() => setShowFinancial((v) => !v)}
+                onClick={toggleFinancial}
                 aria-expanded={showFinancial}
                 aria-controls="prof-financial-panel"
                 className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
