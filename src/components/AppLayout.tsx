@@ -38,6 +38,7 @@ import { useProfile } from "@/contexts/ProfileContext";
 import { useProjects } from "@/contexts/ProjectContext";
 import BetaBanner from "@/components/BetaBanner";
 import { useBetaBannerVisible } from "@/hooks/useBetaBanner";
+import { JOURNEY_ORDER } from "@/constants/journeyOrder";
 
 const principalItems = [
   { labelKey: "nav.home",     path: "/dashboard", icon: Home,         proOnly: false, mobileLabel: "" },
