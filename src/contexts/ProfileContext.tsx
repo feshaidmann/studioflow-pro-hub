@@ -9,6 +9,7 @@ export type UserPlan = "free" | "pro";
 export interface Profile {
   id: string;
   display_name: string;
+  full_name: string;
   username: string;
   bio: string;
   user_type: UserType;
