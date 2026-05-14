@@ -1,73 +1,57 @@
-# Welcome to your Lovable project
+# StudioFlow Pro
 
-## Project info
+Plataforma SaaS de gestão para **artistas independentes** do setor musical brasileiro — projetos, finanças, agenda, carreira (editais + palcos), DNA Musical, Direção Visual e colaboração, com assistente IA contextual em todos os módulos.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+- 🌐 **App:** https://app.jamsessionproject.com.br
+- 📚 **Documentação técnica:** [`docs/`](./docs/README.md)
 
-## How can I edit this code?
+## Stack
 
-There are several ways of editing your application.
+React 18 · TypeScript · Vite 5 · Tailwind 3 · shadcn/ui · React Router 6 · TanStack Query · Lovable Cloud (Supabase: Postgres, Auth, Edge Functions Deno, Storage, Realtime) · Lovable AI Gateway (Gemini / GPT-5).
 
-**Use Lovable**
+## Princípios fixos
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+- **Persona única:** Artista Independente (sem papel "Produtor").
+- **UI:** light mode only, estética macOS minimalista — sem dark mode.
+- **Localização:** pt-BR para moeda, datas e CSV (`;` + BOM UTF-8).
+- **Privacidade financeira:** convidados nunca veem dados financeiros.
+- **Sem `/studio`**, sem convites automáticos por e-mail/WhatsApp no MVP.
 
-Changes made via Lovable will be committed automatically to this repo.
+## Scripts
 
-**Use your preferred IDE**
+```bash
+npm run dev       # Dev server (Vite)
+npm run build     # Build de produção
+npm run preview   # Preview do build
+npm test          # Vitest
+```
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+## Estrutura
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+```
+src/         App React (pages, components, contexts, hooks, lib, workers)
+supabase/    Edge Functions Deno + migrations + config.toml
+docs/        Documentação técnica (índice em docs/README.md)
+public/      Assets estáticos + service worker (sw.js)
+```
 
-Follow these steps:
+## Documentação
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+Toda a documentação técnica (arquitetura, banco, RLS, edge functions, IA, infra, riscos e changelog) está em [`docs/`](./docs/README.md), dividida por tema.
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+## Editar localmente
 
-# Step 3: Install the necessary dependencies.
-npm i
+Este projeto é mantido pelo agente Lovable. Para editar localmente:
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+```bash
+git clone <repo>
+cd studioflow-pro
+npm install
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+A configuração do backend (URL, anon key, project id) vem do `.env` gerado automaticamente pelo Lovable Cloud — **não edite manualmente**.
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## Licença
 
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+Proprietário · StudioFlow Pro · Fernando Shaidmann
