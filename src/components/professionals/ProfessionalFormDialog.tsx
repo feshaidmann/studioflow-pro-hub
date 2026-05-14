@@ -17,10 +17,12 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { SPECIALTY_OPTIONS } from "@/constants/specialtyOptions";
+import {
+  SPECIALTY_OPTIONS, SPECIALTY_NONE, SPECIALTY_OTHER, isPresetSpecialty,
+} from "@/constants/specialtyOptions";
 import { maskPhone, isValidPhone, type Professional } from "./types";
 
-const SPECIALTY_VALUES = [...SPECIALTY_OPTIONS, "Outro"] as const;
+const CUSTOM_SPECIALTY_MAX = 60;
 
 const schema = z.object({
   name: z.string().trim().min(2, "Nome obrigatório").max(100),
