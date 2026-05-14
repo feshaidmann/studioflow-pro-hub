@@ -208,9 +208,9 @@ export function useVisualBriefing(projectId: string | undefined): UseVisualBrief
     queueSave({ artistic_profile: profile }, PROFILE_DEBOUNCE_MS);
   }, [queueSave]);
 
-  const updateReview = useCallback((data: { approved_copy?: string; designer_notes?: string }) => {
+  const updateReview = useCallback((data: ReviewPatch) => {
     setBriefing((prev) => (prev ? { ...prev, ...data } as VisualBriefing : prev));
-    queueSave(data, REVIEW_DEBOUNCE_MS);
+    queueSave(data as Patch, REVIEW_DEBOUNCE_MS);
   }, [queueSave]);
 
   const toggleImage = useCallback((imgId: string) => {
