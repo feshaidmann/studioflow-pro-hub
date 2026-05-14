@@ -23,6 +23,7 @@ export default function Onboarding() {
   const navigate = useNavigate();
 
   const [submitting, setSubmitting] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "success" | "error">("idle");
   const [fullName, setFullName] = useState("");
   const [artistName, setArtistName] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
@@ -51,6 +52,7 @@ export default function Onboarding() {
   const handleConfirm = async () => {
     if (!canSubmit || submitting) return;
     setSubmitting(true);
+    setSaveStatus("saving");
     try {
       await updateProfile({
         full_name: fullName.trim(),
@@ -62,8 +64,10 @@ export default function Onboarding() {
         onboarding_completed: true,
       });
       trackAppEvent("onboarding_completed", { onboarding_version: 3 });
+      setSaveStatus("success");
       navigate("/dashboard", { replace: true });
     } catch (err) {
+      setSaveStatus("error");
       toast.error("Não foi possível salvar. Tente novamente.");
       setSubmitting(false);
     }
@@ -144,6 +148,13 @@ export default function Onboarding() {
           >
             {submitting ? "Salvando..." : <>Começar <ArrowRight className="h-4 w-4" /></>}
           </Button>
+
+          {/* Status acessível para leitores de tela */}
+          <div role="status" aria-live="polite" aria-atomic="true" className="sr-only">
+            {saveStatus === "saving" && "Salvando suas informações..."}
+            {saveStatus === "success" && "Salvo com sucesso. Redirecionando para o painel."}
+            {saveStatus === "error" && "Não foi possível salvar. Tente novamente."}
+          </div>
         </div>
       </div>
     </div>
