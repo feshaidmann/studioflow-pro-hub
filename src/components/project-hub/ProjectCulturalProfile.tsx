@@ -239,9 +239,16 @@ export default function ProjectCulturalProfile({ projectId }: { projectId: strin
                     {kw}
                     <button
                       type="button"
+                      ref={(el) => { keywordButtonsRef.current[kw] = el; }}
                       aria-label={`Remover palavra-chave ${kw}`}
                       onClick={() => removeKeyword(kw)}
-                      className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
+                      onKeyDown={(e) => {
+                        if (e.key === "Backspace" || e.key === "Delete") {
+                          e.preventDefault();
+                          removeKeyword(kw);
+                        }
+                      }}
+                      className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 rounded-sm"
                     >
                       <X className="h-3 w-3" aria-hidden="true" />
                     </button>
@@ -250,6 +257,7 @@ export default function ProjectCulturalProfile({ projectId }: { projectId: strin
               </div>
               <div className="flex gap-2 mt-2">
                 <Input
+                  ref={newKeywordInputRef}
                   value={newKeyword}
                   onChange={(e) => setNewKeyword(e.target.value)}
                   placeholder="Ex: edital audiovisual, lei aldir blanc"
