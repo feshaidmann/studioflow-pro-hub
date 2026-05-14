@@ -239,6 +239,9 @@ export default function ProjectDetail() {
                 artistName={project.artist}
               />
             </TabsContent>
+            <TabsContent value="visual">
+              <ProjectVisualDirectionTab projectId={project.id} />
+            </TabsContent>
           </>
         )}
 
