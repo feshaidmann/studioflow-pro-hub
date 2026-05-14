@@ -1,109 +1,81 @@
-## 1. Diagnóstico atual
+## Refatoração do módulo Contatos (`/professionals`)
 
-### Código
-- `src/pages/Carreira.tsx` (639 linhas) concentra layout, filtros, pipeline, deep-link, IA e callbacks → arquivo inflado.
-- `OpportunityCard` mistura badges (Tipo + Status + Área + "Pra você") + footer com 3 ações concorrentes (Abrir/Buscar, Candidatar, Salvar/Remover) → ruído visual alto.
-- `OpportunityFilters` sidebar de 260px com 7 controles empilhados em desktop (Buscar, Tipo, Ocultar encerrados, Prazo, Status, Estado, Gênero). Status duplica "Ocultar encerrados". Gênero só vale para palco mas aparece sempre.
-- `AISearchPanel` repetido em mobile e desktop (duas instâncias renderizadas).
-- Sheet de detalhe + EditalResultModal + redirecionamento para `/editais/inscricao/:id` criam três modos diferentes de "abrir" uma oportunidade.
+Quatro frentes em um único plano. Sem mudanças no schema do banco — apenas frontend (a tabela `professionals` já tem `allow_global_listing`, `favorite`, `phone`, `bio`).
 
-### UX/CX
-- Em `/carreira` o usuário vê: header + tabs + sidebar de filtros + painel IA + (eventualmente) bloco "Pra você" + chips + contador + grid. São ~5 hierarquias verticais antes do primeiro card → cognitivamente pesado.
-- IA fica ao lado da lista, não acima — quem entra esperando "buscar editais" precisa procurar.
-- Links quebrados aparecem como botão "Buscar" amarelo no card sem explicação; o usuário não entende por que o link "oficial" sumiu.
-- Pipeline ("Minhas inscrições") fica em outra aba sem contador de prazos próximos nem agrupamento por status.
+### 1. Split de código (reduzir monolito de 818 linhas)
 
-### IA — está sendo útil?
-- `oportunidades-search` faz só **classificação de intenção** (edital/palco/ambos) com heurística + fallback Gemini Flash Lite, depois delega para `edital-search`/`palco-search`.
-- O `AISearchPanel` mostra apenas o badge "Detectado: edital|palco|ambos" → valor percebido baixo. Não há ranking, não há justificativa por resultado, não há indicação de "por que isso combina com você".
-- Recomendações ("Pra você") em `RecommendedSection` são determinísticas (estado/gênero/specialties), sem nenhuma camada de IA. Promessa de "busca inteligente" não se cumpre além de roteamento.
-- Não há feedback loop ("não foi útil" / "esconder essa fonte") nem cache por sessão visível.
+Novos arquivos:
 
-### Banco — links quebrados
-```
-editais        : 3 broken / 9 ok / 1 unknown / 13 total
-palcos_curados : 7 broken / 8 ok / 0 unknown / 15 total
-```
-1 edital quebrado tem candidatura associada (precisa preservar o vínculo).
+- `src/hooks/useProfessionalsList.ts` — fetch da lista + ratingsMap + allocationsMap, expõe `{ professionals, ratingsMap, allocationsMap, loading, refetch, toggleFavorite, remove }`. Substitui `fetchProfessionals` inline. Usa `Promise.all` para as 3 queries.
+- `src/hooks/useProfessionalMetrics.ts` — recebe `professional` e devolve `{ metrics, loading }`. Faz as 3 queries do `openDetail` em paralelo via `Promise.all`.
+- `src/components/professionals/ProfessionalsTable.tsx` — tabela desktop (colunas atuais).
+- `src/components/professionals/ProfessionalsCardList.tsx` — lista de cards para `< md` (substitui o overflow horizontal).
+- `src/components/professionals/ProfessionalsFilters.tsx` — search + chips (status, favoritos, em projeto, especialidade).
+- `src/components/professionals/ProfessionalDetailModal.tsx` — modal de detalhe (ver §3).
+- `src/components/professionals/ProfessionalFormDialog.tsx` — modal criar/editar (ver §4).
+- `src/components/professionals/DeleteProfessionalDialog.tsx` — alert dialog de exclusão com mensagem mais clara.
 
----
+`src/pages/Professionals.tsx` vira ~120 linhas: header, hooks, e composição dos componentes acima.
 
-## 2. Limpeza dos links quebrados (executar primeiro)
+Match por id quando possível: ratings já têm `professional_id` (nullable). Atualizar `useProfessionalMetrics` para preferir `professional_id` e cair em `ilike(name)` como fallback (sem migration agora — apenas usar a coluna que já existe).
 
-- **palcos_curados**: deletar fisicamente as 7 linhas com `link_status='broken'` (tabela global, sem vínculos diretos críticos — `edital_applications` referenciando essas linhas não existe).
-- **editais**:
-  - Deletar fisicamente os 2 editais broken **sem** candidatura.
-  - Para o 1 edital broken **com** candidatura: marcar como inativo via `status='Encerrado'` + `inferido=true` e adicionar nota no `resumo` ("Link oficial fora do ar — preservado por candidatura ativa"), em vez de deletar (evita quebrar histórico do usuário).
-- Executar via tool `supabase--insert` (DELETE/UPDATE) — não migration.
+### 2. UI/UX da listagem
 
----
+- **Mobile (< md)**: substituir tabela por `ProfessionalsCardList`. Cada card mostra avatar (inicial do nome em círculo), nome + favorito, especialidade, badge "Em projeto: X", nota, e menu de 3 pontos com ações (editar / excluir). Toque no card abre detalhe.
+- **Desktop**: manter tabela, mas:
+  - Remover ícones de Editar/Excluir das linhas. Substituir por menu kebab (`DropdownMenu`) com Editar, Excluir, Marcar como favorito, Convidar para projeto.
+  - Linha continua clicável → abre detalhe (com `role="button"`, `tabIndex=0`, handler `Enter/Space`).
+  - Estrela de favorito vira só ícone visual; marcar/desmarcar pelo menu (resolve o conflito de 3 affordances).
+- **Filtros**: alinhar todos os chips na mesma altura (`h-7`). Especialidade vira `DropdownMenu` (não Select) para combinar com os outros chips, com checkmark. Adicionar chip "Cidade" se houver cidades cadastradas.
 
-## 3. Refactor do módulo Carreira
+### 3. Modal de detalhe
 
-### 3.1 Arquitetura de arquivos
-- Quebrar `Carreira.tsx` em:
-  - `Carreira.tsx` (apenas composição + tabs)
-  - `carreira/DescobrirTab.tsx` (lista + filtros + IA)
-  - `carreira/InscricoesTab.tsx` (pipeline)
-  - `carreira/useCarreiraFilters.ts` (URL ↔ state, lista filtrada/ordenada, deep-link)
-  - `carreira/useCarreiraInterest.ts` (ensureOpportunity + handleInterest + handleSave + handleRemove)
+- **Header**: avatar inicial em círculo (cor derivada do nome) no lugar do 🎵 fixo. Nome, especialidade, badges (Ativo/Inativo, Globalmente listado).
+- **Métricas**: trocar grid 4 colunas com `text-[9px]` por 2 linhas legíveis:
+  - Linha 1 (sempre visível): `Projetos juntos · Na plataforma · Nota média (n) · Na agenda desde`. Tipografia `text-sm/text-base`, labels em `text-xs`.
+  - Linha 2 (financeiro, **colapsado por padrão**): toggle `<button>` "Mostrar dados financeiros" → expande "Cachê médio" e "Prazo médio". Persistir preferência em `localStorage` (`professionals.show_financial`).
+- **Histórico de colaboração**: mantém, mas com `max-h-[200px] overflow-y-auto` quando > 4 itens.
+- **Contato**: e-mail (mailto), WhatsApp (wa.me com sanitização e validação mínima de 10 dígitos antes de mostrar o link).
+- **Bio**: igual.
+- **Footer com ações úteis**:
+  - Se contato tem perfil público (futuramente lookup por email em `profiles.public_email` + `allow_global_listing` — query opcional dentro de `useProfessionalMetrics`): botão "Ver perfil público" → `/u/:username`.
+  - Botão "Convidar para projeto" → abre `Select` inline com projetos do usuário (do `ProjectContext`) e navega para `/projects/:id` na aba equipe (sem inscrever automaticamente; respeita constraint MVP de "convites manuais").
+  - "Editar" e "Fechar" mantidos.
+- Adicionar `<DialogDescription>` em todos os modais (acessibilidade).
 
-### 3.2 Layout minimalista (jornada intuitiva)
+### 4. Formulário criar/editar
 
-Hierarquia visual nova (1 coluna até md, 2 colunas em lg+):
+- Adicionar `<DialogDescription>`.
+- **Especialidade**: trocar `<Input>` livre por `<Select>` populado com `specialtyOptions` (constants/specialtyOptions.ts), com opção "Outro" que volta ao input livre. Garante consistência com Equipe/Parceiros.
+- **Telefone**: máscara BR `(XX) XXXXX-XXXX` no `onChange` + validação Zod ajustada (`/^\(?\d{2}\)?\s?\d{4,5}-?\d{4}$/` ou vazio). Helper text "Usado para gerar link do WhatsApp".
+- **Cidade**: novo campo de texto livre (existe coluna? Não — `professionals` não tem `city`). **Sem migration neste plano**: omitir o campo cidade até ter alinhamento, OU adicionar via migration separada. Por enquanto: pular cidade neste plano para não acoplar mudança de schema.
+- **Toggle "Aparecer no banco global"**: novo `Switch` com label e helper text "Outros artistas poderão te encontrar pelo nome/especialidade. Você pode desativar a qualquer momento." Vincula a `allow_global_listing`.
+- **Validação anti-duplicata client-side**: ao submeter create, verificar se `email` já existe na lista carregada — se sim, mostrar warning e perguntar "Deseja editar o existente?" antes de inserir.
+- Layout: 2 colunas em `sm+` para Telefone/Especialidade, demais em coluna única.
+
+### 5. Confirm de exclusão
+
+- Texto: "Excluir **{nome}**? Esta ação não pode ser desfeita. O histórico de colaborações em projetos passados continuará visível, mas o contato sairá da sua agenda."
+
+### Fora de escopo (conscientemente)
+
+- Migration para adicionar `city`, `instagram`, `avatar_url` em `professionals`.
+- Importação CSV / merge de duplicatas globais.
+- Realtime / React Query.
+- Backfill de `professional_ratings.professional_id` quando nulo.
+
+### Arquivos editados/criados
 
 ```text
-┌─ Carreira ─────────────────────────────────────────────┐
-│ [✨ Caixa de busca IA — full-width, hero]              │
-│  "O que você procura?  ex: festivais MPB no Sul"       │
-│  chips de exemplo · botão "Buscar"                     │
-├────────────────────────────────────────────────────────┤
-│ [chips compactos] Todas · Editais · Palcos             │
-│ [chips de filtro ativo / Limpar]                       │
-├────────────────────────────────────────────────────────┤
-│ Pra você (3 cards horizontais — só sem filtros ativos) │
-├────────────────────────────────────────────────────────┤
-│ N oportunidades · [⇅ Ordenar] · [⚙ Filtros avançados] │
-│ ┌─ card ─┐ ┌─ card ─┐                                  │
-│ └────────┘ └────────┘                                  │
-└────────────────────────────────────────────────────────┘
+src/pages/Professionals.tsx                                 (refatorar — ~120 linhas)
+src/hooks/useProfessionalsList.ts                           (novo)
+src/hooks/useProfessionalMetrics.ts                         (novo)
+src/components/professionals/ProfessionalsTable.tsx         (novo)
+src/components/professionals/ProfessionalsCardList.tsx      (novo)
+src/components/professionals/ProfessionalsFilters.tsx       (novo)
+src/components/professionals/ProfessionalDetailModal.tsx    (novo)
+src/components/professionals/ProfessionalFormDialog.tsx     (novo)
+src/components/professionals/DeleteProfessionalDialog.tsx   (novo)
 ```
 
-Mudanças concretas:
-- **IA vira hero** (acima da lista, full-width). Remove a duplicação mobile/desktop.
-- **Filtros principais viram chips horizontais** (Tipo + Prazo + Encerrados toggle). Estado/Gênero/Status migram para um **Sheet "Filtros avançados"** (botão único). Reduz 7 controles visíveis → 3.
-- **Cards mais limpos**: 1 badge de tipo (Edital/Palco) à esquerda + status como dot colorido. Resumo, prazo e local ficam; "Área" e "Pra você" só aparecem em hover/detalhe.
-- **Footer do card com 1 ação primária** (Candidatar/Marcar interesse) + ícone discreto de link/Google. "Salvar/Remover" some do card e migra para o detail sheet (menu ⋯).
-- **Links quebrados**: substituir botão amarelo "Buscar" por um chip cinza inline `Link oficial fora do ar · ⌕ buscar` no header do card, com tooltip explicando. Reduz alarmismo.
-- **Aba Inscrições**: agrupar por status (Interesse / Em preparação / Inscrito / Resultado) com headers; destacar prazos < 7 dias com borda colorida.
-
-### 3.3 IA — torná-la realmente útil
-
-Mínimo para que a IA cumpra a promessa (sem expandir escopo):
-- **Justificativa por resultado**: `oportunidades-search` passa a retornar, junto com cada item, um campo `match_reason` curto (1 frase) gerado a partir da query + perfil do usuário (estado, gênero, fase de carreira). Renderiza como linha extra nos cards "vindos da IA" (`origem === 'ai'`).
-- **Resumo da busca**: substituir o badge "Detectado: edital" por uma frase no topo dos resultados ("Encontrei 6 editais e 2 palcos focados em MPB no Sul. Priorizei prazos abertos."), gerada na própria edge function reutilizando a chamada de classificação.
-- **Feedback inline**: cada card vindo da IA ganha 2 botões discretos `👍 útil / 👎 não é isso`, gravados em uma nova tabela `ai_search_feedback` (já compatível com `analytics_events` se preferir não criar tabela).
-- **Filtro residual após IA**: depois de uma busca IA, mostrar pílula `Resultados da IA (limpar)` no topo da grid em vez de misturar silenciosamente com editais salvos (já existe parcialmente, melhorar visibilidade).
-
-> Não vou refatorar `edital-search`/`palco-search` agora — só `oportunidades-search` (adiciona match_reason + summary) e o painel.
-
----
-
-## 4. Detalhes técnicos
-
-- Arquivos a tocar:
-  - **Novos**: `src/pages/carreira/DescobrirTab.tsx`, `src/pages/carreira/InscricoesTab.tsx`, `src/pages/carreira/useCarreiraFilters.ts`, `src/pages/carreira/useCarreiraInterest.ts`, `src/components/carreira/AdvancedFiltersSheet.tsx`, `src/components/carreira/MatchReasonLine.tsx`, `src/components/carreira/AISearchHero.tsx`.
-  - **Editados**: `src/pages/Carreira.tsx`, `src/components/carreira/OpportunityCard.tsx`, `src/components/carreira/OpportunityFilters.tsx` (vira "avançados"), `src/components/carreira/AISearchPanel.tsx` (deprecado → AISearchHero), `supabase/functions/oportunidades-search/index.ts` (adiciona summary + match_reason por item).
-- Sem novas migrações obrigatórias. Feedback da IA: gravar em `analytics_events` (`event_name='carreira_ai_feedback'`, properties = `{verdict, opportunity_key, query}`) para evitar nova tabela.
-- Limpeza de links: 2 statements via `supabase--insert`:
-  1. `DELETE FROM palcos_curados WHERE link_status='broken';`
-  2. `DELETE FROM editais WHERE link_status='broken' AND id NOT IN (SELECT opportunity_id FROM edital_applications WHERE opportunity_id IS NOT NULL);`
-  3. `UPDATE editais SET status='Encerrado', resumo = COALESCE(NULLIF(resumo,''),'') || ' [Link oficial fora do ar]' WHERE link_status='broken';`
-- Manter compatibilidade total das URLs atuais (`?tipo=`, `?op=`, `?tab=`).
-
----
-
-## 5. Fora de escopo
-- Reescrita das edge functions `edital-search`/`palco-search` (mantém prompts e fontes atuais).
-- Onboarding de novas fontes (HostGator continua bloqueado, conforme memória).
-- Mudança no `EditalInscricao.tsx` (assistente de inscrição) — só ajusta o link de entrada.
+Sem mudanças no banco. Sem mudanças em outras páginas além de imports já existentes.
