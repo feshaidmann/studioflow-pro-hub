@@ -6,3 +6,10 @@ export const SPECIALTY_OPTIONS = [
   "Marketing Musical", "Social Media", "Designer Gráfico", "Assessor de Imprensa",
   "Videomaker", "Fotógrafo", "Diretor Criativo",
 ] as const;
+
+export const SPECIALTY_NONE = "__none__";
+export const SPECIALTY_OTHER = "Outro";
+
+export function isPresetSpecialty(v: string): boolean {
+  return (SPECIALTY_OPTIONS as readonly string[]).includes(v);
+}
