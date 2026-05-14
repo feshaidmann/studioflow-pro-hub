@@ -17,7 +17,16 @@ type Patch = Partial<{
   approved_copy: string;
   designer_notes: string;
   current_step: StepKey;
+  generated_palette: import("./types").PaletteResult;
+  copy_options: import("./types").CopyOption[];
 }>;
+
+export type ReviewPatch = {
+  approved_copy?: string;
+  designer_notes?: string;
+  generated_palette?: import("./types").PaletteResult;
+  copy_options?: import("./types").CopyOption[];
+};
 
 interface UseVisualBriefingResult {
   briefing: VisualBriefing | null;
