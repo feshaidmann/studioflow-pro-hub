@@ -22,10 +22,7 @@ import type { Professional } from "./types";
 import { avatarColor, avatarInitials } from "./types";
 
 const STORAGE_KEY_PREFIX = "professionals.show_financial";
-const storageKeyFor = (uid?: string | null) => `${STORAGE_KEY_PREFIX}:${uid ?? "anon"}`;
-const readPref = (uid?: string | null): boolean => {
-  try { return localStorage.getItem(storageKeyFor(uid)) === "1"; } catch { return false; }
-};
+const storageKeyFor = (key: string) => `${STORAGE_KEY_PREFIX}:${key}`;
 
 interface Props {
   professional: Professional | null;
@@ -36,19 +33,47 @@ interface Props {
 export function ProfessionalDetailModal({ professional, onClose, onEdit }: Props) {
   const navigate = useNavigate();
   const { projects } = useProjects();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { metrics, loading } = useProfessionalMetrics(professional);
-  const [showFinancial, setShowFinancial] = useState<boolean>(() => readPref(user?.id));
+
+  // Chave estável: null enquanto auth carrega; "anon" se deslogado; uid caso contrário.
+  const authKey: string | null = authLoading ? null : (user?.id ?? "anon");
+
+  const [showFinancial, setShowFinancial] = useState<boolean>(false);
+  const hydratedKeyRef = useRef<string | null>(null);
+  const userInteractedRef = useRef<boolean>(false);
   const [inviteOpen, setInviteOpen] = useState(false);
 
-  // Re-sync when the logged-in user changes (avoid leaking previous user's preference).
+  // Hidrata quando a chave de auth resolve / muda (login, logout, troca de conta).
   useEffect(() => {
-    setShowFinancial(readPref(user?.id));
-  }, [user?.id]);
+    if (authKey === null) return;
+    userInteractedRef.current = false;
+    let next = false;
+    try {
+      next = localStorage.getItem(storageKeyFor(authKey)) === "1";
+    } catch {
+      next = false;
+    }
+    setShowFinancial(next);
+    hydratedKeyRef.current = authKey;
+  }, [authKey]);
 
+  // Persiste apenas após interação do usuário e somente na chave já hidratada.
   useEffect(() => {
-    try { localStorage.setItem(storageKeyFor(user?.id), showFinancial ? "1" : "0"); } catch {}
-  }, [showFinancial, user?.id]);
+    if (authKey === null) return;
+    if (hydratedKeyRef.current !== authKey) return;
+    if (!userInteractedRef.current) return;
+    try {
+      localStorage.setItem(storageKeyFor(authKey), showFinancial ? "1" : "0");
+    } catch {
+      /* ignore */
+    }
+  }, [showFinancial, authKey]);
+
+  const toggleFinancial = () => {
+    userInteractedRef.current = true;
+    setShowFinancial((v) => !v);
+  };
 
   if (!professional) return null;
 
