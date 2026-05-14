@@ -105,15 +105,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     gestaoItems[1], // Agenda
   ];
 
-  // Drawer "Mais" — ordem fixa pela jornada do artista.
-  // Para adicionar/remover itens, basta editar JOURNEY_ORDER: a posição
-  // de Carreira (e dos demais) é preservada automaticamente.
-  const JOURNEY_ORDER = [
-    "/carreira",      // 1º — oportunidades (editais + palcos)
-    "/music-dna",     // 2º — entenda a faixa
-    "/criativo",      // 3º — materiais criativos com base no DNA
-    "/professionals", // 4º — equipe conforme necessidade
-  ];
+  // Drawer "Mais" — ordem fixa pela jornada do artista (ver JOURNEY_ORDER).
   const drawerPool = [gestaoItems[2], gestaoItems[3], gestaoItems[4], gestaoItems[5]];
   const toolDrawerItems = JOURNEY_ORDER
     .map((path) => drawerPool.find((it) => it.path === path))
