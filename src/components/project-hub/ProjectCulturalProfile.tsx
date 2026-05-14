@@ -1,10 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useId, useRef, KeyboardEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { X, Plus, Save } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { X, Plus, Save, ChevronDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -32,6 +33,12 @@ export default function ProjectCulturalProfile({ projectId }: { projectId: strin
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [newKeyword, setNewKeyword] = useState("");
+  const [open, setOpen] = useState(false);
+
+  const headerId = useId();
+  const panelId = useId();
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     (async () => {
@@ -52,6 +59,21 @@ export default function ProjectCulturalProfile({ projectId }: { projectId: strin
       setLoading(false);
     })();
   }, [projectId]);
+
+  // Foco automático ao expandir / devolução de foco ao recolher
+  useEffect(() => {
+    if (open) {
+      const raf = requestAnimationFrame(() => {
+        panelRef.current?.focus({ preventScroll: false });
+      });
+      return () => cancelAnimationFrame(raf);
+    } else {
+      const active = document.activeElement;
+      if (panelRef.current && active && panelRef.current.contains(active)) {
+        triggerRef.current?.focus();
+      }
+    }
+  }, [open]);
 
   const toggleItem = (field: "areas" | "estados", value: string) => {
     setPerfil((p) => ({
@@ -88,79 +110,151 @@ export default function ProjectCulturalProfile({ projectId }: { projectId: strin
     }
   };
 
+  const handleBadgeKeyDown = (
+    e: KeyboardEvent<HTMLDivElement>,
+    field: "areas" | "estados",
+    value: string,
+  ) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      toggleItem(field, value);
+    }
+  };
+
+  const handlePanelKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === "Escape") {
+      e.stopPropagation();
+      setOpen(false);
+      triggerRef.current?.focus();
+    }
+  };
+
   if (loading) return null;
 
   return (
     <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-base">Perfil Cultural do Projeto</CardTitle>
-        <p className="text-xs text-muted-foreground mt-1">Estes filtros são usados para recomendar editais compatíveis com seu projeto.</p>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Áreas */}
-        <div>
-          <Label className="text-xs text-muted-foreground">Áreas culturais</Label>
-          <div className="flex gap-1.5 mt-1.5 flex-wrap">
-            {AREA_OPTIONS.map((a) => (
-              <Badge
-                key={a}
-                variant={perfil.areas.includes(a) ? "default" : "outline"}
-                className="cursor-pointer"
-                onClick={() => toggleItem("areas", a)}
-              >
-                {a}
-              </Badge>
-            ))}
-          </div>
-        </div>
+      <Collapsible open={open} onOpenChange={setOpen}>
+        <CollapsibleTrigger asChild>
+          <button
+            ref={triggerRef}
+            type="button"
+            aria-controls={panelId}
+            aria-labelledby={headerId}
+            className="w-full text-left group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-t-lg"
+          >
+            <CardHeader className="pb-3 flex flex-row items-start justify-between gap-3 hover:bg-muted/40 transition-colors rounded-t-lg">
+              <div className="flex-1 min-w-0">
+                <CardTitle id={headerId} className="text-base">Perfil Cultural do Projeto</CardTitle>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Estes filtros são usados para recomendar editais compatíveis com seu projeto.
+                </p>
+              </div>
+              <ChevronDown
+                className="h-4 w-4 text-muted-foreground shrink-0 mt-1 transition-transform duration-200 group-data-[state=open]:rotate-180"
+                aria-hidden="true"
+              />
+            </CardHeader>
+          </button>
+        </CollapsibleTrigger>
 
-        {/* Estados */}
-        <div>
-          <Label className="text-xs text-muted-foreground">Estados de interesse</Label>
-          <div className="flex gap-1 mt-1.5 flex-wrap">
-            {UF_OPTIONS.map((uf) => (
-              <Badge
-                key={uf}
-                variant={perfil.estados.includes(uf) ? "default" : "outline"}
-                className="cursor-pointer text-xs px-1.5 py-0.5"
-                onClick={() => toggleItem("estados", uf)}
-              >
-                {uf}
-              </Badge>
-            ))}
-          </div>
-        </div>
+        <CollapsibleContent
+          id={panelId}
+          ref={panelRef}
+          role="region"
+          aria-labelledby={headerId}
+          tabIndex={-1}
+          onKeyDown={handlePanelKeyDown}
+          className="focus-visible:outline-none"
+        >
+          <CardContent className="space-y-4">
+            {/* Áreas */}
+            <div>
+              <Label className="text-xs text-muted-foreground">Áreas culturais</Label>
+              <div className="flex gap-1.5 mt-1.5 flex-wrap">
+                {AREA_OPTIONS.map((a) => {
+                  const selected = perfil.areas.includes(a);
+                  return (
+                    <Badge
+                      key={a}
+                      variant={selected ? "default" : "outline"}
+                      role="button"
+                      tabIndex={0}
+                      aria-pressed={selected}
+                      className="cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      onClick={() => toggleItem("areas", a)}
+                      onKeyDown={(e) => handleBadgeKeyDown(e, "areas", a)}
+                    >
+                      {a}
+                    </Badge>
+                  );
+                })}
+              </div>
+            </div>
 
-        {/* Palavras-chave */}
-        <div>
-          <Label className="text-xs text-muted-foreground">Palavras-chave</Label>
-          <div className="flex gap-1.5 mt-1.5 flex-wrap">
-            {perfil.palavras_chave.map((kw) => (
-              <Badge key={kw} variant="secondary" className="gap-1">
-                {kw}
-                <X className="h-3 w-3 cursor-pointer" onClick={() => removeKeyword(kw)} />
-              </Badge>
-            ))}
-          </div>
-          <div className="flex gap-2 mt-2">
-            <Input
-              value={newKeyword}
-              onChange={(e) => setNewKeyword(e.target.value)}
-              placeholder="Ex: edital audiovisual, lei aldir blanc"
-              className="flex-1"
-              onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addKeyword())}
-            />
-            <Button size="sm" variant="outline" onClick={addKeyword} disabled={!newKeyword.trim()}>
-              <Plus className="h-3.5 w-3.5" />
+            {/* Estados */}
+            <div>
+              <Label className="text-xs text-muted-foreground">Estados de interesse</Label>
+              <div className="flex gap-1 mt-1.5 flex-wrap">
+                {UF_OPTIONS.map((uf) => {
+                  const selected = perfil.estados.includes(uf);
+                  return (
+                    <Badge
+                      key={uf}
+                      variant={selected ? "default" : "outline"}
+                      role="button"
+                      tabIndex={0}
+                      aria-pressed={selected}
+                      className="cursor-pointer text-xs px-1.5 py-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      onClick={() => toggleItem("estados", uf)}
+                      onKeyDown={(e) => handleBadgeKeyDown(e, "estados", uf)}
+                    >
+                      {uf}
+                    </Badge>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Palavras-chave */}
+            <div>
+              <Label className="text-xs text-muted-foreground">Palavras-chave</Label>
+              <div className="flex gap-1.5 mt-1.5 flex-wrap">
+                {perfil.palavras_chave.map((kw) => (
+                  <Badge key={kw} variant="secondary" className="gap-1">
+                    {kw}
+                    <button
+                      type="button"
+                      aria-label={`Remover palavra-chave ${kw}`}
+                      onClick={() => removeKeyword(kw)}
+                      className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
+                    >
+                      <X className="h-3 w-3" aria-hidden="true" />
+                    </button>
+                  </Badge>
+                ))}
+              </div>
+              <div className="flex gap-2 mt-2">
+                <Input
+                  value={newKeyword}
+                  onChange={(e) => setNewKeyword(e.target.value)}
+                  placeholder="Ex: edital audiovisual, lei aldir blanc"
+                  className="flex-1"
+                  aria-label="Nova palavra-chave"
+                  onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addKeyword())}
+                />
+                <Button size="sm" variant="outline" onClick={addKeyword} disabled={!newKeyword.trim()} aria-label="Adicionar palavra-chave">
+                  <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+                </Button>
+              </div>
+            </div>
+
+            <Button size="sm" onClick={save} disabled={saving}>
+              <Save className="h-3.5 w-3.5 mr-1.5" aria-hidden="true" />
+              {saving ? "Salvando..." : "Salvar perfil cultural"}
             </Button>
-          </div>
-        </div>
-
-        <Button size="sm" onClick={save} disabled={saving}>
-          <Save className="h-3.5 w-3.5 mr-1.5" />
-          {saving ? "Salvando..." : "Salvar perfil cultural"}
-        </Button>
-      </CardContent>
+          </CardContent>
+        </CollapsibleContent>
+      </Collapsible>
     </Card>
   );
 }
