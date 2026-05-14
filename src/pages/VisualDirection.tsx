@@ -1,9 +1,10 @@
-import { useParams, useNavigate } from "react-router-dom";
+import { useEffect, useRef } from "react";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, Palette, Loader2 } from "lucide-react";
 import { useProjects } from "@/contexts/ProjectContext";
 import { toast } from "sonner";
-import Stepper from "@/components/visual-direction/Stepper";
+import Stepper, { StepKey } from "@/components/visual-direction/Stepper";
 import ArtisticProfileStep from "@/components/visual-direction/ArtisticProfileStep";
 import GenerationStep from "@/components/visual-direction/GenerationStep";
 import ReviewStep from "@/components/visual-direction/ReviewStep";
@@ -11,9 +12,12 @@ import BriefingStep from "@/components/visual-direction/BriefingStep";
 import SaveStatus from "@/components/visual-direction/SaveStatus";
 import { useVisualBriefing } from "@/components/visual-direction/useVisualBriefing";
 
+const VALID_STEPS: StepKey[] = ["profile", "generation", "review", "briefing"];
+
 export default function VisualDirection() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { projects } = useProjects();
   const project = projects.find((p) => p.id === id);
 
@@ -22,6 +26,31 @@ export default function VisualDirection() {
     setStep, updateProfile, updateReview, toggleImage, generate,
     saveAndAdvance, retryFlush,
   } = useVisualBriefing(id);
+
+  // Restore step from ?step= once briefing is loaded (guards against invalid jumps)
+  const restoredRef = useRef(false);
+  useEffect(() => {
+    if (loading || restoredRef.current) return;
+    restoredRef.current = true;
+    const urlStep = searchParams.get("step") as StepKey | null;
+    if (!urlStep || !VALID_STEPS.includes(urlStep) || urlStep === step) return;
+    // Guard: don't jump to steps the user can't be on yet
+    const hasImages = (briefing?.generated_images ?? []).length > 0;
+    const hasSelection = (briefing?.generated_images ?? []).some((i) => i.selected);
+    if (urlStep === "generation" && !hasImages) return;
+    if (urlStep === "review" && !hasSelection) return;
+    if (urlStep === "briefing" && !briefing?.approved_copy) return;
+    setStep(urlStep);
+  }, [loading, briefing, searchParams, step, setStep]);
+
+  // Keep URL in sync with current step (replace, not push, to avoid history spam)
+  useEffect(() => {
+    if (loading) return;
+    if (searchParams.get("step") === step) return;
+    const next = new URLSearchParams(searchParams);
+    next.set("step", step);
+    setSearchParams(next, { replace: true });
+  }, [step, loading, searchParams, setSearchParams]);
 
   const handleSaveReview = async (data: { approved_copy: string; designer_notes: string }) => {
     if (!briefing) return;
