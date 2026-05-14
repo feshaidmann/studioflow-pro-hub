@@ -49,7 +49,7 @@ const gestaoItems = [
   { labelKey: "nav.agenda",        path: "/agenda",        icon: CalendarDays, proOnly: false, mobileLabel: "" },  // [1]
   // ── Ferramentas — ordenadas pela jornada do artista ──────────────────
   { labelKey: "nav.musicdna",      path: "/music-dna",     icon: Dna,          proOnly: false, mobileLabel: "nav.musicdna.short" }, // [2] — entenda a faixa primeiro
-  { labelKey: "nav.creative",      path: "/criativo",      icon: Palette,      proOnly: false, mobileLabel: "" },  // [3] — crie os materiais com base no DNA
+  { labelKey: "nav.visualDirection", path: "/projects",      icon: Palette,      proOnly: false, mobileLabel: "" },  // [3] — Direção Visual (briefing para designer)
   { labelKey: "nav.carreira",      path: "/carreira",      icon: Trophy,       proOnly: false, mobileLabel: "" },  // [4] — editais + palcos unificados
   { labelKey: "nav.professionals", path: "/professionals", icon: Users,        proOnly: false, mobileLabel: "" },  // [5] — equipe conforme necessidade
 ];
