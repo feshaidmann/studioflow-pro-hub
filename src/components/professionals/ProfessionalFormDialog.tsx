@@ -72,22 +72,31 @@ export function ProfessionalFormDialog({ open, onOpenChange, editTarget, existin
   useEffect(() => {
     if (!open) return;
     setAcknowledgedDuplicate(false);
+    setSpecialtyError("");
     if (editTarget) {
+      const stored = (editTarget.specialty || "").trim();
       reset({
         name: editTarget.name,
         email: editTarget.email,
         phone: editTarget.phone || "",
-        specialty: editTarget.specialty || "",
+        specialty: stored,
         bio: editTarget.bio || "",
         active: editTarget.active,
         allow_global_listing: editTarget.allow_global_listing,
       });
-      const preset = (SPECIALTY_OPTIONS as readonly string[]).includes(editTarget.specialty || "");
-      setSpecialtyMode(preset ? (editTarget.specialty || "") : (editTarget.specialty ? "Outro" : ""));
-      setCustomSpecialty(preset ? "" : (editTarget.specialty || ""));
+      if (!stored) {
+        setSpecialtyMode(SPECIALTY_NONE);
+        setCustomSpecialty("");
+      } else if (isPresetSpecialty(stored)) {
+        setSpecialtyMode(stored);
+        setCustomSpecialty("");
+      } else {
+        setSpecialtyMode(SPECIALTY_OTHER);
+        setCustomSpecialty(stored.slice(0, CUSTOM_SPECIALTY_MAX));
+      }
     } else {
       reset({ name: "", email: "", phone: "", specialty: "", bio: "", active: true, allow_global_listing: false });
-      setSpecialtyMode("");
+      setSpecialtyMode(SPECIALTY_NONE);
       setCustomSpecialty("");
     }
   }, [open, editTarget, reset]);
@@ -95,7 +104,16 @@ export function ProfessionalFormDialog({ open, onOpenChange, editTarget, existin
   const onSubmit = async (values: FormValues) => {
     if (!user) return;
 
-    const finalSpecialty = specialtyMode === "Outro" ? customSpecialty.trim() : specialtyMode;
+    let finalSpecialty = "";
+    if (specialtyMode === SPECIALTY_OTHER) {
+      finalSpecialty = customSpecialty.trim();
+      if (finalSpecialty.length < 2) {
+        setSpecialtyError("Descreva a especialidade (mín. 2 caracteres)");
+        return;
+      }
+    } else if (specialtyMode !== SPECIALTY_NONE) {
+      finalSpecialty = specialtyMode;
+    }
 
     // Block submit if duplicate detected and user hasn't explicitly acknowledged it
     if (!editTarget && isDuplicate && !acknowledgedDuplicate) {
