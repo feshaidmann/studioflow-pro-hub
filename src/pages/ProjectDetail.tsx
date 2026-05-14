@@ -21,6 +21,7 @@ import ProjectChat from "@/components/project-hub/ProjectChat";
 import ProjectTasksTab from "@/components/project-hub/ProjectTasksTab";
 import ProjectFinanceTab from "@/components/project-hub/ProjectFinanceTab";
 import ProjectReleaseTab from "@/components/project-hub/ProjectReleaseTab";
+import ProjectVisualDirectionTab from "@/components/project-hub/ProjectVisualDirectionTab";
 import ProjectFilesTab from "@/components/project-hub/ProjectFilesTab";
 import CollaboratorOverviewTab from "@/components/project-hub/CollaboratorOverviewTab";
 import CollaboratorTasksTab from "@/components/project-hub/CollaboratorTasksTab";
