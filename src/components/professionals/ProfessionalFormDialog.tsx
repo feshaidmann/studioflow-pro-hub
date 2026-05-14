@@ -1,0 +1,228 @@
+import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { AlertTriangle } from "lucide-react";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
+import { SPECIALTY_OPTIONS } from "@/constants/specialtyOptions";
+import { maskPhone, isValidPhone, type Professional } from "./types";
+
+const SPECIALTY_VALUES = [...SPECIALTY_OPTIONS, "Outro"] as const;
+
+const schema = z.object({
+  name: z.string().trim().min(2, "Nome obrigatório").max(100),
+  email: z.string().trim().email("E-mail inválido").max(255),
+  phone: z.string().trim().max(20).default("").refine(isValidPhone, "Telefone deve ter 10 ou 11 dígitos"),
+  specialty: z.string().trim().max(100).default(""),
+  bio: z.string().trim().max(500).default(""),
+  active: z.boolean().default(true),
+  allow_global_listing: z.boolean().default(false),
+});
+type FormValues = z.infer<typeof schema>;
+
+interface Props {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  editTarget: Professional | null;
+  existingEmails: string[];
+  onSaved: () => void;
+  onRequestEdit?: (email: string) => void;
+}
+
+export function ProfessionalFormDialog({ open, onOpenChange, editTarget, existingEmails, onSaved, onRequestEdit }: Props) {
+  const { user } = useAuth();
+  const [submitting, setSubmitting] = useState(false);
+  const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
+
+  const isPresetSpecialty = editTarget?.specialty
+    ? (SPECIALTY_OPTIONS as readonly string[]).includes(editTarget.specialty)
+    : true;
+  const [specialtyMode, setSpecialtyMode] = useState<string>("");
+  const [customSpecialty, setCustomSpecialty] = useState<string>("");
+
+  const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<FormValues>({
+    resolver: zodResolver(schema),
+    defaultValues: { name: "", email: "", phone: "", specialty: "", bio: "", active: true, allow_global_listing: false },
+  });
+
+  const activeValue = watch("active");
+  const globalValue = watch("allow_global_listing");
+  const phoneValue = watch("phone");
+
+  useEffect(() => {
+    if (!open) return;
+    setDuplicateWarning(null);
+    if (editTarget) {
+      reset({
+        name: editTarget.name,
+        email: editTarget.email,
+        phone: editTarget.phone || "",
+        specialty: editTarget.specialty || "",
+        bio: editTarget.bio || "",
+        active: editTarget.active,
+        allow_global_listing: editTarget.allow_global_listing,
+      });
+      const preset = (SPECIALTY_OPTIONS as readonly string[]).includes(editTarget.specialty || "");
+      setSpecialtyMode(preset ? (editTarget.specialty || "") : (editTarget.specialty ? "Outro" : ""));
+      setCustomSpecialty(preset ? "" : (editTarget.specialty || ""));
+    } else {
+      reset({ name: "", email: "", phone: "", specialty: "", bio: "", active: true, allow_global_listing: false });
+      setSpecialtyMode("");
+      setCustomSpecialty("");
+    }
+  }, [open, editTarget, reset]);
+
+  const onSubmit = async (values: FormValues) => {
+    if (!user) return;
+
+    const finalSpecialty = specialtyMode === "Outro" ? customSpecialty.trim() : specialtyMode;
+
+    if (!editTarget) {
+      const dup = existingEmails.find((e) => e.toLowerCase() === values.email.toLowerCase());
+      if (dup && !duplicateWarning) {
+        setDuplicateWarning(values.email);
+        return;
+      }
+    }
+
+    setSubmitting(true);
+    const payload = { ...values, specialty: finalSpecialty };
+
+    if (editTarget) {
+      const { error } = await supabase.from("professionals").update(payload).eq("id", editTarget.id);
+      if (error) toast.error("Erro ao atualizar: " + error.message);
+      else { toast.success("Contato atualizado!"); onSaved(); onOpenChange(false); }
+    } else {
+      const { error } = await supabase.from("professionals").insert([{
+        ...payload,
+        name: payload.name!,
+        email: payload.email!,
+        user_id: user.id,
+      }]);
+      if (error) toast.error("Erro ao cadastrar: " + error.message);
+      else { toast.success("Contato salvo!"); onSaved(); onOpenChange(false); }
+    }
+    setSubmitting(false);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{editTarget ? "Editar Contato" : "Novo Contato"}</DialogTitle>
+          <DialogDescription>
+            {editTarget ? "Atualize as informações do seu contato." : "Adicione um músico, engenheiro ou colaborador à sua agenda."}
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <div className="space-y-1">
+            <Label htmlFor="name">Nome *</Label>
+            <Input id="name" {...register("name")} placeholder="Nome completo" />
+            {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="email">E-mail *</Label>
+            <Input id="email" type="email" {...register("email")} placeholder="email@exemplo.com" />
+            {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label htmlFor="phone">Telefone</Label>
+              <Input
+                id="phone"
+                value={phoneValue || ""}
+                onChange={(e) => setValue("phone", maskPhone(e.target.value), { shouldValidate: true })}
+                placeholder="(11) 99999-9999"
+                inputMode="tel"
+              />
+              {errors.phone && <p className="text-xs text-destructive">{errors.phone.message}</p>}
+              <p className="text-[10px] text-muted-foreground">Usado para gerar link do WhatsApp.</p>
+            </div>
+            <div className="space-y-1">
+              <Label>Especialidade</Label>
+              <Select value={specialtyMode} onValueChange={setSpecialtyMode}>
+                <SelectTrigger><SelectValue placeholder="Selecionar..." /></SelectTrigger>
+                <SelectContent>
+                  {SPECIALTY_VALUES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              {specialtyMode === "Outro" && (
+                <Input
+                  className="mt-1"
+                  value={customSpecialty}
+                  onChange={(e) => setCustomSpecialty(e.target.value.slice(0, 100))}
+                  placeholder="Descreva a especialidade"
+                  maxLength={100}
+                />
+              )}
+            </div>
+          </div>
+
+          <div className="space-y-1">
+            <Label htmlFor="bio">Observações</Label>
+            <Textarea id="bio" {...register("bio")} placeholder="Disponibilidade, estilos, observações..." rows={3} className="resize-none" />
+          </div>
+
+          <div className="space-y-3 rounded-lg border border-border bg-muted/30 p-3">
+            <div className="flex items-center gap-3">
+              <Switch id="active" checked={activeValue} onCheckedChange={(v) => setValue("active", v)} />
+              <Label htmlFor="active" className="cursor-pointer">Contato ativo</Label>
+            </div>
+            <div className="space-y-1">
+              <div className="flex items-center gap-3">
+                <Switch id="global" checked={globalValue} onCheckedChange={(v) => setValue("allow_global_listing", v)} />
+                <Label htmlFor="global" className="cursor-pointer">Aparecer no banco global</Label>
+              </div>
+              <p className="text-[10px] text-muted-foreground pl-11">
+                Outros artistas poderão encontrar este contato pela busca da plataforma. Pode ser desativado a qualquer momento.
+              </p>
+            </div>
+          </div>
+
+          {duplicateWarning && (
+            <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 space-y-2">
+              <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
+                <AlertTriangle className="h-4 w-4" />
+                <p className="text-sm font-medium">E-mail já cadastrado</p>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Já existe um contato com <strong>{duplicateWarning}</strong> na sua agenda.
+              </p>
+              <div className="flex gap-2">
+                {onRequestEdit && (
+                  <Button type="button" variant="outline" size="sm" onClick={() => { onRequestEdit(duplicateWarning); onOpenChange(false); }}>
+                    Editar existente
+                  </Button>
+                )}
+                <Button type="button" size="sm" onClick={() => setDuplicateWarning(null)}>
+                  Cadastrar mesmo assim
+                </Button>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+            <Button type="submit" disabled={submitting || !!duplicateWarning}>
+              {submitting ? "Salvando..." : editTarget ? "Salvar alterações" : "Cadastrar"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
