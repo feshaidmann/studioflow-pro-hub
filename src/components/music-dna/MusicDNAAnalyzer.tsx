@@ -560,7 +560,6 @@ function buildAnalysisMarkdown(input: { name: string; references: string[]; note
   lines.push("");
   lines.push(`_Gerado em ${new Date().toLocaleString("pt-BR")}_`);
   lines.push("");
-  // Gênero classificado removido do relatório (classificador interno omitido na UI)
   if (input.references?.length) lines.push(`**Referências informadas:** ${input.references.join(", ")}`);
   if (input.notes) lines.push(`**Notas:** ${input.notes}`);
   lines.push("");
@@ -622,15 +621,8 @@ function buildAnalysisMarkdown(input: { name: string; references: string[]; note
     });
     lines.push("");
   }
-  if (diagnosis.catalogNeighbors?.length) {
-    lines.push("## Vizinhos no catálogo (referência interna)");
-    diagnosis.catalogNeighbors.forEach(n => {
-      const sim = Math.round((Number(n.similarity_score) || 0) * 100);
-      const tom = n.key_name ? ` — ${n.key_name}${n.mode ? ` ${n.mode}` : ""}` : "";
-      lines.push(`- **${n.band}** (${n.filename}) — ${sim}%${tom} — BPM ${n.tempo_bpm ?? "—"} · LUFS ${n.lufs_integrated ?? "—"}`);
-    });
-    lines.push("");
-  }
+  // Bloco "Vizinhos no catálogo" omitido do export (classificador interno / banco de referências em curadoria)
+
   return lines.join("\n");
 }
 
@@ -774,7 +766,6 @@ async function downloadAnalysisReport(input: { name: string; references: string[
   writeText("DNA Musical", { size: 20, bold: true, color: [20, 20, 20], gap: 6 });
   writeText(input.name, { size: 14, bold: true, color: [60, 60, 60], gap: 4 });
   writeText(`Gerado em ${new Date().toLocaleString("pt-BR")}`, { size: 9, color: [120, 120, 120], gap: 4 });
-  // Gênero classificado removido do PDF (classificador interno omitido na UI)
   if (input.references?.length) writeText(`Referências informadas: ${input.references.join(", ")}`, { size: 10, color: [80, 80, 80] });
   if (input.notes) writeText(`Notas: ${input.notes}`, { size: 10, color: [80, 80, 80] });
 
@@ -866,14 +857,8 @@ async function downloadAnalysisReport(input: { name: string; references: string[
       bullet(`${ref.artista} — ${ref.similaridade}${ref.motivo ? ` — ${ref.motivo}` : ""}`);
     });
   }
-  if (diagnosis.catalogNeighbors?.length) {
-    heading("Vizinhos no catálogo de referência");
-    diagnosis.catalogNeighbors.forEach((n) => {
-      const sim = Math.round((Number(n.similarity_score) || 0) * 100);
-      const tom = n.key_name ? ` — ${n.key_name}${n.mode ? ` ${n.mode}` : ""}` : "";
-      bullet(`${n.band} (${n.filename}) — ${sim}%${tom} — BPM ${n.tempo_bpm ?? "—"} · LUFS ${n.lufs_integrated ?? "—"}`);
-    });
-  }
+  // Bloco "Vizinhos no catálogo" omitido do PDF (classificador interno / banco de referências em curadoria)
+
 
   const safeName = input.name.replace(/[^a-z0-9-_]+/gi, "_").slice(0, 60) || "dna-musical";
   doc.save(`dna-musical_${safeName}.pdf`);
