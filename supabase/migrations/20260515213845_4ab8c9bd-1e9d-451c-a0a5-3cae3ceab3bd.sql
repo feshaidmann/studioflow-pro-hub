@@ -1,0 +1,1 @@
+DROP TABLE IF EXISTS public.track_intelligence_analyses CASCADE;

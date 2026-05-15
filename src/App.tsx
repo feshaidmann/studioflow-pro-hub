@@ -92,7 +92,6 @@ const AppRoutes = () => (
           <Route path="/editais/inscricao/:id" element={<EditalInscricao />} />
           <Route path="/criativo" element={<Navigate to="/projects" replace />} />
           <Route path="/projects/:id/direcao-visual" element={<VisualDirection />} />
-          <Route path="/track-intelligence/*" element={<Navigate to="/dashboard" replace />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </Suspense>
