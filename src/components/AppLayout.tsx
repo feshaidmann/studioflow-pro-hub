@@ -115,7 +115,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   // para evitar a sensação de menu "inativo" causada pela latência do code-split.
   const prefetchRoute = (path: string) => {
     switch (path) {
-      case "/criativo":     /* removido — agora /projects/:id/direcao-visual */ break;
       case "/carreira":     import("@/pages/Carreira");      break;
       case "/professionals": import("@/pages/Professionals"); break;
       case "/music-dna":    import("@/pages/MusicDNA");      break;
