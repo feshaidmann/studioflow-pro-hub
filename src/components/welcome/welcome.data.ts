@@ -4,7 +4,17 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
-export const MOCK_PROJECT = {
+type Task = { label: string; done: boolean; urgent?: boolean };
+type MockProject = {
+  name: string;
+  artist: string;
+  stage: string;
+  releaseDate: string;
+  budget: { spent: number; total: number };
+  tasks: Task[];
+};
+
+export const MOCK_PROJECT: MockProject = {
   name: "Noite Clara",
   artist: "Maria Silva",
   stage: "Pré-lançamento",
