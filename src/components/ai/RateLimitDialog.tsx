@@ -1,10 +1,9 @@
 import { useEffect, useState } from "react";
-import { Clock, ImageIcon } from "lucide-react";
+import { Clock } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useRateLimitDialog } from "@/hooks/useRateLimitDialog";
-import { useNavigate } from "react-router-dom";
 
 function formatCountdown(ms: number): string {
   if (ms <= 0) return "agora";
