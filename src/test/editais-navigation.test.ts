@@ -79,7 +79,7 @@ describe("navegação para /editais", () => {
     const src = readFileSync(file, "utf8");
     for (const url of extractEditaisUrls(src)) {
       const result = validateEditaisPath(url);
-      if (!result.valid) {
+      if (result.valid === false) {
         offenders.push({
           file: relative(SRC, file),
           url,
