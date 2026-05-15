@@ -1,5 +1,5 @@
 import {
-  Clock, DollarSign, Compass, Palette, FolderKanban,
+  Clock, DollarSign, Compass, FolderKanban,
   Users, Sparkles,
   type LucideIcon,
 } from "lucide-react";
@@ -69,5 +69,3 @@ export const MODULES: Module[] = [
   { icon: Sparkles,     name: "DNA + Criativo", desc: "Diagnóstico de mix/master e arte gerada por IA." },
 ];
 
-// keep Palette import alive for tree-shake clarity (used elsewhere? remove)
-void Palette;
