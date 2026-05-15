@@ -1595,7 +1595,7 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
               <Download className="h-3 w-3" />
               Baixar relatório
             </Button>
-            <CreateArtButton isSaved={isSaved} savedAnalysisId={savedAnalysisId} />
+            
           </div>
 
           <Separator orientation="vertical" className="h-6 mx-1 hidden sm:block" />
