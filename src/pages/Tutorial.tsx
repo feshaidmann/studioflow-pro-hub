@@ -313,32 +313,29 @@ const tabContent: Record<TabId, React.ReactNode> = {
     </div>
   ),
 
-  creative: (
+  visual: (
     <div className="space-y-2">
-      <SectionTitle>Módulo Criativo</SectionTitle>
+      <SectionTitle>O que é a Direção Visual</SectionTitle>
       <p className="text-sm text-muted-foreground leading-relaxed">
-        O Módulo Criativo permite gerar artes visuais, capas, banners e legendas para redes sociais usando IA generativa — tudo integrado aos seus projetos.
+        A <strong>Direção Visual</strong> é um wizard de 4 passos, dentro de cada projeto, que transforma a identidade artística da faixa em materiais visuais prontos — capa, variações, briefing e link compartilhável para designers e parceiros.
       </p>
 
-      <SectionTitle>Como gerar uma arte</SectionTitle>
-      <Step n={1}>Acesse <strong>Criativo</strong> no menu lateral.</Step>
-      <Step n={2}>Escreva um <strong>prompt</strong> descrevendo a arte que deseja (ex: "capa de single de trap com tons escuros e tipografia bold").</Step>
-      <Step n={3}>Escolha o <strong>formato</strong>: Capa (1:1), Stories (9:16), Banner (16:9), Post (4:5) ou YouTube.</Step>
-      <Step n={4}>Opcionalmente, selecione um <strong>estilo visual</strong> (Minimalista, Neon, Vintage, Aquarela, etc.).</Step>
-      <Step n={5}>Clique em <strong>"Gerar"</strong> e aguarde a IA criar sua arte.</Step>
+      <SectionTitle>Como acessar</SectionTitle>
+      <Step n={1}>Abra um projeto em <strong>Projetos → Detalhes</strong>.</Step>
+      <Step n={2}>Clique em <strong>Direção Visual</strong> no menu lateral do projeto.</Step>
+      <Step n={3}>A URL do wizard é <code className="text-xs">/projects/:id/direcao-visual</code> — pode ser bookmarked.</Step>
 
-      <SectionTitle>Recursos avançados</SectionTitle>
-      <div className="space-y-1.5">
+      <SectionTitle>Os 4 passos do wizard</SectionTitle>
+      <div className="space-y-1.5 mt-2">
         {[
-          "Geração em lote (múltiplos formatos de uma vez)",
-          "Imagem de referência para guiar o estilo",
-          "Templates rápidos (Capa de Single, Post de Lançamento, Stories, etc.)",
-          "Galeria com todas as artes geradas, organizadas por projeto",
-          "Download direto para uso em distribuidoras e redes sociais",
-        ].map((item, i) => (
-          <div key={i} className="flex items-start gap-2">
+          { title: "Perfil artístico", desc: "Defina mood, paleta, referências visuais e território estético do projeto." },
+          { title: "Geração", desc: "Gere imagens com IA a partir do perfil. Lote por formato (capa, stories, banner)." },
+          { title: "Revisão", desc: "Selecione as melhores variações e marque favoritas para o briefing final." },
+          { title: "Briefing", desc: "Documento consolidado com perfil + imagens escolhidas, exportável e compartilhável via link público." },
+        ].map(({ title, desc }) => (
+          <div key={title} className="flex items-start gap-2">
             <CheckCircle2 className="h-3.5 w-3.5 text-primary mt-0.5 shrink-0" />
-            <p className="text-sm text-muted-foreground">{item}</p>
+            <p className="text-sm text-muted-foreground"><strong className="text-foreground">{title}</strong> — {desc}</p>
           </div>
         ))}
       </div>
@@ -347,11 +344,19 @@ const tabContent: Record<TabId, React.ReactNode> = {
       <div className="flex items-start gap-2 rounded-lg bg-primary/10 border border-primary/20 p-3">
         <Dna className="h-4 w-4 text-primary mt-0.5 shrink-0" />
         <p className="text-sm text-muted-foreground">
-          Ao analisar uma faixa no <strong className="text-foreground">DNA Musical</strong>, você pode gerar automaticamente uma arte visual baseada no gênero, mood e identidade sonora da música.
+          Se a faixa já tem análise no <strong className="text-foreground">DNA Musical</strong>, gênero, mood e identidade sonora são usados como insumo para o perfil artístico, deixando a geração mais alinhada à música.
         </p>
       </div>
 
-      <Tip>Use os templates rápidos para gerar material de divulgação completo em poucos cliques: capa + stories + post.</Tip>
+      <SectionTitle>Compartilhar com parceiros</SectionTitle>
+      <div className="flex items-start gap-2 rounded-lg bg-[hsl(var(--success))]/10 border border-[hsl(var(--success))]/20 p-3">
+        <Share2 className="h-4 w-4 text-[hsl(var(--success))] mt-0.5 shrink-0" />
+        <p className="text-sm text-muted-foreground">
+          O briefing final gera um link público (<code className="text-xs">/briefing/share/:token</code>) para enviar a designers, fotógrafos ou diretoras de arte sem precisar de login.
+        </p>
+      </div>
+
+      <Tip>Quanto mais completo o perfil artístico no passo 1, mais consistente a geração no passo 2 — invista nessa etapa.</Tip>
     </div>
   ),
 
