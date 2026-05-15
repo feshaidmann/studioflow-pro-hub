@@ -14,9 +14,9 @@ interface AIQuotaBadgeProps {
 }
 
 /**
- * Unified AI fair-use quota indicator. Drop-in for DNA, Track Intelligence,
- * Editais AI and Criativo. Reads quota snapshot from RateLimitDialog context
- * (populated by edge functions on each AI call).
+ * Unified AI fair-use quota indicator. Drop-in para módulos com IA
+ * (DNA Musical, Carreira, Direção Visual). Lê o snapshot de quota do
+ * contexto do RateLimitDialog (populado pelas edge functions a cada chamada).
  */
 export function AIQuotaBadge({
   variant = "pill",
