@@ -774,7 +774,7 @@ async function downloadAnalysisReport(input: { name: string; references: string[
   writeText("DNA Musical", { size: 20, bold: true, color: [20, 20, 20], gap: 6 });
   writeText(input.name, { size: 14, bold: true, color: [60, 60, 60], gap: 4 });
   writeText(`Gerado em ${new Date().toLocaleString("pt-BR")}`, { size: 9, color: [120, 120, 120], gap: 4 });
-  if (diagnosis.genero_classificado) writeText(`Gênero classificado: ${diagnosis.genero_classificado}`, { size: 10, color: [80, 80, 80] });
+  // Gênero classificado removido do PDF (classificador interno omitido na UI)
   if (input.references?.length) writeText(`Referências informadas: ${input.references.join(", ")}`, { size: 10, color: [80, 80, 80] });
   if (input.notes) writeText(`Notas: ${input.notes}`, { size: 10, color: [80, 80, 80] });
 
