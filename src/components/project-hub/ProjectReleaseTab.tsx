@@ -1,7 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { useReleaseChecklist, RELEASE_SECTIONS, type SectionDef } from "@/hooks/useReleaseChecklist";
-import { useSavedAnalyses } from "@/hooks/useSavedAnalyses";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -12,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   Truck, FileText, Scale, Image, Globe, CheckCircle2,
-  ChevronDown, Loader2, AlertTriangle, Megaphone, Palette, Dna,
+  ChevronDown, Loader2, AlertTriangle, Megaphone,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
