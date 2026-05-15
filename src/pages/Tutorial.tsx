@@ -228,7 +228,7 @@ const tabContent: Record<TabId, React.ReactNode> = {
       <SectionTitle>O que você recebe</SectionTitle>
       <div className="space-y-1.5">
         {[
-          "Gênero classificado automaticamente",
+          "Identidade sonora e território do gênero declarado",
           "Identidade musical: mood, território sonoro e persona do ouvinte",
           "Diagnóstico técnico de LUFS, True Peak, DR e espectro",
           "Análise de seções e contraste verso→refrão",
