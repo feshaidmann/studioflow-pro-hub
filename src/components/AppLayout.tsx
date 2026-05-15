@@ -385,7 +385,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             {renderNavItem(gestaoItems[0])}
             {renderNavItem(gestaoItems[1])}
 
-            {/* Ferramentas: DNA → Criativo → Palcos → Editais → Profissionais */}
+            {/* Ferramentas: DNA → Carreira → Profissionais */}
             <div className="my-2 border-t border-border/30" />
             {sidebarOpen && (
               <div className="px-2.5 pt-1 pb-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground/60">
