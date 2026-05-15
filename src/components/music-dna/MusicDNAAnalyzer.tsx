@@ -1252,9 +1252,6 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
           </p>
           <h2 className="text-xl font-bold">{input.name}</h2>
           <div className="flex items-center gap-2 mt-1 flex-wrap">
-            <Badge variant="outline" className="text-xs font-mono bg-primary/10 border-primary/30 text-primary">
-              {diagnosis.genero_classificado || "Gênero não classificado"}
-            </Badge>
             {input.references.length > 0 && (
               <span className="text-xs text-foreground/75">
                 {input.references.slice(0, 2).join(", ")}
@@ -1275,13 +1272,7 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
 
       <ExecutiveSummary diagnosis={diagnosis} onAddAllSteps={handleAddAllSteps} allStepsAdded={allStepsAdded} />
 
-      {diagnosis.classifierHint && (
-        <GenreMismatchHint
-          hint={diagnosis.classifierHint}
-          declared={(input as { genre?: string }).genre || diagnosis.genero_classificado || null}
-          analysisId={savedAnalysisId ?? null}
-        />
-      )}
+      {/* Classificador de gênero interno omitido temporariamente */}
 
       <PlatformCompatibilityCard lufs={lufsValue} />
 
