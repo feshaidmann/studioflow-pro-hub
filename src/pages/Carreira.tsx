@@ -127,6 +127,22 @@ export default function Carreira() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters, tab, detailOp]);
 
+  // Aviso ao chegar via URL legada (/editais, /editais/*, /palcos, /palcos/*).
+  // Mostramos um toast informativo e limpamos o marcador `from=legacy` da URL,
+  // mantendo o resto dos parâmetros intactos.
+  useEffect(() => {
+    if (searchParams.get("from") !== "legacy") return;
+    const tipo = searchParams.get("tipo");
+    const label = tipo === "palco" ? "palcos" : "editais";
+    toast.info("Endereço atualizado", {
+      description: `A página de ${label} agora faz parte da seção Carreira.`,
+    });
+    const next = new URLSearchParams(searchParams);
+    next.delete("from");
+    setSearchParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Lista unificada
   const allOpportunities: Opportunity[] = useMemo(() => {
     const list: Opportunity[] = [
