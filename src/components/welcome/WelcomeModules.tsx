@@ -3,17 +3,17 @@ import { MODULES } from "./welcome.data";
 export function WelcomeModules() {
   return (
     <section
-      className="welcome-fade mt-12 w-full"
+      className="welcome-fade mt-10 w-full"
       style={{ "--delay": "300ms" } as React.CSSProperties}
     >
       <p className="mb-1 text-center text-base font-semibold text-foreground">
         Tudo que um lançamento precisa
       </p>
-      <p className="mb-5 text-center text-xs text-muted-foreground">
-        {MODULES.length} módulos integrados. Ative o que precisar, quando precisar.
+      <p className="mb-4 text-center text-xs text-muted-foreground">
+        {MODULES.length} módulos integrados — use o que precisar.
       </p>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
         {MODULES.map((mod, i) => (
           <div
             key={i}

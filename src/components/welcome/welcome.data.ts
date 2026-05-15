@@ -1,17 +1,20 @@
 import {
-  Clock, DollarSign, FileText, Palette, FolderKanban,
-  Users, Mic2, Sparkles,
+  Clock, DollarSign, Compass, Palette, FolderKanban,
+  Users, Sparkles,
   type LucideIcon,
 } from "lucide-react";
 
 type Task = { label: string; done: boolean; urgent?: boolean };
+type Alert = { label: string; tone: "warning" | "info" };
 type MockProject = {
   name: string;
   artist: string;
   stage: string;
   releaseDate: string;
+  health: number; // 0-100
   budget: { spent: number; total: number };
   tasks: Task[];
+  alerts: Alert[];
 };
 
 export const MOCK_PROJECT: MockProject = {
@@ -19,15 +22,18 @@ export const MOCK_PROJECT: MockProject = {
   artist: "Maria Silva",
   stage: "Pré-lançamento",
   releaseDate: "15 jun",
+  health: 72,
   budget: { spent: 4200, total: 8000 },
   tasks: [
     { label: "Master finalizado", done: true },
     { label: "Capa entregue", done: true },
     { label: "Distribuição enviada", done: true },
-    { label: "Press release", done: false, urgent: false },
-    { label: "Publicidade paga", done: false, urgent: false },
     { label: "Vídeo clipe", done: false, urgent: true },
-    { label: "Notas fiscais equipe", done: false, urgent: true },
+    { label: "Press release", done: false },
+  ],
+  alerts: [
+    { label: "Nota fiscal do estúdio vence em 2 dias", tone: "warning" },
+    { label: "Edital ProAC fecha sexta — você se encaixa", tone: "info" },
   ],
 };
 
@@ -35,36 +41,33 @@ export type PainPoint = { pain: string; solve: string; icon: LucideIcon };
 
 export const PAIN_POINTS: PainPoint[] = [
   {
-    pain: "Prazo de entrega perdido porque a nota fiscal do estúdio ficou no WhatsApp",
-    solve: "Prazos, equipe e pagamentos num só lugar. Com alertas automáticos.",
+    pain: "Prazo perdido porque a nota fiscal ficou no WhatsApp",
+    solve: "Prazos, equipe e pagamentos num só lugar, com alertas automáticos.",
     icon: Clock,
   },
   {
-    pain: "Sem saber quanto já gastou no álbum — planilha desatualizada faz 3 semanas",
-    solve: "Financeiro por projeto e por faixa. Atualiza em tempo real.",
+    pain: "Não sabe quanto já gastou — planilha desatualizada faz 3 semanas",
+    solve: "Financeiro por projeto e por faixa, atualizado em tempo real.",
     icon: DollarSign,
   },
   {
     pain: "Perdeu o edital do ProAC porque não sabia que estava aberto",
-    solve: "IA encontra e monitora editais de fomento abertos para você.",
-    icon: FileText,
-  },
-  {
-    pain: "Capa do single feita em Canva de graça — não combina com a música",
-    solve: "Arte gerada com IA a partir do DNA sonoro da faixa.",
-    icon: Palette,
+    solve: "IA monitora editais e palcos compatíveis com seu perfil.",
+    icon: Compass,
   },
 ];
 
 export type Module = { icon: LucideIcon; name: string; desc: string };
 
+// 6 módulos refletindo a estrutura atual (Carreira unifica Editais + Palcos)
 export const MODULES: Module[] = [
-  { icon: FolderKanban, name: "Projetos",     desc: "Do rascunho ao streaming — checklist completo de lançamento." },
-  { icon: DollarSign,   name: "Financeiro",   desc: "Quanto custou, o que falta pagar, quanto entrou de cachê." },
-  { icon: Clock,        name: "Agenda",       desc: "Gravações, reuniões, shows e entregas num calendário só." },
-  { icon: Users,        name: "Equipe",       desc: "Produtor, mixador, fotógrafo — cada um sabe o que entregar." },
-  { icon: FileText,     name: "Editais",      desc: "ProAC, Funarte, SESC — IA encontra oportunidades abertas." },
-  { icon: Mic2,         name: "Palcos",       desc: "Festivais e showcases compatíveis com seu perfil e gênero." },
-  { icon: Palette,      name: "Criativo",     desc: "Capa, post e legenda gerados com IA a partir do DNA da faixa." },
-  { icon: Sparkles,     name: "DNA Musical",  desc: "Diagnóstico técnico de mix e master em segundos." },
+  { icon: FolderKanban, name: "Projetos",     desc: "Do rascunho ao streaming, em 6 etapas claras." },
+  { icon: DollarSign,   name: "Financeiro",   desc: "Custos, recebíveis e saldo por projeto." },
+  { icon: Clock,        name: "Agenda",       desc: "Shows, gravações e entregas num calendário só." },
+  { icon: Users,        name: "Equipe",       desc: "Produtor, mix, fotógrafo — cada um sabe o que entregar." },
+  { icon: Compass,      name: "Carreira",     desc: "Editais e palcos abertos, filtrados por IA." },
+  { icon: Sparkles,     name: "DNA + Criativo", desc: "Diagnóstico de mix/master e arte gerada por IA." },
 ];
+
+// keep Palette import alive for tree-shake clarity (used elsewhere? remove)
+void Palette;
