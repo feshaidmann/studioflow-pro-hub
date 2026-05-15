@@ -273,14 +273,14 @@ serve(async (req: Request) => {
               "• Identidade harmônica & composicional (progressão, campo harmônico, estrutura formal, densidade melódica).\n" +
               "• Produção & arranjo (instrumentação, espaço estéreo, dinâmica, timbres).\n" +
               "• Performance & vocais quando aplicável (técnica, frasagem, inteligibilidade, adequação ao gênero).\n" +
-              "• Posicionamento & mercado (subgênero, discoverability, referências contextuais sem cópia).\n" +
+              "• Posicionamento & mercado — no resumo executivo, traduza isto em leitura de playlist Spotify: perfil sonoro frente à normalização de loudness, contraste entre seções, clareza vocal, identidade reconhecível, tipos de playlist (editoriais de gênero/mood, algorítmicas como Radar de Lançamentos e Release Radar) onde a faixa tem mais chance de destaque. NUNCA use números nem siglas técnicas neste campo.\n" +
               "• Pontos de força (o que funciona e por quê).\n" +
               "• Pontos de desenvolvimento (oportunidades acionáveis, sem derrotar o artista).\n\n" +
               "REGRAS:\n" +
               "❌ Não simule dados de produção ausentes; não use promessas de sucesso ('vai bombar'); não faça análise rasa.\n" +
               "✅ Fundamente cada observação em elementos técnicos; seja construtivo; mantenha profundidade de produtor com 20 anos de bagagem.\n\n" +
               "FORMATO TÉCNICO: Campos técnicos (mix/master) usam linguagem de engenheiro com outro profissional — valores reais (LUFS, dBTP, Hz, dB, LU), plugins específicos (FabFilter, Waves, Izotope Ozone, Voxengo SPAN), configurações mensuráveis e resultado esperado.\n" +
-              "O campo diagnostico_resumo é a SÍNTESE do crítico: 1 parágrafo conectando identidade sonora, forças, pontos de desenvolvimento e posicionamento no mercado independente brasileiro, com pelo menos uma referência técnica concreta.\n" +
+              "O campo diagnostico_resumo é a SÍNTESE do crítico em linguagem 100% acessível: 4-6 frases focadas em sonoridade (peso, brilho, espaço, textura), instrumentos protagonistas e papel do vocal, e enquadramento nos critérios sonoros que o Spotify valoriza para playlists (perfil de loudness coerente com a normalização, contraste entre seções, clareza vocal, identidade reconhecível) + tipos de playlist com mais chance de destaque. PROIBIDO citar LUFS, dBTP, LU, dBFS, Hz, dB, valores numéricos medidos ou nomes de plugins neste campo.\n" +
               "Enquadre sugestões como recomendações de parceiro técnico: 'vale a pena explorar', 'a aposta técnica aqui seria', 'seria interessante considerar'. Nunca use 'urgente', 'crítico' ou 'imediato'.\n\n" +
               "Responda SEMPRE em JSON válido, sem markdown e sem texto externo ao JSON.",
           },
