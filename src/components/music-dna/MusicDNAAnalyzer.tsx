@@ -1656,14 +1656,6 @@ function NextStepsBar({
         <ArrowRight className="h-3 w-3" /> Continuar fluxo
       </p>
       <div className="flex flex-wrap gap-2">
-        <Button
-          size="sm"
-          variant="outline"
-          className="gap-1.5 text-xs bg-background"
-          onClick={() => navigate(`/criativo?dna=${dnaParam}`)}
-        >
-          <Palette className="h-3.5 w-3.5" /> Gerar capa com este DNA
-        </Button>
         {projectId && (
           <Button
             size="sm"
