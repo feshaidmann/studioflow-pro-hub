@@ -70,3 +70,6 @@ export function warnBrokenEditaisLink(
     extra ?? {},
   );
 }
+// Re-export para satisfazer o TS sem mudar o tipo:
+function _typeGuardUnused() {} // no-op
+}
