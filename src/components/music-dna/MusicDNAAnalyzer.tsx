@@ -1276,7 +1276,7 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
 
       <PlatformCompatibilityCard lufs={lufsValue} />
 
-      <NextStepsBar diagnosis={diagnosis} input={input} isSaved={!!isSaved} savedAnalysisId={savedAnalysisId} />
+      {/* NextStepsBar removido: rota /criativo desativada e box poluía a página */}
 
       <div className="sticky top-2 z-20 -mx-1 flex gap-1.5 overflow-x-auto rounded-lg border border-border bg-background/95 p-1 backdrop-blur animate-fade-in">
         {[
