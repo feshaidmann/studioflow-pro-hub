@@ -332,9 +332,10 @@ export default function Dashboard() {
 
       {/* 4. Demais seções na ordem do journeyPlan, exceto as já renderizadas acima */}
       {journeyPlan.sections
-        .filter((s) => !inlineSections.has(s))
-        .map((section) => dashboardSections[section])
-        .filter(Boolean)}
+        .filter((s) => !inlineSections.has(s) && dashboardSections[s])
+        .map((section) => (
+          <div key={section}>{dashboardSections[section]}</div>
+        ))}
 
       {/* Projetos como parceiro */}
       <LazyCardBoundary title="Projetos como parceiro" icon={Users} minHeight="8rem">
