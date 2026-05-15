@@ -9,6 +9,5 @@
 export const JOURNEY_ORDER: readonly string[] = [
   "/carreira",      // 1º — oportunidades (editais + palcos)
   "/music-dna",     // 2º — entenda a faixa
-  "/criativo",      // 3º — materiais criativos com base no DNA
-  "/professionals", // 4º — equipe conforme necessidade
+  "/professionals", // 3º — equipe conforme necessidade
 ] as const;
