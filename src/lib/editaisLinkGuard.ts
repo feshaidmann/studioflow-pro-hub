@@ -62,11 +62,12 @@ export function warnBrokenEditaisLink(
   warnedPaths.add(`${source}:${pathname}`);
 
   const result = validateEditaisPath(pathname);
-  if (result.valid) return;
+  if (result.valid === true) return;
+  const reason = (result as { valid: false; reason: string }).reason;
 
   // eslint-disable-next-line no-console
   console.warn(
-    `[editais-link-guard] link quebrado detectado (${source}): ${pathname} — ${result.reason}`,
+    `[editais-link-guard] link quebrado detectado (${source}): ${pathname} — ${reason}`,
     extra ?? {},
   );
 }
