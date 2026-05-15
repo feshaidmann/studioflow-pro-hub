@@ -21,7 +21,6 @@ function formatCountdown(ms: number): string {
 
 export default function RateLimitDialog() {
   const { info, close } = useRateLimitDialog();
-  const navigate = useNavigate();
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
@@ -36,11 +35,6 @@ export default function RateLimitDialog() {
   const remaining = resetsAt - now;
   const isDaily = info.limit_type === "daily";
   const percent = Math.min(100, Math.round((info.used / info.limit) * 100));
-
-  const handleViewGallery = () => {
-    close();
-    navigate("/criativo?tab=gallery");
-  };
 
   return (
     <Dialog open={!!info} onOpenChange={(o) => { if (!o) close(); }}>
