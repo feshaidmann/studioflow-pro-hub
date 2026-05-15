@@ -264,11 +264,11 @@ const tabContent: Record<TabId, React.ReactNode> = {
       <Step n={3}>O snapshot é versionado em <code className="text-xs">acoustic-catalog/v1.json</code> e alimenta o Match Acústico de todos os usuários.</Step>
       <Tip>Regere o snapshot sempre que importar novas referências em massa via <code className="text-xs">import-reference-tracks</code>.</Tip>
 
-      <SectionTitle>Integração com o Módulo Criativo</SectionTitle>
+      <SectionTitle>Próximo passo: Direção Visual</SectionTitle>
       <div className="flex items-start gap-2 rounded-lg bg-primary/10 border border-primary/20 p-3">
         <Palette className="h-4 w-4 text-primary mt-0.5 shrink-0" />
         <p className="text-sm text-muted-foreground">
-          Após a análise, use o botão <strong className="text-foreground">"Criar arte com este DNA"</strong> para gerar automaticamente uma arte visual baseada no mood, gênero e identidade da faixa.
+          Com o DNA da faixa em mãos, vá ao <strong className="text-foreground">projeto correspondente</strong> e abra <strong className="text-foreground">Direção Visual</strong> para gerar o briefing artístico, imagens de capa e materiais de divulgação alinhados à identidade sonora.
         </p>
       </div>
 
