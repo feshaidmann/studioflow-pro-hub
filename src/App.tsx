@@ -90,7 +90,7 @@ const AppRoutes = () => (
           <Route path="/editais" element={<Navigate to="/carreira?tipo=edital" replace />} />
           <Route path="/palcos" element={<Navigate to="/carreira?tipo=palco" replace />} />
           <Route path="/editais/inscricao/:id" element={<EditalInscricao />} />
-          <Route path="/criativo" element={<Navigate to="/projects" replace />} />
+          
           <Route path="/projects/:id/direcao-visual" element={<VisualDirection />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
