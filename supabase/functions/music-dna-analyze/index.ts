@@ -65,13 +65,18 @@ ${features}
 Benchmark estatístico do gênero (médias):
 ${benchmarkCtx}
 
-Faixas de referência típicas do gênero (medianas — ground truth):
+Contexto estatístico do gênero (medianas do catálogo — referência de distribuição típica do estilo, NÃO comparação direta com a faixa do usuário):
 ${genreCtx}
 
-VIZINHOS MAIS PRÓXIMOS NO CATÁLOGO REAL — comparativo TÉCNICO calibrado (não é fingerprint nem identificação da obra). similarity_score 0–1 reflete proximidade ponderada de LUFS, dinâmica, espectro, ritmo e atributos perceptivos. Scores ≥ 0,80 = alta proximidade; 0,55–0,80 = moderada; < 0,55 = apenas referência aproximada:
+VIZINHOS MAIS PRÓXIMOS NO CATÁLOGO REAL — comparativo TÉCNICO calibrado por atributos extraídos da faixa do usuário (LUFS, dinâmica, espectro, ritmo, perceptivos). similarity_score 0–1 reflete proximidade ponderada. Faixas ≥ 0,80 = alta; 0,55–0,80 = moderada; < 0,55 = apenas referência aproximada. A lista já vem ordenada por proximidade técnica decrescente (NÃO está em ordem alfabética):
 ${neighborsCtx}
 
-INSTRUÇÃO ADICIONAL: Use estes vizinhos para fundamentar "referencias_proximas" citando band+filename reais, descrevendo a nuance técnica (BPM, LUFS, range dinâmico, centroide espectral) que aproxima cada referência da faixa do usuário. NÃO afirme que a faixa "é" de algum artista, NÃO use linguagem de probabilidade de identidade ("provavelmente é da banda X"). Trate sempre como comparativo técnico aproximado. Não invente artistas fora desta lista.${classifierBlock}`;
+INSTRUÇÃO ADICIONAL OBRIGATÓRIA para "referencias_proximas":
+1) Use EXCLUSIVAMENTE os vizinhos desta lista, citando band+filename reais. NÃO use a lista de vocabulário semântico de artistas para esse campo. NÃO invente.
+2) ORDENE estritamente por similarity_score DESCRESCENTE. Proibido ordenar por nome de banda, filename ou qualquer critério alfabético.
+3) CITE SOMENTE vizinhos com similarity_score >= 0.70. Vizinhos abaixo desse piso devem ser OMITIDOS.
+4) Se nenhum vizinho atingir 0.70, devolva "referencias_proximas": [] e, no diagnostico_resumo, registre em linguagem acessível (sem números) que a faixa apresenta identidade própria sem correspondência forte no catálogo atual.
+5) Para cada referência citada, descreva a nuance técnica que aproxima (BPM, LUFS, range dinâmico, centroide espectral). NÃO afirme que a faixa "é" de algum artista nem use linguagem de probabilidade de identidade. Trate sempre como comparativo técnico aproximado.${classifierBlock}`;
 }
 
 async function logInvocation(adminClient: ReturnType<typeof createClient>, userId: string | null, status: "success" | "error", usage?: { prompt_tokens?: number; completion_tokens?: number }) {
@@ -242,7 +247,15 @@ serve(async (req: Request) => {
     };
     const { data: neighbors, error: nnError } = await adminClient.rpc("find_nearest_reference_tracks", rpcArgs);
     if (nnError) console.error("[music-dna-analyze] nearest neighbors error:", nnError);
-    nearestNeighbors = neighbors;
+    // Hardening: reordena defensivamente por similarity_score DESC para garantir
+    // que o LLM receba os vizinhos por proximidade técnica (jamais alfabética),
+    // mesmo se o RPC mudar de comportamento no futuro.
+    const sortedNeighbors = Array.isArray(neighbors)
+      ? [...neighbors]
+          .filter((n: any) => typeof n?.similarity_score === "number")
+          .sort((a: any, b: any) => Number(b.similarity_score) - Number(a.similarity_score))
+      : [];
+    nearestNeighbors = sortedNeighbors;
     const catalogTotalCompared = useStrictGenre ? catalogGenreCount : catalogTotal;
 
     const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
@@ -282,6 +295,7 @@ serve(async (req: Request) => {
               "FORMATO TÉCNICO: Campos técnicos (mix/master) usam linguagem de engenheiro com outro profissional — valores reais (LUFS, dBTP, Hz, dB, LU), plugins específicos (FabFilter, Waves, Izotope Ozone, Voxengo SPAN), configurações mensuráveis e resultado esperado.\n" +
               "O campo diagnostico_resumo é a SÍNTESE do crítico em linguagem 100% acessível: 4-6 frases focadas em sonoridade (peso, brilho, espaço, textura), instrumentos protagonistas e papel do vocal, e enquadramento nos critérios sonoros que o Spotify valoriza para playlists (perfil de loudness coerente com a normalização, contraste entre seções, clareza vocal, identidade reconhecível) + tipos de playlist com mais chance de destaque. PROIBIDO citar LUFS, dBTP, LU, dBFS, Hz, dB, valores numéricos medidos ou nomes de plugins neste campo.\n" +
               "Enquadre sugestões como recomendações de parceiro técnico: 'vale a pena explorar', 'a aposta técnica aqui seria', 'seria interessante considerar'. Nunca use 'urgente', 'crítico' ou 'imediato'.\n\n" +
+              "REFERENCIAS_PROXIMAS — REGRA INVIOLÁVEL: ordene SEMPRE por similarity_score DESCRESCENTE (nunca alfabética); inclua APENAS vizinhos com similarity_score >= 0.70; se nenhum atingir o piso, devolva array vazio. Cite apenas band+filename reais da lista de vizinhos do catálogo fornecida no prompt do usuário.\n\n" +
               "Responda SEMPRE em JSON válido, sem markdown e sem texto externo ao JSON.",
           },
           { role: "user", content: action === "generate_diagnosis" ? buildStructuredPrompt(prompt, payload, benchmark, referenceExamples, nearestNeighbors) : prompt },

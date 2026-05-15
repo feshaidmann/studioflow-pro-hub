@@ -1,38 +1,58 @@
-## Objetivo
+## Diagnóstico
 
-Reescrever as instruções do campo `diagnostico_resumo` (resumo executivo do DNA Musical) para:
-1. Remover jargão técnico e números (LUFS, dBTP, LU, dBFS, Hz).
-2. Focar em **sonoridade** (textura, peso, brilho, espaço) e **instrumentalidade** (instrumentos protagonistas, presença vocal, arranjo).
-3. Adicionar uma leitura clara de **como a faixa se enquadra nos critérios sonoros valorizados pelo Spotify** (normalização de loudness, energia/dança/valência, contraste dinâmico, identidade reconhecível, qualidade de mix percebida pela curadoria) e **o que isso significa para chance de destaque em playlists** (editoriais, Radar de Lançamentos, Release Radar, algorítmicas).
+Auditei o caminho completo do pipeline de vizinhos do DNA Musical (`useMusicDNA.ts` → edge function `music-dna-analyze` → RPCs `find_nearest_reference_tracks` / `get_genre_reference_examples` → validação client-side → UI). Os RPCs já ordenam por distância ponderada nos atributos extraídos (LUFS, DR, centroide, BPM, energia, etc.), com `band ASC, filename ASC` apenas como desempate em distâncias idênticas. Isso está correto.
 
-Os campos técnicos (`diagnostico_tecnico.*`, `pontos_fortes`, `gargalos_criativos`, etc.) continuam com linguagem de engenheiro — a mudança é exclusiva do resumo executivo.
+Os problemas reais que ainda permitem "vazamento" de ordem alfabética / semântica no prompt e nas referências exibidas:
 
-## Arquivos a alterar
+### Problema 1 — Pool técnico de comparação é, na verdade, curadoria semântica + ordem alfabética
+- `src/lib/musicDnaReferences.ts` define uma lista hardcoded de artistas com `territories`/`tags`. `selectReferenceArtists` ordena por sobreposição de territórios e usa **`localeCompare` como desempate** (linha 131), depois concatena `ALL_REFERENCE_ARTISTS` (que segue a ordem de declaração no arquivo).
+- Esse resultado é injetado em `useMusicDNA.ts` (linha 376) como `"Pool técnico de comparação"` — rótulo enganoso: não há nenhuma medição de atributos do áudio aí. O LLM passa a misturar essa lista com os vizinhos reais.
 
-### 1. `src/hooks/useMusicDNA.ts`
+### Problema 2 — Prompt da edge function não força ordenação/threshold por `similarity_score`
+- `supabase/functions/music-dna-analyze/index.ts` linhas 71–74 descrevem faixas de score (≥0,80, 0,55–0,80, <0,55) mas **não obrigam o modelo a ordenar por `similarity_score` decrescente nem a descartar scores baixos**. A instrução prometida na conversa anterior ("Ordene por `similarity_score`, cite apenas ≥ 0,70") não está aplicada no arquivo atual.
 
-- **Linha 363** (regra "EXCEÇÃO — campo diagnostico_resumo"): trocar o exemplo atual (que cita "dinâmica ampla", "LU") por orientação em linguagem de ouvinte/crítico, sem números. Proibir explicitamente menção a LUFS, dBTP, LU, dBFS, Hz, dB e quaisquer valores numéricos no resumo.
-- **Linha 430** (instruções por campo do `diagnostico_resumo`): reescrever para 4–6 frases cobrindo:
-  - Identidade sonora descrita por sensação (ex.: "peso grave encorpado", "vocal frontal e íntimo", "guitarras com brilho cristalino", "arranjo enxuto vs denso").
-  - Instrumentos protagonistas e papel deles na narrativa da faixa.
-  - Enquadramento Spotify: como a faixa se posiciona frente ao perfil sonoro que costuma performar bem em playlists do gênero (energia adequada ao contexto de escuta, contraste entre seções, clareza vocal, "tradução" em diferentes sistemas de reprodução), **sem citar valores**.
-  - Chance de destaque em playlists: que tipo de playlist combina (editoriais de gênero, mood, algorítmicas), e o ajuste sonoro/instrumental — não técnico — que aumentaria as chances (ex.: "ganharia tração em playlists de foco se o refrão abrisse mais", "soa pronta para playlists de MPB contemporânea pelo equilíbrio entre voz e violão").
-  - Tom de crítico acolhedor, sem promessas ("vai bombar"), sem alarmismo.
+### Problema 3 — Validação client-side permite artista curado sem proximidade real
+- `useMusicDNA.ts` linhas 642–650 montam `allowedArtists` a partir de `ALL_REFERENCE_ARTISTS` ∪ `catalogNeighbors`. Resultado: o LLM pode citar qualquer artista da curadoria estática, mesmo que ele não esteja entre os vizinhos reais da faixa. O filtro não garante proximidade técnica, só "está na lista grande".
 
-### 2. `supabase/functions/music-dna-analyze/index.ts`
+### O que já está correto e NÃO muda
+- `find_nearest_reference_tracks` (RPC): ordenação por `norm_distance + bônus` ASC; alfabético só como desempate de empates exatos. Mantém.
+- `get_genre_reference_examples` (RPC): ordenação por distância à mediana do gênero. Mantém.
+- UI (`NeighborDetailDialog`, `MusicDNAAnalyzer`): consome `neighbors` na ordem em que vêm (já por similaridade). Mantém.
 
-- **Linhas 283–284** (system prompt, parágrafo sobre `diagnostico_resumo`): substituir a exigência de "pelo menos uma referência técnica concreta" por "linguagem acessível, focada em sonoridade, instrumentação protagonista e enquadramento nos critérios sonoros do Spotify para playlists". Reforçar a proibição de números e siglas técnicas neste campo específico.
-- **Linha 272** (bloco "BLOCOS DE ANÁLISE OBRIGATÓRIOS"): manter os blocos, mas anotar que o bloco de "Posicionamento & mercado" no resumo deve traduzir o diagnóstico técnico em leitura de playlist Spotify (perfil sonoro, contraste, identidade), sem números.
+## Mudanças
 
-## O que NÃO muda
+### 1. `src/lib/musicDnaReferences.ts`
+- Remover o desempate alfabético em `selectReferenceArtists` (linha 131): manter apenas `b.score - a.score` e estabilizar pelo índice original quando o score empatar, sem `localeCompare`.
+- Adicionar comentário deixando explícito que essa função é apenas para **enriquecer o vocabulário de tags do prompt**, não para comparação técnica.
+- Exportar adicionalmente uma flag/comentário JSDoc destacando o escopo (semântico, não acústico).
 
-- Estrutura do JSON, demais campos, schema de validação, UI, tipos.
-- Linguagem técnica nos campos `diagnostico_tecnico.*`, `pontos_fortes`, `gargalos_criativos`, `sugestoes_arranjo`, `proximos_passos` — esses seguem com LUFS, dBTP, plugins e valores.
-- Lógica de classificação, vizinhos, benchmarks e edge function fora dos trechos de prompt indicados.
+### 2. `src/hooks/useMusicDNA.ts`
+- Renomear no prompt (linha 376) `"Pool técnico de comparação"` para algo como `"Vocabulário semântico de artistas do mesmo território (referência de linguagem, NÃO comparação acústica)"`, deixando claro ao LLM que comparação técnica vem somente do bloco "VIZINHOS MAIS PRÓXIMOS NO CATÁLOGO REAL".
+- Atualizar a instrução do campo `referencias_proximas` (linha 425) para:
+  - Usar **exclusivamente** os vizinhos do catálogo (`band+filename`) ordenados por `similarity_score` decrescente.
+  - Descartar entradas com `similarity_score < 0,70`.
+  - Se não houver vizinho ≥ 0,70, retornar array vazio em vez de inventar.
+- Reforçar (mesmo bloco) que a curadoria de artistas é apenas vocabulário, não fonte de "referências próximas".
+- Validação client-side (linhas 642–655): restringir `allowedArtists` apenas a `catalogNeighbors` com `similarity_score >= 0.70`. Se a IA citar artista fora desse conjunto, descartar e logar — sem permitir "fallback" para a lista curada.
+
+### 3. `supabase/functions/music-dna-analyze/index.ts`
+- No bloco de "INSTRUÇÃO ADICIONAL" (linhas 71–74), adicionar regras explícitas:
+  - "Ordene `referencias_proximas` por `similarity_score` decrescente."
+  - "Cite somente vizinhos com `similarity_score ≥ 0.70`. Abaixo disso, omita."
+  - "Se nenhum vizinho atingir 0.70, devolva `referencias_proximas: []` e justifique no `diagnostico_resumo` em linguagem acessível (sem números) que a faixa tem identidade própria sem correspondência forte no catálogo."
+- Reforçar no system prompt (bloco já existente sobre "referencias_proximas" / "Posicionamento & mercado") a mesma regra de threshold e ordenação.
+- Renomear no prompt do usuário (linha 68) `"Faixas de referência típicas do gênero (medianas — ground truth)"` para deixar claro que é **contexto estatístico do gênero**, não comparação direta com a faixa do usuário, para o LLM não confundir com os vizinhos reais.
+
+### 4. (Opcional, mesmo arquivo) Hardening do ordenamento no edge function
+- Antes de serializar `nearestNeighbors` para o prompt, ordenar defensivamente por `similarity_score DESC` em JS e filtrar score `null`/`undefined`, garantindo que mesmo que o RPC mude um dia, o LLM receba já ordenado por proximidade técnica.
 
 ## Validação
 
-Após o build automático, abrir o DNA Musical, rodar uma análise (ou reaproveitar uma salva via "Reanalisar") e conferir que o `diagnostico_resumo` exibido no card de resumo:
-- Não contém "LUFS", "dBTP", "LU", "dBFS", "Hz", "dB", nem números medidos.
-- Cita instrumentos protagonistas e sensação sonora.
-- Faz uma leitura explícita de enquadramento Spotify + tipo de playlist onde a faixa tem mais chance.
+1. Rodar uma análise no DNA Musical com uma faixa cujo gênero exista no catálogo:
+   - Confirmar nos logs do edge function que `neighbors` vem ordenado por `similarity_score` desc.
+   - Conferir que `referencias_proximas` no resultado mostra apenas faixas reais do catálogo (`band+filename`), ordenadas por similaridade decrescente.
+   - Verificar que nenhum artista da curadoria estática (sem estar entre os vizinhos) aparece em `referencias_proximas`.
+2. Rodar uma análise com features muito atípicas (esperando scores baixos):
+   - `referencias_proximas` deve vir vazio e o `diagnostico_resumo` deve explicar isso em linguagem acessível.
+3. `rg "localeCompare" src/lib/musicDnaReferences.ts` deve retornar vazio.
+4. Build automático passa; teste manual no preview confirma que o card de "Referências próximas" continua renderizando corretamente (ou vazio com mensagem amigável).

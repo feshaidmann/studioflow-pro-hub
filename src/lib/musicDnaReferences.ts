@@ -120,15 +120,27 @@ function inferTerritories(features: AudioFeatures): string[] {
   return Array.from(territories);
 }
 
+/**
+ * ESCOPO: SEMÂNTICO, NÃO ACÚSTICO.
+ *
+ * Esta função apenas enriquece o VOCABULÁRIO de artistas/territórios para o prompt
+ * (ajuda o LLM a usar linguagem coerente com o gênero). Ela NÃO mede proximidade
+ * técnica com os atributos extraídos da faixa do usuário. Comparação real por
+ * atributos acústicos vem exclusivamente do RPC `find_nearest_reference_tracks`.
+ *
+ * Ordenação: pelo overlap de territórios/tags (desc). Em empates, mantém a ordem
+ * de declaração da lista (estável via índice original) — NUNCA alfabética.
+ */
 export function selectReferenceArtists(features: AudioFeatures, genre?: Genre, userReferences: string[] = [], limit = 18): string[] {
   const targetTerritories = new Set([...(genre ? genreTerritories[genre] ?? [] : []), ...inferTerritories(features)]);
   const scored = MUSIC_DNA_ARTIST_REFERENCES
-    .map((reference) => ({
+    .map((reference, index) => ({
       reference,
+      index,
       score: reference.territories.filter((territory) => targetTerritories.has(territory)).length * 2
         + reference.tags.filter((tag) => targetTerritories.has(tag)).length,
     }))
-    .sort((a, b) => b.score - a.score || a.reference.artist.localeCompare(b.reference.artist));
+    .sort((a, b) => b.score - a.score || a.index - b.index);
 
-  return Array.from(new Set([...userReferences, ...scored.filter((item) => item.score > 0).map((item) => item.reference.artist), ...ALL_REFERENCE_ARTISTS])).slice(0, limit);
+  return Array.from(new Set([...userReferences, ...scored.filter((item) => item.score > 0).map((item) => item.reference.artist)])).slice(0, limit);
 }
