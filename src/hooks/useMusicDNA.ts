@@ -636,21 +636,24 @@ export function useMusicDNA(): UseMusicDNAReturn {
       const clean = rawText.replace(/```json|```/g, "").trim();
       const parsed = JSON.parse(clean);
 
-      // Validação client-side: filtra `referencias_proximas` para manter apenas
-      // artistas que estão na lista curada OU em vizinhos reais do catálogo.
-      // Evita o LLM citar artista fora do escopo permitido.
-      const allowedArtists = new Set<string>([
-        ...ALL_REFERENCE_ARTISTS.map((a) => a.toLowerCase()),
-        ...catalogNeighbors.map((n) => n.band?.toLowerCase()).filter(Boolean) as string[],
-      ]);
+      // Validação client-side: `referencias_proximas` deve conter APENAS bandas dos
+      // vizinhos reais do catálogo com `similarity_score >= 0.70`. Curadoria estática
+      // (ALL_REFERENCE_ARTISTS) NÃO é fonte válida de proximidade técnica.
+      const SIMILARITY_FLOOR = 0.7;
+      const validNeighborBands = new Set<string>(
+        catalogNeighbors
+          .filter((n) => typeof n.similarity_score === "number" && n.similarity_score >= SIMILARITY_FLOOR)
+          .map((n) => (n.band ?? "").toLowerCase().trim())
+          .filter((s) => s.length > 0),
+      );
       const rawReferences: ReferenceMatch[] = Array.isArray(parsed.referencias_proximas) ? parsed.referencias_proximas : [];
       const validatedReferences = rawReferences.filter((r) => {
         const name = (r.artista ?? "").toLowerCase().trim();
-        return name.length > 0 && allowedArtists.has(name);
+        return name.length > 0 && validNeighborBands.has(name);
       });
       if (rawReferences.length !== validatedReferences.length) {
         const dropped = rawReferences.filter((r) => !validatedReferences.includes(r));
-        console.warn("[music-dna] referências IA descartadas (fora da lista permitida):", dropped.map((r) => r.artista));
+        console.warn("[music-dna] referências IA descartadas (fora dos vizinhos reais com score >= 0.70):", dropped.map((r) => r.artista));
       }
       parsed.referencias_proximas = validatedReferences;
 
