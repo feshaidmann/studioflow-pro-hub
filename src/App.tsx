@@ -92,7 +92,7 @@ const AppRoutes = () => (
           <Route path="/editais/inscricao/:id" element={<EditalInscricao />} />
           
           <Route path="/projects/:id/direcao-visual" element={<VisualDirection />} />
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>
     </AppLayout>
