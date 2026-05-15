@@ -247,7 +247,15 @@ serve(async (req: Request) => {
     };
     const { data: neighbors, error: nnError } = await adminClient.rpc("find_nearest_reference_tracks", rpcArgs);
     if (nnError) console.error("[music-dna-analyze] nearest neighbors error:", nnError);
-    nearestNeighbors = neighbors;
+    // Hardening: reordena defensivamente por similarity_score DESC para garantir
+    // que o LLM receba os vizinhos por proximidade técnica (jamais alfabética),
+    // mesmo se o RPC mudar de comportamento no futuro.
+    const sortedNeighbors = Array.isArray(neighbors)
+      ? [...neighbors]
+          .filter((n: any) => typeof n?.similarity_score === "number")
+          .sort((a: any, b: any) => Number(b.similarity_score) - Number(a.similarity_score))
+      : [];
+    nearestNeighbors = sortedNeighbors;
     const catalogTotalCompared = useStrictGenre ? catalogGenreCount : catalogTotal;
 
     const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
