@@ -154,13 +154,6 @@ export default function ProjectReleaseTab({
   return (
     <div className="space-y-4">
 
-      {/* Entrada para o módulo Criativo — aparece no topo */}
-      <CreativeEntryCard
-        projectId={projectId}
-        projectName={projectName}
-        artistName={artistName}
-      />
-
       {/* Hint contextual se há itens de conteúdo visual pendentes */}
       {pendingContentItems > 0 && (
         <div className="flex items-center gap-2 rounded-lg border border-warning/40 bg-warning/15 px-3 py-2">
@@ -168,8 +161,7 @@ export default function ProjectReleaseTab({
           <p className="text-xs font-medium text-foreground">
             {pendingContentItems === 1
               ? "1 item de conteúdo visual ainda pendente na seção Conteúdo."
-              : `${pendingContentItems} itens de conteúdo visual pendentes na seção Conteúdo.`}{" "}
-            Use o botão acima para criar os materiais.
+              : `${pendingContentItems} itens de conteúdo visual pendentes na seção Conteúdo.`}
           </p>
         </div>
       )}
