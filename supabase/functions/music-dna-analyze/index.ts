@@ -65,13 +65,18 @@ ${features}
 Benchmark estatístico do gênero (médias):
 ${benchmarkCtx}
 
-Faixas de referência típicas do gênero (medianas — ground truth):
+Contexto estatístico do gênero (medianas do catálogo — referência de distribuição típica do estilo, NÃO comparação direta com a faixa do usuário):
 ${genreCtx}
 
-VIZINHOS MAIS PRÓXIMOS NO CATÁLOGO REAL — comparativo TÉCNICO calibrado (não é fingerprint nem identificação da obra). similarity_score 0–1 reflete proximidade ponderada de LUFS, dinâmica, espectro, ritmo e atributos perceptivos. Scores ≥ 0,80 = alta proximidade; 0,55–0,80 = moderada; < 0,55 = apenas referência aproximada:
+VIZINHOS MAIS PRÓXIMOS NO CATÁLOGO REAL — comparativo TÉCNICO calibrado por atributos extraídos da faixa do usuário (LUFS, dinâmica, espectro, ritmo, perceptivos). similarity_score 0–1 reflete proximidade ponderada. Faixas ≥ 0,80 = alta; 0,55–0,80 = moderada; < 0,55 = apenas referência aproximada. A lista já vem ordenada por proximidade técnica decrescente (NÃO está em ordem alfabética):
 ${neighborsCtx}
 
-INSTRUÇÃO ADICIONAL: Use estes vizinhos para fundamentar "referencias_proximas" citando band+filename reais, descrevendo a nuance técnica (BPM, LUFS, range dinâmico, centroide espectral) que aproxima cada referência da faixa do usuário. NÃO afirme que a faixa "é" de algum artista, NÃO use linguagem de probabilidade de identidade ("provavelmente é da banda X"). Trate sempre como comparativo técnico aproximado. Não invente artistas fora desta lista.${classifierBlock}`;
+INSTRUÇÃO ADICIONAL OBRIGATÓRIA para "referencias_proximas":
+1) Use EXCLUSIVAMENTE os vizinhos desta lista, citando band+filename reais. NÃO use a lista de vocabulário semântico de artistas para esse campo. NÃO invente.
+2) ORDENE estritamente por similarity_score DESCRESCENTE. Proibido ordenar por nome de banda, filename ou qualquer critério alfabético.
+3) CITE SOMENTE vizinhos com similarity_score >= 0.70. Vizinhos abaixo desse piso devem ser OMITIDOS.
+4) Se nenhum vizinho atingir 0.70, devolva "referencias_proximas": [] e, no diagnostico_resumo, registre em linguagem acessível (sem números) que a faixa apresenta identidade própria sem correspondência forte no catálogo atual.
+5) Para cada referência citada, descreva a nuance técnica que aproxima (BPM, LUFS, range dinâmico, centroide espectral). NÃO afirme que a faixa "é" de algum artista nem use linguagem de probabilidade de identidade. Trate sempre como comparativo técnico aproximado.${classifierBlock}`;
 }
 
 async function logInvocation(adminClient: ReturnType<typeof createClient>, userId: string | null, status: "success" | "error", usage?: { prompt_tokens?: number; completion_tokens?: number }) {
