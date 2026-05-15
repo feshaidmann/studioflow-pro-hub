@@ -1595,7 +1595,7 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
               <Download className="h-3 w-3" />
               Baixar relatório
             </Button>
-            <CreateArtButton isSaved={isSaved} savedAnalysisId={savedAnalysisId} />
+            
           </div>
 
           <Separator orientation="vertical" className="h-6 mx-1 hidden sm:block" />
@@ -1656,14 +1656,6 @@ function NextStepsBar({
         <ArrowRight className="h-3 w-3" /> Continuar fluxo
       </p>
       <div className="flex flex-wrap gap-2">
-        <Button
-          size="sm"
-          variant="outline"
-          className="gap-1.5 text-xs bg-background"
-          onClick={() => navigate(`/criativo?dna=${dnaParam}`)}
-        >
-          <Palette className="h-3.5 w-3.5" /> Gerar capa com este DNA
-        </Button>
         {projectId && (
           <Button
             size="sm"
@@ -1680,21 +1672,6 @@ function NextStepsBar({
   );
 }
 
-// ── CREATE ART BUTTON ────────────────────────────────────────────────────────
-
-function CreateArtButton({ isSaved, savedAnalysisId }: { isSaved: boolean; savedAnalysisId?: string }) {
-  const navigate = useNavigate();
-  const handleClick = () => {
-    const dnaParam = isSaved && savedAnalysisId ? savedAnalysisId : "session";
-    navigate(`/criativo?dna=${dnaParam}`);
-  };
-  return (
-    <Button variant="outline" size="sm" className="text-xs gap-1.5" onClick={handleClick}>
-      <Palette className="h-3 w-3" />
-      🎨 Criar arte com este DNA
-    </Button>
-  );
-}
 
 // ── SAVED ANALYSES LIST ──────────────────────────────────────────────────────
 

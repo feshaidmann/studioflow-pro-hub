@@ -59,7 +59,6 @@ const gestaoItems = [
 const drawerSubLabels: Record<string, string> = {
   "/carreira":           "Editais, festivais e palcos",
   "/professionals":      "Equipe e parceiros",
-  "/criativo":           "Arte com IA",
   "/music-dna":          "Análise técnica de mix/master",
 };
 
@@ -116,7 +115,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   // para evitar a sensação de menu "inativo" causada pela latência do code-split.
   const prefetchRoute = (path: string) => {
     switch (path) {
-      case "/criativo":     /* removido — agora /projects/:id/direcao-visual */ break;
       case "/carreira":     import("@/pages/Carreira");      break;
       case "/professionals": import("@/pages/Professionals"); break;
       case "/music-dna":    import("@/pages/MusicDNA");      break;
@@ -145,7 +143,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   const isItemActive = (item: { path: string }) => location.pathname === item.path;
 
-  const ROOT_ROUTES = ["/dashboard", "/projects", "/finance", "/agenda", "/professionals", "/settings", "/admin", "/tutorial", "/music-dna", "/carreira", "/criativo", "/"];
+  const ROOT_ROUTES = ["/dashboard", "/projects", "/finance", "/agenda", "/professionals", "/settings", "/admin", "/tutorial", "/music-dna", "/carreira", "/"];
   const isRootRoute = ROOT_ROUTES.includes(location.pathname);
 
   // ── Mobile ─────────────────────────────────────────────────────────────────
@@ -387,7 +385,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             {renderNavItem(gestaoItems[0])}
             {renderNavItem(gestaoItems[1])}
 
-            {/* Ferramentas: DNA → Criativo → Palcos → Editais → Profissionais */}
+            {/* Ferramentas: DNA → Carreira → Profissionais */}
             <div className="my-2 border-t border-border/30" />
             {sidebarOpen && (
               <div className="px-2.5 pt-1 pb-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground/60">

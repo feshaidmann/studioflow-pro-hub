@@ -1,7 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { useReleaseChecklist, RELEASE_SECTIONS, type SectionDef } from "@/hooks/useReleaseChecklist";
-import { useSavedAnalyses } from "@/hooks/useSavedAnalyses";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -12,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   Truck, FileText, Scale, Image, Globe, CheckCircle2,
-  ChevronDown, Loader2, AlertTriangle, Megaphone, Palette, Dna,
+  ChevronDown, Loader2, AlertTriangle, Megaphone,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -119,65 +117,6 @@ function SectionBlock({ section, items, toggleCheck, setValue }: {
   );
 }
 
-// ── Cartão de entrada para o módulo Criativo ──────────────────────────────
-interface CreativeEntryCardProps {
-  projectId: string;
-  projectName: string;
-  artistName: string;
-}
-
-function CreativeEntryCard({ projectId, projectName, artistName }: CreativeEntryCardProps) {
-  const navigate = useNavigate();
-  const { savedAnalyses } = useSavedAnalyses();
-
-  // Procura a análise de DNA mais recente vinculada a este projeto
-  const linkedDna = savedAnalyses.find((a) => a.project_id === projectId);
-
-  const handleCreate = () => {
-    const params = new URLSearchParams({ project: projectId });
-    if (linkedDna) params.set("dna", linkedDna.id);
-    navigate(`/criativo?${params.toString()}`);
-  };
-
-  return (
-    <Card className="border-border bg-card/60">
-      <CardContent className="p-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <Palette className="h-4 w-4 text-primary shrink-0" />
-              <span className="text-sm font-semibold">Materiais de divulgação</span>
-            </div>
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              Crie artes e legendas para o lançamento de{" "}
-              <span className="font-medium text-foreground">{projectName}</span>
-              {artistName ? ` — ${artistName}` : ""}.
-            </p>
-
-            {/* Badge de DNA se disponível */}
-            {linkedDna && (
-              <div className="flex items-center gap-1.5 mt-2">
-                <Dna className="h-3 w-3 text-primary" />
-                <span className="text-[11px] text-primary">
-                  DNA Musical disponível — {linkedDna.track_name || "faixa analisada"}
-                </span>
-              </div>
-            )}
-          </div>
-
-          <Button
-            size="sm"
-            className="shrink-0 h-8 px-3 text-xs gap-1.5"
-            onClick={handleCreate}
-          >
-            <Palette className="h-3.5 w-3.5" />
-            Criar materiais
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
 
 // ── Componente principal ──────────────────────────────────────────────────
 interface ProjectReleaseTabProps {
@@ -213,13 +152,6 @@ export default function ProjectReleaseTab({
   return (
     <div className="space-y-4">
 
-      {/* Entrada para o módulo Criativo — aparece no topo */}
-      <CreativeEntryCard
-        projectId={projectId}
-        projectName={projectName}
-        artistName={artistName}
-      />
-
       {/* Hint contextual se há itens de conteúdo visual pendentes */}
       {pendingContentItems > 0 && (
         <div className="flex items-center gap-2 rounded-lg border border-warning/40 bg-warning/15 px-3 py-2">
@@ -227,8 +159,7 @@ export default function ProjectReleaseTab({
           <p className="text-xs font-medium text-foreground">
             {pendingContentItems === 1
               ? "1 item de conteúdo visual ainda pendente na seção Conteúdo."
-              : `${pendingContentItems} itens de conteúdo visual pendentes na seção Conteúdo.`}{" "}
-            Use o botão acima para criar os materiais.
+              : `${pendingContentItems} itens de conteúdo visual pendentes na seção Conteúdo.`}
           </p>
         </div>
       )}
