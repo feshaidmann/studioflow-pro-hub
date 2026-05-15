@@ -59,7 +59,6 @@ const gestaoItems = [
 const drawerSubLabels: Record<string, string> = {
   "/carreira":           "Editais, festivais e palcos",
   "/professionals":      "Equipe e parceiros",
-  "/criativo":           "Arte com IA",
   "/music-dna":          "Análise técnica de mix/master",
 };
 
