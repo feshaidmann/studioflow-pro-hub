@@ -1272,13 +1272,7 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
 
       <ExecutiveSummary diagnosis={diagnosis} onAddAllSteps={handleAddAllSteps} allStepsAdded={allStepsAdded} />
 
-      {diagnosis.classifierHint && (
-        <GenreMismatchHint
-          hint={diagnosis.classifierHint}
-          declared={(input as { genre?: string }).genre || diagnosis.genero_classificado || null}
-          analysisId={savedAnalysisId ?? null}
-        />
-      )}
+      {/* Classificador de gênero interno omitido temporariamente */}
 
       <PlatformCompatibilityCard lufs={lufsValue} />
 
