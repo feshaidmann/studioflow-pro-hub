@@ -96,6 +96,15 @@
     font-family: 'SF Mono', 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
     font-variant-numeric: tabular-nums;
   }
+
+  .welcome-fade {
+    opacity: 0;
+    animation: fade-in 0.5s ease-out forwards;
+    animation-delay: var(--delay, 0ms);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .welcome-fade { animation: none; opacity: 1; }
+  }
 }
 
 @keyframes slide-up {
