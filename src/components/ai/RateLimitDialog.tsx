@@ -69,18 +69,13 @@ export default function RateLimitDialog() {
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Enquanto isso</p>
             <ul className="text-sm space-y-1 text-foreground/80">
               <li>• Refine os prompts dos próximos lotes</li>
-              <li>• Use as artes já geradas na sua galeria</li>
               <li>• {isDaily ? "Volte amanhã às 00h (BRT)" : "O contador semanal reabre no domingo"}</li>
             </ul>
           </div>
         </div>
 
         <DialogFooter className="gap-2 sm:gap-2">
-          <Button variant="outline" onClick={close}>Fechar</Button>
-          <Button onClick={handleViewGallery}>
-            <ImageIcon className="h-4 w-4 mr-1.5" />
-            Ver Galeria
-          </Button>
+          <Button onClick={close}>Fechar</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
