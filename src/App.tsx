@@ -89,9 +89,13 @@ const AppRoutes = () => (
           <Route path="/upgrade" element={<UpgradeScreen />} />
           <Route path="/music-dna" element={<MusicDNA />} />
           <Route path="/carreira" element={<Carreira />} />
-          <Route path="/editais" element={<Navigate to="/carreira?tipo=edital" replace />} />
-          <Route path="/palcos" element={<Navigate to="/carreira?tipo=palco" replace />} />
+          {/* Redirects legados — mantidos apenas como compat. de URLs antigas. */}
+          {/* A rota mais específica /editais/inscricao/:id vem ANTES do catch-all. */}
           <Route path="/editais/inscricao/:id" element={<EditalInscricao />} />
+          <Route path="/editais" element={<Navigate to="/carreira?tipo=edital&from=legacy" replace />} />
+          <Route path="/editais/*" element={<Navigate to="/carreira?tipo=edital&from=legacy" replace />} />
+          <Route path="/palcos" element={<Navigate to="/carreira?tipo=palco&from=legacy" replace />} />
+          <Route path="/palcos/*" element={<Navigate to="/carreira?tipo=palco&from=legacy" replace />} />
           
           <Route path="/projects/:id/direcao-visual" element={<VisualDirection />} />
           <Route path="*" element={<NotFound />} />
