@@ -114,7 +114,7 @@ function defaultState(): ChecklistState {
 }
 
 // ── Standalone helper: marca um item do checklist sem precisar do hook ──
-// Usado pelo módulo Criativo para auto-marcar capa/reels/stories/thumbnail
+// Usado pelo módulo Direção Visual para auto-marcar capa/reels/stories/thumbnail
 // quando o usuário salva uma arte vinculada ao projeto.
 export async function markChecklistItem(
   projectId: string,
