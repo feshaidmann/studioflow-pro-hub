@@ -1263,7 +1263,6 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <CompatibilityBadge result={diagnosis} />
           <Button variant="outline" size="sm" onClick={onReset} className="text-xs">
             ← Nova análise
           </Button>
@@ -1272,18 +1271,13 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
 
       <ExecutiveSummary diagnosis={diagnosis} onAddAllSteps={handleAddAllSteps} allStepsAdded={allStepsAdded} />
 
-      {/* Classificador de gênero interno omitido temporariamente */}
-
       <PlatformCompatibilityCard lufs={lufsValue} />
-
-      {/* NextStepsBar removido: rota /criativo desativada e box poluía a página */}
 
       <div className="sticky top-2 z-20 -mx-1 flex gap-1.5 overflow-x-auto rounded-lg border border-border bg-background/95 p-1 backdrop-blur animate-fade-in">
         {[
           { label: "Resumo", id: "dna-resumo" },
           { label: "Diagnóstico", id: "dna-acoes" },
           { label: "Identidade", id: "dna-identidade" },
-          
           { label: "Técnico", id: "dna-tecnico" },
         ].map((item) => (
           <Button
