@@ -1292,7 +1292,7 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
           { label: "Resumo", id: "dna-resumo" },
           { label: "Diagnóstico", id: "dna-acoes" },
           { label: "Identidade", id: "dna-identidade" },
-          { label: "Referências", id: "dna-referencias" },
+          
           { label: "Técnico", id: "dna-tecnico" },
         ].map((item) => (
           <Button
