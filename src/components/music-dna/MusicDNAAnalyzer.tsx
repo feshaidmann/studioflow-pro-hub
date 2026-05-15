@@ -1672,21 +1672,6 @@ function NextStepsBar({
   );
 }
 
-// ── CREATE ART BUTTON ────────────────────────────────────────────────────────
-
-function CreateArtButton({ isSaved, savedAnalysisId }: { isSaved: boolean; savedAnalysisId?: string }) {
-  const navigate = useNavigate();
-  const handleClick = () => {
-    const dnaParam = isSaved && savedAnalysisId ? savedAnalysisId : "session";
-    navigate(`/criativo?dna=${dnaParam}`);
-  };
-  return (
-    <Button variant="outline" size="sm" className="text-xs gap-1.5" onClick={handleClick}>
-      <Palette className="h-3 w-3" />
-      🎨 Criar arte com este DNA
-    </Button>
-  );
-}
 
 // ── SAVED ANALYSES LIST ──────────────────────────────────────────────────────
 
