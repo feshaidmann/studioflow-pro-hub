@@ -621,15 +621,8 @@ function buildAnalysisMarkdown(input: { name: string; references: string[]; note
     });
     lines.push("");
   }
-  if (diagnosis.catalogNeighbors?.length) {
-    lines.push("## Vizinhos no catálogo (referência interna)");
-    diagnosis.catalogNeighbors.forEach(n => {
-      const sim = Math.round((Number(n.similarity_score) || 0) * 100);
-      const tom = n.key_name ? ` — ${n.key_name}${n.mode ? ` ${n.mode}` : ""}` : "";
-      lines.push(`- **${n.band}** (${n.filename}) — ${sim}%${tom} — BPM ${n.tempo_bpm ?? "—"} · LUFS ${n.lufs_integrated ?? "—"}`);
-    });
-    lines.push("");
-  }
+  // Bloco "Vizinhos no catálogo" omitido do export (classificador interno / banco de referências em curadoria)
+
   return lines.join("\n");
 }
 
