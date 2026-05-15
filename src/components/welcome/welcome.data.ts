@@ -66,6 +66,6 @@ export const MODULES: Module[] = [
   { icon: Clock,        name: "Agenda",       desc: "Shows, gravações e entregas num calendário só." },
   { icon: Users,        name: "Equipe",       desc: "Produtor, mix, fotógrafo — cada um sabe o que entregar." },
   { icon: Compass,      name: "Carreira",     desc: "Editais e palcos abertos, filtrados por IA." },
-  { icon: Sparkles,     name: "DNA + Criativo", desc: "Diagnóstico de mix/master e arte gerada por IA." },
+  { icon: Sparkles,     name: "DNA + Direção Visual", desc: "Diagnóstico de mix/master e briefing visual com referências geradas por IA." },
 ];
 
