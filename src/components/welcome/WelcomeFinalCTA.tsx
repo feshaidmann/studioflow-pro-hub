@@ -13,7 +13,7 @@ export function WelcomeFinalCTA({ onGoogle }: Props) {
   return (
     <>
       <section
-        className="welcome-fade mt-12 w-full max-w-sm"
+        className="welcome-fade mt-10 w-full max-w-sm"
         style={{ "--delay": "360ms" } as React.CSSProperties}
       >
         <div className="rounded-[var(--radius)] border border-primary/20 bg-primary/5 p-6 flex flex-col items-center gap-4 text-center">

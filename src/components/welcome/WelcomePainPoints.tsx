@@ -4,14 +4,14 @@ import { PAIN_POINTS } from "./welcome.data";
 export function WelcomePainPoints() {
   return (
     <section
-      className="welcome-fade mt-12 w-full"
+      className="welcome-fade mt-10 w-full"
       style={{ "--delay": "240ms" } as React.CSSProperties}
     >
-      <p className="mb-5 text-center text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60">
-        Se você se identifica com alguma dessas situações
+      <p className="mb-4 text-center text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60">
+        Já passou por isso?
       </p>
 
-      <div className="space-y-3">
+      <div className="space-y-2">
         {PAIN_POINTS.map((item, i) => (
           <article
             key={i}

@@ -16,9 +16,8 @@ export function WelcomeHero({ onGoogle, onSignupEmail, onLogin }: Props) {
           Sua música merece mais que{" "}
           <span className="text-primary">WhatsApp e planilha</span>
         </h1>
-        <p className="mt-4 text-sm leading-relaxed text-muted-foreground md:text-base max-w-lg mx-auto">
-          Gestão de lançamento, financeiro, equipe e editais — num só app,
-          feito para o artista independente brasileiro.
+        <p className="mt-3 text-sm leading-relaxed text-muted-foreground md:text-base max-w-md mx-auto">
+          Projetos, financeiro, agenda, equipe e carreira — num só app, feito para o artista independente brasileiro.
         </p>
       </section>
 
