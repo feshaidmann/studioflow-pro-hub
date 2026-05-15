@@ -560,7 +560,6 @@ function buildAnalysisMarkdown(input: { name: string; references: string[]; note
   lines.push("");
   lines.push(`_Gerado em ${new Date().toLocaleString("pt-BR")}_`);
   lines.push("");
-  // Gênero classificado removido do relatório (classificador interno omitido na UI)
   if (input.references?.length) lines.push(`**Referências informadas:** ${input.references.join(", ")}`);
   if (input.notes) lines.push(`**Notas:** ${input.notes}`);
   lines.push("");
