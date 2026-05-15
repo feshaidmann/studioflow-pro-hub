@@ -29,7 +29,7 @@ export const MOCK_PROJECT: MockProject = {
     { label: "Vídeo clipe", done: false, urgent: true },
     { label: "Notas fiscais equipe", done: false, urgent: true },
   ],
-} as const;
+};
 
 export type PainPoint = { pain: string; solve: string; icon: LucideIcon };
 
