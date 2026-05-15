@@ -13,6 +13,7 @@ import { ProjectProvider } from "@/contexts/ProjectContext";
 import AppLayout from "@/components/AppLayout";
 import FeedbackButton from "@/components/FeedbackButton";
 import RateLimitDialog from "@/components/ai/RateLimitDialog";
+import EditaisLinkGuard from "@/components/EditaisLinkGuard";
 import { RateLimitDialogProvider } from "@/hooks/useRateLimitDialog";
 
 // Eager-load the landing & auth pages (critical path)
@@ -70,6 +71,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 const AppRoutes = () => (
   <ProtectedRoute>
     <AppLayout>
+      <EditaisLinkGuard />
       <Suspense fallback={<LazyFallback />}>
         <Routes>
           <Route path="/dashboard" element={<Dashboard />} />
