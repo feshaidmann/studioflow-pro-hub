@@ -1805,7 +1805,8 @@ export function MusicDNAAnalyzer() {
   const [lastInput, setLastInput] = useState<{ name: string; notes?: string; references: string[]; projectId?: string } | null>(null);
   const [viewingDiagnosis, setViewingDiagnosis] = useState<DiagnosisResult | null>(null);
   const [isSaved, setIsSaved] = useState(false);
-  const { saveAnalysis, isSaving } = useSavedAnalyses();
+  const { saveAnalysis, saveAnalysisAsync, isSaving } = useSavedAnalyses();
+  const savingPromiseRef = useRef<Promise<string | undefined> | null>(null);
   const { data: benchmarks } = useMusicDnaBenchmarks();
   const { projects } = useProjects();
 
