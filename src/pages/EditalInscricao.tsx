@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Sparkles, Copy, Check, Save, Loader2, FileText, ClipboardList, RefreshCw, BookmarkPlus, ChevronRight, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -80,11 +80,24 @@ export default function EditalInscricao() {
     })();
   }, [id, user, loadRascunho]);
 
-  // Extract fields
+  // Extract fields (manual trigger — usado como fallback no card de setup)
   const handleExtract = () => {
     if (!edital) return;
     extractFields(edital.link || undefined, edital.titulo);
   };
+
+  // Auto-extração: dispara uma vez assim que o edital carrega e não houver rascunho
+  // nem campos extraídos. Evita a tela vazia em que o usuário precisava clicar
+  // "Extrair campos" para começar.
+  const autoExtractedRef = useRef(false);
+  useEffect(() => {
+    if (!edital || extracting || extractedFields || autoExtractedRef.current) return;
+    // Se já existe rascunho salvo, prioriza ele (o usuário pode disparar manualmente
+    // depois pelo botão "Extrair novamente" caso queira refazer).
+    if (rascunhoId) return;
+    autoExtractedRef.current = true;
+    extractFields(edital.link || undefined, edital.titulo);
+  }, [edital, extracting, extractedFields, rascunhoId, extractFields]);
 
   // Pre-fill simple fields from profile — more aggressive matching
   const preFillProfile = useCallback(() => {
