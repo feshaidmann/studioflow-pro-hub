@@ -614,6 +614,7 @@ export function useMusicDNA(): UseMusicDNAReturn {
         catalogTotal,
         catalogGenreCount,
         strictGenreUsed,
+        summaryVariant,
       } = await callMusicDNAAnalyze(prompt, {
         features: externalLookup?.features,
         genero: input.genre,
