@@ -115,6 +115,7 @@ export function useEditais(projectId?: string | null) {
         publico_alvo: e.publico_alvo || "",
         resumo: e.resumo || "",
         documentos_resumo: e.documentos_resumo || "",
+        match_reason: e.match_reason || "",
       }));
       const { error } = await supabase.from("editais").insert(rows as any);
       if (error) throw error;
