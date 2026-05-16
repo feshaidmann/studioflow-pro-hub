@@ -37,7 +37,7 @@ export default function EditalInscricao() {
   const { t } = useLanguage();
   const { projects } = useProjects();
   const { profile } = useProfile();
-  const { extracting, extractedFields, extractFields, saving, saveRascunho, loadRascunho } = useRascunhoEdital();
+  const { extracting, extractedFields, extractFields, saving, saveRascunho, loadRascunho, lastError } = useRascunhoEdital();
 
   const [edital, setEdital] = useState<EditalInfo | null>(null);
   const [loadingEdital, setLoadingEdital] = useState(true);
