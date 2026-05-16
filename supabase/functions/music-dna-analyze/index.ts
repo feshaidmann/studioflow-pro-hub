@@ -204,6 +204,12 @@ serve(async (req: Request) => {
       return jsonResponse({ error: "prompt is required" }, 400);
     }
 
+    // A/B do `diagnostico_resumo`: 50/50 aleatório por chamada.
+    // Persistido junto da análise quando o usuário salvar, para reanálises
+    // (visualização posterior) usarem sempre a mesma variante.
+    const summaryVariant: "A" | "B" = Math.random() < 0.5 ? "A" : "B";
+    const enrichedPayload = { ...payload, summary_variant: summaryVariant };
+
     let benchmark: unknown = null;
     let referenceExamples: unknown = null;
     let nearestNeighbors: unknown = null;
