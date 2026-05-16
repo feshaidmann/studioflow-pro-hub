@@ -103,16 +103,16 @@ export function useSavedAnalyses() {
       if (error) throw error;
 
       // Sinal implícito de aceitação: "saved" (idempotente via UNIQUE)
-      await supabase
-        .from("diagnosis_acceptance_signals")
-        .insert({
-          user_id: user!.id,
-          analysis_id: (data as any).id,
-          summary_variant: summaryVariant,
-          signal_type: "saved",
-        })
-        .then(() => undefined)
-        .catch(() => undefined);
+      try {
+        await supabase
+          .from("diagnosis_acceptance_signals")
+          .insert({
+            user_id: user!.id,
+            analysis_id: (data as any).id,
+            summary_variant: summaryVariant,
+            signal_type: "saved",
+          });
+      } catch { /* silencioso: telemetria não pode quebrar o save */ }
 
       if (diagnosis.genero_classificado) {
         Promise.resolve(supabase.rpc("recalcular_benchmark_genero" as never, { p_genero: diagnosis.genero_classificado } as never))
