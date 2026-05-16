@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbSeparator, BreadcrumbPage } from "@/components/ui/breadcrumb";
 import { toast } from "sonner";
-import { useRascunhoEdital, type EditalField } from "@/hooks/useRascunhoEdital";
+import { useRascunhoEdital, extractCauseLabel, type EditalField } from "@/hooks/useRascunhoEdital";
 import { useProjects } from "@/contexts/ProjectContext";
 import { useProfile } from "@/contexts/ProfileContext";
 import { supabase } from "@/integrations/supabase/client";
