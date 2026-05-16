@@ -472,6 +472,7 @@ async function callMusicDNAAnalyze(
   catalogTotal: number;
   catalogGenreCount: number;
   strictGenreUsed: boolean;
+  summaryVariant: "A" | "B";
 }> {
   const { data, error } = await supabase.functions.invoke("music-dna-analyze", {
     body: { action: "generate_diagnosis", payload: { prompt, ...payload } },
@@ -485,6 +486,7 @@ async function callMusicDNAAnalyze(
     catalog_total?: number;
     catalog_genre_count?: number;
     strict_genre_used?: boolean;
+    summary_variant?: string;
   } | null;
   return {
     content: d?.content ?? "",
@@ -493,6 +495,7 @@ async function callMusicDNAAnalyze(
     catalogTotal: d?.catalog_total ?? 0,
     catalogGenreCount: d?.catalog_genre_count ?? 0,
     strictGenreUsed: d?.strict_genre_used ?? false,
+    summaryVariant: (d?.summary_variant === "B" ? "B" : "A"),
   };
 }
 
