@@ -22,6 +22,7 @@ export interface Edital {
   publico_alvo?: string;
   resumo?: string;
   documentos_resumo?: string;
+  match_reason?: string;
 }
 
 export interface SearchResult {
