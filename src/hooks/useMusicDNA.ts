@@ -682,6 +682,7 @@ export function useMusicDNA(): UseMusicDNAReturn {
         catalogGenreCount,
         strictGenreUsed,
         classifierHint,
+        summaryVariant,
       };
     },
 
