@@ -329,7 +329,7 @@ serve(async (req: Request) => {
               "REFERENCIAS_PROXIMAS — REGRA INVIOLÁVEL: ordene SEMPRE por similarity_score DESCRESCENTE (nunca alfabética); inclua APENAS vizinhos com similarity_score >= 0.70; se nenhum atingir o piso, devolva array vazio. Cite apenas band+filename reais da lista de vizinhos do catálogo fornecida no prompt do usuário.\n\n" +
               "Responda SEMPRE em JSON válido, sem markdown e sem texto externo ao JSON.",
           },
-          { role: "user", content: action === "generate_diagnosis" ? buildStructuredPrompt(prompt, payload, benchmark, referenceExamples, nearestNeighbors) : prompt },
+          { role: "user", content: action === "generate_diagnosis" ? buildStructuredPrompt(prompt, enrichedPayload, benchmark, referenceExamples, nearestNeighbors) : prompt },
         ],
       }),
     });
