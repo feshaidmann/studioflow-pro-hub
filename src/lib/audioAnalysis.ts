@@ -50,6 +50,8 @@ export interface StemFeatures {
   confidence: number;
 }
 
+export type ExtractionConfidence = "preview" | "full" | "external";
+
 export interface RealAudioAnalysis {
   // Global
   lufs_integrated: number;
@@ -59,6 +61,10 @@ export interface RealAudioAnalysis {
   bpm: number;
   key: string;
   duration_sec: number;
+  /** Quanto da faixa foi analisado (em segundos). Para confiança per-métrica. */
+  analyzed_duration_sec?: number;
+  /** Origem da extração: preview = browser rápido, full = servidor faixa inteira, external = AcousticBrainz/Deezer. */
+  extraction_confidence?: ExtractionConfidence;
 
   // Spectral global
   spectral_centroid_hz: number;
