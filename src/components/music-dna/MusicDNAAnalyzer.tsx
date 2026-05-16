@@ -1221,6 +1221,11 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
   const { send: sendSignal } = useAcceptanceSignal();
   const summaryVariant = (diagnosis.summaryVariant === "B" ? "B" : "A") as "A" | "B";
 
+  const ensureSignal = async (signal: "thumbs_up" | "thumbs_down" | "copied" | "task_created") => {
+    const id = savedAnalysisId ?? (await onEnsureSaved?.());
+    if (id) sendSignal({ analysisId: id, variant: summaryVariant, signal });
+  };
+
   const handleAddAllSteps = async () => {
     const steps = proximos_passos ?? [];
     let count = 0;
@@ -1233,7 +1238,7 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
     setAllStepsAdded(true);
     if (count > 0) {
       toast.success(`${count} ações adicionadas ao checklist`);
-      sendSignal({ analysisId: savedAnalysisId, variant: summaryVariant, signal: "task_created" });
+      ensureSignal("task_created");
     }
   };
 
