@@ -1,101 +1,67 @@
-## Objetivo
+# UI A/B Resumo + Comparação de Versões
 
-Permitir ao artista enxergar **v1, v2, vN da mesma música lado a lado** dentro do Music DNA e, ao mesmo tempo, usar essas análises para rodar um **A/B test do estilo de `diagnostico_resumo`** — Variante A (sonoridade/instrumentação) vs Variante B (emoção/contexto de escuta) — medindo qual ganha mais aceitação dos produtores.
+Backend, hooks e edge function já estão prontos. Falta a camada visual.
 
-Aceitação = sinal composto:
-- 👍 / 👎 explícito no card do resumo
-- Salvar a análise
-- Copiar o texto do resumo
-- Converter resumo / próximos passos em tarefas `[DNA]`
+## 1. Feedback 👍/👎 no resumo executivo
 
----
+**Arquivo:** `src/components/music-dna/MusicDNAAnalyzer.tsx`
 
-## Mudanças no banco
+- Passar `analysisId` e `summary_variant` do estado do `useMusicDNA` para `<ExecutiveSummary>` no render (linha ~1260).
+- Dentro de `ExecutiveSummary`, abaixo do bloco `diagnostico_resumo`:
+  - Linha discreta: "Esse resumo te ajudou?" + botões `ThumbsUp` / `ThumbsDown` (ícones lucide, variantes ghost).
+  - Botão "Copiar resumo" já existente passa a chamar `onSendSignal('copied')` além de copiar.
+  - Estado local `feedback: 'up' | 'down' | null` para feedback visual imediato; chamada idempotente via `useAcceptanceSignal`.
+  - Badge sutil mostrando variante (`A` ou `B`) só para admins (via `has_role`) — opcional, para QA interno.
+- Toast curto em pt-BR confirmando ("Obrigado pelo feedback!").
 
-### 1. Versionamento de músicas
-Nova tabela `music_track_versions` agrupa análises da mesma música:
+## 2. Sinal de "task_created"
 
-```text
-music_track_versions
-├── id (uuid, PK)
-├── user_id (uuid)
-├── project_id (uuid, FK projects, nullable)
-├── track_slug (text)         — nome canônico (ex. "ondas-do-mar"); chave de agrupamento
-├── display_name (text)
-├── created_at, updated_at
-└── UNIQUE (user_id, track_slug)
-```
+**Arquivo:** `src/components/music-dna/MusicDNAAnalyzer.tsx`
+- No handler `handleAddAllSteps` (conversão `[DNA]` → tarefas), disparar `sendSignal('task_created')` após sucesso.
 
-Em `music_dna_analyses`, adicionar:
-- `track_version_id uuid` (FK `music_track_versions`)
-- `version_label text` (ex.: "v1 — mix bruto", "v2 — após EQ")
-- `version_number int`           — sequencial dentro do grupo
-- `summary_variant text NOT NULL DEFAULT 'A'` — `'A'` (sonoridade) ou `'B'` (storytelling). Persistido para nunca trocar depois.
-- `summary_variant_assigned_at timestamptz`
+## 3. Bloco "Versões desta música" + comparação
 
-RLS: dono via `user_id`.
+**Novo:** `src/components/music-dna/TrackVersionsPanel.tsx`
+- Renderizado dentro do `MusicDNAAnalyzer` após o resumo executivo, quando há análise salva.
+- Usa `useTrackVersions(trackSlug)` para listar v1…vN da mesma faixa do usuário.
+- Lista compacta: `v1 · 14/05 · -9.2 LUFS` etc., com botão "Comparar" quando ≥ 2 versões.
 
-### 2. Sinais de aceitação
-Nova tabela `diagnosis_acceptance_signals`:
+**Novo:** `src/components/music-dna/TrackVersionCompare.tsx`
+- Dialog/Sheet em tela cheia (mobile-friendly, 434px ok).
+- Dropdowns para escolher versão A e versão B.
+- Layout em duas colunas (stack em mobile):
+  - Cabeçalho: nome + label da versão + badge da variante de resumo.
+  - `diagnostico_resumo` lado a lado.
+  - Tabela comparativa: LUFS, True Peak, DR, BPM, tom, gênero detectado — com setas indicando delta (▲ verde / ▼ vermelho conforme métrica).
+- Sem nova lógica de variante — só renderiza o que já está salvo.
 
-```text
-diagnosis_acceptance_signals
-├── id, user_id, analysis_id (FK music_dna_analyses), created_at
-├── summary_variant text         — 'A' | 'B' (snapshot)
-├── signal_type text             — 'thumbs_up' | 'thumbs_down' | 'saved' | 'copied' | 'task_created'
-└── UNIQUE (analysis_id, signal_type)    — cada sinal conta no máximo 1x por análise
-```
+## 4. Painel Admin "A/B Resumo DNA"
 
-RLS: usuário só insere/lê os próprios; admin lê tudo via política específica.
+**Novo:** `src/pages/admin/SummaryVariantStats.tsx`
+- Acessível via nova aba/rota em `src/pages/Admin.tsx` (seguindo padrão das abas existentes).
+- Consome RPC `get_summary_variant_stats()` (já existe).
+- Cards lado a lado para Variante A e B mostrando:
+  - Sample size, 👍 rate, 👎 rate, saved/copied/task rates, **composite score** destacado.
+  - Indicador "vencedora" quando diferença ≥ 5% e sample ≥ 30 por variante.
+- Tabela bruta abaixo. Botão "Atualizar".
+- Respeita `has_role('admin')`; redireciona se não-admin.
 
-### 3. RPC `get_summary_variant_stats()` (security definer, admin-only)
-Retorna por variante: amostra, % com 👍, % com 👎, % salva, % copiada, % convertida em tarefa e um **score de aceitação composto** (média ponderada: 👍=+1, 👎=−1, saved=+0.5, copied=+0.25, task=+0.5, normalizado). Alimenta o painel admin.
+## 5. i18n (pt/en)
 
----
+Adicionar chaves em `LanguageContext`:
+- `dna.feedback.helpful` / `dna.feedback.notHelpful` / `dna.feedback.thanks`
+- `dna.versions.title` / `dna.versions.compare` / `dna.versions.empty`
+- `dna.compare.versionA` / `dna.compare.versionB` / `dna.compare.metric` / `dna.compare.delta`
+- `admin.summaryVariant.title` / `admin.summaryVariant.winner` / `admin.summaryVariant.insufficient`
 
-## Mudanças no frontend
+## 6. Validação
 
-### 1. Atribuição da variante (determinística)
-- Hash estável de `analysis_id` → A/B 50/50 (`hash(analysis_id) % 2`). Calculada no edge function antes de chamar o LLM e persistida em `summary_variant`. Garante que reanálise da mesma `music_dna_analyses.id` nunca troque variante e que v1 e v2 da mesma faixa podem cair em variantes diferentes (ótimo para comparar).
+- Build limpo (typecheck).
+- Smoke test manual: subir v2 da mesma música → ver lista com v1+v2 → abrir comparação → clicar 👍 → conferir linha em `diagnosis_acceptance_signals`.
+- Acessar `/admin` como admin → ver variantes; como user comum → redirect.
 
-### 2. Edge function `music-dna-analyze`
-- Bloco `diagnostico_resumo` do system prompt vira condicional:
-  - **Variante A — sonoridade/instrumentação:** mantém o texto atual focado em peso/brilho/espaço, instrumentos protagonistas, papel do vocal e enquadramento Spotify (sem números).
-  - **Variante B — emoção/contexto de escuta:** mesmo escopo de tamanho (4–6 frases, sem siglas/números), mas pegada de storytelling: que sensação a faixa provoca, em que contexto/momento do ouvinte ela se encaixa (manhã, foco, festa, noite, escuta atenta), que tipo de história/atmosfera ela cria, e como esse "encaixe emocional" mapeia em playlists do Spotify.
-- Restante do schema JSON e demais campos permanecem idênticos — só o `diagnostico_resumo` muda de pegada.
-- Retorna `summary_variant` no payload para o cliente exibir/registrar.
+## Fora de escopo (não fazer agora)
 
-### 3. Music DNA — UI de versões
-Em `src/components/music-dna/MusicDNAAnalyzer.tsx`:
-- Novo bloco "Versões desta música" acima do resultado, listando v1…vN do mesmo `track_version_id`, com botão **"Comparar v1 ↔ v2"**.
-- Tela de comparação `TrackVersionCompare.tsx`: duas colunas lado a lado (mobile: stack), mostrando para cada versão o `diagnostico_resumo`, badges das principais métricas (loudness percebido, dinâmica, instrumentos protagonistas) e a etiqueta da variante (A/B) em pequeno chip discreto — sem revelar a hipótese ao usuário.
-- Ao subir uma nova análise, oferecer "vincular como nova versão de…" se o `track_slug` (slug do nome) bater com uma existente do usuário.
-
-### 4. Captura dos sinais de aceitação
-Novo hook `useAcceptanceSignal(analysisId, variant)` expõe `send(signal_type)` (idempotente). Pontos de instrumentação:
-- Botões 👍/👎 adicionados ao card do `diagnostico_resumo`.
-- `saveAnalysis()` em `useSavedAnalyses` → dispara `'saved'`.
-- "Copiar resumo" no `MusicDNAAnalyzer` (linhas ~773) → dispara `'copied'`.
-- Conversão de próximos passos em `[DNA]` task → dispara `'task_created'`.
-
-Cada chamada é `upsert ON CONFLICT DO NOTHING` na tabela.
-
-### 5. Painel admin
-Em `/admin`, nova aba **"A/B Resumo DNA"** consumindo `get_summary_variant_stats()`. Mostra tabela A vs B, com amostra, taxa de cada sinal, score composto e barrinhas comparativas. Sem informação por usuário (privacidade).
-
----
-
-## Validação
-
-- Migração roda sem quebrar análises existentes (backfill: `summary_variant = 'A'` em históricas para não poluir; flag `legacy = true` para excluí-las das métricas).
-- E2E manual: subir v1, fazer 👍 → ver sinal na tabela; subir v2 → cair em variante diferente quando o hash der; tela de comparação mostra ambos lado a lado.
-- Edge function: testar payload retornando `summary_variant` e ambos os estilos de resumo (curl direto no `music-dna-analyze`).
-- Admin: confirmar que `get_summary_variant_stats()` ignora análises `legacy` e respeita admin-only.
-
-## Detalhes técnicos rápidos
-
-- `track_slug` derivado por `slugify(track_name)` no cliente, com chance de override manual ("esta é uma nova versão de X").
-- Hash A/B: `xxhash32(analysis_id) % 2` no edge (já temos `crypto.subtle` disponível) — determinístico, sem dependência nova.
-- Score composto na RPC: `avg( case signal_type when 'thumbs_up' then 1 when 'thumbs_down' then -1 when 'saved' then 0.5 when 'copied' then 0.25 when 'task_created' then 0.5 end )`.
-- Idempotência dos sinais via `UNIQUE (analysis_id, signal_type)`.
-- Variante nunca é mostrada como "experimento" para o usuário; aparece só como chip discreto "estilo A/B" no admin e em screenshots internas.
+- Gráficos temporais no admin (linha do tempo de score por dia).
+- Forçar variante via querystring para QA — pode ser adicionado depois.
+- Mudar peso do composite score (já fixo no RPC).

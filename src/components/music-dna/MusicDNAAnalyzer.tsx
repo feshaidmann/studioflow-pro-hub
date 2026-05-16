@@ -7,7 +7,9 @@ import {
   Radar, RadarChart, PolarAngleAxis, PolarGrid, PolarRadiusAxis,
   ResponsiveContainer, Legend,
 } from "recharts";
-import { Upload, X, FileAudio, Music, MessageSquare, ListPlus, Check, Save, Trash2, History, Palette, ArrowRight, FolderKanban, Download, CheckCircle2, AlertTriangle, XCircle, ChevronRight, Info, User } from "lucide-react";
+import { Upload, X, FileAudio, Music, MessageSquare, ListPlus, Check, Save, Trash2, History, Palette, ArrowRight, FolderKanban, Download, CheckCircle2, AlertTriangle, XCircle, ChevronRight, Info, User, ThumbsUp, ThumbsDown, Copy, GitCompare } from "lucide-react";
+import { useAcceptanceSignal } from "@/hooks/useAcceptanceSignal";
+import { TrackVersionsPanel } from "@/components/music-dna/TrackVersionsPanel";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useNavigate } from "react-router-dom";
@@ -422,6 +424,23 @@ function ExecutiveSummary({ diagnosis, onAddAllSteps, allStepsAdded, analysisId,
     `${Math.floor(sec / 60)}:${String(Math.round(sec % 60)).padStart(2, "0")}`;
   const stepsCount = diagnosis.proximos_passos?.length ?? 0;
 
+  const handleCopy = () => {
+    try {
+      navigator.clipboard.writeText(diagnosis.diagnostico_resumo ?? "");
+      toast.success("Resumo copiado");
+      onSendSignal?.("copied");
+    } catch {
+      toast.error("Não foi possível copiar");
+    }
+  };
+
+  const handleVote = (signal: "thumbs_up" | "thumbs_down") => {
+    if (voted) return;
+    setVoted(signal);
+    onSendSignal?.(signal);
+    toast.success("Obrigado pelo feedback!");
+  };
+
   return (
     <section id="dna-resumo" className="scroll-mt-16">
       <Card className="border-l-4 border-l-primary animate-fade-in">
@@ -447,6 +466,42 @@ function ExecutiveSummary({ diagnosis, onAddAllSteps, allStepsAdded, analysisId,
               </div>
             ))}
           </div>
+
+          {/* Feedback A/B */}
+          {analysisId && (
+            <div className="flex items-center justify-between gap-3 flex-wrap pt-1 border-t border-border/60">
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground">
+                  Esse resumo te ajudou?
+                </span>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={voted === "thumbs_up" ? "default" : "ghost"}
+                  className="h-7 w-7 p-0"
+                  onClick={() => handleVote("thumbs_up")}
+                  disabled={!!voted}
+                  aria-label="Útil"
+                >
+                  <ThumbsUp className="h-3.5 w-3.5" />
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={voted === "thumbs_down" ? "default" : "ghost"}
+                  className="h-7 w-7 p-0"
+                  onClick={() => handleVote("thumbs_down")}
+                  disabled={!!voted}
+                  aria-label="Não útil"
+                >
+                  <ThumbsDown className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+              <Button type="button" size="sm" variant="ghost" className="h-7 text-xs gap-1.5" onClick={handleCopy}>
+                <Copy className="h-3.5 w-3.5" /> Copiar resumo
+              </Button>
+            </div>
+          )}
 
           {/* CTA primário + chips de confiança */}
           <div className="flex flex-wrap items-center justify-between gap-3 pt-1 border-t border-border/60">
@@ -1162,6 +1217,9 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
     }
   };
 
+  const { send: sendSignal } = useAcceptanceSignal();
+  const summaryVariant = (diagnosis.summaryVariant === "B" ? "B" : "A") as "A" | "B";
+
   const handleAddAllSteps = async () => {
     const steps = proximos_passos ?? [];
     let count = 0;
@@ -1172,7 +1230,10 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
       if (task) { setAddedItems(prev => new Set(prev).add(key)); count++; }
     }
     setAllStepsAdded(true);
-    if (count > 0) toast.success(`${count} ações adicionadas ao checklist`);
+    if (count > 0) {
+      toast.success(`${count} ações adicionadas ao checklist`);
+      sendSignal({ analysisId: savedAnalysisId, variant: summaryVariant, signal: "task_created" });
+    }
   };
 
   // Sticky nav (~40px) + folga visual; evita que o título da seção fique escondido atrás da barra
@@ -1257,7 +1318,19 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
         </div>
       </div>
 
-      <ExecutiveSummary diagnosis={diagnosis} onAddAllSteps={handleAddAllSteps} allStepsAdded={allStepsAdded} />
+      <ExecutiveSummary
+        diagnosis={diagnosis}
+        onAddAllSteps={handleAddAllSteps}
+        allStepsAdded={allStepsAdded}
+        analysisId={savedAnalysisId}
+        onSendSignal={(signal) =>
+          sendSignal({ analysisId: savedAnalysisId, variant: summaryVariant, signal })
+        }
+      />
+
+      {savedAnalysisId && (
+        <TrackVersionsPanel trackName={input.name} currentAnalysisId={savedAnalysisId} />
+      )}
 
       <PlatformCompatibilityCard lufs={lufsValue} />
 
