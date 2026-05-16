@@ -362,6 +362,7 @@ export type Database = {
           link: string | null
           link_checked_at: string | null
           link_status: string
+          match_reason: string
           orgao: string | null
           origem_url: string | null
           prazo: string | null
@@ -387,6 +388,7 @@ export type Database = {
           link?: string | null
           link_checked_at?: string | null
           link_status?: string
+          match_reason?: string
           orgao?: string | null
           origem_url?: string | null
           prazo?: string | null
@@ -412,6 +414,7 @@ export type Database = {
           link?: string | null
           link_checked_at?: string | null
           link_status?: string
+          match_reason?: string
           orgao?: string | null
           origem_url?: string | null
           prazo?: string | null
@@ -1374,6 +1377,7 @@ export type Database = {
           link: string | null
           link_checked_at: string | null
           link_status: string
+          match_reason: string
           nome: string
           organizador: string
           periodo_inscricao: string | null
@@ -1396,6 +1400,7 @@ export type Database = {
           link?: string | null
           link_checked_at?: string | null
           link_status?: string
+          match_reason?: string
           nome: string
           organizador: string
           periodo_inscricao?: string | null
@@ -1418,6 +1423,7 @@ export type Database = {
           link?: string | null
           link_checked_at?: string | null
           link_status?: string
+          match_reason?: string
           nome?: string
           organizador?: string
           periodo_inscricao?: string | null

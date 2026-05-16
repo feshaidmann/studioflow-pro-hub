@@ -108,7 +108,7 @@ export default function OpportunityCard({ opportunity: op, onApply, onSave, onRe
         <p className="text-xs text-muted-foreground mb-2 line-clamp-1">{op.organizador}</p>
       )}
 
-      {op.matchReason && op.origem === "ai" && (
+      {op.matchReason && (
         <p className="text-xs text-primary/90 mb-2 line-clamp-2 inline-flex items-start gap-1">
           <Sparkles className="h-3 w-3 mt-0.5 shrink-0" />
           <span>{op.matchReason}</span>

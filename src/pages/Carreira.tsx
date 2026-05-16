@@ -49,6 +49,31 @@ function normalize(s: string) {
   return (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 }
 
+function daysUntil(iso: string | null | undefined): number | null {
+  if (!iso) return null;
+  try {
+    const d = new Date(iso + "T12:00:00-03:00");
+    return Math.round((d.getTime() - Date.now()) / 86400000);
+  } catch { return null; }
+}
+
+function formatBrDate(iso: string | null | undefined): string | null {
+  if (!iso) return null;
+  try {
+    return new Intl.DateTimeFormat("pt-BR", {
+      timeZone: "America/Sao_Paulo",
+      day: "2-digit", month: "2-digit", year: "numeric",
+    }).format(new Date(iso + "T12:00:00-03:00"));
+  } catch { return iso; }
+}
+
+const APP_STATUS_WEIGHT: Record<string, number> = {
+  interesse: 0,
+  preparando: 1,
+  inscrito: 2,
+  em_analise: 3,
+};
+
 function sessionKeyFor(nome: string, organizador: string) {
   return `${nome}_${organizador}`.toLowerCase()
     .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
@@ -228,6 +253,24 @@ export default function Carreira() {
       if (a.opportunity_id) set.add(a.opportunity_id);
     }
     return set;
+  }, [applications]);
+
+  // Pipeline ordenado: status ativo primeiro, depois prazo ascendente; finais ao fim.
+  const sortedApplications = useMemo(() => {
+    return [...applications].sort((a, b) => {
+      const aFinal = !!a.resultado;
+      const bFinal = !!b.resultado;
+      if (aFinal !== bFinal) return aFinal ? 1 : -1;
+      const sa = APP_STATUS_WEIGHT[a.status] ?? 9;
+      const sb = APP_STATUS_WEIGHT[b.status] ?? 9;
+      if (sa !== sb) return sa - sb;
+      const pa = a.edital?.prazo || null;
+      const pb = b.edital?.prazo || null;
+      if (!pa && !pb) return 0;
+      if (!pa) return 1;
+      if (!pb) return -1;
+      return pa.localeCompare(pb);
+    });
   }, [applications]);
 
   const isAlreadyApplied = useCallback((op: Opportunity) => {
@@ -547,8 +590,10 @@ export default function Carreira() {
             </Card>
           ) : (
             <div className="space-y-2">
-              {applications.map((a) => {
+              {sortedApplications.map((a) => {
                 const isPalco = a.tipo === "palco";
+                const isFinal = !!a.resultado;
+                const dLeft = !isFinal ? daysUntil(a.edital?.prazo) : null;
                 return (
                   <Card
                     key={a.id}
@@ -587,8 +632,21 @@ export default function Carreira() {
                           {a.edital?.prazo && (
                             <span className="text-[11px] text-muted-foreground inline-flex items-center gap-1">
                               <Calendar className="h-3 w-3" />
-                              {a.edital.prazo}
+                              {formatBrDate(a.edital.prazo) || a.edital.prazo}
                             </span>
+                          )}
+                          {dLeft !== null && (
+                            dLeft < 0 ? (
+                              <Badge variant="outline" className="text-[10px] bg-destructive/15 text-destructive border-destructive/40">
+                                Vencido há {Math.abs(dLeft)}d
+                              </Badge>
+                            ) : dLeft <= 7 ? (
+                              <Badge variant="outline" className="text-[10px] bg-warning/15 text-warning-foreground border-warning/40">
+                                {dLeft === 0 ? "Vence hoje" : `Faltam ${dLeft}d`}
+                              </Badge>
+                            ) : dLeft <= 30 ? (
+                              <span className="text-[11px] text-muted-foreground">Faltam {dLeft}d</span>
+                            ) : null
                           )}
                           {a.edital?.link_status === "broken" ? (
                             <Button
