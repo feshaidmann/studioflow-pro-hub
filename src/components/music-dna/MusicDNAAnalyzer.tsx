@@ -1329,9 +1329,7 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
         onAddAllSteps={handleAddAllSteps}
         allStepsAdded={allStepsAdded}
         analysisId={savedAnalysisId}
-        onSendSignal={(signal) =>
-          sendSignal({ analysisId: savedAnalysisId, variant: summaryVariant, signal })
-        }
+        onSendSignal={(signal) => ensureSignal(signal)}
       />
 
       {savedAnalysisId && (
