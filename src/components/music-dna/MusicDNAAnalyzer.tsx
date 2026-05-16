@@ -441,6 +441,13 @@ function ExecutiveSummary({ diagnosis, onAddAllSteps, allStepsAdded, analysisId,
     toast.success("Obrigado pelo feedback!");
   };
 
+  const extractionConfidence = (diagnosis.realAnalysis as { extraction_confidence?: "preview" | "full" | "external" } | undefined)?.extraction_confidence ?? "preview";
+  const confidenceBadge = {
+    preview: { label: "Análise rápida", tone: "bg-amber-100 text-amber-800 border-amber-300", title: "Métricas físicas confiáveis; perceptuais (energia/valência/dançabilidade) são estimativas heurísticas." },
+    full: { label: "Análise completa", tone: "bg-primary/10 text-primary border-primary/30", title: "Faixa inteira processada no servidor com modelos treinados." },
+    external: { label: "Catálogo verificado", tone: "bg-primary/10 text-primary border-primary/30", title: "Features vindas de catálogo externo (AcousticBrainz)." },
+  }[extractionConfidence];
+
   return (
     <section id="dna-resumo" className="scroll-mt-16">
       <Card className="border-l-4 border-l-primary animate-fade-in">
@@ -450,9 +457,14 @@ function ExecutiveSummary({ diagnosis, onAddAllSteps, allStepsAdded, analysisId,
               <p className="text-[11px] font-mono uppercase tracking-widest text-primary mb-1">Resumo executivo</p>
               <p className="text-sm leading-relaxed">{diagnosis.diagnostico_resumo}</p>
             </div>
-            <Badge variant="outline" className={cn("text-[11px] font-mono uppercase tracking-wider", toneClass)}>
-              {status.label}
-            </Badge>
+            <div className="flex flex-col items-end gap-1">
+              <Badge variant="outline" className={cn("text-[11px] font-mono uppercase tracking-wider", toneClass)}>
+                {status.label}
+              </Badge>
+              <Badge variant="outline" className={cn("text-[10px] font-mono uppercase tracking-wider", confidenceBadge.tone)} title={confidenceBadge.title}>
+                {confidenceBadge.label}
+              </Badge>
+            </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
             {[
