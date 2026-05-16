@@ -1318,7 +1318,19 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
         </div>
       </div>
 
-      <ExecutiveSummary diagnosis={diagnosis} onAddAllSteps={handleAddAllSteps} allStepsAdded={allStepsAdded} />
+      <ExecutiveSummary
+        diagnosis={diagnosis}
+        onAddAllSteps={handleAddAllSteps}
+        allStepsAdded={allStepsAdded}
+        analysisId={savedAnalysisId}
+        onSendSignal={(signal) =>
+          sendSignal({ analysisId: savedAnalysisId, variant: summaryVariant, signal })
+        }
+      />
+
+      {savedAnalysisId && (
+        <TrackVersionsPanel trackName={input.name} currentAnalysisId={savedAnalysisId} />
+      )}
 
       <PlatformCompatibilityCard lufs={lufsValue} />
 
