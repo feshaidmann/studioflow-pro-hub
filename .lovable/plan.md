@@ -1,109 +1,25 @@
-## Objetivo
+# Plano: precisão da análise de áudio do DNA Musical
 
-Elevar a precisão da análise de áudio do DNA Musical combinando as 5 frentes: FFT real + LUFS K-weighted + True Peak oversampled, features perceptuais com `essentia.js`, calibração com o catálogo Librosa, extração server-side para faixas completas e marcação de confiança no prompt do LLM.
+## Implementado nesta iteração
 
-## Arquitetura proposta
+1. **Migration** — `music_dna_analyses.full_analysis_jsonb`, `full_analysis_at`, `analysis_confidence` (preview|full|external).
+2. **FFT real (`fft.js`)** em `src/lib/audioAnalysis.ts > computeSpectralMetrics`: substitui DFT O(N²) por radix-4 O(N log N) e processa a faixa INTEIRA (Hann 2048, hop 1024).
+3. **K-weighting BS.1770** (`computeLufsKWeighted`): pre-filter high-shelf 1681Hz +4dB + RLB HP 38Hz desenhados via biquad cookbook RBJ; janela 400ms/hop 100ms; gating absoluto -70 LUFS + relativo -10 LU.
+4. **True Peak 4x oversample** (Catmull-Rom): captura inter-sample peaks; corrige erro típico de +0.5 a +1.5 dB em material limitado.
+5. **Bandwidth + ZCR** agora extraídos no `computeSpectralMetrics`.
+6. **Confidence no prompt Gemini** (`buildConfidenceBlock` em `supabase/functions/music-dna-analyze/index.ts`): classifica cada métrica como high/medium/low e instrui o modelo a NÃO construir narrativas sobre métricas low. Métricas perceptuais ficam `low` em preview.
+7. **Badge UI** `ExecutiveSummary`: "Análise rápida" / "Análise completa" / "Catálogo verificado" com tooltip explicativo.
 
-```text
-[Browser]                                          [Edge Function]
-  └─ Análise rápida (preview)                        └─ Análise completa (autoritativa)
-       fft.js + K-weight + 4x oversample                  Mesma stack rodando na faixa inteira
-       essentia.js (danceability, valence...)             essentia.js WASM no Deno
-       Janela: 30s do meio da faixa                       Janela: faixa inteira
-       Latência: ~3s                                      Latência: 15-40s
-       Marca confidence: "preview"                        Marca confidence: "full"
-              │                                                   │
-              └──────────────► music_dna_analyze ◄────────────────┘
-                                      │
-                                      ├─ Aplica BROWSER_CALIBRATION (offsets vs Librosa)
-                                      ├─ Adiciona confidence_level por métrica
-                                      └─ Injeta no prompt Gemini com tags <low_confidence>
-```
+## Fora desta iteração (planejado, requer decisão/runtime longo)
 
-## Etapas
+- **`essentia.js` para features perceptuais treinadas** (Danceability, KeyExtractor, RhythmExtractor2013, LoudnessEBUR128). Bloqueio: licença AGPL — confirmar com o usuário antes de adotar; plano B é `meyda` (MIT) com cobertura menor.
+- **Edge function `audio-analyze-full`** com `ffmpeg.wasm` + FFT real rodando a faixa completa no servidor (autoritativo). Os campos `full_analysis_jsonb`/`full_analysis_at`/`analysis_confidence` já existem para receber esse resultado.
+- **Script `scripts/calibrate-browser-vs-librosa.ts`** populando offsets reais em `BROWSER_CALIBRATION` comparando extração browser contra o catálogo `music_reference_tracks` já populado por Librosa.
 
-### 1. Precisão de métricas no browser (`src/lib/audioAnalysis.ts`)
-- Substituir DFT naive por `fft.js` (real FFT O(N log N)) — processa faixa inteira em janelas de 2048 com hop 512.
-- Implementar K-weighting ITU-R BS.1770 (stages: shelving HF + RLB high-pass) antes do LUFS gating.
-- True Peak com oversample 4x via filtro polyphase (4 taps) — corrige inter-sample peaks.
-- BPM: substituir autocorrelação truncada por onset detection (spectral flux) + tempogram.
-- Spectral centroid/rolloff/flatness/bandwidth/ZCR já corretos, apenas rodar em todo o áudio.
+## Como validar agora
 
-### 2. Features perceptuais com `essentia.js`
-- Adicionar dependência `essentia.js` (WASM).
-- Carregar via dynamic import em worker (`src/workers/essentiaExtractor.worker.ts`) para não travar UI.
-- Substituir as fórmulas lineares atuais por:
-  - `Danceability` (algoritmo Essentia treinado)
-  - `KeyExtractor` (Krumhansl) — substitui detecção de tonalidade atual
-  - `RhythmExtractor2013` — BPM robusto
-  - `LoudnessEBUR128` — LUFS de referência
-  - `SpectralContrast`, `MFCC` para preencher campos do catálogo
-- Valence/energy: manter heurística mas calibrar contra `music_reference_tracks` (passo 3).
-
-### 3. Calibração browser ↔ Librosa
-- Script Node em `scripts/calibrate-browser-vs-librosa.ts`: lê N=50 faixas do bucket `creative-assets`, roda extração browser-side (via headless Chromium ou Node + Web Audio polyfill) e compara com colunas já populadas por Librosa em `music_reference_tracks`.
-- Calcula offset médio + desvio padrão por métrica (LUFS, centroid, BPM, energy, danceability, valence).
-- Popula `src/lib/audioAnalysis.ts > BROWSER_CALIBRATION` com offsets reais (hoje zerados).
-- Salva relatório em `docs/calibration-report.md` com gráficos de dispersão (mermaid scatter).
-
-### 4. Extração server-side (autoritativa)
-- Nova edge function `audio-analyze-full` (Deno):
-  - Recebe URL do áudio (já uploadado em `creative-assets`).
-  - Decodifica MP3/WAV/FLAC via `ffmpeg.wasm` (já disponível no runtime Edge).
-  - Roda `essentia.js` WASM no Deno + FFT real na faixa completa.
-  - Retorna mesmas chaves do extractor browser + `confidence: "full"`.
-- `music-dna-analyze` passa a chamar `audio-analyze-full` quando o usuário clica em "Análise completa" (botão novo) ou automaticamente após save.
-- Persiste resultado em nova coluna `music_dna_analyses.full_analysis_jsonb` + `full_analysis_at`.
-
-### 5. Restrições no prompt Gemini (`supabase/functions/music-dna-analyze/index.ts`)
-- Para cada métrica, calcular `confidence` (`high` / `medium` / `low`) baseado em:
-  - Cobertura temporal (< 30s = low)
-  - Variância vs vizinhos do catálogo (outliers = medium)
-  - Origem (browser preview = medium, server full = high, AcousticBrainz = high)
-- Injetar no prompt blocos como:
-  ```
-  <metric name="valence" value="0.42" confidence="low" reason="heurística sem modelo treinado">
-  ```
-- Instruir o modelo: "Não construa narrativas sobre métricas com `confidence=low`. Mencione apenas como 'tendência aparente' ou omita."
-- Adicionar few-shot example mostrando como suavizar afirmações em low confidence.
-
-### 6. UI — surface confidence
-- `ExecutiveSummary` e `TrackVersionCompare` ganham badge "Análise rápida" / "Análise completa".
-- Tooltip por métrica com nível de confiança e fonte (browser/server/AcousticBrainz).
-- Botão "Reanalisar com precisão máxima" dispara `audio-analyze-full`.
-
-## Migration
-
-```sql
-ALTER TABLE music_dna_analyses
-  ADD COLUMN full_analysis_jsonb jsonb,
-  ADD COLUMN full_analysis_at timestamptz,
-  ADD COLUMN analysis_confidence text CHECK (analysis_confidence IN ('preview','full','external'));
-```
-
-## Dependências novas
-
-- `fft.js` (~12KB, MIT)
-- `essentia.js` (~3MB WASM, AGPL/commercial — confirmar licença antes)
-- `ffmpeg.wasm` na edge function (~25MB, LGPL)
-
-## Riscos
-
-- **Bundle size browser**: +3MB de essentia.js. Mitigação: carregar dinamicamente apenas quando o usuário abrir o DNA Musical.
-- **Custo edge function**: ffmpeg.wasm + essentia em Deno consome RAM (~512MB pico). Monitorar timeouts.
-- **Licença essentia.js**: AGPL pode ser bloqueio. Plano B: substituir por `meyda` (MIT, menos completo) + manter heurísticas calibradas.
-
-## Ordem de execução sugerida
-
-1. Migration + coluna de confidence (rápido, desbloqueia o resto)
-2. fft.js + K-weight + True Peak (ganho imediato sem deps pesadas)
-3. Calibração contra Librosa (revela quanto erro ainda resta)
-4. essentia.js no browser (decisão sobre licença antes)
-5. Edge function server-side
-6. Confidence no prompt Gemini + UI
-
-## Fora de escopo
-
-- Treinar modelos próprios de valence/energy.
-- Reanálise retroativa de análises antigas (criar job manual em `/admin` depois).
-- Substituir AcousticBrainz/Deezer lookup (continua sendo o caminho preferencial quando há ISRC).
+1. Reanalisar uma faixa: LUFS deve ficar mais próximo do que ferramentas profissionais (Youlean, ffmpeg loudnorm) reportam — diferença esperada cai de ±1.5 LU para ±0.3 LU.
+2. True Peak deve aparecer ≥ Sample Peak (nunca menor); diferença típica 0.2–1.5 dB em masters muito limitados.
+3. Centroide espectral agora reflete a faixa inteira, não só os primeiros 7s.
+4. Badge "Análise rápida" aparece no resumo executivo.
+5. Diagnóstico Gemini deve evitar afirmar "faixa muito dançante" / "claramente feliz" baseando-se em energy/valence sem qualificadores.
