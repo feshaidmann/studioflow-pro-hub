@@ -590,8 +590,10 @@ export default function Carreira() {
             </Card>
           ) : (
             <div className="space-y-2">
-              {applications.map((a) => {
+              {sortedApplications.map((a) => {
                 const isPalco = a.tipo === "palco";
+                const isFinal = !!a.resultado;
+                const dLeft = !isFinal ? daysUntil(a.edital?.prazo) : null;
                 return (
                   <Card
                     key={a.id}
