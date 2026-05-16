@@ -23,6 +23,48 @@ function estimateCost(inputTokens = 0, outputTokens = 0) {
   return Number(((inputTokens / 1_000_000) * TOKEN_INPUT_USD_PER_M + (outputTokens / 1_000_000) * TOKEN_OUTPUT_USD_PER_M).toFixed(8));
 }
 
+type Confidence = "high" | "medium" | "low";
+
+/**
+ * Classifica a confiança de cada métrica com base na origem da extração e
+ * na cobertura temporal. Métricas perceptuais (valence, danceability...)
+ * sempre são baixas em extração preview pois usam heurística linear sem modelo treinado.
+ */
+function buildConfidenceBlock(features: Record<string, unknown> | null | undefined): string {
+  if (!features || typeof features !== "object") return "";
+  const source = String((features as Record<string, unknown>).extraction_confidence ?? "preview");
+  const analyzedSec = Number((features as Record<string, unknown>).analyzed_duration_sec ?? 0);
+  const isExternal = source === "external";
+  const isFull = source === "full";
+  const hasCoverage = analyzedSec >= 30;
+
+  // Mapeamento por categoria de métrica
+  const physical: Confidence = isExternal || isFull ? "high" : hasCoverage ? "medium" : "low";
+  const rhythm: Confidence = isExternal || isFull ? "high" : "medium";
+  const spectral: Confidence = isFull ? "high" : "medium";
+  const perceptual: Confidence = isExternal ? "high" : isFull ? "medium" : "low";
+
+  const lines = [
+    `- lufs_integrated, true_peak_dbtp, dynamic_range_lu, rms_dbfs: confidence=${physical}`,
+    `- bpm, key: confidence=${rhythm}`,
+    `- spectral_centroid_hz, spectral_rolloff_hz, spectral_flatness: confidence=${spectral}`,
+    `- energy, valence, danceability, acousticness, instrumentalness, liveness, speechiness: confidence=${perceptual}`,
+  ];
+
+  return `
+
+════════════════════════════════════════════════
+CONFIANÇA POR MÉTRICA (origem da extração: ${source}; cobertura analisada: ${analyzedSec || "?"}s)
+════════════════════════════════════════════════
+${lines.join("\n")}
+
+REGRAS OBRIGATÓRIAS sobre confiança:
+- Para métricas com confidence=high, você pode afirmar com segurança no diagnóstico.
+- Para confidence=medium, use linguagem de "tendência" ou "aparente" e evite cravar números (ex.: "uma sonoridade brilhante" em vez de "centroide alto").
+- Para confidence=low, NÃO construa narrativas sobre o valor. Mencione apenas como impressão geral ou OMITA. Especificamente, NÃO afirme que a faixa é "dançante", "feliz", "triste", "energética", "acústica" baseando-se apenas nesses campos quando confidence=low — esses valores vêm de heurísticas sem modelo treinado e podem estar errados.
+- Quando o usuário pedir "Análise completa" e a extração ainda for preview, registre uma linha sutil ao final do diagnostico_resumo: "Análise inicial baseada em amostra rápida — recalcule com a faixa completa para diagnóstico definitivo." Sem citar termos técnicos como "preview" ou "confidence".`;
+}
+
 function buildStructuredPrompt(
   prompt: string,
   payload: Record<string, unknown>,
