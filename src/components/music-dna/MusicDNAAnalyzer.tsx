@@ -1217,6 +1217,9 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
     }
   };
 
+  const { send: sendSignal } = useAcceptanceSignal();
+  const summaryVariant = (diagnosis.summaryVariant === "B" ? "B" : "A") as "A" | "B";
+
   const handleAddAllSteps = async () => {
     const steps = proximos_passos ?? [];
     let count = 0;
@@ -1227,7 +1230,10 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
       if (task) { setAddedItems(prev => new Set(prev).add(key)); count++; }
     }
     setAllStepsAdded(true);
-    if (count > 0) toast.success(`${count} ações adicionadas ao checklist`);
+    if (count > 0) {
+      toast.success(`${count} ações adicionadas ao checklist`);
+      sendSignal({ analysisId: savedAnalysisId, variant: summaryVariant, signal: "task_created" });
+    }
   };
 
   // Sticky nav (~40px) + folga visual; evita que o título da seção fique escondido atrás da barra
