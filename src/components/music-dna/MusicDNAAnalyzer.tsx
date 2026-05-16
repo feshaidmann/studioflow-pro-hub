@@ -1953,6 +1953,7 @@ export function MusicDNAAnalyzer() {
             isSaved={isSaved}
             isSaving={isSaving}
             savedAnalysisId={savedAnalysisId}
+            onEnsureSaved={ensureSaved}
             projects={projects}
           />
         </>
