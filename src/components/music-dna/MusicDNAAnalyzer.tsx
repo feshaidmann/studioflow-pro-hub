@@ -1165,7 +1165,7 @@ function LoadingView({ trackName, logs, progress }: {
 
 // ── RESULT VIEW ──────────────────────────────────────────────────────────────
 
-function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isSaving, savedAnalysisId, projects }: {
+function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isSaving, savedAnalysisId, onEnsureSaved, projects }: {
   input: TrackInput | { name: string; notes?: string; references: string[]; projectId?: string };
   diagnosis: DiagnosisResult;
   benchmark?: MusicDnaBenchmark;
@@ -1174,6 +1174,7 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
   onSave?: () => void;
   isSaved?: boolean;
   isSaving?: boolean;
+  onEnsureSaved?: () => Promise<string | undefined>;
   projects?: Array<{ id: string; name: string }>;
 }) {
   const [feedbackOpen, setFeedbackOpen] = useState(false);
