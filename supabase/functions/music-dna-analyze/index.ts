@@ -122,12 +122,14 @@ Siga as instruções já dadas: 4–6 frases acessíveis, foco em SONORIDADE (pe
 e em INSTRUMENTOS PROTAGONISTAS (quem conduz, quem sustenta, papel do vocal),
 enquadrando no que o Spotify valoriza para destacar uma faixa.`;
 
+  const confidenceBlock = buildConfidenceBlock(payload.features as Record<string, unknown> | null | undefined);
+
   return `${prompt}${variantBlock}
 
 ════════════════════════════════════════════════
 ATRIBUTOS ESTILO SPOTIFY — FONTE CONSOLIDADA
 ════════════════════════════════════════════════
-${features}
+${features}${confidenceBlock}
 
 Benchmark estatístico do gênero (médias):
 ${benchmarkCtx}
