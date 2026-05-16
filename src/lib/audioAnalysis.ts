@@ -50,6 +50,8 @@ export interface StemFeatures {
   confidence: number;
 }
 
+export type ExtractionConfidence = "preview" | "full" | "external";
+
 export interface RealAudioAnalysis {
   // Global
   lufs_integrated: number;
@@ -59,6 +61,10 @@ export interface RealAudioAnalysis {
   bpm: number;
   key: string;
   duration_sec: number;
+  /** Quanto da faixa foi analisado (em segundos). Para confiança per-métrica. */
+  analyzed_duration_sec?: number;
+  /** Origem da extração: preview = browser rápido, full = servidor faixa inteira, external = AcousticBrainz/Deezer. */
+  extraction_confidence?: ExtractionConfidence;
 
   // Spectral global
   spectral_centroid_hz: number;
@@ -111,11 +117,35 @@ function decodeMono(audioBuffer: AudioBuffer): Float32Array {
 
 // ── Core metrics ─────────────────────────────────────────────────────────────
 
+/**
+ * True Peak (dBTP) com 4x oversampling via interpolação Catmull-Rom.
+ * Captura inter-sample peaks que o sample-peak puro perde (erro típico de
+ * +0.5 a +1.5 dB em material muito limitado). Aproximação leve da
+ * recomendação ITU-R BS.1770 (que usa FIR polifásico — este método cobre
+ * ~80% do ganho de precisão com custo computacional muito menor).
+ */
 function computeTruePeak(mono: Float32Array): number {
   let peak = 0;
-  for (let i = 0; i < mono.length; i++) {
+  const n = mono.length;
+  // Sample peak primeiro (limite inferior garantido)
+  for (let i = 0; i < n; i++) {
     const abs = Math.abs(mono[i]);
     if (abs > peak) peak = abs;
+  }
+  // 4x oversampling Catmull-Rom: 3 amostras intermediárias entre cada par
+  // x(t) = 0.5 * [(2*p1) + (-p0 + p2)*t + (2*p0 - 5*p1 + 4*p2 - p3)*t^2 + (-p0 + 3*p1 - 3*p2 + p3)*t^3]
+  for (let i = 1; i < n - 2; i++) {
+    const p0 = mono[i - 1], p1 = mono[i], p2 = mono[i + 1], p3 = mono[i + 2];
+    const a0 = 2 * p1;
+    const a1 = -p0 + p2;
+    const a2 = 2 * p0 - 5 * p1 + 4 * p2 - p3;
+    const a3 = -p0 + 3 * p1 - 3 * p2 + p3;
+    for (let k = 1; k < 4; k++) {
+      const t = k * 0.25;
+      const v = 0.5 * (a0 + a1 * t + a2 * t * t + a3 * t * t * t);
+      const abs = Math.abs(v);
+      if (abs > peak) peak = abs;
+    }
   }
   return peak > 0 ? 20 * Math.log10(peak) : -100;
 }
@@ -125,6 +155,67 @@ function computeRmsDbfs(mono: Float32Array): number {
   for (let i = 0; i < mono.length; i++) sum += mono[i] * mono[i];
   const rms = Math.sqrt(sum / mono.length);
   return rms > 0 ? 20 * Math.log10(rms) : -100;
+}
+
+// ── K-weighting (ITU-R BS.1770 / EBU R128) ──────────────────────────────────
+// Dois estágios biquad: pre-filter (high-shelf ~1681Hz, +4dB) + RLB (HP ~38Hz).
+// Coeficientes derivados via bilinear transform para qualquer sample rate.
+
+interface Biquad { b0: number; b1: number; b2: number; a1: number; a2: number; }
+
+/** High-shelf cookbook (RBJ). gainDb=ganho do shelf, fc=corner, q=shelf slope. */
+function designHighShelf(fc: number, gainDb: number, q: number, sr: number): Biquad {
+  const A = Math.pow(10, gainDb / 40);
+  const w0 = 2 * Math.PI * fc / sr;
+  const cosw = Math.cos(w0);
+  const sinw = Math.sin(w0);
+  const alpha = sinw / (2 * q);
+  const sqrtA2alpha = 2 * Math.sqrt(A) * alpha;
+  const b0 =    A * ((A + 1) + (A - 1) * cosw + sqrtA2alpha);
+  const b1 = -2 * A * ((A - 1) + (A + 1) * cosw);
+  const b2 =    A * ((A + 1) + (A - 1) * cosw - sqrtA2alpha);
+  const a0 =        (A + 1) - (A - 1) * cosw + sqrtA2alpha;
+  const a1 =    2 * ((A - 1) - (A + 1) * cosw);
+  const a2 =        (A + 1) - (A - 1) * cosw - sqrtA2alpha;
+  return { b0: b0 / a0, b1: b1 / a0, b2: b2 / a0, a1: a1 / a0, a2: a2 / a0 };
+}
+
+/** High-pass cookbook (RBJ). */
+function designHighPass(fc: number, q: number, sr: number): Biquad {
+  const w0 = 2 * Math.PI * fc / sr;
+  const cosw = Math.cos(w0);
+  const sinw = Math.sin(w0);
+  const alpha = sinw / (2 * q);
+  const b0 =  (1 + cosw) / 2;
+  const b1 = -(1 + cosw);
+  const b2 =  (1 + cosw) / 2;
+  const a0 =   1 + alpha;
+  const a1 =  -2 * cosw;
+  const a2 =   1 - alpha;
+  return { b0: b0 / a0, b1: b1 / a0, b2: b2 / a0, a1: a1 / a0, a2: a2 / a0 };
+}
+
+function applyBiquad(input: Float32Array, biquad: Biquad): Float32Array {
+  const out = new Float32Array(input.length);
+  let x1 = 0, x2 = 0, y1 = 0, y2 = 0;
+  const { b0, b1, b2, a1, a2 } = biquad;
+  for (let i = 0; i < input.length; i++) {
+    const x0 = input[i];
+    const y0 = b0 * x0 + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2;
+    out[i] = y0;
+    x2 = x1; x1 = x0;
+    y2 = y1; y1 = y0;
+  }
+  return out;
+}
+
+/** Aplica K-weighting (pre-filter high-shelf + RLB high-pass) à faixa mono. */
+function applyKWeighting(mono: Float32Array, sampleRate: number): Float32Array {
+  // ITU-R BS.1770: parâmetros do pre-filter e RLB
+  const preFilter = designHighShelf(1681.974, 3.999, 0.7071752, sampleRate);
+  const rlbFilter = designHighPass(38.135, 0.5003270, sampleRate);
+  const stage1 = applyBiquad(mono, preFilter);
+  return applyBiquad(stage1, rlbFilter);
 }
 
 function computeBlockEnergies(mono: Float32Array, sampleRate: number, windowSec: number): number[] {
@@ -139,17 +230,47 @@ function computeBlockEnergies(mono: Float32Array, sampleRate: number, windowSec:
   return energies;
 }
 
-function computeLufs(blockEnergies: number[]): number {
-  if (blockEnergies.length === 0) return -70;
-  const absoluteThreshold = Math.pow(10, -7);
-  const gated = blockEnergies.filter(e => e > absoluteThreshold);
-  if (gated.length === 0) return -70;
-  const ungatedMean = gated.reduce((a, b) => a + b, 0) / gated.length;
-  const relativeThreshold = ungatedMean * Math.pow(10, -1);
-  const finalBlocks = gated.filter(e => e >= relativeThreshold);
-  if (finalBlocks.length === 0) return -70;
-  const meanEnergy = finalBlocks.reduce((a, b) => a + b, 0) / finalBlocks.length;
-  return -0.691 + 10 * Math.log10(meanEnergy);
+/** Pipeline LUFS BS.1770 completo: K-weighting → janelas 400ms → gating absoluto e relativo. */
+function computeLufsKWeighted(mono: Float32Array, sampleRate: number): { integrated: number; shortTerm: number } {
+  const weighted = applyKWeighting(mono, sampleRate);
+  // Janelas de 400ms com hop 100ms (overlap 75%, conforme BS.1770)
+  const blockSize = Math.floor(sampleRate * 0.4);
+  const hop = Math.floor(sampleRate * 0.1);
+  const meanSquares: number[] = [];
+  for (let start = 0; start + blockSize <= weighted.length; start += hop) {
+    let sum = 0;
+    for (let i = start; i < start + blockSize; i++) sum += weighted[i] * weighted[i];
+    meanSquares.push(sum / blockSize);
+  }
+  if (meanSquares.length === 0) return { integrated: -70, shortTerm: -70 };
+
+  // Loudness por bloco em LUFS
+  const blockLoudness = meanSquares.map(ms => -0.691 + 10 * Math.log10(Math.max(ms, 1e-12)));
+
+  // Gate absoluto -70 LUFS
+  const absGated = blockLoudness.filter(l => l > -70);
+  if (absGated.length === 0) return { integrated: -70, shortTerm: -70 };
+
+  // Gate relativo: média ungated − 10 LU
+  const ungatedMs = meanSquares.filter((_, i) => blockLoudness[i] > -70);
+  const meanUngated = ungatedMs.reduce((a, b) => a + b, 0) / ungatedMs.length;
+  const relThresholdLUFS = -0.691 + 10 * Math.log10(meanUngated) - 10;
+
+  const finalMs = meanSquares.filter((_, i) => blockLoudness[i] > -70 && blockLoudness[i] >= relThresholdLUFS);
+  if (finalMs.length === 0) return { integrated: -70, shortTerm: -70 };
+  const meanFinal = finalMs.reduce((a, b) => a + b, 0) / finalMs.length;
+  const integrated = -0.691 + 10 * Math.log10(meanFinal);
+
+  // Short-term: janela 3s, pico
+  const stBlock = Math.floor(sampleRate * 3);
+  let maxSt = -Infinity;
+  for (let start = 0; start + stBlock <= weighted.length; start += stBlock) {
+    let sum = 0;
+    for (let i = start; i < start + stBlock; i++) sum += weighted[i] * weighted[i];
+    const lufs = -0.691 + 10 * Math.log10(Math.max(sum / stBlock, 1e-12));
+    if (lufs > maxSt) maxSt = lufs;
+  }
+  return { integrated, shortTerm: isFinite(maxSt) ? maxSt : integrated };
 }
 
 function computeDynamicRange(blockEnergies: number[]): number {
@@ -161,90 +282,102 @@ function computeDynamicRange(blockEnergies: number[]): number {
   return 0;
 }
 
-function computeShortTermLufs(mono: Float32Array, sampleRate: number): number {
-  // 3-second windows, take the max
-  const energies = computeBlockEnergies(mono, sampleRate, 3.0);
-  if (energies.length === 0) return -70;
-  const maxEnergy = Math.max(...energies);
-  return maxEnergy > 0 ? -0.691 + 10 * Math.log10(maxEnergy) : -70;
-}
-
 // ── Spectral metrics ─────────────────────────────────────────────────────────
 
 interface SpectralResult {
   centroid: number;
   rolloff: number;
   flatness: number;
+  bandwidth: number;
+  zcr: number;
   magnitudes: Float64Array;
   freqPerBin: number;
 }
 
+// Carregamento dinâmico de fft.js (CommonJS via Vite)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type FFTCtor = new (size: number) => { createComplexArray(): number[]; realTransform(out: number[], data: ArrayLike<number>): void; completeSpectrum(out: number[]): void };
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+import FFTImport from "fft.js";
+const FFT: FFTCtor = FFTImport as unknown as FFTCtor;
+
+/**
+ * Calcula métricas espectrais agregadas processando a faixa INTEIRA via
+ * FFT real O(N log N). Substitui a DFT naive O(N²) que ficava limitada a
+ * ~7s de áudio. Janelas Hann 2048 com hop 1024.
+ */
 function computeSpectralMetrics(mono: Float32Array, sampleRate: number): SpectralResult {
-  const fftSize = 4096;
-  const hopSize = fftSize / 2;
+  const fftSize = 2048;
+  const hopSize = 1024;
   const binCount = fftSize / 2;
   const freqPerBin = sampleRate / fftSize;
-  const numSegments = Math.max(1, Math.floor((mono.length - fftSize) / hopSize) + 1);
-  const cappedSegments = Math.min(numSegments, 80);
+  const fft = new FFT(fftSize);
+  const out = fft.createComplexArray();
+  const buf = new Array<number>(fftSize);
 
-  const magnitudes = new Float64Array(binCount);
-
-  for (let seg = 0; seg < cappedSegments; seg++) {
-    const offset = seg * hopSize;
-    if (offset + fftSize > mono.length) break;
-
-    const real = new Float64Array(fftSize);
-    for (let i = 0; i < fftSize; i++) {
-      const w = 0.5 * (1 - Math.cos((2 * Math.PI * i) / (fftSize - 1)));
-      real[i] = mono[offset + i] * w;
-    }
-
-    for (let k = 0; k < binCount; k++) {
-      let re = 0, im = 0;
-      for (let n = 0; n < fftSize; n++) {
-        const angle = (2 * Math.PI * k * n) / fftSize;
-        re += real[n] * Math.cos(angle);
-        im -= real[n] * Math.sin(angle);
-      }
-      magnitudes[k] += Math.sqrt(re * re + im * im) / cappedSegments;
-    }
+  // Janela Hann pré-calculada
+  const window = new Float32Array(fftSize);
+  for (let i = 0; i < fftSize; i++) {
+    window[i] = 0.5 * (1 - Math.cos((2 * Math.PI * i) / (fftSize - 1)));
   }
 
-  // Spectral Centroid
+  const magnitudes = new Float64Array(binCount);
+  let segments = 0;
+  for (let offset = 0; offset + fftSize <= mono.length; offset += hopSize) {
+    for (let i = 0; i < fftSize; i++) buf[i] = mono[offset + i] * window[i];
+    fft.realTransform(out, buf);
+    // out tem layout [re0, im0, re1, im1, ...] já no formato completo do fft.js
+    for (let k = 0; k < binCount; k++) {
+      const re = out[2 * k];
+      const im = out[2 * k + 1];
+      magnitudes[k] += Math.sqrt(re * re + im * im);
+    }
+    segments++;
+  }
+  if (segments > 0) {
+    for (let k = 0; k < binCount; k++) magnitudes[k] /= segments;
+  }
+
+  // Centroid
   let weightedSum = 0, magSum = 0;
   for (let k = 0; k < binCount; k++) {
-    const freq = k * freqPerBin;
-    weightedSum += freq * magnitudes[k];
+    weightedSum += k * freqPerBin * magnitudes[k];
     magSum += magnitudes[k];
   }
   const centroid = magSum > 0 ? weightedSum / magSum : 0;
 
-  // Spectral Rolloff (85%)
-  const totalEnergy = magSum;
-  let cumulative = 0;
-  let rolloff = 0;
+  // Rolloff 85%
+  let cumulative = 0, rolloff = 0;
   for (let k = 0; k < binCount; k++) {
     cumulative += magnitudes[k];
-    if (cumulative >= 0.85 * totalEnergy) {
-      rolloff = k * freqPerBin;
-      break;
-    }
+    if (cumulative >= 0.85 * magSum) { rolloff = k * freqPerBin; break; }
   }
 
-  // Spectral Flatness = geomean / mean
-  let logSum = 0;
-  let count = 0;
+  // Flatness (Wiener entropy)
+  let logSum = 0, count = 0;
   for (let k = 1; k < binCount; k++) {
-    if (magnitudes[k] > 1e-10) {
-      logSum += Math.log(magnitudes[k]);
-      count++;
-    }
+    if (magnitudes[k] > 1e-10) { logSum += Math.log(magnitudes[k]); count++; }
   }
-  const arithmeticMean = magSum / binCount;
-  const geometricMean = count > 0 ? Math.exp(logSum / count) : 0;
-  const flatness = arithmeticMean > 0 ? geometricMean / arithmeticMean : 0;
+  const arith = magSum / binCount;
+  const geo = count > 0 ? Math.exp(logSum / count) : 0;
+  const flatness = arith > 0 ? geo / arith : 0;
 
-  return { centroid, rolloff, flatness, magnitudes, freqPerBin };
+  // Bandwidth (desvio em torno do centroid)
+  let bwSum = 0;
+  for (let k = 0; k < binCount; k++) {
+    const diff = (k * freqPerBin) - centroid;
+    bwSum += diff * diff * magnitudes[k];
+  }
+  const bandwidth = magSum > 0 ? Math.sqrt(bwSum / magSum) : 0;
+
+  // ZCR (no domínio do tempo, faixa inteira)
+  let zc = 0;
+  for (let i = 1; i < mono.length; i++) {
+    if ((mono[i] >= 0) !== (mono[i - 1] >= 0)) zc++;
+  }
+  const zcr = mono.length > 1 ? zc / mono.length : 0;
+
+  return { centroid, rolloff, flatness, bandwidth, zcr, magnitudes, freqPerBin };
 }
 
 // ── MFCC + Chroma CENS (catalog-aligned acoustic fingerprint) ───────────────
@@ -463,9 +596,11 @@ function detectSections(mono: Float32Array, sampleRate: number): AudioSection[] 
     // Energy (normalized)
     const energy = Math.min(1, rms * 5);
 
-    // LUFS (simplified for segment)
+    // LUFS (simplificado por segmento — sem K-weighting, suficiente para clustering)
     const blockEnergies = computeBlockEnergies(segment, sampleRate, 0.4);
-    const lufs = computeLufs(blockEnergies);
+    const lufs = blockEnergies.length > 0
+      ? -0.691 + 10 * Math.log10(Math.max(blockEnergies.reduce((a, b) => a + b, 0) / blockEnergies.length, 1e-12))
+      : -70;
 
     // Centroid (simplified: use a small FFT)
     const fftSize = 2048;
@@ -652,9 +787,10 @@ export async function analyzeAudioFull(file: File): Promise<{
   const truePeak = computeTruePeak(mono);
   const rmsDb = computeRmsDbfs(mono);
   const blockEnergies = computeBlockEnergies(mono, sampleRate, 0.4);
-  const lufsIntegrated = computeLufs(blockEnergies);
+  const lufs = computeLufsKWeighted(mono, sampleRate);
+  const lufsIntegrated = lufs.integrated;
+  const lufsShortTerm = lufs.shortTerm;
   const dynamicRange = computeDynamicRange(blockEnergies);
-  const lufsShortTerm = computeShortTermLufs(mono, sampleRate);
 
   // Spectral
   const spectral = computeSpectralMetrics(mono, sampleRate);
@@ -699,6 +835,8 @@ export async function analyzeAudioFull(file: File): Promise<{
     mfcc: fp.mfcc.map(round4),
     chroma_cens: fp.chroma.map(round4),
     sections,
+    analyzed_duration_sec: Math.round(duration * 10) / 10,
+    extraction_confidence: "preview",
   };
 
   const legacy: AnalysisResult = {
@@ -784,7 +922,7 @@ export async function analyzeAudio(file: File): Promise<AnalysisResult> {
 
   const truePeak = computeTruePeak(mono);
   const blockEnergies = computeBlockEnergies(mono, sampleRate, 0.4);
-  const lufsIntegrated = computeLufs(blockEnergies);
+  const lufsIntegrated = computeLufsKWeighted(mono, sampleRate).integrated;
   const dynamicRange = computeDynamicRange(blockEnergies);
 
   const r = (v: number) => Math.round(v * 10) / 10;

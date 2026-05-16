@@ -822,6 +822,7 @@ export type Database = {
       music_dna_analyses: {
         Row: {
           acousticness: number | null
+          analysis_confidence: string | null
           created_at: string
           danceability: number | null
           deezer_id: number | null
@@ -830,6 +831,8 @@ export type Database = {
           dynamic_range_db: number | null
           energy: number | null
           fonte_analise: string | null
+          full_analysis_at: string | null
+          full_analysis_jsonb: Json | null
           genre: string
           id: string
           input_metadata: Json
@@ -860,6 +863,7 @@ export type Database = {
         }
         Insert: {
           acousticness?: number | null
+          analysis_confidence?: string | null
           created_at?: string
           danceability?: number | null
           deezer_id?: number | null
@@ -868,6 +872,8 @@ export type Database = {
           dynamic_range_db?: number | null
           energy?: number | null
           fonte_analise?: string | null
+          full_analysis_at?: string | null
+          full_analysis_jsonb?: Json | null
           genre?: string
           id?: string
           input_metadata?: Json
@@ -898,6 +904,7 @@ export type Database = {
         }
         Update: {
           acousticness?: number | null
+          analysis_confidence?: string | null
           created_at?: string
           danceability?: number | null
           deezer_id?: number | null
@@ -906,6 +913,8 @@ export type Database = {
           dynamic_range_db?: number | null
           energy?: number | null
           fonte_analise?: string | null
+          full_analysis_at?: string | null
+          full_analysis_jsonb?: Json | null
           genre?: string
           id?: string
           input_metadata?: Json
