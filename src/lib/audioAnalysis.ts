@@ -596,9 +596,11 @@ function detectSections(mono: Float32Array, sampleRate: number): AudioSection[] 
     // Energy (normalized)
     const energy = Math.min(1, rms * 5);
 
-    // LUFS (simplified for segment)
+    // LUFS (simplificado por segmento — sem K-weighting, suficiente para clustering)
     const blockEnergies = computeBlockEnergies(segment, sampleRate, 0.4);
-    const lufs = computeLufs(blockEnergies);
+    const lufs = blockEnergies.length > 0
+      ? -0.691 + 10 * Math.log10(Math.max(blockEnergies.reduce((a, b) => a + b, 0) / blockEnergies.length, 1e-12))
+      : -70;
 
     // Centroid (simplified: use a small FFT)
     const fftSize = 2048;
@@ -785,9 +787,10 @@ export async function analyzeAudioFull(file: File): Promise<{
   const truePeak = computeTruePeak(mono);
   const rmsDb = computeRmsDbfs(mono);
   const blockEnergies = computeBlockEnergies(mono, sampleRate, 0.4);
-  const lufsIntegrated = computeLufs(blockEnergies);
+  const lufs = computeLufsKWeighted(mono, sampleRate);
+  const lufsIntegrated = lufs.integrated;
+  const lufsShortTerm = lufs.shortTerm;
   const dynamicRange = computeDynamicRange(blockEnergies);
-  const lufsShortTerm = computeShortTermLufs(mono, sampleRate);
 
   // Spectral
   const spectral = computeSpectralMetrics(mono, sampleRate);
@@ -917,7 +920,7 @@ export async function analyzeAudio(file: File): Promise<AnalysisResult> {
 
   const truePeak = computeTruePeak(mono);
   const blockEnergies = computeBlockEnergies(mono, sampleRate, 0.4);
-  const lufsIntegrated = computeLufs(blockEnergies);
+  const lufsIntegrated = computeLufsKWeighted(mono, sampleRate).integrated;
   const dynamicRange = computeDynamicRange(blockEnergies);
 
   const r = (v: number) => Math.round(v * 10) / 10;
