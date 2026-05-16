@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Sparkles, Copy, Check, Save, Loader2, FileText, ClipboardList, RefreshCw, BookmarkPlus, ChevronRight, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -80,11 +80,24 @@ export default function EditalInscricao() {
     })();
   }, [id, user, loadRascunho]);
 
-  // Extract fields
+  // Extract fields (manual trigger — usado como fallback no card de setup)
   const handleExtract = () => {
     if (!edital) return;
     extractFields(edital.link || undefined, edital.titulo);
   };
+
+  // Auto-extração: dispara uma vez assim que o edital carrega e não houver rascunho
+  // nem campos extraídos. Evita a tela vazia em que o usuário precisava clicar
+  // "Extrair campos" para começar.
+  const autoExtractedRef = useRef(false);
+  useEffect(() => {
+    if (!edital || extracting || extractedFields || autoExtractedRef.current) return;
+    // Se já existe rascunho salvo, prioriza ele (o usuário pode disparar manualmente
+    // depois pelo botão "Extrair novamente" caso queira refazer).
+    if (rascunhoId) return;
+    autoExtractedRef.current = true;
+    extractFields(edital.link || undefined, edital.titulo);
+  }, [edital, extracting, extractedFields, rascunhoId, extractFields]);
 
   // Pre-fill simple fields from profile — more aggressive matching
   const preFillProfile = useCallback(() => {
@@ -338,15 +351,16 @@ export default function EditalInscricao() {
         </Card>
       )}
 
-      {/* Step 0: Setup */}
-      {!extractedFields && !extracting && (
+      {/* Step 0: fallback — só aparece se a auto-extração falhou (toast de erro foi
+          mostrado pelo hook). Permite tentar de novo e escolher um projeto a vincular. */}
+      {!extractedFields && !extracting && autoExtractedRef.current && (
         <Card>
           <CardContent className="pt-5 space-y-4">
             <div className="flex flex-col items-center text-center py-6">
               <ClipboardList className="h-12 w-12 text-muted-foreground/40 mb-4" />
-              <h2 className="text-lg font-medium mb-2">Preparar inscrição</h2>
+              <h2 className="text-lg font-medium mb-2">Não conseguimos ler o edital automaticamente</h2>
               <p className="text-sm text-muted-foreground max-w-md mb-6">
-                A IA vai analisar o edital e extrair os campos obrigatórios do formulário de inscrição para você preencher aqui.
+                O link pode estar fora do ar ou o regulamento exige login. Tente novamente — ou abra o oficial e cole o texto manualmente nos campos.
               </p>
 
               <div className="w-full max-w-sm space-y-3">
@@ -363,16 +377,23 @@ export default function EditalInscricao() {
                   </Select>
                 </div>
                 <Button className="w-full" onClick={handleExtract}>
-                  <Sparkles className="h-4 w-4 mr-1.5" />
-                  Extrair campos do edital
+                  <RefreshCw className="h-4 w-4 mr-1.5" />
+                  Tentar novamente
                 </Button>
+                {edital.link && (
+                  <Button variant="outline" className="w-full" asChild>
+                    <a href={edital.link} target="_blank" rel="noopener noreferrer">
+                      Abrir edital oficial
+                    </a>
+                  </Button>
+                )}
               </div>
             </div>
           </CardContent>
         </Card>
       )}
 
-      {/* Loading */}
+      {/* Loading — primeira extração ou retry */}
       {extracting && (
         <Card>
           <CardContent className="py-12 flex flex-col items-center text-center">

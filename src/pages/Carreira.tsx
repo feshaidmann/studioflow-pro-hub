@@ -301,9 +301,18 @@ export default function Carreira() {
         opportunity_title: op.titulo,
         origem: op.origem,
       });
-      toast.success(op.tipo === "edital" ? "Candidatura iniciada" : "Interesse registrado", {
-        action: { label: "Ver pipeline", onClick: () => setTab("inscricoes") },
-      });
+      if (resolved.tipo === "fomento") {
+        // Edital → leva direto para o assistente de inscrição (CTA "Iniciar candidatura"
+        // promete isso). O toast aqui é apenas confirmação; o usuário já está no destino.
+        setDetailOp(null);
+        toast.success("Candidatura iniciada");
+        navigate(`/editais/inscricao/${resolved.id}`);
+      } else {
+        // Palco: ainda não há fluxo de proposta dedicado — segue mostrando o pipeline.
+        toast.success("Interesse registrado", {
+          action: { label: "Ver pipeline", onClick: () => setTab("inscricoes") },
+        });
+      }
     } catch {
       // toast tratado pelo hook
     } finally {
