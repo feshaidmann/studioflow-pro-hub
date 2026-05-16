@@ -2541,6 +2541,18 @@ export type Database = {
         }[]
       }
       get_auth_email: { Args: never; Returns: string }
+      get_extract_metrics: {
+        Args: { p_days?: number }
+        Returns: {
+          avg_attempts_to_success: number
+          failure_rate: number
+          failures_by_cause: Json
+          retry_rate: number
+          total_attempts: number
+          total_failed: number
+          total_success: number
+        }[]
+      }
       get_file_download_url: { Args: { p_file_id: string }; Returns: string }
       get_genre_reference_examples: {
         Args: { p_genero: string; p_limit?: number }
