@@ -632,8 +632,21 @@ export default function Carreira() {
                           {a.edital?.prazo && (
                             <span className="text-[11px] text-muted-foreground inline-flex items-center gap-1">
                               <Calendar className="h-3 w-3" />
-                              {a.edital.prazo}
+                              {formatBrDate(a.edital.prazo) || a.edital.prazo}
                             </span>
+                          )}
+                          {dLeft !== null && (
+                            dLeft < 0 ? (
+                              <Badge variant="outline" className="text-[10px] bg-destructive/15 text-destructive border-destructive/40">
+                                Vencido há {Math.abs(dLeft)}d
+                              </Badge>
+                            ) : dLeft <= 7 ? (
+                              <Badge variant="outline" className="text-[10px] bg-warning/15 text-warning-foreground border-warning/40">
+                                {dLeft === 0 ? "Vence hoje" : `Faltam ${dLeft}d`}
+                              </Badge>
+                            ) : dLeft <= 30 ? (
+                              <span className="text-[11px] text-muted-foreground">Faltam {dLeft}d</span>
+                            ) : null
                           )}
                           {a.edital?.link_status === "broken" ? (
                             <Button
