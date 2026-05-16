@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import type { DiagnosisResult } from "@/hooks/useMusicDNA";
 import { musicDnaColumnsFromDiagnosis } from "@/types/musicDna";
+import { ensureTrackVersion } from "@/hooks/useTrackVersions";
 
 export interface SavedAnalysis {
   id: string;
@@ -18,6 +19,10 @@ export interface SavedAnalysis {
   };
   diagnosis: DiagnosisResult;
   created_at: string;
+  track_version_id?: string | null;
+  version_number?: number | null;
+  version_label?: string | null;
+  summary_variant?: string | null;
 }
 
 const SESSION_KEY = "music-dna-last-analysis";
@@ -66,7 +71,16 @@ export function useSavedAnalyses() {
     }: {
       input: { name: string; notes?: string; references: string[]; projectId?: string };
       diagnosis: DiagnosisResult;
-    }): Promise<{ id: string }> => {
+    }): Promise<{ id: string; trackVersionId: string; versionNumber: number; summaryVariant: "A" | "B" }> => {
+      // Agrupa por slug do nome → versão Nx automática.
+      const { id: trackVersionId, nextVersionNumber } = await ensureTrackVersion({
+        userId: user!.id,
+        trackName: input.name,
+        projectId: input.projectId ?? null,
+      });
+
+      const summaryVariant = (diagnosis.summaryVariant === "B" ? "B" : "A") as "A" | "B";
+
       const { data, error } = await supabase
         .from("music_dna_analyses")
         .insert({
@@ -76,21 +90,46 @@ export function useSavedAnalyses() {
           project_id: input.projectId || null,
           input_metadata: input as any,
           diagnosis: diagnosis as any,
+          track_version_id: trackVersionId,
+          version_number: nextVersionNumber,
+          version_label: `v${nextVersionNumber}`,
+          summary_variant: summaryVariant,
+          summary_variant_assigned_at: new Date().toISOString(),
+          legacy: false,
           ...musicDnaColumnsFromDiagnosis(diagnosis),
         } as any)
         .select("id")
         .single();
       if (error) throw error;
+
+      // Sinal implícito de aceitação: "saved" (idempotente via UNIQUE)
+      await supabase
+        .from("diagnosis_acceptance_signals")
+        .insert({
+          user_id: user!.id,
+          analysis_id: (data as any).id,
+          summary_variant: summaryVariant,
+          signal_type: "saved",
+        })
+        .then(() => undefined)
+        .catch(() => undefined);
+
       if (diagnosis.genero_classificado) {
         Promise.resolve(supabase.rpc("recalcular_benchmark_genero" as never, { p_genero: diagnosis.genero_classificado } as never))
           .then(() => queryClient.invalidateQueries({ queryKey: ["music-dna-benchmarks"] }))
           .catch(() => undefined);
       }
-      return { id: data.id as string };
+      return {
+        id: (data as any).id as string,
+        trackVersionId,
+        versionNumber: nextVersionNumber,
+        summaryVariant,
+      };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["music-dna-analyses"] });
       queryClient.invalidateQueries({ queryKey: ["music-dna-benchmarks"] });
+      queryClient.invalidateQueries({ queryKey: ["track-versions"] });
       toast.success("Análise salva com sucesso");
     },
     onError: (err: Error) => {
@@ -105,6 +144,7 @@ export function useSavedAnalyses() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["music-dna-analyses"] });
+      queryClient.invalidateQueries({ queryKey: ["track-versions"] });
       toast.success("Análise removida");
     },
   });
