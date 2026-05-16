@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbSeparator, BreadcrumbPage } from "@/components/ui/breadcrumb";
 import { toast } from "sonner";
-import { useRascunhoEdital, type EditalField } from "@/hooks/useRascunhoEdital";
+import { useRascunhoEdital, extractCauseLabel, type EditalField } from "@/hooks/useRascunhoEdital";
 import { useProjects } from "@/contexts/ProjectContext";
 import { useProfile } from "@/contexts/ProfileContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -37,7 +37,7 @@ export default function EditalInscricao() {
   const { t } = useLanguage();
   const { projects } = useProjects();
   const { profile } = useProfile();
-  const { extracting, extractedFields, extractFields, saving, saveRascunho, loadRascunho } = useRascunhoEdital();
+  const { extracting, extractedFields, extractFields, saving, saveRascunho, loadRascunho, lastError } = useRascunhoEdital();
 
   const [edital, setEdital] = useState<EditalInfo | null>(null);
   const [loadingEdital, setLoadingEdital] = useState(true);
@@ -83,7 +83,7 @@ export default function EditalInscricao() {
   // Extract fields (manual trigger — usado como fallback no card de setup)
   const handleExtract = () => {
     if (!edital) return;
-    extractFields(edital.link || undefined, edital.titulo);
+    extractFields(edital.link || undefined, edital.titulo, edital.id);
   };
 
   // Auto-extração: dispara uma vez assim que o edital carrega e não houver rascunho
@@ -92,11 +92,9 @@ export default function EditalInscricao() {
   const autoExtractedRef = useRef(false);
   useEffect(() => {
     if (!edital || extracting || extractedFields || autoExtractedRef.current) return;
-    // Se já existe rascunho salvo, prioriza ele (o usuário pode disparar manualmente
-    // depois pelo botão "Extrair novamente" caso queira refazer).
     if (rascunhoId) return;
     autoExtractedRef.current = true;
-    extractFields(edital.link || undefined, edital.titulo);
+    extractFields(edital.link || undefined, edital.titulo, edital.id);
   }, [edital, extracting, extractedFields, rascunhoId, extractFields]);
 
   // Pre-fill simple fields from profile — more aggressive matching
@@ -359,8 +357,14 @@ export default function EditalInscricao() {
             <div className="flex flex-col items-center text-center py-6">
               <ClipboardList className="h-12 w-12 text-muted-foreground/40 mb-4" />
               <h2 className="text-lg font-medium mb-2">Não conseguimos ler o edital automaticamente</h2>
+              {lastError && (
+                <div className="flex items-center gap-2 mb-3">
+                  <Badge variant="destructive">{extractCauseLabel(lastError.cause)}</Badge>
+                  <span className="text-xs text-muted-foreground">Tentativa {lastError.attempt}</span>
+                </div>
+              )}
               <p className="text-sm text-muted-foreground max-w-md mb-6">
-                O link pode estar fora do ar ou o regulamento exige login. Tente novamente — ou abra o oficial e cole o texto manualmente nos campos.
+                {lastError?.message ?? "O link pode estar fora do ar ou o regulamento exige login."} Tente novamente — ou abra o oficial e preencha manualmente.
               </p>
 
               <div className="w-full max-w-sm space-y-3">

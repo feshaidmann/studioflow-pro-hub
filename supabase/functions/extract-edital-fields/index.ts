@@ -6,20 +6,82 @@ const corsHeaders = {
 };
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const PERPLEXITY_API_KEY = Deno.env.get("PERPLEXITY_API_KEY");
 
-Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+type Cause =
+  | "ok"
+  | "auth_error"
+  | "bad_request"
+  | "no_perplexity_key"
+  | "perplexity_upstream_error"
+  | "perplexity_timeout"
+  | "empty_response"
+  | "invalid_json"
+  | "no_fields_extracted"
+  | "unknown_error";
+
+const supabaseService = createClient(SUPABASE_URL, SERVICE_ROLE);
+
+async function logFn(
+  level: "info" | "warn" | "error",
+  message: string,
+  details: Record<string, unknown>,
+) {
+  try {
+    await supabaseService.from("function_logs").insert({
+      function_name: "extract-edital-fields",
+      level,
+      message,
+      details,
+    });
+  } catch (e) {
+    console.error("function_logs insert failed", e);
   }
+}
+
+function jsonResponse(status: number, body: Record<string, unknown>) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+
+  const startedAt = Date.now();
+  let userId: string | null = null;
+  let hasUrl = false;
+  let hasTitulo = false;
+
+  const finish = async (
+    status: number,
+    cause: Cause,
+    extra: Record<string, unknown>,
+    levelOverride?: "info" | "warn" | "error",
+  ) => {
+    const duration_ms = Date.now() - startedAt;
+    const level: "info" | "warn" | "error" =
+      levelOverride ?? (cause === "ok" ? "info" : status >= 500 ? "error" : "warn");
+    if (cause !== "ok") {
+      await logFn(level, cause, {
+        cause,
+        http_status: status,
+        duration_ms,
+        user_id: userId,
+        has_url: hasUrl,
+        has_titulo: hasTitulo,
+        ...extra,
+      });
+    }
+    return jsonResponse(status, { cause, http_status: status, duration_ms, ...extra });
+  };
 
   try {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: "Não autorizado" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return await finish(401, "auth_error", { error: "Não autorizado" });
     }
 
     const supabaseUser = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_ANON_KEY")!, {
@@ -28,27 +90,21 @@ Deno.serve(async (req) => {
 
     const { data: { user }, error: authErr } = await supabaseUser.auth.getUser();
     if (authErr || !user) {
-      return new Response(JSON.stringify({ error: "Não autorizado" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return await finish(401, "auth_error", { error: "Não autorizado" });
     }
+    userId = user.id;
 
-    const body = await req.json();
-    const { url, titulo } = body;
+    const body = await req.json().catch(() => ({}));
+    const { url, titulo } = body ?? {};
+    hasUrl = !!url;
+    hasTitulo = !!titulo;
 
     if (!url && !titulo) {
-      return new Response(JSON.stringify({ error: "URL ou título é obrigatório" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return await finish(400, "bad_request", { error: "URL ou título é obrigatório" });
     }
 
     if (!PERPLEXITY_API_KEY) {
-      return new Response(JSON.stringify({ error: "API key não configurada" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return await finish(500, "no_perplexity_key", { error: "API key não configurada" });
     }
 
     const prompt = url
@@ -73,52 +129,91 @@ Identifique os campos típicos obrigatórios para inscrição neste tipo de edit
 
 Retorne APENAS um JSON válido no formato: { "campos": [...], "resumo_edital": "breve resumo", "documentos_exigidos": ["lista de documentos"] }`;
 
-    const perplexityRes = await fetch("https://api.perplexity.ai/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${PERPLEXITY_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: "sonar-pro",
-        messages: [
-          {
-            role: "system",
-            content: "Você é um assistente especialista em editais culturais brasileiros. Extraia campos de formulários de inscrição e retorne JSON válido.",
-          },
-          { role: "user", content: prompt },
-        ],
-        max_tokens: 2000,
-        search_recency_filter: "month",
-      }),
-    });
+    // Perplexity call with timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 45_000);
+    let perplexityRes: Response;
+    try {
+      perplexityRes = await fetch("https://api.perplexity.ai/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${PERPLEXITY_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: "sonar-pro",
+          messages: [
+            {
+              role: "system",
+              content: "Você é um assistente especialista em editais culturais brasileiros. Extraia campos de formulários de inscrição e retorne JSON válido.",
+            },
+            { role: "user", content: prompt },
+          ],
+          max_tokens: 2000,
+          search_recency_filter: "month",
+        }),
+        signal: controller.signal,
+      });
+    } catch (fetchErr: any) {
+      clearTimeout(timeoutId);
+      const isAbort = fetchErr?.name === "AbortError";
+      return await finish(504, isAbort ? "perplexity_timeout" : "perplexity_upstream_error", {
+        error: isAbort ? "Tempo esgotado ao consultar IA" : "Falha de rede ao consultar IA",
+        fetch_error: String(fetchErr?.message ?? fetchErr),
+      });
+    }
+    clearTimeout(timeoutId);
 
     if (!perplexityRes.ok) {
-      const errText = await perplexityRes.text();
-      console.error("Perplexity error:", errText);
-      throw new Error("Erro ao consultar IA");
+      const errText = await perplexityRes.text().catch(() => "");
+      return await finish(502, "perplexity_upstream_error", {
+        error: "Erro ao consultar IA",
+        perplexity_status: perplexityRes.status,
+        raw_excerpt: errText.slice(0, 500),
+      });
     }
 
-    const perplexityData = await perplexityRes.json();
-    const rawContent = perplexityData.choices?.[0]?.message?.content || "";
+    const perplexityData = await perplexityRes.json().catch(() => null);
+    const rawContent: string = perplexityData?.choices?.[0]?.message?.content ?? "";
 
-    // Try to extract JSON from the response
-    let parsed;
+    if (!rawContent.trim()) {
+      return await finish(502, "empty_response", {
+        error: "A IA não retornou conteúdo",
+        perplexity_status: perplexityRes.status,
+      });
+    }
+
+    let parsed: any;
+    let parseFailed = false;
     try {
       const jsonMatch = rawContent.match(/\{[\s\S]*\}/);
-      parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : { campos: [], resumo_edital: rawContent, documentos_exigidos: [] };
+      if (!jsonMatch) throw new Error("no_json_match");
+      parsed = JSON.parse(jsonMatch[0]);
     } catch {
+      parseFailed = true;
       parsed = { campos: [], resumo_edital: rawContent, documentos_exigidos: [] };
     }
 
-    return new Response(JSON.stringify(parsed), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  } catch (err) {
+    const fieldsCount = Array.isArray(parsed?.campos) ? parsed.campos.length : 0;
+
+    if (parseFailed) {
+      return await finish(200, "invalid_json", {
+        ...parsed,
+        fields_count: 0,
+        raw_excerpt: rawContent.slice(0, 500),
+      });
+    }
+    if (fieldsCount === 0) {
+      return await finish(200, "no_fields_extracted", {
+        ...parsed,
+        fields_count: 0,
+        raw_excerpt: rawContent.slice(0, 500),
+      });
+    }
+
+    return await finish(200, "ok", { ...parsed, fields_count: fieldsCount });
+  } catch (err: any) {
     console.error("extract-edital-fields error:", err);
-    return new Response(JSON.stringify({ error: err.message }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return await finish(500, "unknown_error", { error: err?.message ?? "Erro desconhecido" });
   }
 });
