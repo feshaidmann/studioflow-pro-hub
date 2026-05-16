@@ -1873,6 +1873,23 @@ export function MusicDNAAnalyzer() {
     }
   };
 
+  const ensureSaved = useCallback(async (): Promise<string | undefined> => {
+    if (savedAnalysisId) return savedAnalysisId;
+    if (savingPromiseRef.current) return savingPromiseRef.current;
+    const diag = viewingDiagnosis || result;
+    if (!lastInput || !diag) return undefined;
+    const p = saveAnalysisAsync({ input: lastInput, diagnosis: diag, silent: true })
+      .then(({ id }) => {
+        setIsSaved(true);
+        setSavedAnalysisId(id);
+        return id;
+      })
+      .catch(() => undefined)
+      .finally(() => { savingPromiseRef.current = null; });
+    savingPromiseRef.current = p;
+    return p;
+  }, [savedAnalysisId, viewingDiagnosis, result, lastInput, saveAnalysisAsync]);
+
   const handleLoadSaved = (saved: SavedAnalysis) => {
     const meta = saved.input_metadata as { name: string; notes?: string; references: string[]; projectId?: string };
     const input = { ...meta, projectId: meta.projectId ?? saved.project_id ?? undefined };
