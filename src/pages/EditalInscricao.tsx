@@ -83,7 +83,7 @@ export default function EditalInscricao() {
   // Extract fields (manual trigger — usado como fallback no card de setup)
   const handleExtract = () => {
     if (!edital) return;
-    extractFields(edital.link || undefined, edital.titulo);
+    extractFields(edital.link || undefined, edital.titulo, edital.id);
   };
 
   // Auto-extração: dispara uma vez assim que o edital carrega e não houver rascunho
@@ -92,11 +92,9 @@ export default function EditalInscricao() {
   const autoExtractedRef = useRef(false);
   useEffect(() => {
     if (!edital || extracting || extractedFields || autoExtractedRef.current) return;
-    // Se já existe rascunho salvo, prioriza ele (o usuário pode disparar manualmente
-    // depois pelo botão "Extrair novamente" caso queira refazer).
     if (rascunhoId) return;
     autoExtractedRef.current = true;
-    extractFields(edital.link || undefined, edital.titulo);
+    extractFields(edital.link || undefined, edital.titulo, edital.id);
   }, [edital, extracting, extractedFields, rascunhoId, extractFields]);
 
   // Pre-fill simple fields from profile — more aggressive matching
