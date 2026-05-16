@@ -359,6 +359,7 @@ serve(async (req: Request) => {
       catalog_total: catalogTotal,
       catalog_genre_count: catalogGenreCount,
       strict_genre_used: useStrictGenre,
+      summary_variant: summaryVariant,
     });
   } catch (error) {
     console.error("[music-dna-analyze] Error:", error);
