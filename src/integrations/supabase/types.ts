@@ -497,14 +497,20 @@ export type Database = {
       }
       edital_applications: {
         Row: {
+          contact_channel: string
+          contact_recipient: string
+          contacted_at: string | null
           created_at: string
           data_inscricao: string | null
           data_resultado: string | null
+          epk_content: string
           id: string
           licoes_aprendidas: string | null
           motivo_recusa: string | null
           notas: string
           opportunity_id: string
+          pitch_content: string
+          pitch_subject: string
           project_id: string | null
           resultado: string | null
           status: string
@@ -514,14 +520,20 @@ export type Database = {
           valor_aprovado: number | null
         }
         Insert: {
+          contact_channel?: string
+          contact_recipient?: string
+          contacted_at?: string | null
           created_at?: string
           data_inscricao?: string | null
           data_resultado?: string | null
+          epk_content?: string
           id?: string
           licoes_aprendidas?: string | null
           motivo_recusa?: string | null
           notas?: string
           opportunity_id: string
+          pitch_content?: string
+          pitch_subject?: string
           project_id?: string | null
           resultado?: string | null
           status?: string
@@ -531,14 +543,20 @@ export type Database = {
           valor_aprovado?: number | null
         }
         Update: {
+          contact_channel?: string
+          contact_recipient?: string
+          contacted_at?: string | null
           created_at?: string
           data_inscricao?: string | null
           data_resultado?: string | null
+          epk_content?: string
           id?: string
           licoes_aprendidas?: string | null
           motivo_recusa?: string | null
           notas?: string
           opportunity_id?: string
+          pitch_content?: string
+          pitch_subject?: string
           project_id?: string | null
           resultado?: string | null
           status?: string
@@ -1306,6 +1324,44 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      palco_outreach_log: {
+        Row: {
+          application_id: string
+          channel: string
+          created_at: string
+          direction: string
+          id: string
+          summary: string
+          user_id: string
+        }
+        Insert: {
+          application_id: string
+          channel?: string
+          created_at?: string
+          direction?: string
+          id?: string
+          summary?: string
+          user_id: string
+        }
+        Update: {
+          application_id?: string
+          channel?: string
+          created_at?: string
+          direction?: string
+          id?: string
+          summary?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "palco_outreach_log_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "edital_applications"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       palcos_curados: {
         Row: {

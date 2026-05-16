@@ -294,24 +294,25 @@ export default function Carreira() {
         toast.error("Não foi possível registrar interesse. Tente novamente.");
         return;
       }
-      await createApp.mutateAsync({ opportunity_id: resolved.id, tipo: resolved.tipo });
+      const created = await createApp.mutateAsync({ opportunity_id: resolved.id, tipo: resolved.tipo });
       await refetchApps();
       void trackAppEvent("carreira_interest_marked", {
         opportunity_type: op.tipo,
         opportunity_title: op.titulo,
         origem: op.origem,
       });
+      setDetailOp(null);
       if (resolved.tipo === "fomento") {
-        // Edital → leva direto para o assistente de inscrição (CTA "Iniciar candidatura"
-        // promete isso). O toast aqui é apenas confirmação; o usuário já está no destino.
-        setDetailOp(null);
         toast.success("Candidatura iniciada");
         navigate(`/editais/inscricao/${resolved.id}`);
       } else {
-        // Palco: ainda não há fluxo de proposta dedicado — segue mostrando o pipeline.
-        toast.success("Interesse registrado", {
-          action: { label: "Ver pipeline", onClick: () => setTab("inscricoes") },
-        });
+        // Palco → fluxo de proposta dedicado (EPK + pitch + contato + acompanhamento)
+        toast.success("Proposta iniciada");
+        if (created?.id) {
+          navigate(`/palcos/proposta/${created.id}`);
+        } else {
+          setTab("inscricoes");
+        }
       }
     } catch {
       // toast tratado pelo hook
@@ -355,23 +356,7 @@ export default function Carreira() {
 
   const handleApplicationClick = (a: EditalApplication) => {
     if (a.tipo === "palco") {
-      // Reabre como sheet em vez do assistente de inscrição
-      const op: Opportunity = {
-        key: a.opportunity_id,
-        tipo: "palco",
-        titulo: a.edital?.titulo || "Palco",
-        organizador: a.edital?.orgao || "",
-        estado: a.edital?.estado || null,
-        status: a.edital?.status || "Indefinido",
-        prazo: a.edital?.prazo || null,
-        link: a.edital?.link || null,
-        valor: null,
-        resumo: a.edital?.resumo || null,
-        editalId: a.opportunity_id,
-        origem: "saved",
-        raw: (a.edital as any) || {},
-      };
-      setDetailOp(op);
+      navigate(`/palcos/proposta/${a.id}`);
     } else {
       navigate(`/editais/inscricao/${a.opportunity_id}`);
     }
