@@ -380,11 +380,14 @@ function DetailSection({ id, title, icon, children }: {
   );
 }
 
-function ExecutiveSummary({ diagnosis, onAddAllSteps, allStepsAdded }: {
+function ExecutiveSummary({ diagnosis, onAddAllSteps, allStepsAdded, analysisId, onSendSignal }: {
   diagnosis: DiagnosisResult;
   onAddAllSteps: () => void;
   allStepsAdded: boolean;
+  analysisId?: string;
+  onSendSignal?: (signal: "thumbs_up" | "thumbs_down" | "copied") => void;
 }) {
+  const [voted, setVoted] = useState<"thumbs_up" | "thumbs_down" | null>(null);
   const truePeak = diagnosis.realAnalysis?.true_peak_dbtp;
   const lufs = diagnosis.realAnalysis?.lufs_integrated;
   const dynamicRange = diagnosis.realAnalysis?.dynamic_range_lu;
