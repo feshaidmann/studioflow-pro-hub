@@ -357,8 +357,14 @@ export default function EditalInscricao() {
             <div className="flex flex-col items-center text-center py-6">
               <ClipboardList className="h-12 w-12 text-muted-foreground/40 mb-4" />
               <h2 className="text-lg font-medium mb-2">Não conseguimos ler o edital automaticamente</h2>
+              {lastError && (
+                <div className="flex items-center gap-2 mb-3">
+                  <Badge variant="destructive">{extractCauseLabel(lastError.cause)}</Badge>
+                  <span className="text-xs text-muted-foreground">Tentativa {lastError.attempt}</span>
+                </div>
+              )}
               <p className="text-sm text-muted-foreground max-w-md mb-6">
-                O link pode estar fora do ar ou o regulamento exige login. Tente novamente — ou abra o oficial e cole o texto manualmente nos campos.
+                {lastError?.message ?? "O link pode estar fora do ar ou o regulamento exige login."} Tente novamente — ou abra o oficial e preencha manualmente.
               </p>
 
               <div className="w-full max-w-sm space-y-3">
