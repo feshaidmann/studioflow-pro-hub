@@ -48,6 +48,7 @@ import {
 } from "recharts";
 import { useAdminRole } from "@/hooks/useAdminRole";
 import { supabase } from "@/integrations/supabase/client";
+import { SummaryVariantStatsSection } from "@/components/admin/SummaryVariantStatsSection";
 
 interface PlatformStats {
   totalUsers: number;
@@ -795,6 +796,9 @@ export default function Admin() {
           </CardContent>
         </Card>
       </section>
+
+      {/* ── A/B Resumo DNA ── */}
+      <SummaryVariantStatsSection />
 
       {/* ── Feedback Beta ── */}
       <BetaFeedbackSection />
