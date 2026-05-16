@@ -356,23 +356,7 @@ export default function Carreira() {
 
   const handleApplicationClick = (a: EditalApplication) => {
     if (a.tipo === "palco") {
-      // Reabre como sheet em vez do assistente de inscrição
-      const op: Opportunity = {
-        key: a.opportunity_id,
-        tipo: "palco",
-        titulo: a.edital?.titulo || "Palco",
-        organizador: a.edital?.orgao || "",
-        estado: a.edital?.estado || null,
-        status: a.edital?.status || "Indefinido",
-        prazo: a.edital?.prazo || null,
-        link: a.edital?.link || null,
-        valor: null,
-        resumo: a.edital?.resumo || null,
-        editalId: a.opportunity_id,
-        origem: "saved",
-        raw: (a.edital as any) || {},
-      };
-      setDetailOp(op);
+      navigate(`/palcos/proposta/${a.id}`);
     } else {
       navigate(`/editais/inscricao/${a.opportunity_id}`);
     }
