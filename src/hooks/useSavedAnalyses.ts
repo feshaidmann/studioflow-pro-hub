@@ -127,14 +127,14 @@ export function useSavedAnalyses() {
         summaryVariant,
       };
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["music-dna-analyses"] });
       queryClient.invalidateQueries({ queryKey: ["music-dna-benchmarks"] });
       queryClient.invalidateQueries({ queryKey: ["track-versions"] });
-      toast.success("Análise salva com sucesso");
+      if (!variables.silent) toast.success("Análise salva com sucesso");
     },
-    onError: (err: Error) => {
-      toast.error(`Erro ao salvar: ${err.message}`);
+    onError: (err: Error, variables) => {
+      if (!variables.silent) toast.error(`Erro ao salvar: ${err.message}`);
     },
   });
 
@@ -154,6 +154,7 @@ export function useSavedAnalyses() {
     savedAnalyses,
     isLoading,
     saveAnalysis: saveMutation.mutate,
+    saveAnalysisAsync: saveMutation.mutateAsync,
     isSaving: saveMutation.isPending,
     deleteAnalysis: deleteMutation.mutate,
   };
