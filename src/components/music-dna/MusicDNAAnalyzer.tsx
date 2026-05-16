@@ -1165,7 +1165,7 @@ function LoadingView({ trackName, logs, progress }: {
 
 // ── RESULT VIEW ──────────────────────────────────────────────────────────────
 
-function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isSaving, savedAnalysisId, projects }: {
+function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isSaving, savedAnalysisId, onEnsureSaved, projects }: {
   input: TrackInput | { name: string; notes?: string; references: string[]; projectId?: string };
   diagnosis: DiagnosisResult;
   benchmark?: MusicDnaBenchmark;
@@ -1174,6 +1174,7 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
   onSave?: () => void;
   isSaved?: boolean;
   isSaving?: boolean;
+  onEnsureSaved?: () => Promise<string | undefined>;
   projects?: Array<{ id: string; name: string }>;
 }) {
   const [feedbackOpen, setFeedbackOpen] = useState(false);
@@ -1220,6 +1221,11 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
   const { send: sendSignal } = useAcceptanceSignal();
   const summaryVariant = (diagnosis.summaryVariant === "B" ? "B" : "A") as "A" | "B";
 
+  const ensureSignal = async (signal: "thumbs_up" | "thumbs_down" | "copied" | "task_created") => {
+    const id = savedAnalysisId ?? (await onEnsureSaved?.());
+    if (id) sendSignal({ analysisId: id, variant: summaryVariant, signal });
+  };
+
   const handleAddAllSteps = async () => {
     const steps = proximos_passos ?? [];
     let count = 0;
@@ -1232,7 +1238,7 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
     setAllStepsAdded(true);
     if (count > 0) {
       toast.success(`${count} ações adicionadas ao checklist`);
-      sendSignal({ analysisId: savedAnalysisId, variant: summaryVariant, signal: "task_created" });
+      ensureSignal("task_created");
     }
   };
 
@@ -1323,9 +1329,7 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
         onAddAllSteps={handleAddAllSteps}
         allStepsAdded={allStepsAdded}
         analysisId={savedAnalysisId}
-        onSendSignal={(signal) =>
-          sendSignal({ analysisId: savedAnalysisId, variant: summaryVariant, signal })
-        }
+        onSendSignal={(signal) => ensureSignal(signal)}
       />
 
       {savedAnalysisId && (
@@ -1801,7 +1805,8 @@ export function MusicDNAAnalyzer() {
   const [lastInput, setLastInput] = useState<{ name: string; notes?: string; references: string[]; projectId?: string } | null>(null);
   const [viewingDiagnosis, setViewingDiagnosis] = useState<DiagnosisResult | null>(null);
   const [isSaved, setIsSaved] = useState(false);
-  const { saveAnalysis, isSaving } = useSavedAnalyses();
+  const { saveAnalysis, saveAnalysisAsync, isSaving } = useSavedAnalyses();
+  const savingPromiseRef = useRef<Promise<string | undefined> | null>(null);
   const { data: benchmarks } = useMusicDnaBenchmarks();
   const { projects } = useProjects();
 
@@ -1868,6 +1873,23 @@ export function MusicDNAAnalyzer() {
     }
   };
 
+  const ensureSaved = useCallback(async (): Promise<string | undefined> => {
+    if (savedAnalysisId) return savedAnalysisId;
+    if (savingPromiseRef.current) return savingPromiseRef.current;
+    const diag = viewingDiagnosis || result;
+    if (!lastInput || !diag) return undefined;
+    const p = saveAnalysisAsync({ input: lastInput, diagnosis: diag, silent: true })
+      .then(({ id }) => {
+        setIsSaved(true);
+        setSavedAnalysisId(id);
+        return id;
+      })
+      .catch(() => undefined)
+      .finally(() => { savingPromiseRef.current = null; });
+    savingPromiseRef.current = p;
+    return p;
+  }, [savedAnalysisId, viewingDiagnosis, result, lastInput, saveAnalysisAsync]);
+
   const handleLoadSaved = (saved: SavedAnalysis) => {
     const meta = saved.input_metadata as { name: string; notes?: string; references: string[]; projectId?: string };
     const input = { ...meta, projectId: meta.projectId ?? saved.project_id ?? undefined };
@@ -1931,6 +1953,7 @@ export function MusicDNAAnalyzer() {
             isSaved={isSaved}
             isSaving={isSaving}
             savedAnalysisId={savedAnalysisId}
+            onEnsureSaved={ensureSaved}
             projects={projects}
           />
         </>
