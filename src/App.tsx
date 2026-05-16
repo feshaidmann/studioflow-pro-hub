@@ -93,6 +93,7 @@ const AppRoutes = () => (
           {/* Redirects legados — mantidos apenas como compat. de URLs antigas. */}
           {/* A rota mais específica /editais/inscricao/:id vem ANTES do catch-all. */}
           <Route path="/editais/inscricao/:id" element={<EditalInscricao />} />
+          <Route path="/palcos/proposta/:applicationId" element={<PalcoProposta />} />
           <Route path="/editais" element={<Navigate to="/carreira?tipo=edital&from=legacy" replace />} />
           <Route path="/editais/*" element={<Navigate to="/carreira?tipo=edital&from=legacy" replace />} />
           <Route path="/palcos" element={<Navigate to="/carreira?tipo=palco&from=legacy" replace />} />
