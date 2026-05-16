@@ -255,6 +255,24 @@ export default function Carreira() {
     return set;
   }, [applications]);
 
+  // Pipeline ordenado: status ativo primeiro, depois prazo ascendente; finais ao fim.
+  const sortedApplications = useMemo(() => {
+    return [...applications].sort((a, b) => {
+      const aFinal = !!a.resultado;
+      const bFinal = !!b.resultado;
+      if (aFinal !== bFinal) return aFinal ? 1 : -1;
+      const sa = APP_STATUS_WEIGHT[a.status] ?? 9;
+      const sb = APP_STATUS_WEIGHT[b.status] ?? 9;
+      if (sa !== sb) return sa - sb;
+      const pa = a.edital?.prazo || null;
+      const pb = b.edital?.prazo || null;
+      if (!pa && !pb) return 0;
+      if (!pa) return 1;
+      if (!pb) return -1;
+      return pa.localeCompare(pb);
+    });
+  }, [applications]);
+
   const isAlreadyApplied = useCallback((op: Opportunity) => {
     if (op.editalId && appliedKeys.has(op.editalId)) return true;
     return applications.some(
