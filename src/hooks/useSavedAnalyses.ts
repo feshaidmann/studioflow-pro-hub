@@ -71,6 +71,7 @@ export function useSavedAnalyses() {
     }: {
       input: { name: string; notes?: string; references: string[]; projectId?: string };
       diagnosis: DiagnosisResult;
+      silent?: boolean;
     }): Promise<{ id: string; trackVersionId: string; versionNumber: number; summaryVariant: "A" | "B" }> => {
       // Agrupa por slug do nome → versão Nx automática.
       const { id: trackVersionId, nextVersionNumber } = await ensureTrackVersion({
