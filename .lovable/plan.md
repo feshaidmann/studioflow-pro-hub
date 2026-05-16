@@ -1,126 +1,102 @@
+## Objetivo
 
-# Diagnóstico — Módulo Carreira
+Resolver o atrito **C1** do diagnóstico: hoje quando o usuário clica em "Marcar interesse" num Palco, a aplicação é criada mas não há fluxo de conquista. Esta plano cria um fluxo paralelo ao `/editais/inscricao/:id`, específico para Palco (festival, showcase, residência, abertura, circuito) — onde a conquista não passa por formulário oficial, mas por **pitch direto** com curador/produtor.
 
-Análise focada em **jornada, usabilidade e CX** do `/carreira` (Editais + Palcos unificados), suas integrações (`oportunidades-search`, `edital-search`, `palco-search`, `edital-ai-assistant`, `match-editais`, `notify-edital-deadlines`) e seu objetivo declarado: **ajudar o artista a descobrir, decidir e conquistar oportunidades de fomento e apresentação.**
+## Entregáveis
 
----
+### 1. Nova rota `/palcos/proposta/:applicationId`
 
-## 1. Mapa atual da jornada
+Página `src/pages/PalcoProposta.tsx` em 4 etapas (stepper visual, mesma linguagem do EditalInscricao):
 
 ```text
-Descobrir (aba) ──► AISearchPanel ──► resultados (editais + palcos)
-                                         │
-                  ┌──────────────────────┼─────────────────────┐
-                  ▼                      ▼                     ▼
-            "Pra você" (perfil)   Grade filtrada        OpportunityDetailSheet
-                                                              │
-                              ┌───────────────┬───────────────┤
-                              ▼               ▼               ▼
-                        Marcar interesse  Salvar (IA)    Abrir oficial / Google
-                              │
-                              ▼
-                Aba "Minhas inscrições" (pipeline)
-                              │
-              ┌───────────────┼──────────────────────┐
-              ▼               ▼                      ▼
-       ApplicationStatusMenu  EditalResultModal   EditalInscricao (somente edital)
-                                                  (assistente IA + checklist)
+[1 EPK] → [2 Proposta] → [3 Contato] → [4 Acompanhamento]
 ```
 
-A jornada é coerente, mas tem **6 atritos materiais** que minam o objetivo de "conquistar" (não só descobrir).
+- **1. EPK / Release** — Gera material de apresentação:
+  - Mini-bio (puxa de `profile.bio` + completa via IA)
+  - Release da obra (puxa do projeto vinculado, se houver; ou texto livre)
+  - Links de trabalho (puxa de `profile.work_links` + YouTube)
+  - Rider técnico básico (campo livre)
+  - Botão "Gerar EPK com IA" usa edge function existente `edital-ai-assistant` (ou nova `palco-pitch-generate`) passando: dados do palco + perfil + projeto.
+  - Botão "Copiar EPK" / "Baixar como .md".
 
----
+- **2. Proposta / Carta** — Texto persuasivo curto:
+  - Template de e-mail pré-preenchido: assunto, saudação, gancho específico do palco (puxa `resumo`/`tipo_palco`/`organizador`), pitch (3–5 linhas), CTA, assinatura.
+  - 3 variações de tom (formal / cordial / direto) geradas pela IA.
+  - Editor inline + "Copiar texto" + "Abrir no Gmail" (`mailto:` quando houver e-mail do organizador, senão só copiar).
 
-## 2. Achados — por gravidade
+- **3. Contato** — Rastreio de canal:
+  - Selecionar canal: E-mail / WhatsApp / Instagram DM / Formulário oficial / Outro.
+  - Campo de destinatário (e-mail/handle/URL).
+  - Checkbox "Enviado em [data]" → marca `contacted_at`.
+  - Campo de notas livres ("falei com Fulano", "indicado por…").
 
-### Críticos (bloqueiam conquista)
+- **4. Acompanhamento** — Linha do tempo de follow-up:
+  - Lista de interações (data, canal, resumo) — `palco_outreach_log`.
+  - Botões de status rápido: "Aguardando resposta" / "Em conversa" / "Confirmado" / "Recusado" — atualiza `edital_applications.status`.
+  - Sugestão automática de follow-up após 7 dias sem resposta (badge "Hora de fazer follow-up").
+  - Quando status = "Confirmado", CTA "Criar evento na Agenda" e "Registrar cachet em Financeiro".
 
-**C1. Palco não tem fluxo de conquista.**
-`handleApplicationClick` em `Carreira.tsx:347` abre só a sheet de detalhes para palcos. Editais ganham o `EditalInscricao` (assistente IA, checklist, banco de docs, batch-fill). Palco fica órfão: marca interesse → e depois? Sem release/EPK, sem rastreio de contato com organizador, sem template de e-mail de proposta. O módulo promete "conquista" mas só entrega para metade do catálogo.
+### 2. Schema (migration)
 
-**C2. "Iniciar candidatura" não leva para a candidatura.**
-No `OpportunityDetailSheet` o CTA primário é "Iniciar candidatura", mas o handler só cria a `EditalApplication` e fecha — o usuário precisa ir manualmente à aba "Minhas inscrições" e clicar de novo para chegar no `EditalInscricao`. Quebra de promessa direto no CTA. Esperado: criar + navegar para `/editais/inscricao/:id` no mesmo gesto (e o toast vira confirmação, não atalho).
+Nova tabela `palco_outreach_log` (interações de contato por candidatura) e colunas extras em `edital_applications` para palcos:
 
-**C3. Extração de campos é cega ao usuário até clicar.**
-`EditalInscricao` exige clique em "Extrair campos" para começar; sem isso a página fica vazia (`extractedFields` null). Em link quebrado (`link_status="broken"`) a extração falha silenciosamente sem fallback. Resultado: usuário entra, vê página vazia, sai. Deveria auto-extrair on-mount com skeleton + estado de erro acionável ("link caiu, cole o texto do edital aqui").
+```sql
+ALTER TABLE edital_applications
+  ADD COLUMN IF NOT EXISTS epk_content text DEFAULT '',
+  ADD COLUMN IF NOT EXISTS pitch_content text DEFAULT '',
+  ADD COLUMN IF NOT EXISTS contact_channel text DEFAULT '',
+  ADD COLUMN IF NOT EXISTS contact_recipient text DEFAULT '',
+  ADD COLUMN IF NOT EXISTS contacted_at timestamptz;
 
-### Sérios (degradam confiança)
+CREATE TABLE palco_outreach_log (
+  id uuid PK,
+  user_id uuid NOT NULL,
+  application_id uuid NOT NULL,
+  channel text NOT NULL,        -- email|whatsapp|instagram|form|other
+  direction text NOT NULL,      -- sent|received|note
+  summary text NOT NULL DEFAULT '',
+  created_at timestamptz DEFAULT now()
+);
+-- RLS: user_id = auth.uid() (ALL)
+```
 
-**S1. Busca IA não tem memória nem refinamento.**
-`AISearchPanel` é stateless: cada busca substitui `aiResults` (`Carreira.tsx:336`). Não há histórico, "buscas salvas", nem refinar ("só dos últimos 30 dias", "exclua SP"). Para uma feature posicionada como "hero", isso é pobre. Buscas anteriores deveriam virar chips reabriveis no topo do painel.
+Reutilizamos `edital_applications` (já tem `tipo='palco'`) para não fragmentar pipeline; apenas estendemos campos.
 
-**S2. Resumo da IA e `match_reason` por card não estão integrados.**
-A edge function `oportunidades-search` calcula `match_reason` por item (linhas 167-174), mas `OpportunityCard.tsx` não exibe — o investimento de tokens é desperdiçado. O resumo geral aparece em banner separado e o "por que isso apareceu pra você" some.
+### 3. Roteamento & integração com Carreira
 
-**S3. "Pra você" só roda em editais já salvos.**
-`RecommendedSection` pontua sobre `editais` (estado local de `useEditais` — base do usuário) e `palcosCurados`. Quem entra sem nada salvo vê seção vazia, e o algoritmo de recomendação nunca dispara `edital-search`/`palco-search` proativamente. A promessa "pra você" só se cumpre **depois** que o usuário já fez o trabalho.
+- Adicionar rota lazy em `src/App.tsx`:
+  - `const PalcoProposta = lazy(() => import("@/pages/PalcoProposta"));`
+  - `<Route path="/palcos/proposta/:applicationId" element={<PalcoProposta />} />`
 
-**S4. Pipeline não diferencia urgência.**
-`TabsContent value="inscricoes"` lista por ordem de criação. Sem ordenação por prazo, sem destaque visual para "vence em <7d", sem agrupamento por status (rascunho / inscrito / aguardando resultado). `notify-edital-deadlines` existe mas não há badge in-app ("3 prazos esta semana"). O usuário precisa de um cockpit, recebe uma lista.
+- Em `src/pages/Carreira.tsx`, no `handleInterest`/`handleApplicationClick`:
+  - Edital (`tipo === "fomento"`) → continua indo para `/editais/inscricao/:editalId` (já implementado).
+  - **Palco** (`tipo === "palco"`) → após criar a `application`, `navigate("/palcos/proposta/" + application.id)`.
 
-### Médios (fricção evitável)
+- Card no pipeline de palco passa a mostrar:
+  - Badge do canal de contato (se preenchido)
+  - "Aguardando há 5d" quando `contacted_at` + sem resposta
+  - CTA "Continuar proposta" leva direto para a rota.
 
-**M1. Deep-link `?op=tipo:key` só resolve depois das listas carregarem** (`Carreira.tsx:163-173`). Link compartilhado mostra grade primeiro, depois "salta" para o sheet. Mostrar skeleton dedicado quando há `op` na URL.
+### 4. Edge function `palco-pitch-generate` (opcional, mas recomendado)
 
-**M2. Filtros avançados escondem o que é discoverable.** Estado, gênero, prazo estão no `AdvancedFiltersSheet` (gaveta). Em mobile (viewport atual 434px) o usuário só vê os chips de tipo + um botão "Filtros (N)". UF e prazo são os filtros mais valiosos do domínio (artista pensa em "tem no meu estado?" e "dá pra fazer a tempo?"). Promovê-los para chips horizontais scrolláveis.
+Wrapper sobre Lovable AI Gateway (`google/gemini-2.5-flash`) que recebe `{ palco, profile, project, tone }` e devolve `{ epk, pitch_variations: [formal, cordial, direto], subject_suggestions }`. Reaproveita padrão de `edital-ai-assistant`. Rate-limit por `ai_usage` (mesma cota).
 
-**M3. `EditalInscricao` mistura 3 modos** (extração, preenchimento, status) sem hierarquia visual clara. Header tem breadcrumb + título + status + projeto + 4 botões. Falta passo a passo (1. Extrair → 2. Vincular projeto → 3. Preencher → 4. Marcar inscrito).
+## Fora de escopo (próximas iterações)
 
-**M4. Ausência de prova social/precedente.** Nada conta "X artistas já se candidataram via StudioFlow a este edital" ou "seu match score: 8/10 porque...". O `match_reason` existe; transformar em score visual já cria credibilidade.
+- Envio automático de e-mail (manual copy-paste no MVP, alinhado à memória do projeto).
+- Integração com Gmail/Outlook API.
+- Templates de EPK em PDF com identidade visual.
+- CRM completo (kanban de oportunidades de palco).
 
-**M5. "Link quebrado" delega ao Google sem contexto.** `buildGoogleFallbackUrl` é genérico ("título + órgão + edital"). Para um edital específico, deveria abrir Google site:gov.br ou site:org-conhecido e logar o report para o cron `check-opportunity-links` reagir.
+## Critério de aceitação
 
-**M6. Sem export/share.** Não há "exportar minha pipeline para CSV", "compartilhar oportunidade com manager", "imprimir checklist". Artista trabalha com equipe (produtor, manager) e o módulo é silo de 1 pessoa.
+- Clicar "Marcar interesse" em um Palco abre `/palcos/proposta/:id` na etapa 1.
+- IA gera EPK e 3 variações de pitch usando dados reais do perfil e projeto.
+- Usuário consegue copiar conteúdo, marcar "enviei em X canal em Y data" e ver isso refletido no card do pipeline.
+- Quando muda status para "Confirmado", aparecem CTAs para Agenda e Financeiro.
+- RLS garante que apenas o dono enxerga os logs e campos.
 
-### Baixos (polimento)
+## Estimativa
 
-**B1.** Toast de "Endereço atualizado" para rotas legadas (`/editais`, `/palcos`) é correto mas aparece **toda vez** que alguém abre o link com `from=legacy`; sem dedupe por sessão.
-**B2.** Contagem "X oportunidade(s) com filtros aplicados" sempre no plural quando = 1.
-**B3.** Empty state da aba "Descobrir" sem oportunidades pede "use a busca inteligente acima" — não tem link/scroll-to.
-**B4.** `EditalResultModal` só roda em editais inscritos sem resultado; palcos não têm equivalente para registrar "fui aprovado / toquei / cachet recebido" — perde dados úteis para o módulo Financeiro.
-
----
-
-## 3. Lacunas estratégicas (objetivo "conquistar")
-
-| Promessa do módulo | Estado atual |
-|---|---|
-| Descobrir oportunidades certas | ✅ Sólido (IA + curados + filtros) |
-| Entender se vale a pena | ⚠️ Parcial (resumo IA existe mas não atinge o card; sem score; sem comparação rápida) |
-| Preparar candidatura | ⚠️ Só edital. `EditalDocumentsBank` + `ApplicationChecklist` existem mas escondidos dentro do EditalInscricao |
-| Submeter e acompanhar | ❌ Não há "marcar como inscrito" claro, sem comprovante, sem prazo de resultado esperado |
-| Registrar resultado e aprender | ⚠️ `EditalResultModal` cobre editais; sem feedback loop ("o que funcionou na sua proposta vencedora") |
-| Integrar com resto do app | ⚠️ Vincula projeto, mas resultado aprovado não vira automaticamente entrada financeira nem evento na Agenda |
-
----
-
-## 4. Recomendações priorizadas (ordem sugerida)
-
-**P0 — desbloquear conquista (1 sprint):**
-- Resolver C2: CTA "Iniciar candidatura" navega direto para `/editais/inscricao/:id`.
-- Resolver C3: auto-extrair on-mount; estado de erro com fallback de colar texto.
-- Resolver C1: criar `PalcoProposta.tsx` análogo ao `EditalInscricao` — gera EPK/release a partir do perfil+projeto, template de e-mail ao organizador, checklist mínimo (foto pro, rider, vídeo ao vivo, valor solicitado).
-
-**P1 — credibilidade da descoberta (1 sprint):**
-- S2: renderizar `match_reason` no `OpportunityCard` (linha sutil sob o título).
-- S4: pipeline reordena por prazo + destaque "vence em <7d" + chips de status no topo.
-- M2: promover UF e prazo para chips horizontais.
-- M4: transformar enriquecimento IA em score numérico (1-10) com tooltip explicando.
-
-**P2 — recorrência (1 sprint):**
-- S1: salvar últimas 5 buscas IA no `user_settings` + chips de reabertura.
-- S3: quando "Pra você" estaria vazio, disparar `oportunidades-search` proativo com queries derivadas do perfil ("editais de fomento para [primary_genre] em [state]").
-- B4: `PalcoResultModal` (compareceu? cachet recebido?) com criação automática de `financial_transactions` (recebível) e evento na Agenda.
-
-**P3 — colaboração e dados (backlog):**
-- M6: export CSV pt-BR (já temos papaparse), share link assinado, modo "manager view" read-only.
-- Integração Agenda: prazo de candidatura vira evento opcional com lembrete.
-- Métricas pessoais: dashboard "taxa de aprovação por área/órgão", reaproveita `EditalMetricsDashboard` no nível Carreira (não por edital).
-
----
-
-## 5. Próximo passo proposto
-
-Posso transformar este diagnóstico em um plano executável priorizando **P0** (3 itens, ~1 sprint) — começando pelo fix de navegação do CTA (C2) e pelo fluxo de proposta para palcos (C1), que juntos dobram a cobertura funcional do módulo.
-
-Quer que eu prossiga para o plano de implementação de P0, ou prefere ajustar a priorização antes?
+~1 sprint (3 a 5 dias de trabalho focado): migration + página em 4 steps + edge function + integração no Carreira.
