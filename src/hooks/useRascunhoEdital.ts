@@ -211,5 +211,5 @@ export function useRascunhoEdital() {
     }
   }, [user]);
 
-  return { extracting, extractedFields, extractFields, saving, saveRascunho, loadRascunho };
+  return { extracting, extractedFields, extractFields, saving, saveRascunho, loadRascunho, lastError };
 }
