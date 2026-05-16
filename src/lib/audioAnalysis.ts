@@ -835,6 +835,8 @@ export async function analyzeAudioFull(file: File): Promise<{
     mfcc: fp.mfcc.map(round4),
     chroma_cens: fp.chroma.map(round4),
     sections,
+    analyzed_duration_sec: Math.round(duration * 10) / 10,
+    extraction_confidence: "preview",
   };
 
   const legacy: AnalysisResult = {
