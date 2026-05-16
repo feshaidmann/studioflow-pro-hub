@@ -49,6 +49,31 @@ function normalize(s: string) {
   return (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 }
 
+function daysUntil(iso: string | null | undefined): number | null {
+  if (!iso) return null;
+  try {
+    const d = new Date(iso + "T12:00:00-03:00");
+    return Math.round((d.getTime() - Date.now()) / 86400000);
+  } catch { return null; }
+}
+
+function formatBrDate(iso: string | null | undefined): string | null {
+  if (!iso) return null;
+  try {
+    return new Intl.DateTimeFormat("pt-BR", {
+      timeZone: "America/Sao_Paulo",
+      day: "2-digit", month: "2-digit", year: "numeric",
+    }).format(new Date(iso + "T12:00:00-03:00"));
+  } catch { return iso; }
+}
+
+const APP_STATUS_WEIGHT: Record<string, number> = {
+  interesse: 0,
+  preparando: 1,
+  inscrito: 2,
+  em_analise: 3,
+};
+
 function sessionKeyFor(nome: string, organizador: string) {
   return `${nome}_${organizador}`.toLowerCase()
     .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
