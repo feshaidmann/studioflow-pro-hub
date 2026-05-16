@@ -55,7 +55,32 @@ ${hint.runnerUp ? `- top2: ${hint.runnerUp.genre} (${Math.round((hint.runnerUp.s
 Use isso APENAS para enriquecer a análise. Se o classificador divergir do declarado com confiança alta (≥75%), você pode mencionar a proximidade técnica com ${hint.detected} no diagnostico_resumo, mas NÃO contradiga o gênero declarado pelo usuário no campo genero_classificado.`
     : "";
 
-  return `${prompt}
+  const variant = (payload.summary_variant === "B" ? "B" : "A") as "A" | "B";
+  const variantBlock = variant === "B"
+    ? `
+
+════════════════════════════════════════════════
+ESTILO DO CAMPO "diagnostico_resumo" — VARIANTE B (storytelling / contexto de escuta)
+════════════════════════════════════════════════
+Sobrescreva quaisquer instruções anteriores SOMENTE para o campo "diagnostico_resumo".
+Mantenha 4–6 frases, linguagem 100% acessível, SEM siglas técnicas (LUFS, dBTP, LU, dBFS, Hz, dB),
+SEM valores numéricos medidos e SEM nomes de plugins. Em vez de focar primeiro em sonoridade/instrumentos:
+1) Abra pela SENSAÇÃO/EMOÇÃO que a faixa provoca no primeiro minuto (tensão, abraço, nostalgia, euforia, urgência, intimidade).
+2) Descreva o CONTEXTO/MOMENTO do ouvinte em que a música se encaixa (manhã acordando, foco no trabalho, deslocamento de carro, festa em casa, fim de noite, escuta atenta de fone).
+3) Construa uma micro-narrativa de atmosfera: que história ou cenário interno a faixa cria, como ela evolui ao longo do tempo (calma → tensão, abertura → recolhimento etc.).
+4) Conecte esse "encaixe emocional" às playlists do Spotify que vivem desse tipo de sensação (editoriais de mood como Chill, Foco, Sad Hour, Festa em Casa; algorítmicas como Radar de Lançamentos / Release Radar; playlists temáticas de contexto).
+5) Feche com um único ajuste — não técnico — que tornaria esse encaixe emocional ainda mais nítido.
+Tom de crítico-parceiro acolhedor, sem promessas de sucesso e sem alarmismo.`
+    : `
+
+════════════════════════════════════════════════
+ESTILO DO CAMPO "diagnostico_resumo" — VARIANTE A (sonoridade / instrumentação)
+════════════════════════════════════════════════
+Siga as instruções já dadas: 4–6 frases acessíveis, foco em SONORIDADE (peso, brilho, espaço, textura, intimidade ou abertura)
+e em INSTRUMENTOS PROTAGONISTAS (quem conduz, quem sustenta, papel do vocal),
+enquadrando no que o Spotify valoriza para destacar uma faixa.`;
+
+  return `${prompt}${variantBlock}
 
 ════════════════════════════════════════════════
 ATRIBUTOS ESTILO SPOTIFY — FONTE CONSOLIDADA
@@ -179,6 +204,12 @@ serve(async (req: Request) => {
       return jsonResponse({ error: "prompt is required" }, 400);
     }
 
+    // A/B do `diagnostico_resumo`: 50/50 aleatório por chamada.
+    // Persistido junto da análise quando o usuário salvar, para reanálises
+    // (visualização posterior) usarem sempre a mesma variante.
+    const summaryVariant: "A" | "B" = Math.random() < 0.5 ? "A" : "B";
+    const enrichedPayload = { ...payload, summary_variant: summaryVariant };
+
     let benchmark: unknown = null;
     let referenceExamples: unknown = null;
     let nearestNeighbors: unknown = null;
@@ -298,7 +329,7 @@ serve(async (req: Request) => {
               "REFERENCIAS_PROXIMAS — REGRA INVIOLÁVEL: ordene SEMPRE por similarity_score DESCRESCENTE (nunca alfabética); inclua APENAS vizinhos com similarity_score >= 0.70; se nenhum atingir o piso, devolva array vazio. Cite apenas band+filename reais da lista de vizinhos do catálogo fornecida no prompt do usuário.\n\n" +
               "Responda SEMPRE em JSON válido, sem markdown e sem texto externo ao JSON.",
           },
-          { role: "user", content: action === "generate_diagnosis" ? buildStructuredPrompt(prompt, payload, benchmark, referenceExamples, nearestNeighbors) : prompt },
+          { role: "user", content: action === "generate_diagnosis" ? buildStructuredPrompt(prompt, enrichedPayload, benchmark, referenceExamples, nearestNeighbors) : prompt },
         ],
       }),
     });
@@ -328,6 +359,7 @@ serve(async (req: Request) => {
       catalog_total: catalogTotal,
       catalog_genre_count: catalogGenreCount,
       strict_genre_used: useStrictGenre,
+      summary_variant: summaryVariant,
     });
   } catch (error) {
     console.error("[music-dna-analyze] Error:", error);

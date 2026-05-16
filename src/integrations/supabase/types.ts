@@ -314,6 +314,41 @@ export type Database = {
         }
         Relationships: []
       }
+      diagnosis_acceptance_signals: {
+        Row: {
+          analysis_id: string
+          created_at: string
+          id: string
+          signal_type: string
+          summary_variant: string
+          user_id: string
+        }
+        Insert: {
+          analysis_id: string
+          created_at?: string
+          id?: string
+          signal_type: string
+          summary_variant: string
+          user_id: string
+        }
+        Update: {
+          analysis_id?: string
+          created_at?: string
+          id?: string
+          signal_type?: string
+          summary_variant?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "diagnosis_acceptance_signals_analysis_id_fkey"
+            columns: ["analysis_id"]
+            isOneToOne: false
+            referencedRelation: "music_dna_analyses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       editais: {
         Row: {
           abertura: string | null
@@ -802,6 +837,7 @@ export type Database = {
           isrc: string | null
           key_name: string | null
           key_number: number | null
+          legacy: boolean
           liveness: number | null
           loudness_db: number | null
           lufs_integrated: number | null
@@ -811,11 +847,16 @@ export type Database = {
           project_id: string | null
           speechiness: number | null
           spotify_id: string | null
+          summary_variant: string
+          summary_variant_assigned_at: string | null
           tempo_bpm: number | null
           time_signature: number | null
           track_name: string
+          track_version_id: string | null
           user_id: string
           valence: number | null
+          version_label: string
+          version_number: number
         }
         Insert: {
           acousticness?: number | null
@@ -834,6 +875,7 @@ export type Database = {
           isrc?: string | null
           key_name?: string | null
           key_number?: number | null
+          legacy?: boolean
           liveness?: number | null
           loudness_db?: number | null
           lufs_integrated?: number | null
@@ -843,11 +885,16 @@ export type Database = {
           project_id?: string | null
           speechiness?: number | null
           spotify_id?: string | null
+          summary_variant?: string
+          summary_variant_assigned_at?: string | null
           tempo_bpm?: number | null
           time_signature?: number | null
           track_name?: string
+          track_version_id?: string | null
           user_id: string
           valence?: number | null
+          version_label?: string
+          version_number?: number
         }
         Update: {
           acousticness?: number | null
@@ -866,6 +913,7 @@ export type Database = {
           isrc?: string | null
           key_name?: string | null
           key_number?: number | null
+          legacy?: boolean
           liveness?: number | null
           loudness_db?: number | null
           lufs_integrated?: number | null
@@ -875,13 +923,26 @@ export type Database = {
           project_id?: string | null
           speechiness?: number | null
           spotify_id?: string | null
+          summary_variant?: string
+          summary_variant_assigned_at?: string | null
           tempo_bpm?: number | null
           time_signature?: number | null
           track_name?: string
+          track_version_id?: string | null
           user_id?: string
           valence?: number | null
+          version_label?: string
+          version_number?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "music_dna_analyses_track_version_id_fkey"
+            columns: ["track_version_id"]
+            isOneToOne: false
+            referencedRelation: "music_track_versions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       music_dna_benchmarks: {
         Row: {
@@ -1144,6 +1205,36 @@ export type Database = {
           updated_at?: string
           valence?: number | null
           zero_crossing_rate?: number | null
+        }
+        Relationships: []
+      }
+      music_track_versions: {
+        Row: {
+          created_at: string
+          display_name: string
+          id: string
+          project_id: string | null
+          track_slug: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string
+          id?: string
+          project_id?: string | null
+          track_slug: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string
+          id?: string
+          project_id?: string | null
+          track_slug?: string
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -2454,6 +2545,19 @@ export type Database = {
         Returns: {
           avg_stars: number
           rating_count: number
+        }[]
+      }
+      get_summary_variant_stats: {
+        Args: never
+        Returns: {
+          composite_score: number
+          copied_rate: number
+          sample_size: number
+          saved_rate: number
+          summary_variant: string
+          task_created_rate: number
+          thumbs_down_rate: number
+          thumbs_up_rate: number
         }[]
       }
       has_role: {
