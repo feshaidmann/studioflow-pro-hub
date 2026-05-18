@@ -30,6 +30,7 @@ const ProjectDetail = lazy(() => import("@/pages/ProjectDetail"));
 const FinancialTracker = lazy(() => import("@/pages/FinancialTracker"));
 const Tutorial = lazy(() => import("@/pages/Tutorial"));
 const Professionals = lazy(() => import("@/pages/Professionals"));
+const Captadores = lazy(() => import("@/pages/Captadores"));
 const Settings = lazy(() => import("@/pages/Settings"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
 const InviteResponse = lazy(() => import("@/pages/InviteResponse"));
