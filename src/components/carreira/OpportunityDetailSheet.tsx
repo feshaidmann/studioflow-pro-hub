@@ -50,7 +50,9 @@ export default function OpportunityDetailSheet({ opportunity: op, open, onOpenCh
   async function handleReportBroken() {
     if (!op.editalId) return;
     setReporting(true);
-    const table = op.tipo === "edital" ? "editais" : "palcos_curados";
+    // Palcos curados vivem em palcos_curados; tudo o resto (editais + palcos
+    // salvos via IA pelo pipeline unificado) vive em editais.
+    const table = op.origem === "curated" ? "palcos_curados" : "editais";
     const { error } = await supabase
       .from(table)
       .update({ link_status: "broken", link_checked_at: new Date().toISOString() })
