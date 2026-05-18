@@ -5,6 +5,8 @@ import { useToast } from "@/hooks/use-toast";
 
 export interface Edital {
   id?: string;
+  /** "fomento" (edital) ou "palco" (oportunidade de palco salva via IA). */
+  tipo?: "fomento" | "palco";
   titulo: string;
   orgao: string;
   estado: string;
@@ -23,6 +25,14 @@ export interface Edital {
   resumo?: string;
   documentos_resumo?: string;
   match_reason?: string;
+  link_status?: string | null;
+  link_checked_at?: string | null;
+  // Campos específicos quando tipo === "palco"
+  tipo_palco?: string | null;
+  generos?: string[] | null;
+  porte?: string | null;
+  tem_edital?: boolean | null;
+  periodo_inscricao?: string | null;
 }
 
 export interface SearchResult {

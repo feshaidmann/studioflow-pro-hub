@@ -35,6 +35,32 @@ export interface Opportunity {
 }
 
 export function editalToOpportunity(e: Edital): Opportunity {
+  // Linhas com tipo='palco' em editais (salvas via palco-search) devem virar
+  // Opportunity de palco, usando as novas colunas dedicadas (com fallback para
+  // os campos antigos quando vierem nulos em registros pré-migração).
+  if (e.tipo === "palco") {
+    return {
+      key: e.id || e.session_key || `${e.titulo}_${e.orgao}`,
+      tipo: "palco",
+      titulo: e.titulo,
+      organizador: e.orgao,
+      estado: e.estado,
+      status: e.status,
+      prazo: e.prazo,
+      link: e.link || null,
+      valor: e.valor && e.valor !== "—" ? e.valor : null,
+      resumo: e.resumo && e.resumo !== "—" ? e.resumo : null,
+      area: e.area,
+      generos: e.generos ?? [],
+      porteOuTipo: e.tipo_palco ?? null,
+      editalId: e.id,
+      origem: e.id ? "saved" : "ai",
+      linkStatus: (e.link_status as Opportunity["linkStatus"]) ?? undefined,
+      linkCheckedAt: e.link_checked_at ?? null,
+      matchReason: e.match_reason ?? null,
+      raw: e,
+    };
+  }
   return {
     key: e.id || e.session_key || `${e.titulo}_${e.orgao}`,
     tipo: "edital",
@@ -49,9 +75,9 @@ export function editalToOpportunity(e: Edital): Opportunity {
     area: e.area,
     editalId: e.id,
     origem: e.id ? "saved" : "ai",
-    linkStatus: (e as any).link_status as Opportunity["linkStatus"],
-    linkCheckedAt: (e as any).link_checked_at ?? null,
-    matchReason: (e as any).match_reason ?? null,
+    linkStatus: (e.link_status as Opportunity["linkStatus"]) ?? undefined,
+    linkCheckedAt: e.link_checked_at ?? null,
+    matchReason: e.match_reason ?? null,
     raw: e,
   };
 }

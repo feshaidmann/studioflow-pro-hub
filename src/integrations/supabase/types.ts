@@ -356,6 +356,7 @@ export type Database = {
           created_at: string | null
           documentos_resumo: string
           estado: string | null
+          generos: string[]
           id: string
           inferido: boolean | null
           inscrito: boolean
@@ -365,13 +366,17 @@ export type Database = {
           match_reason: string
           orgao: string | null
           origem_url: string | null
+          periodo_inscricao: string | null
+          porte: string | null
           prazo: string | null
           project_id: string | null
           publico_alvo: string
           resumo: string
           session_key: string | null
           status: string | null
+          tem_edital: boolean | null
           tipo: string
+          tipo_palco: string | null
           titulo: string
           user_id: string
           valor: string
@@ -382,6 +387,7 @@ export type Database = {
           created_at?: string | null
           documentos_resumo?: string
           estado?: string | null
+          generos?: string[]
           id?: string
           inferido?: boolean | null
           inscrito?: boolean
@@ -391,13 +397,17 @@ export type Database = {
           match_reason?: string
           orgao?: string | null
           origem_url?: string | null
+          periodo_inscricao?: string | null
+          porte?: string | null
           prazo?: string | null
           project_id?: string | null
           publico_alvo?: string
           resumo?: string
           session_key?: string | null
           status?: string | null
+          tem_edital?: boolean | null
           tipo?: string
+          tipo_palco?: string | null
           titulo: string
           user_id: string
           valor?: string
@@ -408,6 +418,7 @@ export type Database = {
           created_at?: string | null
           documentos_resumo?: string
           estado?: string | null
+          generos?: string[]
           id?: string
           inferido?: boolean | null
           inscrito?: boolean
@@ -417,13 +428,17 @@ export type Database = {
           match_reason?: string
           orgao?: string | null
           origem_url?: string | null
+          periodo_inscricao?: string | null
+          porte?: string | null
           prazo?: string | null
           project_id?: string | null
           publico_alvo?: string
           resumo?: string
           session_key?: string | null
           status?: string | null
+          tem_edital?: boolean | null
           tipo?: string
+          tipo_palco?: string | null
           titulo?: string
           user_id?: string
           valor?: string
