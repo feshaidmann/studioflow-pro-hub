@@ -128,36 +128,13 @@ export function usePalcos() {
     projectId?: string | null
   ) => {
     if (!user || palcos.length === 0) return;
+    const slug = (s: string) =>
+      s.toLowerCase()
+        .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9_]/g, "_").replace(/_+/g, "_");
     try {
-      const sessionKeys = palcos
-        .map((p) => `${p.nome}_${p.organizador}`.toLowerCase()
-          .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-          .replace(/[^a-z0-9_]/g, "_").replace(/_+/g, "_"))
-        .filter(Boolean);
-
-      let existingKeys = new Set<string>();
-      if (sessionKeys.length > 0) {
-        const { data: existing } = await supabase
-          .from("editais")
-          .select("session_key")
-          .in("session_key", sessionKeys)
-          .eq("user_id", user.id);
-        existingKeys = new Set((existing || []).map((e: any) => e.session_key));
-      }
-
-      const newItems = palcos.filter((p) => {
-        const sk = `${p.nome}_${p.organizador}`.toLowerCase()
-          .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-          .replace(/[^a-z0-9_]/g, "_").replace(/_+/g, "_");
-        return !existingKeys.has(sk);
-      });
-
-      if (newItems.length === 0) {
-        toast({ title: "Oportunidades já salvas", description: "Todos os itens já estão na sua lista." });
-        return;
-      }
-
-      const rows = newItems.map((p) => ({
+      const nowIso = new Date().toISOString();
+      const rows = palcos.map((p) => ({
         user_id: user.id,
         project_id: projectId || null,
         tipo: "palco" as const,
@@ -171,18 +148,35 @@ export function usePalcos() {
         link: p.link || "",
         origem_url: p.link || "",
         inferido: false,
-        session_key: `${p.nome}_${p.organizador}`.toLowerCase()
-          .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-          .replace(/[^a-z0-9_]/g, "_").replace(/_+/g, "_"),
+        session_key: slug(`${p.nome}_${p.organizador}`),
         valor: p.cachet_medio || "",
         publico_alvo: p.publico_estimado || "",
         resumo: p.resumo || "",
         documentos_resumo: "",
+        tipo_palco: p.tipo_palco || null,
+        generos: Array.isArray(p.generos) ? p.generos : [],
+        porte: p.porte || null,
+        tem_edital: typeof p.tem_edital === "boolean" ? p.tem_edital : null,
+        periodo_inscricao: p.periodo_inscricao || null,
+        link_status: "unknown",
+        link_checked_at: nowIso,
       }));
 
-      const { error } = await supabase.from("editais").insert(rows as any);
+      const { data: inserted, error } = await supabase
+        .from("editais")
+        .upsert(rows as any, { onConflict: "user_id,session_key", ignoreDuplicates: true })
+        .select("id");
       if (error) throw error;
-      toast({ title: `${newItems.length} oportunidade(s) salva(s)!` });
+
+      const newCount = inserted?.length ?? 0;
+      const dupCount = rows.length - newCount;
+      if (newCount === 0) {
+        toast({ title: "Oportunidades já salvas", description: "Todos os itens já estão na sua lista." });
+      } else if (dupCount > 0) {
+        toast({ title: `${newCount} oportunidade(s) salva(s)!`, description: `${dupCount} já existia(m).` });
+      } else {
+        toast({ title: `${newCount} oportunidade(s) salva(s)!` });
+      }
     } catch (err: any) {
       toast({ title: "Erro ao salvar", description: err.message, variant: "destructive" });
     }
