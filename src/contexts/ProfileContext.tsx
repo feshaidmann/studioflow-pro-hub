@@ -31,6 +31,13 @@ export interface Profile {
   primary_genre?: string | null;
   state?: string | null;
   career_start_year?: number | null;
+  is_captador?: boolean;
+  captador_verificado?: boolean;
+  captador_palco_tipos?: string[];
+  captador_generos?: string[];
+  captador_regioes?: string[];
+  captador_porte?: string[];
+  captador_taxa?: string;
   created_at?: string;
 }
 
