@@ -80,24 +80,7 @@ export function useEditais(projectId?: string | null) {
   const saveResults = useCallback(async (items: Edital[], linkedProjectId?: string | null) => {
     if (!user || items.length === 0) return;
     try {
-      // Fetch existing session_keys to avoid duplicate constraint violations
-      const sessionKeys = items.map((e) => e.session_key).filter(Boolean);
-      let existingKeys = new Set<string>();
-      if (sessionKeys.length > 0) {
-        const { data: existing } = await supabase
-          .from("editais")
-          .select("session_key")
-          .in("session_key", sessionKeys);
-        existingKeys = new Set((existing || []).map((e: any) => e.session_key));
-      }
-
-      const newItems = items.filter((e) => !e.session_key || !existingKeys.has(e.session_key));
-      if (newItems.length === 0) {
-        toast({ title: "Editais já salvos", description: "Todos os editais já estão na sua lista." });
-        return;
-      }
-
-      const rows = newItems.map((e) => ({
+      const rows = items.map((e) => ({
         user_id: user.id,
         project_id: linkedProjectId || null,
         titulo: e.titulo,
@@ -116,10 +99,27 @@ export function useEditais(projectId?: string | null) {
         resumo: e.resumo || "",
         documentos_resumo: e.documentos_resumo || "",
         match_reason: e.match_reason || "",
+        link_status: (e as any).link_status || "unknown",
+        link_checked_at: (e as any).link_status ? new Date().toISOString() : null,
       }));
-      const { error } = await supabase.from("editais").insert(rows as any);
+
+      // Race-safe upsert: confia no UNIQUE INDEX (user_id, session_key) WHERE session_key <> ''.
+      // ignoreDuplicates=true descarta silenciosamente itens já existentes.
+      const { data: inserted, error } = await supabase
+        .from("editais")
+        .upsert(rows as any, { onConflict: "user_id,session_key", ignoreDuplicates: true })
+        .select("id");
       if (error) throw error;
-      toast({ title: "Editais salvos!", description: `${newItems.length} edital(is) salvo(s).` });
+
+      const newCount = inserted?.length ?? 0;
+      const dupCount = rows.length - newCount;
+      if (newCount === 0) {
+        toast({ title: "Editais já salvos", description: "Todos os editais já estão na sua lista." });
+      } else if (dupCount > 0) {
+        toast({ title: "Editais salvos!", description: `${newCount} novo(s), ${dupCount} já existia(m).` });
+      } else {
+        toast({ title: "Editais salvos!", description: `${newCount} edital(is) salvo(s).` });
+      }
       await fetchEditais();
     } catch (err: any) {
       console.error("Save error:", err);
