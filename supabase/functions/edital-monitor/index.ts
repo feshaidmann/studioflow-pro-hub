@@ -56,7 +56,7 @@ async function fetchRSS(url: string): Promise<EditalParsed[]> {
       if (!titulo) continue;
 
       const linkStr = (link?.[1] || "").trim();
-      const sessionKey = `rss_${Buffer.from(titulo + linkStr).toString("base64").slice(0, 40)}`;
+      const sessionKey = `rss_${btoa(unescape(encodeURIComponent(titulo + linkStr))).slice(0, 40)}`;
 
       items.push({
         titulo,
