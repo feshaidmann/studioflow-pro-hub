@@ -85,6 +85,7 @@ const AppRoutes = () => (
           <Route path="/agenda" element={<Agenda />} />
           <Route path="/tutorial" element={<Tutorial />} />
           <Route path="/professionals" element={<Professionals />} />
+          <Route path="/captadores" element={<Captadores />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="/admin/reference-tracks" element={<ReferenceTracks />} />
