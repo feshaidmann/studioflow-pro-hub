@@ -132,7 +132,7 @@ Datas no formato YYYY-MM-DD. Se não souber, use null. Sem texto extra.`;
       prazo: e.prazo || null,
       link: e.link || "",
       origem_url: fonte.url_base || "perplexity",
-      session_key: `ppx_${Buffer.from((e.titulo || "") + (e.link || "")).toString("base64").slice(0, 40)}`,
+      session_key: `ppx_${btoa(unescape(encodeURIComponent((e.titulo || "") + (e.link || "")))).slice(0, 40)}`,
       inferido: true,
     }));
   } catch (err) {
