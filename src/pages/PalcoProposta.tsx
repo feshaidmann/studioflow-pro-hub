@@ -596,6 +596,19 @@ export default function PalcoProposta() {
               />
             </div>
 
+            <div className="border-t border-border pt-3">
+              <RecommendedCaptadores
+                applicationId={applicationId!}
+                onUseContact={(recipient, channel) => {
+                  setContactRecipient(recipient);
+                  setContactChannel(channel);
+                  saveExtras({ contact_recipient: recipient, contact_channel: channel });
+                  toast.success("Contato preenchido");
+                }}
+              />
+            </div>
+
+
             <div className="flex flex-wrap gap-2">
               {mailtoHref && (
                 <Button size="sm" variant="outline" asChild>
