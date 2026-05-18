@@ -284,6 +284,8 @@ export default function Settings() {
         </CardContent>
       </Card>
 
+      <CaptadorOptInSection />
+
 
       {/* Notificações Push */}
       <Card className="glass-card">
