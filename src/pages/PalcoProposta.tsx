@@ -21,12 +21,17 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useProjects } from "@/contexts/ProjectContext";
 import { useProfile } from "@/contexts/ProfileContext";
 import { useEditalApplications, useUpdateApplication, APPLICATION_STATUS_LABELS, type ApplicationStatus } from "@/hooks/useEditalApplications";
+import { usePalcoProposal } from "@/hooks/usePalcoProposal";
+import CommercialProposalStep from "@/components/palco/CommercialProposalStep";
+import TechPackageStep from "@/components/palco/TechPackageStep";
 
-type StepKey = "epk" | "pitch" | "contato" | "follow";
+type StepKey = "epk" | "pitch" | "proposta" | "tecnico" | "contato" | "follow";
 
 const STEPS: { key: StepKey; label: string }[] = [
   { key: "epk", label: "EPK / Release" },
-  { key: "pitch", label: "Proposta" },
+  { key: "pitch", label: "Pitch" },
+  { key: "proposta", label: "Proposta Comercial" },
+  { key: "tecnico", label: "Pacote Técnico" },
   { key: "contato", label: "Contato" },
   { key: "follow", label: "Acompanhamento" },
 ];
