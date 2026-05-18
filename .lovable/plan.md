@@ -1,48 +1,60 @@
-## Objetivo
-Unificar o pipeline de palco-search: gravar sempre em `editais` (tipo='palco') sem perder os campos específicos de palco, e fazer o frontend ler esses campos do mesmo lugar.
+# Plano — Aprofundar módulo Palcos (passo crítico #1)
 
-## Decisão de destino
-- **`editais`** vira o destino único do pipeline por-usuário (editais + palcos buscados via IA).
-- **`palcos_curados`** permanece como tabela curada pelo admin/seed (global, somente leitura para usuários). Sem mudanças nela.
+## Por que este é o passo mais crítico
+A pesquisa Colaborativa apontou **booking de shows + negociação** como dor #1. Hoje o StudioFlow cobre **descoberta** (Carreira) e o **pitch inicial** (`/palcos/proposta/:applicationId` com EPK + 3 variações de pitch + contato + follow-up). Faltam os dois passos que efetivamente **fecham o show**:
 
-## Mudanças
+1. **Proposta comercial** (cachê, condições, validade, contrato simples)
+2. **Pacote técnico** (rider de áudio, mapa de palco, orçamento de produção)
 
-### 1. Migration — estender `editais`
-Adicionar colunas (todas nullable) para preservar os campos palco-only que hoje viram texto livre/perdido:
-- `tipo_palco text` ("festival" | "showcase" | "circuito" | "residencia" | "abertura")
-- `generos text[] default '{}'`
-- `porte text` ("iniciante" | "medio" | "grande")
-- `tem_edital boolean`
-- `periodo_inscricao text`
+Sem isso o artista ainda precisa sair da plataforma para fechar o evento — exatamente o que a pesquisa diz que ele não faz hoje.
 
-Sem mudança de RLS (já é per-user). Sem alteração em `palcos_curados`.
+## Escopo desta entrega
 
-### 2. `supabase/functions/palco-search/index.ts`
-Incluir esses 5 campos no upsert (já é upsert para `editais` com `onConflict: user_id,session_key`). Remover só os comentários sobre "campos perdidos".
+Adicionar **2 novas etapas** ao fluxo de proposta já existente, mantendo EPK/Pitch/Contato/Follow intactos:
 
-### 3. `src/hooks/usePalcos.ts` (`saveResults`)
-- Trocar fluxo select+filter+insert por `upsert(... { onConflict: "user_id,session_key", ignoreDuplicates:true }).select("id")`, igual ao `useEditais.saveResults`.
-- Persistir `tipo_palco`, `generos`, `porte`, `tem_edital`, `periodo_inscricao`, `link_status:'unknown'`, `link_checked_at`.
-- Toast com contagem real de novos/duplicados.
+```text
+EPK  →  Pitch  →  [NOVO] Proposta Comercial  →  [NOVO] Pacote Técnico  →  Contato  →  Acompanhamento
+```
 
-### 4. `src/hooks/useEditais.ts`
-Expandir interface `Edital` com `tipo?`, `tipo_palco?`, `generos?`, `porte?`, `tem_edital?`, `periodo_inscricao?` para que o tipado bata com o que vem do DB.
+### Etapa 3 — Proposta Comercial
+Formulário + gerador IA para uma **carta-proposta** em PDF/Markdown:
+- Cachê (com sugestão por porte do palco, base no `cachet_medio` do `palcos_curados`)
+- Condições: deslocamento, hospedagem, alimentação, equipe inclusa, duração do set, número de músicos
+- Forma de pagamento e validade da proposta
+- IA gera o texto formal a partir desses campos + perfil do artista
+- Botões: copiar, baixar PDF, anexar ao envio em "Contato"
 
-### 5. `src/components/carreira/types.ts` + `src/pages/Carreira.tsx`
-No mapeamento `editais.map(editalToOpportunity)`:
-- Se `e.tipo === 'palco'`, converter para `Opportunity` com `tipo: 'palco'`, preenchendo `generos`, `porteOuTipo = tipo_palco`, etc., a partir das novas colunas (com fallback para os campos existentes — `valor`, `publico_alvo`, `area` — quando colunas novas vierem null em linhas antigas).
-- Caso contrário, comportamento atual (`editalToOpportunity`).
+### Etapa 4 — Pacote Técnico
+Três sub-abas em uma só etapa:
+- **Rider de áudio**: lista editável de canais (vocal, violão, etc.) com mic/DI sugerido, monitores, P.A. mínimo. Template inicial baseado em `primary_genre` e formação do projeto.
+- **Mapa de palco**: editor visual simples (grid drag-drop com posições) renderizado em SVG; export PNG.
+- **Orçamento interno**: tabela de custos (cachê líquido, transporte, hospedagem, sideman, técnico) com cálculo automático de margem vs. cachê bruto da etapa anterior. Reutiliza categorias de `transactionCategories.ts`.
 
-Resultado: filtros por gênero, badges de tipo de palco e detalhe funcionam tanto para palcos curados quanto salvos via IA, lendo os mesmos campos.
+Tudo persistido por `application_id` para o artista voltar e iterar.
 
-### 6. Backfill (na mesma migration, opcional mas barato)
-Para linhas antigas com `tipo='palco'` em `editais`: deixar colunas novas nulas — o mapper cai no fallback (`area`/`valor`/`publico_alvo`). Sem risco de corromper dados.
+## Mudanças técnicas
 
-## Fora de escopo
-- Mudar `palcos_curados` (segue como admin/curado).
-- Telemetria de `oportunidades-search`, soft-404, prompt 2025-26.
-- Reescrever `EditalInscricao.tsx`/`PalcoProposta.tsx` (continuam lendo os campos atuais).
+**Banco** (1 migration):
+- Tabela `palco_proposals` (application_id, cache_bruto, condicoes jsonb, validade, proposta_md, status) — RLS por `user_id`.
+- Tabela `palco_tech_packages` (application_id, rider jsonb, stage_map jsonb, orcamento jsonb) — RLS por `user_id`.
+
+**Edge functions**:
+- Estender `palco-pitch-generate` com 2 novas `action`s: `generate_commercial_proposal` e `generate_rider_template` (mesmo padrão Gemini Flash já em uso, sem novas chaves).
+
+**Frontend**:
+- `src/pages/PalcoProposta.tsx`: adicionar 2 entradas em `STEPS` e os 2 componentes de step.
+- Novos: `src/components/palco/CommercialProposalStep.tsx`, `TechPackageStep.tsx`, `StageMapEditor.tsx`.
+- Hook `usePalcoProposal(applicationId)` para CRUD.
+- Export PDF: usar `html2canvas` + `jspdf` (já no projeto se existir; senão `bun add`).
+
+**Fora de escopo** desta entrega (próximos passos):
+- Assinatura eletrônica do contrato
+- Marketplace de captadores (passo #2)
+- Integração com WhatsApp Business API
 
 ## Validação
-- Após deploy: rodar `palco-search` com `save_results=true`, conferir no DB que linha em `editais` tem `tipo_palco`/`generos`/`porte` preenchidos.
-- No frontend Carreira: filtro por gênero retorna palcos salvos via IA; sheet de detalhe mostra tipo e gêneros.
+- Migration aplicada com RLS testado (owner-only).
+- Fluxo end-to-end em uma application existente: criar proposta → gerar via IA → criar rider → exportar PDF.
+- Mobile: steps acessíveis no menu lateral do fluxo.
+
+Quer que eu prossiga com esta entrega ou prefere reduzir/ampliar o escopo (ex: só Proposta Comercial primeiro, deixando Pacote Técnico depois)?

@@ -22,7 +22,7 @@ serve(async (req) => {
     if (authErr || !user) throw new Error("Invalid token");
     const userId = user.id;
 
-    const { action, palco, project_id } = await req.json();
+    const { action, palco, project_id, proposal_data } = await req.json();
     if (!action || !palco) throw new Error("action and palco are required");
 
     const admin = createClient(
@@ -86,8 +86,47 @@ Links: ${workLinks.join(" | ") || "(nenhum)"}`;
 }
 Cada variação deve ter saudação personalizada ao organizador, gancho de 1 linha mostrando que o artista pesquisou o palco, 3–5 linhas de proposta (quem é, por que cabe, o que entrega), CTA claro pedindo próximos passos, assinatura com nome e contato. Não invente dados.`;
       userMessage = `Gere as 3 variações de pitch + 3 sugestões de assunto.\n\n=== PALCO ===\n${palcoCtx}\n\n=== ARTISTA ===\n${artistCtx}\n\nContato do artista: ${profile?.public_email || ""} ${profile?.whatsapp ? "| WhatsApp: " + profile.whatsapp : ""}`;
-    } else {
-      throw new Error(`Unknown action: ${action}`);
+    }
+
+    // ── Novas ações: proposta comercial e rider técnico ────────────────────
+    if (action === "generate_commercial_proposal") {
+      const pd = proposal_data || {};
+      systemPrompt = `Você é um(a) booker brasileiro(a) experiente. Escreva uma CARTA-PROPOSTA COMERCIAL formal, em português do Brasil, em Markdown. Estrutura: cabeçalho com nome do palco/organizador, parágrafo de apresentação do artista (2-3 linhas), seção "Proposta artística" (set + número de músicos + duração), seção "Condições comerciais" (cachê, deslocamento, hospedagem, alimentação, equipamento) bem clara, seção "Forma de pagamento e validade", encerramento cordial com assinatura. Tom profissional, objetivo e cordial. Use os números EXATAMENTE como informados — não arredonde, não invente. Máx. 450 palavras.`;
+      userMessage = `Gere a carta-proposta comercial.
+
+=== PALCO ===
+${palcoCtx}
+
+=== ARTISTA ===
+${artistCtx}
+
+=== CONDIÇÕES COMERCIAIS INFORMADAS ===
+Cachê bruto: R$ ${Number(pd.cache_bruto || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+Número de músicos: ${pd.num_musicos || "—"}
+Duração do set: ${pd.duracao_min ? pd.duracao_min + " minutos" : "—"}
+Deslocamento incluso: ${pd.deslocamento ? "sim" : "por conta do contratante"}
+Hospedagem inclusa: ${pd.hospedagem ? "sim" : "por conta do contratante"}
+Alimentação inclusa: ${pd.alimentacao ? "sim" : "por conta do contratante"}
+Equipamento próprio: ${pd.equipamento_proprio ? "sim" : "P.A. e backline por conta do palco"}
+Forma de pagamento: ${pd.forma_pagamento || "50% na confirmação, 50% até o dia do show"}
+Validade da proposta: ${pd.validade_dias || 15} dias`;
+    } else if (action === "generate_rider_template") {
+      systemPrompt = `Você é um(a) técnico(a) de áudio brasileiro(a). Gere um RIDER DE ÁUDIO básico para a formação informada. Devolva APENAS um JSON válido (sem markdown) no formato:
+{
+  "channels": [{"n": 1, "fonte": "...", "mic_di": "...", "obs": ""}],
+  "monitors": "texto curto descrevendo monitores necessários",
+  "pa_min": "P.A. mínimo recomendado",
+  "obs": "observações gerais (passagem de som, equipe técnica esperada, etc.)"
+}
+Sugira microfones/DIs padrão de mercado (SM57, SM58, DI ativa, e609, beta52, c414…). Numere os canais sequencialmente começando em 1. Seja realista para o porte/gênero do artista.`;
+      userMessage = `Gere o rider para:
+
+=== ARTISTA ===
+${artistCtx}
+
+=== FORMAÇÃO ===
+${(proposal_data?.formacao_descricao) || "Formação não detalhada — use o gênero do artista como referência"}
+Número de músicos: ${proposal_data?.num_musicos || 1}`;
     }
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
@@ -139,6 +178,16 @@ Cada variação deve ter saudação personalizada ao organizador, gancho de 1 li
         } else {
           result = { raw: cleaned };
         }
+      }
+    } else if (action === "generate_commercial_proposal") {
+      result = { proposta_md: raw.trim() };
+    } else if (action === "generate_rider_template") {
+      const cleaned = raw.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
+      try {
+        result = { rider: JSON.parse(cleaned) };
+      } catch {
+        const match = cleaned.match(/\{[\s\S]*\}/);
+        result = { rider: match ? JSON.parse(match[0]) : { channels: [], monitors: "", pa_min: "", obs: cleaned } };
       }
     }
 

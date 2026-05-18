@@ -1381,6 +1381,81 @@ export type Database = {
           },
         ]
       }
+      palco_proposals: {
+        Row: {
+          application_id: string
+          cache_bruto: number
+          condicoes: Json
+          created_at: string
+          forma_pagamento: string
+          id: string
+          proposta_md: string
+          status: string
+          updated_at: string
+          user_id: string
+          validade_dias: number
+        }
+        Insert: {
+          application_id: string
+          cache_bruto?: number
+          condicoes?: Json
+          created_at?: string
+          forma_pagamento?: string
+          id?: string
+          proposta_md?: string
+          status?: string
+          updated_at?: string
+          user_id: string
+          validade_dias?: number
+        }
+        Update: {
+          application_id?: string
+          cache_bruto?: number
+          condicoes?: Json
+          created_at?: string
+          forma_pagamento?: string
+          id?: string
+          proposta_md?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+          validade_dias?: number
+        }
+        Relationships: []
+      }
+      palco_tech_packages: {
+        Row: {
+          application_id: string
+          created_at: string
+          id: string
+          orcamento: Json
+          rider: Json
+          stage_map: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          application_id: string
+          created_at?: string
+          id?: string
+          orcamento?: Json
+          rider?: Json
+          stage_map?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          application_id?: string
+          created_at?: string
+          id?: string
+          orcamento?: Json
+          rider?: Json
+          stage_map?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       palcos_curados: {
         Row: {
           ativo: boolean | null

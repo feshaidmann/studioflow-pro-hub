@@ -21,12 +21,17 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useProjects } from "@/contexts/ProjectContext";
 import { useProfile } from "@/contexts/ProfileContext";
 import { useEditalApplications, useUpdateApplication, APPLICATION_STATUS_LABELS, type ApplicationStatus } from "@/hooks/useEditalApplications";
+import { usePalcoProposal } from "@/hooks/usePalcoProposal";
+import CommercialProposalStep from "@/components/palco/CommercialProposalStep";
+import TechPackageStep from "@/components/palco/TechPackageStep";
 
-type StepKey = "epk" | "pitch" | "contato" | "follow";
+type StepKey = "epk" | "pitch" | "proposta" | "tecnico" | "contato" | "follow";
 
 const STEPS: { key: StepKey; label: string }[] = [
   { key: "epk", label: "EPK / Release" },
-  { key: "pitch", label: "Proposta" },
+  { key: "pitch", label: "Pitch" },
+  { key: "proposta", label: "Proposta Comercial" },
+  { key: "tecnico", label: "Pacote Técnico" },
   { key: "contato", label: "Contato" },
   { key: "follow", label: "Acompanhamento" },
 ];
@@ -55,6 +60,7 @@ interface PalcoOpp {
   resumo: string | null;
   link: string | null;
   area: string | null; // usado como tipo_palco quando palco
+  cachet_medio?: string | null;
 }
 
 function CopyBtn({ text, label = "Copiar" }: { text: string; label?: string }) {
@@ -95,6 +101,8 @@ export default function PalcoProposta() {
   const [palco, setPalco] = useState<PalcoOpp | null>(null);
   const [loading, setLoading] = useState(true);
   const [step, setStep] = useState<StepKey>("epk");
+
+  const { proposal, tech, saveProposal, saveTech } = usePalcoProposal(applicationId);
 
   // Editable form state (synced from edital_applications extra fields)
   const [epkContent, setEpkContent] = useState("");
@@ -385,9 +393,9 @@ export default function PalcoProposta() {
 
       {/* Stepper */}
       <Tabs value={step} onValueChange={(v) => setStep(v as StepKey)}>
-        <TabsList className="w-full grid grid-cols-4 h-auto">
+        <TabsList className="w-full grid grid-cols-3 sm:grid-cols-6 h-auto">
           {STEPS.map((s, i) => (
-            <TabsTrigger key={s.key} value={s.key} className="flex flex-col py-2 text-xs gap-0.5">
+            <TabsTrigger key={s.key} value={s.key} className="flex flex-col py-2 text-[11px] gap-0.5">
               <span className="text-[10px] text-muted-foreground">Etapa {i + 1}</span>
               <span>{s.label}</span>
             </TabsTrigger>
@@ -505,12 +513,43 @@ export default function PalcoProposta() {
             </div>
 
             <div className="flex justify-end">
-              <Button size="sm" variant="ghost" onClick={() => setStep("contato")}>
-                Próximo: Contato →
+              <Button size="sm" variant="ghost" onClick={() => setStep("proposta")}>
+                Próximo: Proposta Comercial →
               </Button>
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {step === "proposta" && proposal && (
+        <CommercialProposalStep
+          proposal={proposal}
+          palco={{ titulo: palco.titulo, orgao: palco.orgao, estado: palco.estado, resumo: palco.resumo }}
+          cachetMedioPalco={palco.cachet_medio || null}
+          projectId={projectId || null}
+          artistName={profile?.full_name || profile?.display_name || "Artista"}
+          onChange={saveProposal}
+          onNext={() => setStep("tecnico")}
+        />
+      )}
+
+      {step === "tecnico" && tech && proposal && (
+        <>
+          <TechPackageStep
+            tech={tech}
+            cacheBruto={proposal.cache_bruto || 0}
+            numMusicos={proposal.condicoes.num_musicos || 1}
+            formacaoDescricao={proposal.condicoes.formacao_descricao || ""}
+            projectId={projectId || null}
+            palcoTitulo={palco.titulo}
+            onChange={saveTech}
+          />
+          <div className="flex justify-end">
+            <Button size="sm" variant="ghost" onClick={() => setStep("contato")}>
+              Próximo: Contato →
+            </Button>
+          </div>
+        </>
       )}
 
       {step === "contato" && (
