@@ -87,6 +87,7 @@ const AppRoutes = () => (
           <Route path="/settings" element={<Settings />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="/admin/reference-tracks" element={<ReferenceTracks />} />
+          <Route path="/admin/oportunidades-search" element={<OportunidadesSearchMetrics />} />
           <Route path="/perfil" element={<FreelancerProfile />} />
           <Route path="/upgrade" element={<UpgradeScreen />} />
           <Route path="/music-dna" element={<MusicDNA />} />
