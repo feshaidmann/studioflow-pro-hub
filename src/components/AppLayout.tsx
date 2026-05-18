@@ -54,6 +54,7 @@ const gestaoItems = [
   { labelKey: "nav.visualDirection", path: "/projects",      icon: Palette,      proOnly: false, mobileLabel: "" },  // [3] — Direção Visual (briefing para designer)
   { labelKey: "nav.carreira",      path: "/carreira",      icon: Trophy,       proOnly: false, mobileLabel: "" },  // [4] — editais + palcos unificados
   { labelKey: "nav.professionals", path: "/professionals", icon: Users,        proOnly: false, mobileLabel: "" },  // [5] — equipe conforme necessidade
+  { labelKey: "nav.captadores",    path: "/captadores",    icon: Megaphone,    proOnly: false, mobileLabel: "" },  // [6] — marketplace de captadores
 ];
 
 // Sub-labels descritivos curtos (P2) — apenas para itens do drawer "Mais"
