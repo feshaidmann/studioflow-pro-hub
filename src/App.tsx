@@ -36,6 +36,7 @@ const InviteResponse = lazy(() => import("@/pages/InviteResponse"));
 
 const Admin = lazy(() => import("@/pages/Admin"));
 const ReferenceTracks = lazy(() => import("@/pages/admin/ReferenceTracks"));
+const OportunidadesSearchMetrics = lazy(() => import("@/pages/admin/OportunidadesSearchMetrics"));
 const Agenda = lazy(() => import("@/pages/Agenda"));
 const FreelancerProfile = lazy(() => import("@/pages/FreelancerProfile"));
 const UpgradeScreen = lazy(() => import("@/pages/UpgradeScreen"));
