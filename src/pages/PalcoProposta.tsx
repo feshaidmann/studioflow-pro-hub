@@ -513,8 +513,8 @@ export default function PalcoProposta() {
             </div>
 
             <div className="flex justify-end">
-              <Button size="sm" variant="ghost" onClick={() => setStep("contato")}>
-                Próximo: Contato →
+              <Button size="sm" variant="ghost" onClick={() => setStep("proposta")}>
+                Próximo: Proposta Comercial →
               </Button>
             </div>
           </CardContent>
