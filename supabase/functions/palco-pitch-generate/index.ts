@@ -86,8 +86,6 @@ Links: ${workLinks.join(" | ") || "(nenhum)"}`;
 }
 Cada variação deve ter saudação personalizada ao organizador, gancho de 1 linha mostrando que o artista pesquisou o palco, 3–5 linhas de proposta (quem é, por que cabe, o que entrega), CTA claro pedindo próximos passos, assinatura com nome e contato. Não invente dados.`;
       userMessage = `Gere as 3 variações de pitch + 3 sugestões de assunto.\n\n=== PALCO ===\n${palcoCtx}\n\n=== ARTISTA ===\n${artistCtx}\n\nContato do artista: ${profile?.public_email || ""} ${profile?.whatsapp ? "| WhatsApp: " + profile.whatsapp : ""}`;
-    } else {
-      throw new Error(`Unknown action: ${action}`);
     }
 
     // ── Novas ações: proposta comercial e rider técnico ────────────────────
