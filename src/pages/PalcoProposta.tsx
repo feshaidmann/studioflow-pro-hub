@@ -24,6 +24,7 @@ import { useEditalApplications, useUpdateApplication, APPLICATION_STATUS_LABELS,
 import { usePalcoProposal } from "@/hooks/usePalcoProposal";
 import CommercialProposalStep from "@/components/palco/CommercialProposalStep";
 import TechPackageStep from "@/components/palco/TechPackageStep";
+import RecommendedCaptadores from "@/components/palco/RecommendedCaptadores";
 
 type StepKey = "epk" | "pitch" | "proposta" | "tecnico" | "contato" | "follow";
 
