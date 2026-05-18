@@ -22,6 +22,7 @@ import {
   Database,
   Mic2,
   Trophy,
+  Megaphone,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
