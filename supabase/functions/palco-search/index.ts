@@ -221,8 +221,9 @@ serve(async (req) => {
 
     const cleanMessage = messageContent.replace(/<palcos_json>[\s\S]*?<\/palcos_json>/, "").trim();
 
-    // Persist if requested — saved as tipo='palco' in editais table (unified pipeline)
+    // Persist if requested — saved as tipo='palco' in editais table (pipeline unificado)
     if (save_results && palcos.length > 0) {
+      const nowIso = new Date().toISOString();
       const rows = palcos.map((p: any) => ({
         user_id: userId,
         project_id: project_id || null,
@@ -242,7 +243,14 @@ serve(async (req) => {
         publico_alvo: p.publico_estimado || "",
         resumo: p.resumo || "",
         documentos_resumo: "",
-        // Extra fields stored in resumo JSON supplement via resumo field
+        // Campos específicos de palco — preservados em colunas dedicadas
+        tipo_palco: p.tipo_palco || null,
+        generos: Array.isArray(p.generos) ? p.generos : [],
+        porte: p.porte || null,
+        tem_edital: typeof p.tem_edital === "boolean" ? p.tem_edital : null,
+        periodo_inscricao: p.periodo_inscricao || null,
+        link_status: "unknown",
+        link_checked_at: nowIso,
       }));
 
       await getAdminClient()
