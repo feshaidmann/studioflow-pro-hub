@@ -179,6 +179,16 @@ Número de músicos: ${proposal_data?.num_musicos || 1}`;
           result = { raw: cleaned };
         }
       }
+    } else if (action === "generate_commercial_proposal") {
+      result = { proposta_md: raw.trim() };
+    } else if (action === "generate_rider_template") {
+      const cleaned = raw.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
+      try {
+        result = { rider: JSON.parse(cleaned) };
+      } catch {
+        const match = cleaned.match(/\{[\s\S]*\}/);
+        result = { rider: match ? JSON.parse(match[0]) : { channels: [], monitors: "", pa_min: "", obs: cleaned } };
+      }
     }
 
     await admin.from("ai_invocations").insert({
