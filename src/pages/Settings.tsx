@@ -16,6 +16,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { User, Save, ListChecks, DollarSign, CalendarClock, Clock, Mail, Disc3, Megaphone, Loader2, FlaskConical, Activity, Users, UserCircle, ChevronRight, MapPin, Globe, Palette, Sun, Bell, BellOff } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import CaptadorOptInSection from "@/components/captadores/CaptadorOptInSection";
 
 const RULE_ICONS: Record<string, React.ElementType> = {
   inactivity:     Clock,
@@ -282,6 +283,8 @@ export default function Settings() {
           </Button>
         </CardContent>
       </Card>
+
+      <CaptadorOptInSection />
 
 
       {/* Notificações Push */}

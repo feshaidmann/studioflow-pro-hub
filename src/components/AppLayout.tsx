@@ -22,6 +22,7 @@ import {
   Database,
   Mic2,
   Trophy,
+  Megaphone,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -53,12 +54,14 @@ const gestaoItems = [
   { labelKey: "nav.visualDirection", path: "/projects",      icon: Palette,      proOnly: false, mobileLabel: "" },  // [3] — Direção Visual (briefing para designer)
   { labelKey: "nav.carreira",      path: "/carreira",      icon: Trophy,       proOnly: false, mobileLabel: "" },  // [4] — editais + palcos unificados
   { labelKey: "nav.professionals", path: "/professionals", icon: Users,        proOnly: false, mobileLabel: "" },  // [5] — equipe conforme necessidade
+  { labelKey: "nav.captadores",    path: "/captadores",    icon: Megaphone,    proOnly: false, mobileLabel: "" },  // [6] — marketplace de captadores
 ];
 
 // Sub-labels descritivos curtos (P2) — apenas para itens do drawer "Mais"
 const drawerSubLabels: Record<string, string> = {
   "/carreira":           "Editais, festivais e palcos",
   "/professionals":      "Equipe e parceiros",
+  "/captadores":         "Bookers e produtores executivos",
   "/music-dna":          "Análise técnica de mix/master",
 };
 
@@ -117,6 +120,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     switch (path) {
       case "/carreira":     import("@/pages/Carreira");      break;
       case "/professionals": import("@/pages/Professionals"); break;
+      case "/captadores": import("@/pages/Captadores"); break;
       case "/music-dna":    import("@/pages/MusicDNA");      break;
       case "/agenda":       import("@/pages/Agenda");        break;
       case "/finance":      import("@/pages/FinancialTracker"); break;
@@ -143,7 +147,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   const isItemActive = (item: { path: string }) => location.pathname === item.path;
 
-  const ROOT_ROUTES = ["/dashboard", "/projects", "/finance", "/agenda", "/professionals", "/settings", "/admin", "/tutorial", "/music-dna", "/carreira", "/"];
+  const ROOT_ROUTES = ["/dashboard", "/projects", "/finance", "/agenda", "/professionals", "/captadores", "/settings", "/admin", "/tutorial", "/music-dna", "/carreira", "/"];
   const isRootRoute = ROOT_ROUTES.includes(location.pathname);
 
   // ── Mobile ─────────────────────────────────────────────────────────────────

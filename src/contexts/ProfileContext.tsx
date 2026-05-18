@@ -31,6 +31,13 @@ export interface Profile {
   primary_genre?: string | null;
   state?: string | null;
   career_start_year?: number | null;
+  is_captador?: boolean;
+  captador_verificado?: boolean;
+  captador_palco_tipos?: string[];
+  captador_generos?: string[];
+  captador_regioes?: string[];
+  captador_porte?: string[];
+  captador_taxa?: string;
   created_at?: string;
 }
 
@@ -65,7 +72,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     }
     const { data } = await supabase
       .from("profiles")
-      .select("id, display_name, full_name, username, bio, user_type, track_view_mode, plan, origin, whatsapp, city, specialties, accept_invites, projects_completed, public_email, allow_global_listing, onboarding_completed, current_moment, main_pain, onboarding_version, last_onboarding_project_id, primary_genre, state, career_start_year, created_at")
+      .select("id, display_name, full_name, username, bio, user_type, track_view_mode, plan, origin, whatsapp, city, specialties, accept_invites, projects_completed, public_email, allow_global_listing, onboarding_completed, current_moment, main_pain, onboarding_version, last_onboarding_project_id, primary_genre, state, career_start_year, is_captador, captador_verificado, captador_palco_tipos, captador_generos, captador_regioes, captador_porte, captador_taxa, created_at")
       .eq("id", user.id)
       .maybeSingle();
 

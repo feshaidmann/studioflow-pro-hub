@@ -1662,6 +1662,12 @@ export type Database = {
           allow_global_listing: boolean
           avatar_url: string | null
           bio: string
+          captador_generos: string[]
+          captador_palco_tipos: string[]
+          captador_porte: string[]
+          captador_regioes: string[]
+          captador_taxa: string
+          captador_verificado: boolean
           career_start_year: number | null
           city: string
           created_at: string
@@ -1669,6 +1675,7 @@ export type Database = {
           display_name: string
           full_name: string
           id: string
+          is_captador: boolean
           last_onboarding_project_id: string | null
           main_pain: string
           onboarding_completed: boolean
@@ -1693,6 +1700,12 @@ export type Database = {
           allow_global_listing?: boolean
           avatar_url?: string | null
           bio?: string
+          captador_generos?: string[]
+          captador_palco_tipos?: string[]
+          captador_porte?: string[]
+          captador_regioes?: string[]
+          captador_taxa?: string
+          captador_verificado?: boolean
           career_start_year?: number | null
           city?: string
           created_at?: string
@@ -1700,6 +1713,7 @@ export type Database = {
           display_name?: string
           full_name?: string
           id: string
+          is_captador?: boolean
           last_onboarding_project_id?: string | null
           main_pain?: string
           onboarding_completed?: boolean
@@ -1724,6 +1738,12 @@ export type Database = {
           allow_global_listing?: boolean
           avatar_url?: string | null
           bio?: string
+          captador_generos?: string[]
+          captador_palco_tipos?: string[]
+          captador_porte?: string[]
+          captador_regioes?: string[]
+          captador_taxa?: string
+          captador_verificado?: boolean
           career_start_year?: number | null
           city?: string
           created_at?: string
@@ -1731,6 +1751,7 @@ export type Database = {
           display_name?: string
           full_name?: string
           id?: string
+          is_captador?: boolean
           last_onboarding_project_id?: string | null
           main_pain?: string
           onboarding_completed?: boolean
