@@ -1,36 +1,48 @@
-
 ## Objetivo
+Unificar o pipeline de palco-search: gravar sempre em `editais` (tipo='palco') sem perder os campos específicos de palco, e fazer o frontend ler esses campos do mesmo lugar.
 
-Destravar a coleta automática de editais e tornar a persistência manual robusta a duplicatas e a links quebrados. Depois, revalidar via logs/dados que tudo voltou a funcionar.
+## Decisão de destino
+- **`editais`** vira o destino único do pipeline por-usuário (editais + palcos buscados via IA).
+- **`palcos_curados`** permanece como tabela curada pelo admin/seed (global, somente leitura para usuários). Sem mudanças nela.
 
 ## Mudanças
 
-### 1. `supabase/functions/edital-monitor/index.ts` — fix do `Buffer`
-- Substituir o uso de `Buffer.from(...).toString("base64")` na geração de `session_key` por API nativa do Deno.
-- Estratégia: `btoa(unescape(encodeURIComponent(titulo + link)))` truncado em 40 chars (ASCII-safe para títulos com acento).
-- Sem outras mudanças de lógica. Deploy imediato da função.
+### 1. Migration — estender `editais`
+Adicionar colunas (todas nullable) para preservar os campos palco-only que hoje viram texto livre/perdido:
+- `tipo_palco text` ("festival" | "showcase" | "circuito" | "residencia" | "abertura")
+- `generos text[] default '{}'`
+- `porte text` ("iniciante" | "medio" | "grande")
+- `tem_edital boolean`
+- `periodo_inscricao text`
 
-### 2. `src/hooks/useEditais.ts` — upsert + link_status
-- Trocar o fluxo "select existentes → filtrar → insert" por um único `upsert(rows, { onConflict: "user_id,session_key", ignoreDuplicates: true })`, eliminando race condition entre abas.
-- Persistir `link_status` e `link_checked_at` nas linhas inseridas:
-  - Se o item já vier com `link_status` definido pela busca (`edital-search` retorna isso indiretamente), preservar.
-  - Caso contrário gravar `link_status: 'unknown'` e deixar o cron diário `check-opportunity-links` reavaliar.
-- Ajustar o toast para refletir contagem real de novos vs duplicados (usa `data?.length` do retorno do upsert).
-- Manter assinatura pública do hook intacta (sem quebra para `Carreira.tsx`).
+Sem mudança de RLS (já é per-user). Sem alteração em `palcos_curados`.
 
-### 3. Pré-requisito de schema
-- Verificar se existe `UNIQUE (user_id, session_key)` em `public.editais`. Se não existir, criar via migration mínima — sem isso o `onConflict` falha.
+### 2. `supabase/functions/palco-search/index.ts`
+Incluir esses 5 campos no upsert (já é upsert para `editais` com `onConflict: user_id,session_key`). Remover só os comentários sobre "campos perdidos".
 
-### 4. Validação pós-deploy
-- Disparar o `edital-monitor` manualmente para a fonte "Editais SP música" (curl) e conferir:
-  - Sem erro `Buffer is not defined` nos logs da função.
-  - Linhas novas em `editais` com `session_key` iniciando em `ppx_`.
-- Inserir um edital fictício duas vezes pelo hook e confirmar que o segundo insert não duplica nem lança erro.
-- Conferir `link_status` populado nas novas linhas.
+### 3. `src/hooks/usePalcos.ts` (`saveResults`)
+- Trocar fluxo select+filter+insert por `upsert(... { onConflict: "user_id,session_key", ignoreDuplicates:true }).select("id")`, igual ao `useEditais.saveResults`.
+- Persistir `tipo_palco`, `generos`, `porte`, `tem_edital`, `periodo_inscricao`, `link_status:'unknown'`, `link_checked_at`.
+- Toast com contagem real de novos/duplicados.
 
-## Fora de escopo (ficam para iterações seguintes)
+### 4. `src/hooks/useEditais.ts`
+Expandir interface `Edital` com `tipo?`, `tipo_palco?`, `generos?`, `porte?`, `tem_edital?`, `periodo_inscricao?` para que o tipado bata com o que vem do DB.
 
-- Decisão sobre destino de `palco-search` (editais vs palcos_curados).
-- Telemetria do `oportunidades-search`.
-- Soft-404 no `checkLinkAlive`.
-- Atualização do system prompt do `edital-search` para PNAB / Paulo Gustavo.
+### 5. `src/components/carreira/types.ts` + `src/pages/Carreira.tsx`
+No mapeamento `editais.map(editalToOpportunity)`:
+- Se `e.tipo === 'palco'`, converter para `Opportunity` com `tipo: 'palco'`, preenchendo `generos`, `porteOuTipo = tipo_palco`, etc., a partir das novas colunas (com fallback para os campos existentes — `valor`, `publico_alvo`, `area` — quando colunas novas vierem null em linhas antigas).
+- Caso contrário, comportamento atual (`editalToOpportunity`).
+
+Resultado: filtros por gênero, badges de tipo de palco e detalhe funcionam tanto para palcos curados quanto salvos via IA, lendo os mesmos campos.
+
+### 6. Backfill (na mesma migration, opcional mas barato)
+Para linhas antigas com `tipo='palco'` em `editais`: deixar colunas novas nulas — o mapper cai no fallback (`area`/`valor`/`publico_alvo`). Sem risco de corromper dados.
+
+## Fora de escopo
+- Mudar `palcos_curados` (segue como admin/curado).
+- Telemetria de `oportunidades-search`, soft-404, prompt 2025-26.
+- Reescrever `EditalInscricao.tsx`/`PalcoProposta.tsx` (continuam lendo os campos atuais).
+
+## Validação
+- Após deploy: rodar `palco-search` com `save_results=true`, conferir no DB que linha em `editais` tem `tipo_palco`/`generos`/`porte` preenchidos.
+- No frontend Carreira: filtro por gênero retorna palcos salvos via IA; sheet de detalhe mostra tipo e gêneros.
