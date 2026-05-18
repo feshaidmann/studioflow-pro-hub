@@ -2596,6 +2596,10 @@ export type Database = {
           stage: string
         }[]
       }
+      get_oportunidades_search_metrics: {
+        Args: { p_days?: number }
+        Returns: Json
+      }
       get_professional_project_count: {
         Args: { p_email: string; p_name: string }
         Returns: number
