@@ -22,7 +22,7 @@ serve(async (req) => {
     if (authErr || !user) throw new Error("Invalid token");
     const userId = user.id;
 
-    const { action, palco, project_id } = await req.json();
+    const { action, palco, project_id, proposal_data } = await req.json();
     if (!action || !palco) throw new Error("action and palco are required");
 
     const admin = createClient(
