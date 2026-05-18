@@ -10,6 +10,50 @@ const corsHeaders = {
 const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
+const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+const admin = createClient(SUPABASE_URL, SERVICE_ROLE, {
+  auth: { persistSession: false, autoRefreshToken: false },
+});
+
+// ── Telemetria ──────────────────────────────────────────────────────────────
+// function_logs: visível só p/ admin (RLS), guarda invocação/erro/duração.
+// analytics_events: por usuário (quando autenticado), permite agregados de uso.
+async function logFn(level: "info" | "warn" | "error", message: string, details: Record<string, unknown>) {
+  try {
+    await admin.from("function_logs").insert({
+      function_name: "oportunidades-search",
+      level,
+      message,
+      details,
+    });
+  } catch (e) {
+    console.error("[telemetry] function_logs insert failed:", e);
+  }
+}
+
+async function logEvent(userId: string | null, event_name: string, properties: Record<string, unknown>) {
+  try {
+    await admin.from("analytics_events").insert({
+      event_name,
+      user_id: userId,
+      session_id: String(properties.run_id || ""),
+      properties,
+    });
+  } catch (e) {
+    console.error("[telemetry] analytics_events insert failed:", e);
+  }
+}
+
+async function resolveUserId(authHeader: string | null): Promise<string | null> {
+  if (!authHeader) return null;
+  try {
+    const token = authHeader.replace(/^Bearer\s+/i, "").trim();
+    if (!token) return null;
+    const { data } = await admin.auth.getUser(token);
+    return data?.user?.id ?? null;
+  } catch { return null; }
+}
 
 interface ClassifyResult {
   intent: "edital" | "palco" | "ambos";
