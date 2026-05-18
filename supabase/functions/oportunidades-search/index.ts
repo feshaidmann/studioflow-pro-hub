@@ -125,19 +125,38 @@ async function callInternal(name: string, body: unknown, authHeader: string | nu
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
+  const run_id = crypto.randomUUID();
+  const t0 = performance.now();
+  const authHeader = req.headers.get("Authorization");
+  const source = req.headers.get("x-invocation-source") || (req.headers.get("user-agent") || "").slice(0, 120);
+  const userId = await resolveUserId(authHeader);
+
+  await logEvent(userId, "oportunidades_search_invoked", { run_id, source });
+
+  let classification: string | undefined;
+  let editaisCount = 0;
+  let palcosCount = 0;
+  const subErrors: Record<string, string> = {};
+
   try {
     const { query, project_id } = await req.json();
     if (!query || typeof query !== "string" || query.trim().length < 3) {
+      const duration_ms = Math.round(performance.now() - t0);
+      await logFn("warn", "Query muito curta", { run_id, duration_ms, user_id: userId, source });
+      await logEvent(userId, "oportunidades_search_failed", {
+        run_id, duration_ms, cause: "query_too_short", source,
+      });
       return new Response(JSON.stringify({ error: "Query muito curta" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const authHeader = req.headers.get("Authorization");
+    const tClassify0 = performance.now();
     const cls = await classifyIntent(query);
+    const classify_ms = Math.round(performance.now() - tClassify0);
+    classification = cls.intent;
 
-    // Dispara em paralelo conforme classificação
     const tasks: Promise<{ kind: "edital" | "palco"; data: any } | { kind: "edital" | "palco"; error: string }>[] = [];
 
     if (cls.intent === "edital" || cls.intent === "ambos") {
@@ -155,20 +174,25 @@ serve(async (req) => {
       );
     }
 
+    const tSearch0 = performance.now();
     const results = await Promise.all(tasks);
+    const search_ms = Math.round(performance.now() - tSearch0);
 
     let editais: any[] = [];
     let palcos: any[] = [];
-    const errors: Record<string, string> = {};
     for (const r of results) {
-      if ("error" in r) { errors[r.kind] = r.error; continue; }
+      if ("error" in r) { subErrors[r.kind] = r.error; continue; }
       if (r.kind === "edital") editais = r.data?.editais || [];
       else palcos = r.data?.palcos || [];
     }
+    editaisCount = editais.length;
+    palcosCount = palcos.length;
 
     // Enriquecimento IA: gera resumo da busca + match_reason por item.
     // Falha silenciosa — se o LLM falhar, mantém os resultados sem enriquecimento.
     let summary = "";
+    let enrich_ms = 0;
+    let enrich_status: "ok" | "skipped" | "failed" = "skipped";
     try {
       const items = [
         ...editais.map((e: any, i: number) => ({
@@ -182,6 +206,7 @@ serve(async (req) => {
         })),
       ];
       if (items.length > 0) {
+        const tEnrich0 = performance.now();
         const enrichResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
           method: "POST",
           headers: { "Content-Type": "application/json", "Authorization": `Bearer ${LOVABLE_API_KEY}` },
@@ -193,15 +218,13 @@ serve(async (req) => {
                 content:
                   "Você ajuda artistas musicais a entender por que um edital ou palco combina (ou não) com a busca deles. Responda APENAS em JSON válido com a forma {\"summary\":\"frase única em pt-BR, máx 140 chars, descrevendo o que foi encontrado\",\"reasons\":{\"<ref>\":\"frase única em pt-BR, máx 90 chars, dizendo por que esta oportunidade aparece para esta busca\"}}. Use linguagem direta, sem marketing, sem emoji.",
               },
-              {
-                role: "user",
-                content: JSON.stringify({ query, items }),
-              },
+              { role: "user", content: JSON.stringify({ query, items }) },
             ],
             response_format: { type: "json_object" },
             temperature: 0.2,
           }),
         });
+        enrich_ms = Math.round(performance.now() - tEnrich0);
         if (enrichResp.ok) {
           const enrichData = await enrichResp.json();
           const txt = enrichData?.choices?.[0]?.message?.content || "{}";
@@ -216,27 +239,58 @@ serve(async (req) => {
             const r = reasons[`p${i}`];
             if (r) p.match_reason = String(r).slice(0, 140);
           });
+          enrich_status = "ok";
+        } else {
+          enrich_status = "failed";
+          subErrors.enrich = `gateway ${enrichResp.status}`;
         }
       }
-    } catch (e) {
+    } catch (e: any) {
+      enrich_status = "failed";
+      subErrors.enrich = String(e?.message || e);
       console.error("enrichment failed:", e);
     }
 
+    const duration_ms = Math.round(performance.now() - t0);
+    const hasSubError = Object.keys(subErrors).length > 0;
+
+    await logFn(hasSubError ? "warn" : "info", hasSubError ? "Concluído com erros parciais" : "Concluído", {
+      run_id, duration_ms, classify_ms, search_ms, enrich_ms, enrich_status,
+      classification, editais: editaisCount, palcos: palcosCount,
+      user_id: userId, source, sub_errors: hasSubError ? subErrors : undefined,
+    });
+    await logEvent(userId, "oportunidades_search_succeeded", {
+      run_id, duration_ms, classification, editais: editaisCount, palcos: palcosCount,
+      enrich_status, source, sub_errors: hasSubError ? subErrors : undefined,
+    });
+
     return new Response(
       JSON.stringify({
+        run_id,
         classification: cls.intent,
         reason: cls.reason,
         summary,
         editais,
         palcos,
-        errors: Object.keys(errors).length ? errors : undefined,
+        errors: hasSubError ? subErrors : undefined,
+        telemetry: { duration_ms, classify_ms, search_ms, enrich_ms, enrich_status },
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (err: any) {
+    const duration_ms = Math.round(performance.now() - t0);
+    const message = err?.message || String(err) || "erro";
     console.error("oportunidades-search error:", err);
+    await logFn("error", message, {
+      run_id, duration_ms, classification, user_id: userId, source,
+      stack: typeof err?.stack === "string" ? err.stack.slice(0, 2000) : undefined,
+      editais: editaisCount, palcos: palcosCount, sub_errors: subErrors,
+    });
+    await logEvent(userId, "oportunidades_search_failed", {
+      run_id, duration_ms, classification, cause: message, source,
+    });
     return new Response(
-      JSON.stringify({ error: err?.message || "erro" }),
+      JSON.stringify({ error: message, run_id }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }
