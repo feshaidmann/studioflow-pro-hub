@@ -16,6 +16,7 @@ const translations: Record<string, string> = {
   "nav.musicdna": "DNA Musical",
   "nav.musicdna.short": "DNA",
   "nav.professionals": "Contatos",
+  "nav.captadores": "Captadores",
   "nav.settings": "Configurações",
   "nav.settings.short": "Config.",
   "nav.admin": "Admin",
