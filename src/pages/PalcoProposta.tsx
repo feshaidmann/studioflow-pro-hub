@@ -60,6 +60,7 @@ interface PalcoOpp {
   resumo: string | null;
   link: string | null;
   area: string | null; // usado como tipo_palco quando palco
+  cachet_medio?: string | null;
 }
 
 function CopyBtn({ text, label = "Copiar" }: { text: string; label?: string }) {
