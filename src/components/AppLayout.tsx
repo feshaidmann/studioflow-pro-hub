@@ -120,6 +120,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     switch (path) {
       case "/carreira":     import("@/pages/Carreira");      break;
       case "/professionals": import("@/pages/Professionals"); break;
+      case "/captadores": import("@/pages/Captadores"); break;
       case "/music-dna":    import("@/pages/MusicDNA");      break;
       case "/agenda":       import("@/pages/Agenda");        break;
       case "/finance":      import("@/pages/FinancialTracker"); break;
