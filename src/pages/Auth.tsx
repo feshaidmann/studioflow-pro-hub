@@ -41,8 +41,11 @@ export default function Auth() {
   const { needsProfileSetup } = useProfile();
   const [searchParams] = useSearchParams();
   const initialMode = searchParams.get("mode") === "signup" ? "signup" : "login";
+  const invitedEmail = searchParams.get("invited_email") ?? "";
+  const redirectParam = searchParams.get("redirect") || "";
+  const isInviteFlow = redirectParam.startsWith("/invite/") || !!invitedEmail;
   const [mode, setMode] = useState<Mode>(initialMode);
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(invitedEmail);
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -50,7 +53,7 @@ export default function Auth() {
   const [signupSent, setSignupSent] = useState(false);
   const [signupEmail, setSignupEmail] = useState("");
 
-  const redirectTo = searchParams.get("redirect") || "/dashboard";
+  const redirectTo = redirectParam || "/dashboard";
 
   if (loading) return <div className="flex items-center justify-center min-h-screen"><div className="animate-pulse text-muted-foreground">Carregando...</div></div>;
   if (user && needsProfileSetup) return <Navigate to="/onboarding" replace />;
