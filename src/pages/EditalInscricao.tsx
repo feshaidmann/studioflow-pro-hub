@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Sparkles, Copy, Check, Save, Loader2, FileText, ClipboardList, RefreshCw, BookmarkPlus, ChevronRight, User } from "lucide-react";
+import { ArrowLeft, Sparkles, Copy, Check, Save, Loader2, FileText, ClipboardList, RefreshCw, BookmarkPlus, ChevronRight, User, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -37,7 +37,9 @@ export default function EditalInscricao() {
   const { t } = useLanguage();
   const { projects } = useProjects();
   const { profile } = useProfile();
-  const { extracting, extractedFields, extractFields, saving, saveRascunho, loadRascunho, lastError } = useRascunhoEdital();
+  const { extracting, extractedFields, extractFields, extractFieldsFromFile, saving, saveRascunho, loadRascunho, lastError } = useRascunhoEdital();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const [edital, setEdital] = useState<EditalInfo | null>(null);
   const [loadingEdital, setLoadingEdital] = useState(true);
@@ -391,6 +393,46 @@ export default function EditalInscricao() {
                     </a>
                   </Button>
                 )}
+              </div>
+
+              {/* Fallback: upload manual do edital */}
+              <div className="w-full max-w-sm mt-6 pt-6 border-t space-y-3 text-left">
+                <div>
+                  <Label className="text-sm font-medium">Ou envie o edital manualmente</Label>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Baixe o PDF do edital e envie aqui — a IA lê o arquivo direto. PDF, DOC, DOCX ou TXT, até 10 MB.
+                  </p>
+                </div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".pdf,.doc,.docx,.txt,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0] ?? null;
+                    setSelectedFile(f);
+                  }}
+                />
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={extracting}
+                >
+                  <FileText className="h-4 w-4 mr-1.5" />
+                  {selectedFile ? selectedFile.name : "Escolher arquivo"}
+                </Button>
+                <Button
+                  className="w-full"
+                  disabled={!selectedFile || extracting}
+                  onClick={() => {
+                    if (!selectedFile || !edital) return;
+                    extractFieldsFromFile(selectedFile, edital.id);
+                  }}
+                >
+                  <Upload className="h-4 w-4 mr-1.5" />
+                  Extrair do arquivo
+                </Button>
               </div>
             </div>
           </CardContent>
