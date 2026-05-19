@@ -1,4 +1,4 @@
-import { Megaphone, BadgeCheck, Mail, MessageCircle, ExternalLink } from "lucide-react";
+import { Megaphone, BadgeCheck, Mail, MessageCircle, ExternalLink, Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
