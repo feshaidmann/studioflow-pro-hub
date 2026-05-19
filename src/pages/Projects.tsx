@@ -255,7 +255,7 @@ export default function Projects() {
   const createInviteRecord = async (opts: { projectId: string; name: string; email: string; role: string; fee: number; deadline: string; scheduleNotes: string }): Promise<string | null> => {
     if (!opts.email) return null;
     const userId = (await supabase.auth.getSession()).data.session?.user.id;
-    const { data: row } = await supabase.from("project_invitations").insert({
+    const { data: row, error: insertErr } = await supabase.from("project_invitations").insert({
       project_id: opts.projectId,
       invited_by: userId,
       professional_name: opts.name,
@@ -267,6 +267,15 @@ export default function Projects() {
       status: "pending",
       allow_global_listing: false,
     }).select("id, token").single();
+    if (insertErr) {
+      const msg = (insertErr as any).message ?? "";
+      if (msg.includes("project_invitations_unique_pending") || (insertErr as any).code === "23505") {
+        toast.error("Já existe um convite pendente para esse email neste projeto.");
+      } else {
+        toast.error("Não foi possível criar o convite. Tente novamente.");
+      }
+      return null;
+    }
     if (row?.token) {
       setInviteTokens((prev) => ({ ...prev, [opts.email]: row.token }));
       setInviteStatuses((prev) => ({ ...prev, [opts.email]: "pending" }));
