@@ -115,6 +115,117 @@ Deno.serve(async (req) => {
       return await finish(400, "bad_request", { error: "URL ou título é obrigatório" });
     }
 
+    const body = await req.json().catch(() => ({}));
+    const { url, titulo, file } = body ?? {};
+    hasUrl = !!url;
+    hasTitulo = !!titulo;
+    const hasFile = !!file && typeof file === "object" && typeof file.base64 === "string";
+
+    if (!url && !titulo && !hasFile) {
+      return await finish(400, "bad_request", { error: "URL, título ou arquivo é obrigatório" });
+    }
+
+    const userPromptForFields = `Você está analisando um edital cultural brasileiro.
+
+Extraia TODOS os campos obrigatórios do formulário de inscrição. Para cada campo, retorne:
+- "nome": nome do campo (ex: "Nome do proponente")
+- "tipo": tipo do campo (text, textarea, number, date, file, select)
+- "obrigatorio": boolean
+- "descricao": breve descrição ou instrução do campo
+- "opcoes": array de opções se for select (senão null)
+
+Retorne APENAS um JSON válido no formato: { "campos": [...], "resumo_edital": "breve resumo do edital", "documentos_exigidos": ["lista de documentos"] }`;
+
+    // ============ Branch: arquivo enviado pelo usuário (fallback) ============
+    if (hasFile) {
+      if (!LOVABLE_API_KEY) {
+        return await finish(500, "lovable_ai_error", { error: "Integração de IA indisponível" });
+      }
+      const mime = String(file.mime_type ?? "").toLowerCase();
+      if (!ALLOWED_FILE_MIME.has(mime)) {
+        return await finish(400, "unsupported_file_type", { error: "Tipo de arquivo não suportado", mime_type: mime });
+      }
+      const base64: string = file.base64;
+      // base64 length * 3/4 ≈ raw bytes
+      const approxBytes = Math.floor((base64.length * 3) / 4);
+      if (approxBytes > MAX_FILE_BYTES) {
+        return await finish(400, "file_too_large", { error: "Arquivo excede 10 MB", approx_bytes: approxBytes });
+      }
+
+      const dataUrl = `data:${mime};base64,${base64}`;
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 60_000);
+      let aiRes: Response;
+      try {
+        aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          },
+          body: JSON.stringify({
+            model: "google/gemini-2.5-flash",
+            messages: [
+              {
+                role: "system",
+                content: "Você é um assistente especialista em editais culturais brasileiros. Extraia campos de formulários de inscrição e retorne JSON válido.",
+              },
+              {
+                role: "user",
+                content: [
+                  { type: "text", text: userPromptForFields },
+                  { type: "image_url", image_url: { url: dataUrl } },
+                ],
+              },
+            ],
+          }),
+          signal: controller.signal,
+        });
+      } catch (fetchErr: any) {
+        clearTimeout(timeoutId);
+        const isAbort = fetchErr?.name === "AbortError";
+        return await finish(504, isAbort ? "perplexity_timeout" : "lovable_ai_error", {
+          error: isAbort ? "Tempo esgotado ao analisar arquivo" : "Falha de rede ao consultar IA",
+          fetch_error: String(fetchErr?.message ?? fetchErr),
+        });
+      }
+      clearTimeout(timeoutId);
+
+      if (!aiRes.ok) {
+        const errText = await aiRes.text().catch(() => "");
+        return await finish(502, "lovable_ai_error", {
+          error: "Erro ao consultar IA",
+          ai_status: aiRes.status,
+          raw_excerpt: errText.slice(0, 500),
+        });
+      }
+      const aiData = await aiRes.json().catch(() => null);
+      const rawContent: string = aiData?.choices?.[0]?.message?.content ?? "";
+      if (!rawContent.trim()) {
+        return await finish(502, "empty_response", { error: "A IA não retornou conteúdo" });
+      }
+
+      let parsed: any;
+      let parseFailed = false;
+      try {
+        const jsonMatch = rawContent.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) throw new Error("no_json_match");
+        parsed = JSON.parse(jsonMatch[0]);
+      } catch {
+        parseFailed = true;
+        parsed = { campos: [], resumo_edital: rawContent, documentos_exigidos: [] };
+      }
+      const fieldsCount = Array.isArray(parsed?.campos) ? parsed.campos.length : 0;
+      if (parseFailed) {
+        return await finish(200, "invalid_json", { ...parsed, fields_count: 0, raw_excerpt: rawContent.slice(0, 500) });
+      }
+      if (fieldsCount === 0) {
+        return await finish(200, "no_fields_extracted", { ...parsed, fields_count: 0, raw_excerpt: rawContent.slice(0, 500) });
+      }
+      return await finish(200, "ok", { ...parsed, fields_count: fieldsCount, source: "file" });
+    }
+
+    // ============ Branch: URL / título via Perplexity ============
     if (!PERPLEXITY_API_KEY) {
       return await finish(500, "no_perplexity_key", { error: "API key não configurada" });
     }
@@ -122,7 +233,10 @@ Deno.serve(async (req) => {
     const prompt = url
       ? `Acesse o edital cultural neste link: ${url}
 
-Extraia TODOS os campos obrigatórios do formulário de inscrição deste edital. Para cada campo, retorne:
+${userPromptForFields}`
+      : `Busque informações sobre o edital cultural "${titulo}".
+
+${userPromptForFields}`;
 - "nome": nome do campo (ex: "Nome do proponente")
 - "tipo": tipo do campo (text, textarea, number, date, file, select)
 - "obrigatorio": boolean
