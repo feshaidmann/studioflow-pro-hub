@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { CaptadorProfile } from "./useCaptadores";
 
-interface MatchedCaptador extends CaptadorProfile { match_score: number; }
+export interface MatchReason { label: string; detail: string; weight: number; }
+export interface MatchedCaptador extends CaptadorProfile { match_score: number; match_reasons?: MatchReason[]; }
 
 export function usePalcoCaptadoresMatch(applicationId?: string) {
   const [data, setData] = useState<MatchedCaptador[]>([]);
