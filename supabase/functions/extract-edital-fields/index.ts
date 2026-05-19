@@ -237,23 +237,6 @@ ${userPromptForFields}`
       : `Busque informações sobre o edital cultural "${titulo}".
 
 ${userPromptForFields}`;
-- "nome": nome do campo (ex: "Nome do proponente")
-- "tipo": tipo do campo (text, textarea, number, date, file, select)
-- "obrigatorio": boolean
-- "descricao": breve descrição ou instrução do campo
-- "opcoes": array de opções se for select (senão null)
-
-Retorne APENAS um JSON válido no formato: { "campos": [...], "resumo_edital": "breve resumo do edital", "documentos_exigidos": ["lista de documentos"] }`
-      : `Busque informações sobre o edital cultural "${titulo}".
-
-Identifique os campos típicos obrigatórios para inscrição neste tipo de edital. Para cada campo, retorne:
-- "nome": nome do campo
-- "tipo": tipo do campo (text, textarea, number, date, file, select)
-- "obrigatorio": boolean
-- "descricao": breve descrição
-- "opcoes": array de opções se for select (senão null)
-
-Retorne APENAS um JSON válido no formato: { "campos": [...], "resumo_edital": "breve resumo", "documentos_exigidos": ["lista de documentos"] }`;
 
     // Perplexity call with timeout
     const controller = new AbortController();
