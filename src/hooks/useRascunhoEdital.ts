@@ -288,5 +288,5 @@ export function useRascunhoEdital() {
     }
   }, [user]);
 
-  return { extracting, extractedFields, extractFields, saving, saveRascunho, loadRascunho, lastError };
+  return { extracting, extractedFields, extractFields, extractFieldsFromFile, saving, saveRascunho, loadRascunho, lastError };
 }
