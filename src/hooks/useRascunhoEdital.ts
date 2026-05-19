@@ -28,6 +28,9 @@ export type ExtractCause =
   | "empty_response"
   | "invalid_json"
   | "no_fields_extracted"
+  | "lovable_ai_error"
+  | "file_too_large"
+  | "unsupported_file_type"
   | "unknown_error";
 
 export interface ExtractError {
@@ -40,13 +43,16 @@ export interface ExtractError {
 const CAUSE_PT: Record<ExtractCause, string> = {
   ok: "Sucesso",
   auth_error: "Sessão expirada — faça login novamente",
-  bad_request: "Edital sem link ou título suficiente",
+  bad_request: "Edital sem link, título ou arquivo suficiente",
   no_perplexity_key: "Integração de IA indisponível no momento",
   perplexity_upstream_error: "A IA não respondeu — tente novamente",
   perplexity_timeout: "A IA demorou demais — tente novamente",
   empty_response: "A IA não retornou conteúdo",
   invalid_json: "A IA não retornou um formulário válido",
   no_fields_extracted: "Não conseguimos identificar campos automaticamente",
+  lovable_ai_error: "A IA falhou ao analisar o arquivo",
+  file_too_large: "Arquivo excede 10 MB",
+  unsupported_file_type: "Tipo de arquivo não suportado (use PDF, DOC, DOCX ou TXT)",
   unknown_error: "Erro inesperado",
 };
 
@@ -60,10 +66,32 @@ const CAUSE_LABEL_SHORT: Record<ExtractCause, string> = {
   empty_response: "Resposta vazia",
   invalid_json: "JSON inválido",
   no_fields_extracted: "Sem campos",
+  lovable_ai_error: "IA arquivo",
+  file_too_large: "Arquivo grande",
+  unsupported_file_type: "Formato inválido",
   unknown_error: "Erro",
 };
 
 export const extractCauseLabel = (c: ExtractCause) => CAUSE_LABEL_SHORT[c] ?? "Erro";
+
+const ALLOWED_FILE_MIME = new Set([
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "text/plain",
+]);
+const MAX_FILE_BYTES = 10 * 1024 * 1024;
+
+async function fileToBase64(file: File): Promise<string> {
+  const buffer = await file.arrayBuffer();
+  const bytes = new Uint8Array(buffer);
+  let binary = "";
+  const chunkSize = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode.apply(null, Array.from(bytes.subarray(i, i + chunkSize)) as any);
+  }
+  return btoa(binary);
+}
 
 export interface Rascunho {
   id: string;
