@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Sparkles, Copy, Check, Save, Loader2, FileText, ClipboardList, RefreshCw, BookmarkPlus, ChevronRight, User } from "lucide-react";
+import { ArrowLeft, Sparkles, Copy, Check, Save, Loader2, FileText, ClipboardList, RefreshCw, BookmarkPlus, ChevronRight, User, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
