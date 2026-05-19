@@ -90,12 +90,31 @@ Deno.serve(async (req) => {
     const list = (candidates ?? []) as ProfileRow[];
     const scored = list.map((p) => {
       let score = 0;
-      if (palcoTipo && p.captador_palco_tipos?.some((t) => t.toLowerCase() === palcoTipo.toLowerCase())) score += 3;
-      if (palcoEstado && p.captador_regioes?.includes(palcoEstado)) score += 2;
-      if (palcoGeneros.length > 0 && p.captador_generos?.some((g) => palcoGeneros.includes(g))) score += 2;
-      if (palcoPorte && p.captador_porte?.includes(palcoPorte)) score += 1;
-      if (p.captador_verificado) score += 0.5;
-      return { ...p, match_score: score };
+      const match_reasons: { label: string; detail: string; weight: number }[] = [];
+      if (palcoTipo && p.captador_palco_tipos?.some((t) => t.toLowerCase() === palcoTipo.toLowerCase())) {
+        score += 3;
+        match_reasons.push({ label: "Tipo de palco", detail: palcoTipo, weight: 3 });
+      }
+      if (palcoEstado && p.captador_regioes?.includes(palcoEstado)) {
+        score += 2;
+        match_reasons.push({ label: "Região", detail: palcoEstado, weight: 2 });
+      }
+      if (palcoGeneros.length > 0) {
+        const overlap = p.captador_generos?.filter((g) => palcoGeneros.includes(g)) ?? [];
+        if (overlap.length > 0) {
+          score += 2;
+          match_reasons.push({ label: "Gênero", detail: overlap.join(", "), weight: 2 });
+        }
+      }
+      if (palcoPorte && p.captador_porte?.includes(palcoPorte)) {
+        score += 1;
+        match_reasons.push({ label: "Porte", detail: palcoPorte, weight: 1 });
+      }
+      if (p.captador_verificado) {
+        score += 0.5;
+        match_reasons.push({ label: "Verificado", detail: "Perfil validado pela equipe", weight: 0.5 });
+      }
+      return { ...p, match_score: score, match_reasons };
     });
 
     scored.sort((a, b) => b.match_score - a.match_score);
