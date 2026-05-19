@@ -162,6 +162,17 @@ export default function Auth() {
           )}
         </CardHeader>
         <CardContent>
+          {isInviteFlow && mode !== "forgot" && (
+            <div className="mb-4 rounded-lg border border-primary/30 bg-primary/5 p-3 text-xs text-foreground/80 leading-relaxed">
+              <strong className="font-semibold">Convite detectado.</strong> Use exatamente{" "}
+              {invitedEmail ? (
+                <span className="font-medium text-primary">{invitedEmail}</span>
+              ) : (
+                <>o mesmo email para o qual o convite foi enviado</>
+              )}
+              {" "}— senão o acesso ao projeto não será vinculado.
+            </div>
+          )}
           {mode === "forgot" && forgotSent ? (
             <div className="text-center space-y-4">
               <div className="rounded-lg bg-primary/10 border border-primary/20 p-4">
