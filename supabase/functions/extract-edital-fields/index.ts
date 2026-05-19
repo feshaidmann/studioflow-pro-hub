@@ -8,6 +8,15 @@ const corsHeaders = {
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const PERPLEXITY_API_KEY = Deno.env.get("PERPLEXITY_API_KEY");
+const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+
+const ALLOWED_FILE_MIME = new Set([
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "text/plain",
+]);
+const MAX_FILE_BYTES = 10 * 1024 * 1024; // 10 MB
 
 type Cause =
   | "ok"
@@ -19,6 +28,9 @@ type Cause =
   | "empty_response"
   | "invalid_json"
   | "no_fields_extracted"
+  | "lovable_ai_error"
+  | "file_too_large"
+  | "unsupported_file_type"
   | "unknown_error";
 
 const supabaseService = createClient(SUPABASE_URL, SERVICE_ROLE);
