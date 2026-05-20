@@ -38,7 +38,7 @@ export default function EditalInscricao() {
   const { t } = useLanguage();
   const { projects } = useProjects();
   const { profile } = useProfile();
-  const { extracting, extractedFields, extractFields, extractFieldsFromFile, saving, saveRascunho, loadRascunho, lastError } = useRascunhoEdital();
+  const { extracting, extractedFields, extractFields, extractFieldsFromFile, saving, saveRascunho, loadRascunho, lastError, attemptProgress } = useRascunhoEdital();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
@@ -99,6 +99,29 @@ export default function EditalInscricao() {
     autoExtractedRef.current = true;
     extractFields(edital.link || undefined, edital.titulo, edital.id);
   }, [edital, extracting, extractedFields, rascunhoId, extractFields]);
+
+  // Após esgotar as 3 tentativas em erro transitório, apaga o edital e volta
+  // para /carreira — evita deixar entradas "fantasma" inutilizáveis na lista.
+  const purgedRef = useRef(false);
+  useEffect(() => {
+    if (!lastError?.exhausted || !edital || !user || purgedRef.current) return;
+    purgedRef.current = true;
+    (async () => {
+      try {
+        // Apaga rascunho (se houver) e o edital (RLS garante escopo por user_id)
+        await supabase.from("rascunhos_editais").delete().eq("edital_id", edital.id).eq("user_id", user.id);
+        await supabase.from("editais").delete().eq("id", edital.id).eq("user_id", user.id);
+        toast.error(`Edital "${edital.titulo}" foi removido após 3 tentativas sem sucesso.`, {
+          description: "Você pode adicioná-lo de novo mais tarde quando o portal estiver estável.",
+        });
+      } catch (err) {
+        console.error("Falha ao apagar edital:", err);
+      } finally {
+        navigate("/carreira", { replace: true });
+      }
+    })();
+  }, [lastError, edital, user, navigate]);
+
 
   // Pre-fill simple fields from profile — more aggressive matching
   const preFillProfile = useCallback(() => {
@@ -423,9 +446,24 @@ export default function EditalInscricao() {
       {extracting && (
         <Card>
           <CardContent className="py-8 flex flex-col items-center text-center space-y-6">
-            <div className="flex flex-col items-center">
+            <div className="flex flex-col items-center w-full max-w-xs">
               <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
-              <p className="text-sm text-muted-foreground">Analisando edital e extraindo campos...</p>
+              <p className="text-sm text-muted-foreground">
+                {attemptProgress && attemptProgress.current > 1
+                  ? `Tentativa ${attemptProgress.current} de ${attemptProgress.max} — a IA pode estar instável…`
+                  : "Analisando edital e extraindo campos..."}
+              </p>
+              {attemptProgress && (
+                <>
+                  <Progress
+                    value={(attemptProgress.current / attemptProgress.max) * 100}
+                    className="h-1.5 mt-3 w-full"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1.5">
+                    {attemptProgress.current}/{attemptProgress.max} tentativas
+                  </p>
+                </>
+              )}
             </div>
             <UploadEditalPanel
               fileInputRef={fileInputRef}
