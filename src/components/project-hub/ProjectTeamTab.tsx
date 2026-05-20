@@ -60,7 +60,10 @@ export default function ProjectTeamTab({ projectId }: ProjectTeamTabProps) {
   const [memberExtras, setMemberExtras] = useState<Record<string, MemberExtra>>({});
   const [inviteTokens, setInviteTokens] = useState<Record<string, string>>({});
   const [inviteStatuses, setInviteStatuses] = useState<Record<string, string>>({});
+  const [inviteIds, setInviteIds] = useState<Record<string, string>>({});
   const [copiedToken, setCopiedToken] = useState<string | null>(null);
+  const [revokeTarget, setRevokeTarget] = useState<{ id: string; email: string; name: string } | null>(null);
+  const [revoking, setRevoking] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<MemberExtra>>({});
