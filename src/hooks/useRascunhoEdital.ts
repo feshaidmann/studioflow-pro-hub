@@ -166,8 +166,13 @@ export function useRascunhoEdital() {
 
     const fail = (cause: ExtractCause, httpStatus?: number, extra?: Record<string, unknown>) => {
       const message = CAUSE_PT[cause];
+      const guidance = CAUSE_GUIDANCE[cause];
       setLastError({ cause, message, attempt, http_status: httpStatus });
-      toast({ title: "Não foi possível extrair", description: `${message} (tentativa ${attempt})`, variant: "destructive" });
+      toast({
+        title: "Não foi possível ler o edital",
+        description: guidance ? `${message}. ${guidance}` : `${message} (tentativa ${attempt})`,
+        variant: "destructive",
+      });
       trackAppEvent("edital_extract_failed", {
         attempt,
         source,
