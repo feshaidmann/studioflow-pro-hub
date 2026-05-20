@@ -75,19 +75,22 @@ export default function ProjectTeamTab({ projectId }: ProjectTeamTabProps) {
   useEffect(() => {
     const fetchData = async () => {
       const [invRes, memRes] = await Promise.all([
-        supabase.from("project_invitations").select("professional_email, token, status").eq("project_id", projectId),
+        supabase.from("project_invitations").select("id, professional_email, token, status").eq("project_id", projectId),
         supabase.from("project_members").select("id, delivery_status, delivery_due_date, expected_deliverable, last_activity_at, stage").eq("project_id", projectId),
       ]);
 
       if (invRes.data) {
         const tokenMap: Record<string, string> = {};
         const statusMap: Record<string, string> = {};
+        const idMap: Record<string, string> = {};
         invRes.data.forEach((row) => {
           if (row.token) tokenMap[row.professional_email] = row.token;
           if (row.status) statusMap[row.professional_email] = row.status;
+          if (row.id) idMap[row.professional_email] = row.id;
         });
         setInviteTokens(tokenMap);
         setInviteStatuses(statusMap);
+        setInviteIds(idMap);
       }
 
       if (memRes.data) {
