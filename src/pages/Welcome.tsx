@@ -75,6 +75,8 @@ export default function Welcome() {
           onLogin={() => navigate("/auth")}
         />
 
+        <ImpactMetrics />
+
         <WelcomeProductPreview />
 
         <Suspense fallback={null}>
