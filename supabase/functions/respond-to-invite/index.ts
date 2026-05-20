@@ -40,6 +40,27 @@ Deno.serve(async (req) => {
       });
     }
 
+    if (inv.status === "revoked") {
+      return new Response(
+        JSON.stringify({ error: "invitation_revoked" }),
+        { status: 410, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (inv.status === "expired" || new Date(inv.expires_at) < new Date()) {
+      // Garante consistência de status quando o cron ainda não rodou
+      if (inv.status === "pending") {
+        await adminClient
+          .from("project_invitations")
+          .update({ status: "expired" })
+          .eq("id", inv.id);
+      }
+      return new Response(JSON.stringify({ error: "invitation_expired" }), {
+        status: 410,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     if (inv.status !== "pending") {
       return new Response(
         JSON.stringify({ error: "already_responded", status: inv.status }),
