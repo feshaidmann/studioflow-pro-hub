@@ -233,6 +233,8 @@ export default function InviteResponse() {
     return <StatusScreen icon={<XCircle className="h-8 w-8 text-destructive" />} title="Convite não encontrado" message="Este link é inválido ou já foi removido." />;
   if (pageState === "expired")
     return <StatusScreen icon={<Clock className="h-8 w-8 text-warning" />} title="Convite expirado" message="Este convite não é mais válido. Entre em contato com o artista para receber um novo." />;
+  if (pageState === "revoked")
+    return <StatusScreen icon={<XCircle className="h-8 w-8 text-destructive" />} title="Convite cancelado" message="Este convite foi revogado pelo artista. Entre em contato com ele para receber um novo link." />;
   if (pageState === "already_responded")
     return (
       <StatusScreen
