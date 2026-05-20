@@ -149,6 +149,31 @@ export default function ProjectTeamTab({ projectId }: ProjectTeamTabProps) {
     setTimeout(() => setCopiedToken(null), 2000);
   };
 
+  const handleRevoke = async () => {
+    if (!revokeTarget) return;
+    setRevoking(true);
+    const { data, error } = await supabase.rpc("revoke_project_invitation", {
+      p_invitation_id: revokeTarget.id,
+    });
+    setRevoking(false);
+    if (error) {
+      toast.error("Não foi possível revogar o convite");
+      return;
+    }
+    const payload = data as { ok?: boolean; reason?: string } | null;
+    if (payload?.ok === false) {
+      toast.info("Este convite já não está mais pendente");
+    } else {
+      toast.success("Convite revogado. O link antigo foi invalidado.");
+    }
+    setInviteStatuses((m) => ({ ...m, [revokeTarget.email]: "revoked" }));
+    setInviteTokens((m) => {
+      const { [revokeTarget.email]: _, ...rest } = m;
+      return rest;
+    });
+    setRevokeTarget(null);
+  };
+
   const startEditing = (prof: Professional) => {
     const extra = memberExtras[prof.id];
     setEditingId(prof.id);
