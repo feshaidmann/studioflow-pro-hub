@@ -152,6 +152,8 @@ export function useRascunhoEdital() {
   const [extractedFields, setExtractedFields] = useState<ExtractedFields | null>(null);
   const [saving, setSaving] = useState(false);
   const [lastError, setLastError] = useState<ExtractError | null>(null);
+  /** Tentativa atual (1..MAX_EXTRACT_ATTEMPTS) durante uma execução de extração. */
+  const [attemptProgress, setAttemptProgress] = useState<{ current: number; max: number } | null>(null);
   const attemptsRef = useRef<Map<string, number>>(new Map());
 
   const runExtract = useCallback(async (
@@ -160,81 +162,123 @@ export function useRascunhoEdital() {
     invokeBody: Record<string, unknown>,
     meta: { editalId?: string; has_url?: boolean; has_titulo?: boolean; file_mime?: string; file_size?: number },
   ) => {
-    const attempt = (attemptsRef.current.get(key) ?? 0) + 1;
-    attemptsRef.current.set(key, attempt);
-
-    const startedAt = Date.now();
     setExtracting(true);
     setExtractedFields(null);
     setLastError(null);
 
-    trackAppEvent("edital_extract_attempt", {
-      attempt,
-      source,
-      has_url: !!meta.has_url,
-      has_titulo: !!meta.has_titulo,
-      file_mime: meta.file_mime ?? null,
-      file_size: meta.file_size ?? null,
-      edital_id: meta.editalId ?? null,
-    });
-
-    const fail = (cause: ExtractCause, httpStatus?: number, extra?: Record<string, unknown>) => {
-      const message = CAUSE_PT[cause];
-      const guidance = CAUSE_GUIDANCE[cause];
-      setLastError({ cause, message, attempt, http_status: httpStatus });
-      toast({
-        title: "Não foi possível ler o edital",
-        description: guidance ? `${message}. ${guidance}` : `${message} (tentativa ${attempt})`,
-        variant: "destructive",
-      });
-      trackAppEvent("edital_extract_failed", {
-        attempt,
-        source,
-        cause,
-        http_status: httpStatus ?? null,
-        duration_ms: Date.now() - startedAt,
-        edital_id: meta.editalId ?? null,
-        ...(extra ?? {}),
-      });
-    };
+    let attempt = 0;
+    let lastFailure: { cause: ExtractCause; httpStatus?: number; extra?: Record<string, unknown> } | null = null;
 
     try {
-      const { data, error } = await supabase.functions.invoke("extract-edital-fields", {
-        body: invokeBody,
-      });
-      if (error) {
-        fail("unknown_error", (error as any)?.status, { error_message: error.message });
-        return;
+      while (attempt < MAX_EXTRACT_ATTEMPTS) {
+        attempt += 1;
+        attemptsRef.current.set(key, (attemptsRef.current.get(key) ?? 0) + 1);
+        setAttemptProgress({ current: attempt, max: MAX_EXTRACT_ATTEMPTS });
+
+        const startedAt = Date.now();
+        trackAppEvent("edital_extract_attempt", {
+          attempt,
+          source,
+          has_url: !!meta.has_url,
+          has_titulo: !!meta.has_titulo,
+          file_mime: meta.file_mime ?? null,
+          file_size: meta.file_size ?? null,
+          edital_id: meta.editalId ?? null,
+        });
+
+        let cause: ExtractCause = "unknown_error";
+        let httpStatus: number | undefined;
+        let extra: Record<string, unknown> | undefined;
+        let payload: (Partial<ExtractedFields> & { fields_count?: number }) | null = null;
+
+        try {
+          const { data, error } = await supabase.functions.invoke("extract-edital-fields", {
+            body: invokeBody,
+          });
+          if (error) {
+            cause = "unknown_error";
+            httpStatus = (error as any)?.status;
+            extra = { error_message: error.message };
+          } else {
+            const p = (data ?? {}) as Partial<ExtractedFields> & {
+              cause?: ExtractCause;
+              http_status?: number;
+              fields_count?: number;
+            };
+            cause = p.cause ?? "unknown_error";
+            httpStatus = p.http_status;
+            payload = p;
+          }
+        } catch (err: any) {
+          console.error("Extract error:", err);
+          cause = "unknown_error";
+          extra = { error_message: err?.message };
+        }
+
+        // Sucesso → grava campos e encerra
+        if (cause === "ok" && payload) {
+          setExtractedFields({
+            campos: payload.campos ?? [],
+            resumo_edital: payload.resumo_edital ?? "",
+            documentos_exigidos: payload.documentos_exigidos ?? [],
+          });
+          trackAppEvent("edital_extract_succeeded", {
+            attempt,
+            source,
+            duration_ms: Date.now() - startedAt,
+            fields_count: payload.fields_count ?? (payload.campos?.length ?? 0),
+            edital_id: meta.editalId ?? null,
+          });
+          setLastError(null);
+          return;
+        }
+
+        // Falha → registra evento
+        lastFailure = { cause, httpStatus, extra };
+        trackAppEvent("edital_extract_failed", {
+          attempt,
+          source,
+          cause,
+          http_status: httpStatus ?? null,
+          duration_ms: Date.now() - startedAt,
+          edital_id: meta.editalId ?? null,
+          ...(extra ?? {}),
+        });
+
+        const isTransient = TRANSIENT_CAUSES.has(cause);
+        const canRetry = isTransient && attempt < MAX_EXTRACT_ATTEMPTS;
+
+        if (!canRetry) break;
+
+        // Toast leve de retry para dar feedback ao usuário
+        toast({
+          title: `Tentando de novo (${attempt + 1}/${MAX_EXTRACT_ATTEMPTS})`,
+          description: `${CAUSE_PT[cause]}. Reenviando em alguns segundos…`,
+        });
+        await sleep(RETRY_BACKOFF_MS[attempt - 1] ?? 3000);
       }
-      const payload = (data ?? {}) as Partial<ExtractedFields> & {
-        cause?: ExtractCause;
-        http_status?: number;
-        fields_count?: number;
-      };
-      const cause: ExtractCause = payload.cause ?? "unknown_error";
-      if (cause !== "ok") {
-        fail(cause, payload.http_status);
-        return;
+
+      // Esgotou as tentativas ou erro não-transitório
+      if (lastFailure) {
+        const { cause, httpStatus } = lastFailure;
+        const message = CAUSE_PT[cause];
+        const guidance = CAUSE_GUIDANCE[cause];
+        const exhausted = TRANSIENT_CAUSES.has(cause) && attempt >= MAX_EXTRACT_ATTEMPTS;
+        setLastError({ cause, message, attempt, http_status: httpStatus, exhausted });
+        toast({
+          title: exhausted
+            ? `Falhou após ${MAX_EXTRACT_ATTEMPTS} tentativas`
+            : "Não foi possível ler o edital",
+          description: guidance ? `${message}. ${guidance}` : message,
+          variant: "destructive",
+        });
       }
-      setExtractedFields({
-        campos: payload.campos ?? [],
-        resumo_edital: payload.resumo_edital ?? "",
-        documentos_exigidos: payload.documentos_exigidos ?? [],
-      });
-      trackAppEvent("edital_extract_succeeded", {
-        attempt,
-        source,
-        duration_ms: Date.now() - startedAt,
-        fields_count: payload.fields_count ?? (payload.campos?.length ?? 0),
-        edital_id: meta.editalId ?? null,
-      });
-    } catch (err: any) {
-      console.error("Extract error:", err);
-      fail("unknown_error", undefined, { error_message: err?.message });
     } finally {
       setExtracting(false);
+      setAttemptProgress(null);
     }
   }, [toast]);
+
 
   const extractFields = useCallback(async (url?: string, titulo?: string, editalId?: string) => {
     if (!user) return;
