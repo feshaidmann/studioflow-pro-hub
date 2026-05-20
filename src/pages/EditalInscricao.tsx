@@ -481,6 +481,33 @@ export default function EditalInscricao() {
             </Button>
           </div>
 
+          {/* Re-extrair a partir de um PDF oficial (opcional) */}
+          <Card>
+            <CardContent className="pt-4 pb-5">
+              <details className="group">
+                <summary className="flex items-center gap-2 cursor-pointer text-sm font-medium select-none">
+                  <FileText className="h-4 w-4 text-muted-foreground" />
+                  Enviar PDF do edital (re-extrair campos)
+                  <span className="text-xs text-muted-foreground font-normal ml-auto">opcional</span>
+                </summary>
+                <div className="mt-4 flex justify-center">
+                  <UploadEditalPanel
+                    fileInputRef={fileInputRef}
+                    selectedFile={selectedFile}
+                    setSelectedFile={setSelectedFile}
+                    extracting={extracting}
+                    onExtract={() => {
+                      if (!selectedFile || !edital) return;
+                      extractFieldsFromFile(selectedFile, edital.id);
+                    }}
+                    title="Substituir pelos campos do PDF"
+                    description="Os campos atuais serão substituídos pelos extraídos do arquivo oficial. Suas respostas em rascunho são mantidas."
+                  />
+                </div>
+              </details>
+            </CardContent>
+          </Card>
+
           {/* Required fields */}
           {requiredFields.length > 0 && (
             <Card>
