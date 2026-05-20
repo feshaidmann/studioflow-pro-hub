@@ -93,12 +93,6 @@ Deno.serve(async (req) => {
     }
 
 
-    if (new Date(inv.expires_at) < new Date()) {
-      return new Response(JSON.stringify({ error: "invitation_expired" }), {
-        status: 410,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
 
     const now = new Date().toISOString();
 
