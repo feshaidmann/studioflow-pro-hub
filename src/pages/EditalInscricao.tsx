@@ -20,6 +20,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useEditalAI } from "@/hooks/useEditalAI";
 import { useEditalApplications, useUpdateApplication, APPLICATION_STATUS_LABELS, APPLICATION_STATUS_COLORS, type ApplicationStatus } from "@/hooks/useEditalApplications";
+import { UploadEditalPanel } from "@/components/editais/UploadEditalPanel";
 
 interface EditalInfo {
   id: string;
