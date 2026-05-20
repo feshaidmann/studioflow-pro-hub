@@ -107,15 +107,6 @@ Deno.serve(async (req) => {
     userId = user.id;
 
     const body = await req.json().catch(() => ({}));
-    const { url, titulo } = body ?? {};
-    hasUrl = !!url;
-    hasTitulo = !!titulo;
-
-    if (!url && !titulo) {
-      return await finish(400, "bad_request", { error: "URL ou título é obrigatório" });
-    }
-
-    const body = await req.json().catch(() => ({}));
     const { url, titulo, file } = body ?? {};
     hasUrl = !!url;
     hasTitulo = !!titulo;
