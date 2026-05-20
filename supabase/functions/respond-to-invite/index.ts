@@ -47,6 +47,31 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Block accept if a different user is logged in
+    const authHeader = req.headers.get("Authorization") ?? req.headers.get("authorization");
+    if (authHeader?.startsWith("Bearer ")) {
+      const jwt = authHeader.slice("Bearer ".length);
+      const { data: userData } = await adminClient.auth.getUser(jwt);
+      const loggedEmail = userData?.user?.email?.toLowerCase() ?? null;
+      const invitedEmail = inv.professional_email?.toLowerCase() ?? null;
+      if (
+        status === "accepted" &&
+        loggedEmail &&
+        invitedEmail &&
+        loggedEmail !== invitedEmail
+      ) {
+        return new Response(
+          JSON.stringify({
+            error: "email_mismatch",
+            invited_email: inv.professional_email,
+            logged_email: userData!.user!.email,
+          }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
+
     if (new Date(inv.expires_at) < new Date()) {
       return new Response(JSON.stringify({ error: "invitation_expired" }), {
         status: 410,
