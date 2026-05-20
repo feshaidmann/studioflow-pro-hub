@@ -446,9 +446,24 @@ export default function EditalInscricao() {
       {extracting && (
         <Card>
           <CardContent className="py-8 flex flex-col items-center text-center space-y-6">
-            <div className="flex flex-col items-center">
+            <div className="flex flex-col items-center w-full max-w-xs">
               <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
-              <p className="text-sm text-muted-foreground">Analisando edital e extraindo campos...</p>
+              <p className="text-sm text-muted-foreground">
+                {attemptProgress && attemptProgress.current > 1
+                  ? `Tentativa ${attemptProgress.current} de ${attemptProgress.max} — a IA pode estar instável…`
+                  : "Analisando edital e extraindo campos..."}
+              </p>
+              {attemptProgress && (
+                <>
+                  <Progress
+                    value={(attemptProgress.current / attemptProgress.max) * 100}
+                    className="h-1.5 mt-3 w-full"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1.5">
+                    {attemptProgress.current}/{attemptProgress.max} tentativas
+                  </p>
+                </>
+              )}
             </div>
             <UploadEditalPanel
               fileInputRef={fileInputRef}
