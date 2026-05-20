@@ -38,7 +38,21 @@ export interface ExtractError {
   message: string;
   attempt: number;
   http_status?: number;
+  /** true quando esgotamos MAX_ATTEMPTS de retry automático em erros transitórios */
+  exhausted?: boolean;
 }
+
+export const MAX_EXTRACT_ATTEMPTS = 3;
+/** Causas que justificam retry automático (instabilidade de upstream/IA). */
+const TRANSIENT_CAUSES: ReadonlySet<ExtractCause> = new Set<ExtractCause>([
+  "perplexity_timeout",
+  "perplexity_upstream_error",
+  "empty_response",
+  "lovable_ai_error",
+  "unknown_error",
+]);
+const RETRY_BACKOFF_MS = [1500, 3000];
+const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
 const CAUSE_PT: Record<ExtractCause, string> = {
   ok: "Sucesso",
