@@ -533,6 +533,29 @@ export default function ProjectTeamTab({ projectId }: ProjectTeamTabProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Revoke confirmation */}
+      <AlertDialog open={!!revokeTarget} onOpenChange={(o) => !o && !revoking && setRevokeTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Revogar convite</AlertDialogTitle>
+            <AlertDialogDescription>
+              O link enviado para <strong>{revokeTarget?.name}</strong> ({revokeTarget?.email}) deixará de funcionar imediatamente.
+              Esta ação não pode ser desfeita — você precisará enviar um novo convite caso queira incluí-lo no projeto.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={revoking}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={revoking}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={(e) => { e.preventDefault(); handleRevoke(); }}
+            >
+              {revoking ? "Revogando…" : "Revogar link"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
