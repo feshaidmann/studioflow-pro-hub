@@ -224,24 +224,79 @@ export function useRascunhoEdital() {
 
   const extractFields = useCallback(async (url?: string, titulo?: string, editalId?: string) => {
     if (!user) return;
-    const key = editalId || url || titulo || "default";
-    await runExtract(key, "url", { url, titulo }, { editalId, has_url: !!url, has_titulo: !!titulo });
-  }, [user, runExtract]);
+    const cleanUrl = (url ?? "").trim();
+    const cleanTitulo = (titulo ?? "").trim();
+
+    if (!cleanUrl && !cleanTitulo) {
+      const cause: ExtractCause = "bad_request";
+      setLastError({ cause, message: CAUSE_PT[cause], attempt: 0 });
+      toast({
+        title: "Faltou o link ou título do edital",
+        description: CAUSE_GUIDANCE[cause],
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (cleanUrl) {
+      try {
+        const parsed = new URL(cleanUrl);
+        if (!/^https?:$/.test(parsed.protocol)) throw new Error("invalid_protocol");
+      } catch {
+        const cause: ExtractCause = "bad_request";
+        const message = "Link inválido — use uma URL começando com https://";
+        setLastError({ cause, message, attempt: 0 });
+        toast({
+          title: "Link inválido",
+          description: `${message}. ${CAUSE_GUIDANCE[cause]}`,
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
+    const key = editalId || cleanUrl || cleanTitulo || "default";
+    await runExtract(
+      key,
+      "url",
+      { url: cleanUrl || undefined, titulo: cleanTitulo || undefined },
+      { editalId, has_url: !!cleanUrl, has_titulo: !!cleanTitulo },
+    );
+  }, [user, toast, runExtract]);
 
   const extractFieldsFromFile = useCallback(async (file: File, editalId?: string) => {
     if (!user) return;
 
+    if (!file) {
+      const cause: ExtractCause = "bad_request";
+      setLastError({ cause, message: "Nenhum arquivo selecionado", attempt: 0 });
+      toast({
+        title: "Selecione um arquivo",
+        description: "Escolha o PDF/DOC do regulamento antes de clicar em extrair.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     // Client-side validation
     if (!ALLOWED_FILE_MIME.has(file.type)) {
-      const message = CAUSE_PT["unsupported_file_type"];
-      setLastError({ cause: "unsupported_file_type", message, attempt: 0 });
-      toast({ title: "Arquivo inválido", description: message, variant: "destructive" });
+      const cause: ExtractCause = "unsupported_file_type";
+      setLastError({ cause, message: CAUSE_PT[cause], attempt: 0 });
+      toast({
+        title: "Formato não suportado",
+        description: `${CAUSE_PT[cause]}. ${CAUSE_GUIDANCE[cause]}`,
+        variant: "destructive",
+      });
       return;
     }
     if (file.size > MAX_FILE_BYTES) {
-      const message = CAUSE_PT["file_too_large"];
-      setLastError({ cause: "file_too_large", message, attempt: 0 });
-      toast({ title: "Arquivo muito grande", description: message, variant: "destructive" });
+      const cause: ExtractCause = "file_too_large";
+      setLastError({ cause, message: CAUSE_PT[cause], attempt: 0 });
+      toast({
+        title: "Arquivo muito grande",
+        description: `${CAUSE_PT[cause]}. ${CAUSE_GUIDANCE[cause]}`,
+        variant: "destructive",
+      });
       return;
     }
 
@@ -249,7 +304,11 @@ export function useRascunhoEdital() {
     try {
       base64 = await fileToBase64(file);
     } catch (err: any) {
-      toast({ title: "Erro ao ler arquivo", description: err?.message ?? "Não foi possível ler o arquivo", variant: "destructive" });
+      toast({
+        title: "Não conseguimos ler o arquivo",
+        description: `${err?.message ?? "Falha desconhecida"}. Verifique se ele não está corrompido e tente novamente.`,
+        variant: "destructive",
+      });
       return;
     }
 
@@ -261,6 +320,7 @@ export function useRascunhoEdital() {
       { editalId, file_mime: file.type, file_size: file.size },
     );
   }, [user, toast, runExtract]);
+
 
 
   const saveRascunho = useCallback(async (
