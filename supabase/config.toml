@@ -1,1 +1,4 @@
 project_id = "icdedfqsiorzzuhzvfgl"
+
+[functions.public-stats]
+verify_jwt = false
