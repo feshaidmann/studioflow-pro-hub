@@ -147,6 +147,8 @@ export default function InviteResponse() {
       .then(({ data, error }) => {
         if (error || !data) { setPageState("not_found"); return; }
         const inv = data as unknown as InvitationData;
+        if (inv.status === "revoked") { setPageState("revoked"); return; }
+        if (inv.status === "expired") { setPageState("expired"); return; }
         if (inv.status !== "pending") { setPageState("already_responded"); setInvitation(inv); return; }
         if (new Date(inv.expires_at) < new Date()) { setPageState("expired"); return; }
         setInvitation(inv);
