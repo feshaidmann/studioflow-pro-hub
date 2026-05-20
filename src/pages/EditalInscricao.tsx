@@ -20,6 +20,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useEditalAI } from "@/hooks/useEditalAI";
 import { useEditalApplications, useUpdateApplication, APPLICATION_STATUS_LABELS, APPLICATION_STATUS_COLORS, type ApplicationStatus } from "@/hooks/useEditalApplications";
+import { UploadEditalPanel } from "@/components/editais/UploadEditalPanel";
 
 interface EditalInfo {
   id: string;
@@ -401,55 +402,44 @@ export default function EditalInscricao() {
               </div>
 
               {/* Fallback: upload manual do edital */}
-              <div className="w-full max-w-sm mt-6 pt-6 border-t space-y-3 text-left">
-                <div>
-                  <Label className="text-sm font-medium">Ou envie o edital manualmente</Label>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Baixe o PDF do edital e envie aqui — a IA lê o arquivo direto. PDF, DOC, DOCX ou TXT, até 10 MB.
-                  </p>
-                </div>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".pdf,.doc,.docx,.txt,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"
-                  className="hidden"
-                  onChange={(e) => {
-                    const f = e.target.files?.[0] ?? null;
-                    setSelectedFile(f);
-                  }}
-                />
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={extracting}
-                >
-                  <FileText className="h-4 w-4 mr-1.5" />
-                  {selectedFile ? selectedFile.name : "Escolher arquivo"}
-                </Button>
-                <Button
-                  className="w-full"
-                  disabled={!selectedFile || extracting}
-                  onClick={() => {
-                    if (!selectedFile || !edital) return;
-                    extractFieldsFromFile(selectedFile, edital.id);
-                  }}
-                >
-                  <Upload className="h-4 w-4 mr-1.5" />
-                  Extrair do arquivo
-                </Button>
-              </div>
+              <UploadEditalPanel
+                fileInputRef={fileInputRef}
+                selectedFile={selectedFile}
+                setSelectedFile={setSelectedFile}
+                extracting={extracting}
+                onExtract={() => {
+                  if (!selectedFile || !edital) return;
+                  extractFieldsFromFile(selectedFile, edital.id);
+                }}
+                className="mt-6 pt-6 border-t"
+              />
             </div>
           </CardContent>
         </Card>
       )}
 
-      {/* Loading — primeira extração ou retry */}
+      {/* Loading — primeira extração ou retry. Mostra também o upload pra
+          quem já tem o PDF em mãos e quer pular o scraping do link. */}
       {extracting && (
         <Card>
-          <CardContent className="py-12 flex flex-col items-center text-center">
-            <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
-            <p className="text-sm text-muted-foreground">Analisando edital e extraindo campos...</p>
+          <CardContent className="py-8 flex flex-col items-center text-center space-y-6">
+            <div className="flex flex-col items-center">
+              <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
+              <p className="text-sm text-muted-foreground">Analisando edital e extraindo campos...</p>
+            </div>
+            <UploadEditalPanel
+              fileInputRef={fileInputRef}
+              selectedFile={selectedFile}
+              setSelectedFile={setSelectedFile}
+              extracting={extracting}
+              onExtract={() => {
+                if (!selectedFile || !edital) return;
+                extractFieldsFromFile(selectedFile, edital.id);
+              }}
+              className="w-full max-w-sm pt-6 border-t text-left"
+              title="Já tem o PDF do edital?"
+              description="Envie aqui para pular o scraping e extrair os campos direto do arquivo oficial."
+            />
           </CardContent>
         </Card>
       )}
@@ -490,6 +480,33 @@ export default function EditalInscricao() {
               Copiar tudo
             </Button>
           </div>
+
+          {/* Re-extrair a partir de um PDF oficial (opcional) */}
+          <Card>
+            <CardContent className="pt-4 pb-5">
+              <details className="group">
+                <summary className="flex items-center gap-2 cursor-pointer text-sm font-medium select-none">
+                  <FileText className="h-4 w-4 text-muted-foreground" />
+                  Enviar PDF do edital (re-extrair campos)
+                  <span className="text-xs text-muted-foreground font-normal ml-auto">opcional</span>
+                </summary>
+                <div className="mt-4 flex justify-center">
+                  <UploadEditalPanel
+                    fileInputRef={fileInputRef}
+                    selectedFile={selectedFile}
+                    setSelectedFile={setSelectedFile}
+                    extracting={extracting}
+                    onExtract={() => {
+                      if (!selectedFile || !edital) return;
+                      extractFieldsFromFile(selectedFile, edital.id);
+                    }}
+                    title="Substituir pelos campos do PDF"
+                    description="Os campos atuais serão substituídos pelos extraídos do arquivo oficial. Suas respostas em rascunho são mantidas."
+                  />
+                </div>
+              </details>
+            </CardContent>
+          </Card>
 
           {/* Required fields */}
           {requiredFields.length > 0 && (
