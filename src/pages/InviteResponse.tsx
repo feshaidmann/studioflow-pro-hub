@@ -203,6 +203,7 @@ export default function InviteResponse() {
       }
       else if (body.error === "already_responded") setPageState("already_responded");
       else if (body.error === "invitation_expired") setPageState("expired");
+      else if (body.error === "invitation_revoked") setPageState("revoked");
       else setPageState("error");
     }
   };
