@@ -7,6 +7,7 @@ import { useProfile } from "@/contexts/ProfileContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { WelcomeHero } from "@/components/welcome/WelcomeHero";
 import { WelcomeProductPreview } from "@/components/welcome/WelcomeProductPreview";
+import { ImpactMetrics } from "@/components/welcome/ImpactMetrics";
 
 const WelcomePainPoints = lazy(() =>
   import("@/components/welcome/WelcomePainPoints").then((m) => ({ default: m.WelcomePainPoints }))
