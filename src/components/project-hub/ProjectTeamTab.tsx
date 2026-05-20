@@ -472,10 +472,39 @@ export default function ProjectTeamTab({ projectId }: ProjectTeamTabProps) {
                       <Link2 className="h-3 w-3 text-primary shrink-0" />
                       <span className="text-[10px] text-muted-foreground truncate flex-1 font-mono">/invite/{token}</span>
                     </div>
-                    <Button variant="outline" size="sm" className="h-7 text-xs gap-1 w-full" onClick={() => handleCopyLink(token!)}>
-                      {isCopied ? <Check className="h-3 w-3 text-success" /> : <Copy className="h-3 w-3" />}
-                      {isCopied ? "Copiado!" : "Copiar link"}
-                    </Button>
+                    <div className="flex gap-1.5">
+                      <Button variant="outline" size="sm" className="h-7 text-xs gap-1 flex-1" onClick={() => handleCopyLink(token!)}>
+                        {isCopied ? <Check className="h-3 w-3 text-success" /> : <Copy className="h-3 w-3" />}
+                        {isCopied ? "Copiado!" : "Copiar link"}
+                      </Button>
+                      {prof.email && inviteIds[prof.email] && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7 text-xs gap-1 text-destructive hover:text-destructive border-destructive/30"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setRevokeTarget({ id: inviteIds[prof.email!], email: prof.email!, name: prof.name });
+                          }}
+                        >
+                          <XIcon className="h-3 w-3" /> Revogar
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                )}
+                {prof.email && inviteStatuses[prof.email] === "revoked" && !token && (
+                  <div className="pt-2 border-t border-border/40">
+                    <Badge variant="outline" className="text-[10px] border-destructive/40 text-destructive">
+                      Convite revogado
+                    </Badge>
+                  </div>
+                )}
+                {prof.email && inviteStatuses[prof.email] === "expired" && !token && (
+                  <div className="pt-2 border-t border-border/40">
+                    <Badge variant="outline" className="text-[10px] border-warning/40 text-warning">
+                      Convite expirado
+                    </Badge>
                   </div>
                 )}
               </div>
