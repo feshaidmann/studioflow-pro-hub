@@ -43,6 +43,7 @@ type PageState =
   | "declined"
   | "already_responded"
   | "expired"
+  | "revoked"
   | "not_found"
   | "email_mismatch"
   | "error";
