@@ -2604,6 +2604,7 @@ export type Database = {
         Args: { p_genre: string }
         Returns: number
       }
+      expire_old_invitations: { Args: never; Returns: number }
       find_nearest_reference_tracks: {
         Args: {
           p_acousticness?: number
@@ -2819,6 +2820,10 @@ export type Database = {
           tracks_per_band_avg: number
           tracks_per_band_max: number
         }[]
+      }
+      revoke_project_invitation: {
+        Args: { p_invitation_id: string }
+        Returns: Json
       }
       upsert_reference_tracks: {
         Args: { p_rows: Json }

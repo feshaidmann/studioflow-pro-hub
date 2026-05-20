@@ -43,6 +43,7 @@ type PageState =
   | "declined"
   | "already_responded"
   | "expired"
+  | "revoked"
   | "not_found"
   | "email_mismatch"
   | "error";
@@ -146,6 +147,8 @@ export default function InviteResponse() {
       .then(({ data, error }) => {
         if (error || !data) { setPageState("not_found"); return; }
         const inv = data as unknown as InvitationData;
+        if (inv.status === "revoked") { setPageState("revoked"); return; }
+        if (inv.status === "expired") { setPageState("expired"); return; }
         if (inv.status !== "pending") { setPageState("already_responded"); setInvitation(inv); return; }
         if (new Date(inv.expires_at) < new Date()) { setPageState("expired"); return; }
         setInvitation(inv);
@@ -200,6 +203,7 @@ export default function InviteResponse() {
       }
       else if (body.error === "already_responded") setPageState("already_responded");
       else if (body.error === "invitation_expired") setPageState("expired");
+      else if (body.error === "invitation_revoked") setPageState("revoked");
       else setPageState("error");
     }
   };
@@ -229,6 +233,8 @@ export default function InviteResponse() {
     return <StatusScreen icon={<XCircle className="h-8 w-8 text-destructive" />} title="Convite não encontrado" message="Este link é inválido ou já foi removido." />;
   if (pageState === "expired")
     return <StatusScreen icon={<Clock className="h-8 w-8 text-warning" />} title="Convite expirado" message="Este convite não é mais válido. Entre em contato com o artista para receber um novo." />;
+  if (pageState === "revoked")
+    return <StatusScreen icon={<XCircle className="h-8 w-8 text-destructive" />} title="Convite cancelado" message="Este convite foi revogado pelo artista. Entre em contato com ele para receber um novo link." />;
   if (pageState === "already_responded")
     return (
       <StatusScreen

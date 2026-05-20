@@ -60,7 +60,10 @@ export default function ProjectTeamTab({ projectId }: ProjectTeamTabProps) {
   const [memberExtras, setMemberExtras] = useState<Record<string, MemberExtra>>({});
   const [inviteTokens, setInviteTokens] = useState<Record<string, string>>({});
   const [inviteStatuses, setInviteStatuses] = useState<Record<string, string>>({});
+  const [inviteIds, setInviteIds] = useState<Record<string, string>>({});
   const [copiedToken, setCopiedToken] = useState<string | null>(null);
+  const [revokeTarget, setRevokeTarget] = useState<{ id: string; email: string; name: string } | null>(null);
+  const [revoking, setRevoking] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<MemberExtra>>({});
@@ -72,19 +75,22 @@ export default function ProjectTeamTab({ projectId }: ProjectTeamTabProps) {
   useEffect(() => {
     const fetchData = async () => {
       const [invRes, memRes] = await Promise.all([
-        supabase.from("project_invitations").select("professional_email, token, status").eq("project_id", projectId),
+        supabase.from("project_invitations").select("id, professional_email, token, status").eq("project_id", projectId),
         supabase.from("project_members").select("id, delivery_status, delivery_due_date, expected_deliverable, last_activity_at, stage").eq("project_id", projectId),
       ]);
 
       if (invRes.data) {
         const tokenMap: Record<string, string> = {};
         const statusMap: Record<string, string> = {};
+        const idMap: Record<string, string> = {};
         invRes.data.forEach((row) => {
           if (row.token) tokenMap[row.professional_email] = row.token;
           if (row.status) statusMap[row.professional_email] = row.status;
+          if (row.id) idMap[row.professional_email] = row.id;
         });
         setInviteTokens(tokenMap);
         setInviteStatuses(statusMap);
+        setInviteIds(idMap);
       }
 
       if (memRes.data) {
@@ -141,6 +147,31 @@ export default function ProjectTeamTab({ projectId }: ProjectTeamTabProps) {
     setCopiedToken(token);
     toast.success("Link copiado! 🔗");
     setTimeout(() => setCopiedToken(null), 2000);
+  };
+
+  const handleRevoke = async () => {
+    if (!revokeTarget) return;
+    setRevoking(true);
+    const { data, error } = await supabase.rpc("revoke_project_invitation", {
+      p_invitation_id: revokeTarget.id,
+    });
+    setRevoking(false);
+    if (error) {
+      toast.error("Não foi possível revogar o convite");
+      return;
+    }
+    const payload = data as { ok?: boolean; reason?: string } | null;
+    if (payload?.ok === false) {
+      toast.info("Este convite já não está mais pendente");
+    } else {
+      toast.success("Convite revogado. O link antigo foi invalidado.");
+    }
+    setInviteStatuses((m) => ({ ...m, [revokeTarget.email]: "revoked" }));
+    setInviteTokens((m) => {
+      const { [revokeTarget.email]: _, ...rest } = m;
+      return rest;
+    });
+    setRevokeTarget(null);
   };
 
   const startEditing = (prof: Professional) => {
@@ -441,10 +472,39 @@ export default function ProjectTeamTab({ projectId }: ProjectTeamTabProps) {
                       <Link2 className="h-3 w-3 text-primary shrink-0" />
                       <span className="text-[10px] text-muted-foreground truncate flex-1 font-mono">/invite/{token}</span>
                     </div>
-                    <Button variant="outline" size="sm" className="h-7 text-xs gap-1 w-full" onClick={() => handleCopyLink(token!)}>
-                      {isCopied ? <Check className="h-3 w-3 text-success" /> : <Copy className="h-3 w-3" />}
-                      {isCopied ? "Copiado!" : "Copiar link"}
-                    </Button>
+                    <div className="flex gap-1.5">
+                      <Button variant="outline" size="sm" className="h-7 text-xs gap-1 flex-1" onClick={() => handleCopyLink(token!)}>
+                        {isCopied ? <Check className="h-3 w-3 text-success" /> : <Copy className="h-3 w-3" />}
+                        {isCopied ? "Copiado!" : "Copiar link"}
+                      </Button>
+                      {prof.email && inviteIds[prof.email] && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7 text-xs gap-1 text-destructive hover:text-destructive border-destructive/30"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setRevokeTarget({ id: inviteIds[prof.email!], email: prof.email!, name: prof.name });
+                          }}
+                        >
+                          <XIcon className="h-3 w-3" /> Revogar
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                )}
+                {prof.email && inviteStatuses[prof.email] === "revoked" && !token && (
+                  <div className="pt-2 border-t border-border/40">
+                    <Badge variant="outline" className="text-[10px] border-destructive/40 text-destructive">
+                      Convite revogado
+                    </Badge>
+                  </div>
+                )}
+                {prof.email && inviteStatuses[prof.email] === "expired" && !token && (
+                  <div className="pt-2 border-t border-border/40">
+                    <Badge variant="outline" className="text-[10px] border-warning/40 text-warning">
+                      Convite expirado
+                    </Badge>
                   </div>
                 )}
               </div>
@@ -469,6 +529,29 @@ export default function ProjectTeamTab({ projectId }: ProjectTeamTabProps) {
               onClick={() => { if (removeTarget) { removeProfessional(projectId, removeTarget.id); setRemoveTarget(null); } }}
             >
               Remover
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Revoke confirmation */}
+      <AlertDialog open={!!revokeTarget} onOpenChange={(o) => !o && !revoking && setRevokeTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Revogar convite</AlertDialogTitle>
+            <AlertDialogDescription>
+              O link enviado para <strong>{revokeTarget?.name}</strong> ({revokeTarget?.email}) deixará de funcionar imediatamente.
+              Esta ação não pode ser desfeita — você precisará enviar um novo convite caso queira incluí-lo no projeto.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={revoking}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={revoking}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={(e) => { e.preventDefault(); handleRevoke(); }}
+            >
+              {revoking ? "Revogando…" : "Revogar link"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
