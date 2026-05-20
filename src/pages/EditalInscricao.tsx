@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbSeparator, BreadcrumbPage } from "@/components/ui/breadcrumb";
 import { toast } from "sonner";
-import { useRascunhoEdital, extractCauseLabel, type EditalField } from "@/hooks/useRascunhoEdital";
+import { useRascunhoEdital, extractCauseLabel, extractCauseGuidance, type EditalField } from "@/hooks/useRascunhoEdital";
 import { useProjects } from "@/contexts/ProjectContext";
 import { useProfile } from "@/contexts/ProfileContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -362,11 +362,16 @@ export default function EditalInscricao() {
               {lastError && (
                 <div className="flex items-center gap-2 mb-3">
                   <Badge variant="destructive">{extractCauseLabel(lastError.cause)}</Badge>
-                  <span className="text-xs text-muted-foreground">Tentativa {lastError.attempt}</span>
+                  {lastError.attempt > 0 && (
+                    <span className="text-xs text-muted-foreground">Tentativa {lastError.attempt}</span>
+                  )}
                 </div>
               )}
+              <p className="text-sm text-foreground max-w-md mb-2">
+                {lastError?.message ?? "O link pode estar fora do ar ou o regulamento exige login."}
+              </p>
               <p className="text-sm text-muted-foreground max-w-md mb-6">
-                {lastError?.message ?? "O link pode estar fora do ar ou o regulamento exige login."} Tente novamente — ou abra o oficial e preencha manualmente.
+                {lastError ? extractCauseGuidance(lastError.cause) : "Tente novamente — ou abra o edital oficial e preencha manualmente."}
               </p>
 
               <div className="w-full max-w-sm space-y-3">
