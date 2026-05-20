@@ -100,6 +100,29 @@ export default function EditalInscricao() {
     extractFields(edital.link || undefined, edital.titulo, edital.id);
   }, [edital, extracting, extractedFields, rascunhoId, extractFields]);
 
+  // Após esgotar as 3 tentativas em erro transitório, apaga o edital e volta
+  // para /carreira — evita deixar entradas "fantasma" inutilizáveis na lista.
+  const purgedRef = useRef(false);
+  useEffect(() => {
+    if (!lastError?.exhausted || !edital || !user || purgedRef.current) return;
+    purgedRef.current = true;
+    (async () => {
+      try {
+        // Apaga rascunho (se houver) e o edital (RLS garante escopo por user_id)
+        await supabase.from("rascunhos_editais").delete().eq("edital_id", edital.id).eq("user_id", user.id);
+        await supabase.from("editais").delete().eq("id", edital.id).eq("user_id", user.id);
+        toast.error(`Edital "${edital.titulo}" foi removido após 3 tentativas sem sucesso.`, {
+          description: "Você pode adicioná-lo de novo mais tarde quando o portal estiver estável.",
+        });
+      } catch (err) {
+        console.error("Falha ao apagar edital:", err);
+      } finally {
+        navigate("/carreira", { replace: true });
+      }
+    })();
+  }, [lastError, edital, user, navigate]);
+
+
   // Pre-fill simple fields from profile — more aggressive matching
   const preFillProfile = useCallback(() => {
     if (!extractedFields?.campos || !profile) return;
