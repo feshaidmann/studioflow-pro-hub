@@ -1,62 +1,61 @@
-## Correções no fluxo de convites
+# Métricas de impacto na landing `/`
 
-### 1. 🔴 Bloquear aceite com email divergente (`respond-to-invite`)
+Adicionar uma seção com 4 KPIs públicos (artistas ativos, editais abertos, projetos publicados, profissionais cadastrados) entre o `WelcomeHero` e o `WelcomeProductPreview`, alimentada por uma Edge Function pública com cache de 1h.
 
-No edge function `supabase/functions/respond-to-invite/index.ts`:
-- Quando o request trouxer `Authorization: Bearer <jwt>`, criar um client com esse token e chamar `auth.getUser()` para obter o email do usuário logado.
-- Se houver usuário logado e `user.email.toLowerCase() !== inv.professional_email.toLowerCase()`, retornar **403** com `{ error: "email_mismatch", invited_email: inv.professional_email }`.
-- Não consumir o convite nesse caso.
+## 1. Edge Function `public-stats`
 
-No frontend `src/pages/InviteResponse.tsx`:
-- Enviar o header `Authorization` quando houver sessão (via `supabase.auth.getSession()`).
-- Tratar o erro `email_mismatch` com um novo `PageState` (`email_mismatch`) mostrando: *"Este convite é para `{invited_email}`. Saia da conta atual ou entre com o email correto."* + botões "Sair" (`supabase.auth.signOut()` e recarregar) e "Voltar".
+Arquivo: `supabase/functions/public-stats/index.ts`
 
-### 2. 🔴 Reconciliar membership pós-signup
+- `verify_jwt = false` em `supabase/config.toml` (bloco específico da função; não tocar em `project_id`).
+- CORS padrão (`npm:@supabase/supabase-js@2/cors`), handler `OPTIONS`.
+- Client com `SUPABASE_SERVICE_ROLE_KEY` (leitura agregada bypassa RLS sem expor dados).
+- 4 queries paralelas com `Promise.allSettled` (`head: true, count: 'exact'`):
+  - `artistsActive`: `projects` distintos por `user_id` nos últimos 90 dias. Como Supabase JS não tem `countDistinct`, usar `select('user_id').gte('created_at', since)` e contar `new Set()` no edge.
+  - `editaisAtivos`: `editais` com `status='Aberto'` e `prazo > now()`.
+  - `projectsPublished`: `projects` com `completed = true`.
+  - `professionalsAvailable`: `profiles` com `allow_global_listing = true` (a tabela `professionals` legada não tem essa flag; `profiles` é a fonte correta — confirmar nas próximas etapas lendo o schema antes de codar).
+- Em qualquer falha individual → log `console.error` e zero para aquele campo. Nunca lança 5xx.
+- Resposta JSON com `generatedAt: new Date().toISOString()`.
+- Headers: `Cache-Control: public, max-age=3600, s-maxage=3600` + CORS + `Content-Type: application/json`.
 
-Migration:
-- Criar função `public.reconcile_invitations_for_new_user()` `SECURITY DEFINER` que, para o `NEW.id`/`NEW.email`, faz `UPDATE project_members SET user_id = NEW.id, delivery_status='ativo', last_activity_at=now() WHERE lower(email)=lower(NEW.email) AND user_id <> NEW.id` e marca `invitation_id` quando aplicável (join com `project_invitations` accepted).
-- Trigger `AFTER INSERT ON auth.users` chamando essa função.
-- Também rodar um backfill único no final da migration para reconciliar usuários já existentes.
+## 2. Componente `ImpactMetrics`
 
-### 3. 🟡 Aviso no `/auth` quando vier de convite
+Arquivo: `src/components/welcome/ImpactMetrics.tsx`
 
-Em `src/pages/Auth.tsx`:
-- Detectar `searchParams.get("redirect")?.startsWith("/invite/")` **ou** novo param `invited_email`.
-- Mostrar banner discreto acima do form: *"Use o mesmo email para o qual o convite foi enviado, senão o acesso ao projeto não será vinculado."*
-- Em `InviteResponse.tsx`, ao montar o botão "Entrar na plataforma", anexar `&invited_email={professional_email}` para pré-preencher o campo de email no Auth (`useEffect` lê e seta).
+- Hook local: ao montar, ler `sessionStorage["sf_impact_stats_v1"]`. Se `generatedAt` < 1h, hidratar sem fetch. Caso contrário `supabase.functions.invoke("public-stats")`, gravar no storage.
+- Estados: `loading` (skeleton), `ready` (4 cards), `error` → retorna `null` (graceful fail, não renderiza nada).
+- Layout: `grid grid-cols-2 md:grid-cols-4 gap-3`. Cada card reusa o padrão de `WelcomeModules` (`rounded-[var(--radius)] border border-border/50 bg-card/60 backdrop-blur-sm`).
+- Ícones lucide: `Music`, `Trophy`, `Rocket`, `Users` em `bg-primary/10 text-primary`.
+- Número formatado pt-BR via `Intl.NumberFormat('pt-BR')`. Sem animação de contagem.
+- Skeleton usa `@/components/ui/skeleton` (4 blocos do mesmo tamanho do card final).
+- Acessibilidade: cada card como `<div role="group" aria-label="...">`, número em `<p>` `text-2xl font-semibold`.
 
-### 4. 🟡 UNIQUE parcial em `project_invitations`
+## 3. Integração em `Welcome.tsx`
 
-Migration:
-```sql
-CREATE UNIQUE INDEX IF NOT EXISTS project_invitations_unique_pending
-  ON public.project_invitations (project_id, lower(professional_email))
-  WHERE status = 'pending';
+- Import direto (não lazy — está acima da dobra).
+- Inserir entre `<WelcomeHero />` e `<WelcomeProductPreview />`.
+- Wrapper com `welcome-fade` e `--delay: 90ms` para alinhar com a cadência existente.
+
+## 4. Verificação
+
+- `supabase--deploy_edge_functions(["public-stats"])` após criar.
+- Testar com `supabase--curl_edge_functions` (GET, sem auth header explícito — passar `Authorization: ""` para garantir que não usa o token da sessão de preview).
+- Conferir no preview: 4 cards visíveis sem login, segundo reload em < 1h não dispara nova request (network tab).
+
+## Detalhes técnicos
+
+```text
+Welcome.tsx
+ ├── WelcomeHero
+ ├── ImpactMetrics  ◀ novo (eager)
+ ├── WelcomeProductPreview
+ └── Suspense → WelcomePainPoints / WelcomeModules / WelcomeFinalCTA
 ```
-- Antes do índice, rodar dedupe: manter o mais recente por `(project_id, lower(email))` em status pending e marcar duplicados como `status='cancelled'` (ou `declined`) com `responded_at=now()`.
-- Atualizar `send-project-invite` para tratar erro de constraint retornando mensagem amigável ("Já existe um convite pendente para este email neste projeto").
 
-### 5. 🟡 Retematizar `InviteResponse.tsx` (light / macOS)
+Cache key: `sf_impact_stats_v1` → `{ data: {...}, cachedAt: number }`. TTL: `Date.now() - cachedAt < 3_600_000`.
 
-Reescrever a página removendo:
-- `GradientBg` escuro (`hsl(240 10% 3.9%)`), orbs `neon-pink`, gradients `primary→neon-pink`, `neon-glow`, sombras `0 0 60px`.
-- Substituir por:
-  - Fundo `bg-background` (neutro cinza claro já no design system).
-  - Cards com `bg-card border border-border rounded-2xl shadow-sm` (sem backdrop-blur escuro).
-  - Logo: ícone simples em `bg-primary/10 text-primary` sem blur.
-  - Botões usando variantes padrão (`Button` default + `variant="outline"` para recusar), sem `neon-glow`.
-  - Highlight de cachê/prazo com `bg-muted/40` e accent sutil em `text-primary` / `text-warning`.
-  - Animação de confirmação: substituir orbe gradiente pulsante por check/X em círculo sólido `bg-success`/`bg-destructive` com `animate-scale-in` apenas.
-- Manter toda a lógica de estados (`loading`, `ready`, `accepted`, `declined`, `already_responded`, `expired`, `not_found`, `error`, novo `email_mismatch`).
+## Fora do escopo
 
-### Ordem de execução
-1. Migration (itens 2 + 4, incluindo dedupe e backfill).
-2. Edge function `respond-to-invite` (item 1) + ajuste em `send-project-invite` (item 4).
-3. `Auth.tsx` (item 3).
-4. `InviteResponse.tsx` (itens 1 frontend + 3 link + 5 retema).
-
-### Detalhes técnicos
-- A trigger em `auth.users` é permitida (já existe `handle_new_user`), então adicionamos uma segunda função separada para reconciliação — não tocar na existente.
-- A função de reconciliação não precisa cruzar `project_invitations` se já existir `project_members` por email; basta atualizar pelo email. O `invitation_id` é preenchido quando há match em `project_invitations` accepted.
-- Para o 403 de email_mismatch, garantir que o edge function não atualize nada antes da checagem (mover validação para logo após o fetch do invitation).
-- O índice UNIQUE parcial requer `lower(professional_email)` — Postgres aceita expressão em índice único.
+- Não alterar hero, modules, pain points, product preview, final CTA.
+- Não tocar em `admin-stats` (privada).
+- Sem analytics extra — PostHog continua via `initAnalytics`.
