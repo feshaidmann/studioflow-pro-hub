@@ -1,85 +1,84 @@
-## Onboarding em 3 passos com "primeiro valor"
 
-Transforma `src/pages/Onboarding.tsx` em um fluxo de 3 steps que termina mostrando editais e profissionais reais, antes do dashboard.
+# Diagnóstico profundo do código
+
+Análise feita sobre o projeto StudioFlow (React + Vite + Supabase/Cloud), ~50k linhas em 275 arquivos TS/TSX e 33 edge functions. Sem propor mudanças ainda — apenas um relatório do estado atual com prioridades.
+
+## 1. Saúde geral
+
+- **Build TypeScript:** `tsc --noEmit` passou limpo (0 erros).
+- **Testes:** 7 suítes / 75 testes — todos verdes em ~5,4s.
+- **Console no preview:** apenas o erro esperado `Invalid Refresh Token: Refresh Token Not Found` (sessão expirada, sem ação requerida).
+- **Edge functions com problemas reais nos últimos 7 dias:** somente `extract-edital-fields` (9 warns: 1 `auth_error`, 6 `no_fields_extracted`, 2 `invalid_json`). Nenhuma 5xx.
+
+Resumo: a base está estável. Os riscos abaixo são de manutenção, segurança e performance — não bloqueiam o produto hoje.
 
 ---
 
-### 1. Nova edge function `onboarding-matches`
+## 2. Riscos altos (recomendo tratar nos próximos ciclos)
 
-Arquivo: `supabase/functions/onboarding-matches/index.ts`
+### 2.1. Linter Supabase: 28 warnings de SECURITY DEFINER expostas
+- 1 `extension in public` + 27 `SECURITY DEFINER` executáveis por `anon`/`authenticated`.
+- 9 dessas funções são realmente públicas/legítimas (ex.: `get_public_profile`, `get_public_profile_ratings`, `get_genre_reference_examples`, `find_nearest_reference_tracks`, `count_reference_tracks_by_genre`, `report_reference_coverage` — esta última já valida `has_role admin` no corpo).
+- As 18 restantes (`authenticated`) provavelmente também são intencionais (`list_user_applications`, `get_member_projects`, `get_extract_metrics`, etc.) mas o **EXECUTE** não está sendo revogado de quem não deveria chamar. Padrão recomendado: `REVOKE EXECUTE … FROM public/anon` e conceder apenas a `authenticated` (ou `service_role`) caso a caso.
 
-- Pública (sem JWT), CORS padrão (`npm:@supabase/supabase-js@2/cors`).
-- Cliente com `SUPABASE_SERVICE_ROLE_KEY` (necessário porque `editais` tem RLS por `user_id`).
-- Input via query string: `state` (UF) e `genre` (opcional, hoje só passado adiante para futuro ranking).
-- Queries em paralelo (`Promise.allSettled`):
-  - **Editais** (top 5): `status = 'Aberto'` + `prazo > now()` (ou nulo) + `estado ilike %UF%` OR `estado = 'Nacional'` OR `estado` vazio, ordenado por `created_at desc`. Campos retornados: `id, titulo, orgao, estado, prazo, valor`. Sem PII.
-  - **Profissionais** (top 3): `active = true` + `allow_global_listing = true` + `city ilike %UF%` (fallback: sem filtro de cidade caso retorne 0). Campos: `id, name, specialty, city, bio` (truncar bio a 1 linha no client). Sem email/telefone.
-- Cache: `Cache-Control: public, max-age=600`.
-- Falha individual → log + array vazio; nunca 5xx.
-- Deploy via `supabase--deploy_edge_functions`; sem alteração em `supabase/config.toml` (verify_jwt já é false por padrão).
+### 2.2. Privacidade financeira (regra core do projeto)
+- O guard de "guest nunca vê financeiro" está implementado via RLS + RPCs `SECURITY DEFINER`. Não vi vazamento no client (busquei `from("transactions")` — só aparece em `ProjectContext.tsx`, contexto do dono).
+- Mas vale uma auditoria explícita: confirmar que **nenhuma** das 18 SECURITY DEFINER de `authenticated` retorna campos de `transactions`/`fee`/`valor_aprovado` para usuários que não são dono.
 
-### 2. Refactor de `src/pages/Onboarding.tsx`
+### 2.3. `extract-edital-fields` — qualidade do output
+- `no_fields_extracted` (6 ocorrências) e `invalid_json` (2) representam ~89% das falhas na semana. Hoje retornam **HTTP 200** com `cause` no payload — o frontend já mapeia isso pro retry e pro purge depois de 3 tentativas (implementado no último ciclo). Funcionalmente OK, mas duas coisas mereceriam atenção:
+  - **Métricas:** o RPC `get_extract_metrics` existe mas a retry loop conta cada attempt como evento; vale conferir se o `attempt` está sendo enviado pelo frontend (o RPC depende disso para calcular `retry_rate`).
+  - **Prompt do Perplexity:** taxa de `no_fields_extracted` sugere que o modelo está achando a página do edital mas devolvendo descrição em vez de JSON. Vale enviar exemplos few-shot ou forçar JSON mode quando disponível.
 
-Manter rota `/onboarding`, layout, guards (`!user`, `onboarding_completed`) e `OnboardingRouter` intactos. State adicional:
+---
 
-```ts
-const [step, setStep] = useState<1 | 2 | 3>(1);
-const [primaryGenre, setPrimaryGenre] = useState("");
-const [stateUf, setStateUf] = useState("");
-const [currentMoment, setCurrentMoment] = useState("");
-const [matches, setMatches] = useState<{editais: Edital[]; pros: Pro[]} | null>(null);
-const [matchesLoading, setMatchesLoading] = useState(false);
-```
+## 3. Riscos médios (dívida técnica)
 
-**Indicador de progresso:** 3 dots no topo do card (ativo = `bg-primary`, inativo = `bg-muted`).
+### 3.1. Arquivos gigantes (refactor recomendado)
+- `src/components/music-dna/MusicDNAAnalyzer.tsx` — **1.990 linhas**
+- `src/pages/Projects.tsx` — 1.380
+- `src/pages/FinancialTracker.tsx` — 1.174
+- `src/pages/Admin.tsx` — 998
+- `src/pages/EditalInscricao.tsx` — 826
+- `src/pages/PalcoProposta.tsx` — 748
+- `src/hooks/useMusicDNA.ts` — 731
+- `src/pages/Carreira.tsx` — 730
+- `src/contexts/ProjectContext.tsx` — 598 (concentra projects + transactions + mix_tracks + members + professionals — é o single-point-of-failure do app)
 
-**Botão "Voltar":** visível em steps 2 e 3, à esquerda do botão primário; preserva valores (state não é resetado).
+Sugestão: quebrar `ProjectContext` em sub-providers (`ProjectsProvider`, `ProjectFinanceProvider`, `ProjectTeamProvider`) reduziria re-renders e isolaria escopos de RLS.
 
-**Step 1** — inalterado em campos (nome, artístico, whatsapp), mas o botão "Começar" vira "Continuar" e só faz `setStep(2)` (sem salvar ainda).
+### 3.2. Uso de `: any` (53 ocorrências em ~38 arquivos)
+Volume não-crítico, mas vale tipar gradualmente — sobretudo em hooks que tocam o banco (`useRascunhoEdital`, `useEditalAI`, `useMusicDNA`).
 
-**Step 2 — "Sobre sua música":**
-- `<Select>` (shadcn) gênero principal usando `GENRE_OPTIONS`.
-- `<Select>` estado usando `BRAZIL_STATES` (value = `uf`, label = `name`).
-- `<Select>` momento: `começando` | `em desenvolvimento` | `lançando agora`.
-- "Continuar" habilita quando gênero E estado preenchidos. Momento é opcional (label "(opcional)").
-- Ao clicar "Continuar": dispara fetch de matches (`supabase.functions.invoke("onboarding-matches", { body: { state: stateUf, genre: primaryGenre } })`) e `setStep(3)` imediatamente — Step 3 mostra skeleton enquanto carrega.
+### 3.3. Console.log em produção
+53 ocorrências de `console.{log,error,warn}` em 38 arquivos. Vários parecem debug esquecido (storage upload, chat, AI). Recomendação: centralizar via `lib/logger.ts` que vira no-op em prod.
 
-**Step 3 — "Aqui está o que já é seu":**
-- Header dinâmico: `{artistName}, encontrei {N} editais e {M} profissionais para você começar`. Se `N === 0 && M === 0`, headline alternativo: `{artistName}, seu cadastro está pronto. Vamos criar seu primeiro projeto?`.
-- Lista de editais (cards): título, órgão, estado, prazo formatado pt-BR (`Intl.DateTimeFormat`), valor se houver. Click → `window.open('/editais/inscricao/' + id, '_blank', 'noopener')` para não interromper o flow.
-- Empty state editais: "Cadastramos novos editais toda semana — vai chegar matched no seu perfil."
-- Lista de profissionais (cards compactos): name, specialty, city, bio truncada (line-clamp-1). Click → abre `ProfessionalDetailModal` (controlado por `selectedPro` state). O modal precisa de objeto `Professional`; mapear os campos retornados preenchendo defaults (`email: ""`, `phone: ""`, `active: true`, `favorite: false`, `allow_global_listing: true`, `user_id: ""`, timestamps) e passar `onEdit` / `onDelete` como no-ops (modal funciona em modo read-only nessa tela).
-- Empty state profissionais: "Marketplace de profissionais em crescimento — você pode convidar quem já trabalha com você."
-- CTA primário (full width): "Criar meu primeiro projeto" → `handleFinish()` então `navigate("/projects?new=1")`.
-- CTA secundário (ghost, texto pequeno): "Ir para o dashboard" → `handleFinish()` então `navigate("/dashboard")`.
+### 3.4. React Router v6 → v7
+Testes mostram avisos `v7_startTransition` e `v7_relativeSplatPath`. Migrar agora evita refactor maior depois.
 
-**`handleFinish()`** (compartilhado pelos 2 CTAs):
-```ts
-await updateProfile({
-  full_name, display_name: artistName, whatsapp,
-  user_type: "artist", track_view_mode: "basic",
-  primary_genre: primaryGenre,
-  state: stateUf,
-  current_moment: currentMoment, // pode ser ""
-  onboarding_version: 4,
-  onboarding_completed: true,
-});
-trackAppEvent("onboarding_completed", { onboarding_version: 4 });
-```
-Em erro: toast + manter no Step 3 (não reseta seleção).
+---
 
-### 3. Detalhes de UX/A11y
+## 4. Riscos baixos / observações
 
-- `aria-live` no header de Step 3 quando matches carregam.
-- Skeletons (`@/components/ui/skeleton`) para os 5+3 cards durante `matchesLoading`.
-- Focus inicial em cada step: input principal (Step 1: fullName já existe; Step 2: gênero; Step 3: primeiro card).
-- Status `role="status" sr-only` mantém narração de save/error.
+- **Bundle:** sem `dist` no sandbox para medir, mas o `types.ts` do Supabase (2.969 linhas, ~auto-gerado) e o `MusicDNAAnalyzer` puxam muito código. Lazy-loading já está bem aplicado em `App.tsx`.
+- **Service worker (`public/sw.js`)** existe mas não vi testes de versionamento — risco baixo de cache stale em deploy.
+- **i18n PT/EN:** memória diz que o sistema é bilíngue, mas vários `toast()` em hooks têm strings hardcoded em PT (`useRascunhoEdital`, `useMatchEditais`). Pequena inconsistência.
+- **Rotas legadas** (`/editais`, `/palcos`, `/master`) já estão redirecionando corretamente — coberto por testes.
 
-### 4. Verificação
+---
 
-- `supabase--curl_edge_functions` GET em `/onboarding-matches?state=SP&genre=MPB` → JSON com `editais` e `professionals`.
-- Manual: criar usuário novo, percorrer 3 steps, validar `primary_genre`/`state`/`current_moment` em `/settings`. Voltar entre steps preserva valores. Confirmar `onboarding_completed = true` só após CTA final.
+## 5. Prioridades sugeridas
 
-### Fora do escopo
+| # | Tema | Esforço | Impacto |
+|---|---|---|---|
+| 1 | Revogar EXECUTE das 18 SECURITY DEFINER `authenticated` que não precisam ser expostas | Médio | Alto (segurança) |
+| 2 | Auditar RLS/RPC contra vazamento financeiro para guests | Baixo | Alto (regra core) |
+| 3 | Melhorar prompt do `extract-edital-fields` para reduzir `no_fields_extracted` | Baixo | Médio (UX) |
+| 4 | Quebrar `ProjectContext` em sub-providers | Médio | Médio (perf + DX) |
+| 5 | Refatorar `MusicDNAAnalyzer.tsx` em sub-componentes | Alto | Médio (manutenção) |
+| 6 | Centralizar logger e remover `console.*` espalhados | Baixo | Baixo |
+| 7 | Migrar future flags do React Router v7 | Baixo | Baixo |
 
-- `OnboardingRouter` em `src/App.tsx`, `OnboardingGuest.tsx`, rota `/onboarding`, `isPro` em `ProfileContext`, mudanças no schema de `editais`/`professionals`.
+---
+
+Se quiser, posso aprofundar qualquer um desses itens (ex.: listar exatamente quais SECURITY DEFINER deveriam ter EXECUTE revogado, ou abrir o `MusicDNAAnalyzer` e propor o split) — só me dizer por onde começar.
