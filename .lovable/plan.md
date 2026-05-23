@@ -1,84 +1,69 @@
 
-# Diagnóstico profundo do código
+# Correções de segurança: SECURITY DEFINER
 
-Análise feita sobre o projeto StudioFlow (React + Vite + Supabase/Cloud), ~50k linhas em 275 arquivos TS/TSX e 33 edge functions. Sem propor mudanças ainda — apenas um relatório do estado atual com prioridades.
+Objetivo: alinhar os privilégios `EXECUTE` das funções `SECURITY DEFINER` em `public` ao princípio do menor privilégio, sem quebrar nenhuma funcionalidade existente.
 
-## 1. Saúde geral
+## Diagnóstico atual
 
-- **Build TypeScript:** `tsc --noEmit` passou limpo (0 erros).
-- **Testes:** 7 suítes / 75 testes — todos verdes em ~5,4s.
-- **Console no preview:** apenas o erro esperado `Invalid Refresh Token: Refresh Token Not Found` (sessão expirada, sem ação requerida).
-- **Edge functions com problemas reais nos últimos 7 dias:** somente `extract-edital-fields` (9 warns: 1 `auth_error`, 6 `no_fields_extracted`, 2 `invalid_json`). Nenhuma 5xx.
+23 funções `SECURITY DEFINER` em `public`. Classifiquei cada uma pela necessidade real:
 
-Resumo: a base está estável. Os riscos abaixo são de manutenção, segurança e performance — não bloqueiam o produto hoje.
+### A. Manter público (perfil público `/u/:username` é por design)
+Sem mudança:
+- `get_public_profile(text)`
+- `get_public_profile_history(text)`
+- `get_public_profile_ratings(uuid)`
 
----
+### B. Manter `authenticated` (já com `has_role` interno ou uso por usuário logado)
+Sem mudança:
+- `get_auth_email`, `has_role`, `get_member_projects`, `get_project_for_member`, `get_professional_project_count`, `get_genre_reference_examples`, `list_user_applications`
+- Admin-gated: `get_extract_metrics`, `get_oportunidades_search_metrics`, `get_summary_variant_stats`, `report_reference_coverage`
 
-## 2. Riscos altos (recomendo tratar nos próximos ciclos)
+### C. Trigger / infra / service-role only — revogar de **anon, authenticated e PUBLIC**
+- `handle_new_user()` — já sem privilégios; nada a fazer.
+- `recalcular_benchmark_genero(text)` — já sem privilégios.
+- `upsert_reference_tracks(jsonb)` — já sem privilégios.
+- `get_file_download_url(uuid)` — já sem privilégios.
+- `reconcile_invitations_for_new_user()` — **hoje executável por anon/auth/public**. É função de trigger em `auth.users`. Vou revogar tudo (continua funcionando via trigger, que ignora `EXECUTE`).
+- `expire_old_invitations()` — **hoje executável por anon/auth/public**. É chamada por cron/edge function com service_role. Vou revogar tudo.
 
-### 2.1. Linter Supabase: 28 warnings de SECURITY DEFINER expostas
-- 1 `extension in public` + 27 `SECURITY DEFINER` executáveis por `anon`/`authenticated`.
-- 9 dessas funções são realmente públicas/legítimas (ex.: `get_public_profile`, `get_public_profile_ratings`, `get_genre_reference_examples`, `find_nearest_reference_tracks`, `count_reference_tracks_by_genre`, `report_reference_coverage` — esta última já valida `has_role admin` no corpo).
-- As 18 restantes (`authenticated`) provavelmente também são intencionais (`list_user_applications`, `get_member_projects`, `get_extract_metrics`, etc.) mas o **EXECUTE** não está sendo revogado de quem não deveria chamar. Padrão recomendado: `REVOKE EXECUTE … FROM public/anon` e conceder apenas a `authenticated` (ou `service_role`) caso a caso.
+### D. Funções usadas só por usuário logado — revogar de **anon**
+- `count_reference_tracks_by_genre(text)`
+- `find_nearest_reference_tracks(...)`
+- `revoke_project_invitation(uuid)`
 
-### 2.2. Privacidade financeira (regra core do projeto)
-- O guard de "guest nunca vê financeiro" está implementado via RLS + RPCs `SECURITY DEFINER`. Não vi vazamento no client (busquei `from("transactions")` — só aparece em `ProjectContext.tsx`, contexto do dono).
-- Mas vale uma auditoria explícita: confirmar que **nenhuma** das 18 SECURITY DEFINER de `authenticated` retorna campos de `transactions`/`fee`/`valor_aprovado` para usuários que não são dono.
+## Migration que será criada
 
-### 2.3. `extract-edital-fields` — qualidade do output
-- `no_fields_extracted` (6 ocorrências) e `invalid_json` (2) representam ~89% das falhas na semana. Hoje retornam **HTTP 200** com `cause` no payload — o frontend já mapeia isso pro retry e pro purge depois de 3 tentativas (implementado no último ciclo). Funcionalmente OK, mas duas coisas mereceriam atenção:
-  - **Métricas:** o RPC `get_extract_metrics` existe mas a retry loop conta cada attempt como evento; vale conferir se o `attempt` está sendo enviado pelo frontend (o RPC depende disso para calcular `retry_rate`).
-  - **Prompt do Perplexity:** taxa de `no_fields_extracted` sugere que o modelo está achando a página do edital mas devolvendo descrição em vez de JSON. Vale enviar exemplos few-shot ou forçar JSON mode quando disponível.
+```sql
+-- Trigger / infra: nenhum role nominal precisa chamar
+REVOKE EXECUTE ON FUNCTION public.reconcile_invitations_for_new_user() FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.expire_old_invitations()           FROM PUBLIC, anon, authenticated;
 
----
+-- Funções de usuário logado: tirar acesso do anon
+REVOKE EXECUTE ON FUNCTION public.count_reference_tracks_by_genre(text)                FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION public.find_nearest_reference_tracks(
+  numeric, numeric, numeric, numeric, numeric, numeric, numeric, numeric, numeric,
+  text, integer, boolean, numeric, numeric, numeric, numeric, numeric, numeric, text, text
+)                                                                                      FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION public.revoke_project_invitation(uuid)                      FROM PUBLIC, anon;
 
-## 3. Riscos médios (dívida técnica)
+-- Garantir explicitamente que authenticated mantém acesso nessas três
+GRANT EXECUTE ON FUNCTION public.count_reference_tracks_by_genre(text) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.find_nearest_reference_tracks(
+  numeric, numeric, numeric, numeric, numeric, numeric, numeric, numeric, numeric,
+  text, integer, boolean, numeric, numeric, numeric, numeric, numeric, numeric, text, text
+) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.revoke_project_invitation(uuid) TO authenticated;
+```
 
-### 3.1. Arquivos gigantes (refactor recomendado)
-- `src/components/music-dna/MusicDNAAnalyzer.tsx` — **1.990 linhas**
-- `src/pages/Projects.tsx` — 1.380
-- `src/pages/FinancialTracker.tsx` — 1.174
-- `src/pages/Admin.tsx` — 998
-- `src/pages/EditalInscricao.tsx` — 826
-- `src/pages/PalcoProposta.tsx` — 748
-- `src/hooks/useMusicDNA.ts` — 731
-- `src/pages/Carreira.tsx` — 730
-- `src/contexts/ProjectContext.tsx` — 598 (concentra projects + transactions + mix_tracks + members + professionals — é o single-point-of-failure do app)
+## Verificação pós-migration
 
-Sugestão: quebrar `ProjectContext` em sub-providers (`ProjectsProvider`, `ProjectFinanceProvider`, `ProjectTeamProvider`) reduziria re-renders e isolaria escopos de RLS.
+1. Rodar `supabase--linter` — esperar que os 5 warnings ligados a essas funções desapareçam. Os warnings restantes (perfil público e funções de `authenticated` realmente usadas) são by-design e serão marcados como ignorados no security memory.
+2. Conferir privilégios com `has_function_privilege` no `psql/read_query` para as 5 funções alteradas.
+3. Rodar `bunx vitest run` para confirmar que nada quebrou.
+4. Smoke manual: o trigger de novo usuário continua reconciliando convites (`reconcile_invitations_for_new_user` roda como trigger, EXECUTE não é necessário para o caller).
 
-### 3.2. Uso de `: any` (53 ocorrências em ~38 arquivos)
-Volume não-crítico, mas vale tipar gradualmente — sobretudo em hooks que tocam o banco (`useRascunhoEdital`, `useEditalAI`, `useMusicDNA`).
+## Fora do escopo
 
-### 3.3. Console.log em produção
-53 ocorrências de `console.{log,error,warn}` em 38 arquivos. Vários parecem debug esquecido (storage upload, chat, AI). Recomendação: centralizar via `lib/logger.ts` que vira no-op em prod.
-
-### 3.4. React Router v6 → v7
-Testes mostram avisos `v7_startTransition` e `v7_relativeSplatPath`. Migrar agora evita refactor maior depois.
-
----
-
-## 4. Riscos baixos / observações
-
-- **Bundle:** sem `dist` no sandbox para medir, mas o `types.ts` do Supabase (2.969 linhas, ~auto-gerado) e o `MusicDNAAnalyzer` puxam muito código. Lazy-loading já está bem aplicado em `App.tsx`.
-- **Service worker (`public/sw.js`)** existe mas não vi testes de versionamento — risco baixo de cache stale em deploy.
-- **i18n PT/EN:** memória diz que o sistema é bilíngue, mas vários `toast()` em hooks têm strings hardcoded em PT (`useRascunhoEdital`, `useMatchEditais`). Pequena inconsistência.
-- **Rotas legadas** (`/editais`, `/palcos`, `/master`) já estão redirecionando corretamente — coberto por testes.
-
----
-
-## 5. Prioridades sugeridas
-
-| # | Tema | Esforço | Impacto |
-|---|---|---|---|
-| 1 | Revogar EXECUTE das 18 SECURITY DEFINER `authenticated` que não precisam ser expostas | Médio | Alto (segurança) |
-| 2 | Auditar RLS/RPC contra vazamento financeiro para guests | Baixo | Alto (regra core) |
-| 3 | Melhorar prompt do `extract-edital-fields` para reduzir `no_fields_extracted` | Baixo | Médio (UX) |
-| 4 | Quebrar `ProjectContext` em sub-providers | Médio | Médio (perf + DX) |
-| 5 | Refatorar `MusicDNAAnalyzer.tsx` em sub-componentes | Alto | Médio (manutenção) |
-| 6 | Centralizar logger e remover `console.*` espalhados | Baixo | Baixo |
-| 7 | Migrar future flags do React Router v7 | Baixo | Baixo |
-
----
-
-Se quiser, posso aprofundar qualquer um desses itens (ex.: listar exatamente quais SECURITY DEFINER deveriam ter EXECUTE revogado, ou abrir o `MusicDNAAnalyzer` e propor o split) — só me dizer por onde começar.
+- Não vou tocar nas funções de perfil público nem nas admin-gated por `has_role`.
+- Não vou mover funções para outro schema (`extension in public` é warning isolado e exige reinstalação da extensão `pg_trgm`/`citext`; trato em ciclo separado se você quiser).
+- Não vou alterar `SECURITY DEFINER` → `SECURITY INVOKER`, porque várias dependem de bypass de RLS proposital.
