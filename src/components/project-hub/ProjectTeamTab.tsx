@@ -589,6 +589,8 @@ export default function ProjectTeamTab({ projectId }: ProjectTeamTabProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <MarketplaceSheet open={marketplaceOpen} onOpenChange={setMarketplaceOpen} projectId={projectId} />
     </div>
   );
 }
