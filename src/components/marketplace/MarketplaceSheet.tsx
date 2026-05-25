@@ -7,6 +7,7 @@ import { useMarketplaceProviders } from "@/hooks/useMarketplace";
 import { SPECIALTY_OPTIONS } from "@/constants/specialtyOptions";
 import { BRAZIL_STATES } from "@/constants/brazilStates";
 import { ProviderCard } from "./ProviderCard";
+import { ProviderProfileSheet } from "./ProviderProfileSheet";
 import { RequestQuoteModal } from "./RequestQuoteModal";
 import type { MarketplaceProvider } from "@/types/marketplace";
 
