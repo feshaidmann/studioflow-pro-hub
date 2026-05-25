@@ -356,17 +356,88 @@ export default function PublicProfile() {
           </div>
         )}
 
-        {/* CTA */}
-        <div className="pt-2 pb-8">
-          <Button asChild className="w-full neon-glow gap-2 h-11 text-base" size="lg">
-            <Link to="/auth">
-              Convidar para projeto
-            </Link>
+        {/* CTAs */}
+        <div className="pt-2 pb-8 space-y-2">
+          <Button
+            className="w-full gap-2 h-11 text-base"
+            size="lg"
+            onClick={() => {
+              if (!user) {
+                navigate(`/auth?return_to=/u/${username}`);
+                return;
+              }
+              setQuoteOpen(true);
+            }}
+          >
+            <Send className="h-4 w-4" />
+            Solicitar orçamento
           </Button>
-          <p className="text-center text-xs text-muted-foreground mt-3">
-            É necessário ter uma conta para enviar convites
-          </p>
+          <div className="grid grid-cols-2 gap-2">
+            <Button
+              variant="outline"
+              className="gap-2 h-10"
+              onClick={() => {
+                if (!user) {
+                  navigate(`/auth?return_to=/u/${username}`);
+                  return;
+                }
+                navigate(`/?invite=${profile.username}`);
+              }}
+            >
+              <UserPlus className="h-4 w-4" />
+              Convidar
+            </Button>
+            {(profile.public_email || profile.whatsapp) ? (
+              <Button
+                variant="outline"
+                className="gap-2 h-10"
+                onClick={() => {
+                  const value = profile.public_email || profile.whatsapp;
+                  navigator.clipboard.writeText(value);
+                  setContactCopied(profile.public_email ? "email" : "wa");
+                  toast.success("Contato copiado!");
+                  setTimeout(() => setContactCopied(null), 2000);
+                }}
+              >
+                {contactCopied ? <Check className="h-4 w-4 text-primary" /> : <Copy className="h-4 w-4" />}
+                {contactCopied ? "Copiado" : "Copiar contato"}
+              </Button>
+            ) : (
+              <Button variant="outline" className="gap-2 h-10" onClick={handleCopyLink}>
+                <Share2 className="h-4 w-4" />
+                Compartilhar
+              </Button>
+            )}
+          </div>
+          {!user && (
+            <p className="text-center text-xs text-muted-foreground pt-1">
+              É necessário ter uma conta para solicitar orçamento ou convidar.
+            </p>
+          )}
         </div>
+      </div>
+
+      {/* Quote modal */}
+      <RequestQuoteModal
+        open={quoteOpen}
+        onOpenChange={setQuoteOpen}
+        provider={profile ? ({
+          provider_ref: profile.id,
+          source: "user",
+          name: profile.display_name,
+          handle: profile.username,
+          avatar_url: "",
+          bio: profile.bio,
+          city: profile.city,
+          state: "",
+          specialties: profile.specialties,
+          genres: [],
+          projects_completed: profile.projects_completed,
+          accept_invites: profile.accept_invites,
+          is_user: true,
+        } satisfies MarketplaceProvider) : null}
+      />
+
       </div>
     </div>
   );
