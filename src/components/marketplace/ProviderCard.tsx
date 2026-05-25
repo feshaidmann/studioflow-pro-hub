@@ -1,8 +1,10 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MapPin, Star, Send, ShieldCheck, Users } from "lucide-react";
+import { MapPin, Star, Send, ShieldCheck, Users, ExternalLink } from "lucide-react";
+import { Link } from "react-router-dom";
 import { avatarColor, avatarInitials } from "@/components/professionals/types";
 import type { MarketplaceProvider } from "@/types/marketplace";
+
 
 interface Props {
   provider: MarketplaceProvider;
