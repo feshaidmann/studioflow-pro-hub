@@ -1,98 +1,71 @@
-## Marketplace de Profissionais — Vitrine + Briefing/Orçamento, acionado por contexto do projeto
+## Perfil Público — Refino + Abertura Web + Integração
 
-Objetivo: quando um projeto precisa de um papel (ex.: falta Mix Engineer, Designer de capa, Videomaker), o StudioFlow sugere prestadores curados, deixa o artista publicar um briefing curto, e profissionais respondem com proposta (valor + prazo). Negociação/pagamento seguem fora da plataforma (consistente com o MVP).
+Refinar a tela existente `/u/:username`, tornando-a acessível a visitantes não autenticados (com opt-in explícito do dono) e plugando-a aos pontos certos da jornada.
 
-### 1. Quem pode ser prestador
+### 1. Banco (migration)
 
-Três origens, todas unificadas em uma única view `marketplace_providers`:
+Adicionar à `profiles`:
+- `public_profile_enabled boolean default false` — flag dedicado, separado de `allow_global_listing`.
+- `show_public_email boolean default false`, `show_public_whatsapp boolean default false` — controlam exibição de contato.
 
-1. **Usuário StudioFlow opt-in** — `profiles.allow_global_listing = true` + `specialties` preenchidas. Entra automaticamente (já tem perfil público em `/u/:username`).
-2. **Contato adicionado por outro usuário** — `professionals.allow_global_listing = true`. Entra como "perfil leve" (sem login).
-3. **Outsider via curadoria admin** — nova tabela `marketplace_curated_providers` (espelha o padrão `palcos_curados`): admin cadastra manualmente nome, especialidade, portfólio, contato. Aparece com selo "Curado pelo StudioFlow".
+Atualizar policy `Public can view listed profiles` para `(public_profile_enabled = true OR allow_global_listing = true)`, mantendo acesso anônimo somente a colunas seguras via view `public_profiles_view` (SECURITY INVOKER) que omite `whatsapp`/`public_email` quando os respectivos flags estão `false`.
 
-Dedup por e-mail (lowercase). Status: `pending_review | approved | rejected` para os casos 2 e 3 (o caso 1 é auto-aprovado porque já passou pelo onboarding).
+Função `get_public_profile(p_username text)` (SECURITY DEFINER, retorna SETOF) usada pela página pública — única fonte de leitura para anon, garantindo mascaramento.
 
-### 2. Acionamento por contexto do projeto
+### 2. Frontend — refino da tela `/u/:username`
 
-No `ProjectTeamTab` (já existe) e no `ProjectOverviewTab`, detectar lacunas de papel — ex.: estágio "Mix" sem membro com `specialty = "Mix Engineer"`. Mostrar card:
+Manter estrutura atual e adicionar/melhorar:
+- Hero limpo (avatar grande, nome, especialidades, cidade/UF, badge "Verificado" se `captador_verificado`).
+- Métricas: projetos concluídos, rating médio (via `get_provider_public_rating`).
+- Seções: Bio · Especialidades · Portfólio (work_links + youtube) · Projetos públicos · Avaliações recentes.
+- Barra de ações sticky com 4 CTAs:
+  - **Solicitar orçamento** → abre `RequestQuoteModal` existente (exige login; se anon, redireciona para /auth com return_to).
+  - **Convidar para projeto** → fluxo `project_invitations` existente (exige login).
+  - **Copiar contato** → copia email/whatsapp se o dono optou por exibir; caso contrário, esconde o botão.
+  - **Compartilhar perfil** → `navigator.share` ou copia link `/u/:username`.
+- Estado vazio amigável quando perfil não é público (404 contextual com CTA "este usuário não tornou o perfil público").
+- SEO: `<title>`, meta description, OG tags e JSON-LD Person.
 
-> "Falta um Mix Engineer para este projeto. Ver 6 profissionais disponíveis →"
+### 3. Opt-in do dono
 
-Clique abre o **Sheet do Marketplace** filtrado pela especialidade faltante, gênero do projeto e (opcional) estado do artista.
+Em `Settings` (ou `ProfileEdit`): novo bloco "Perfil público" com:
+- Toggle "Tornar meu perfil visível na web aberta" (`public_profile_enabled`).
+- Sub-toggles (só ativos se o principal estiver on): "Mostrar email público", "Mostrar WhatsApp".
+- Preview do link `/u/:username` + botão copiar.
 
-Pontos de entrada secundários:
-- Aba "Descobrir profissionais" dentro de `/professionals` (vitrine geral, mesmos filtros).
-- Botão no `ProfessionalFormDialog` ("ou buscar no marketplace") quando o artista vai adicionar um contato manualmente.
+### 4. Integração na jornada
 
-### 3. Fluxo do briefing
+- **MarketplaceSheet / ProviderCard**: clicar no card abre `/u/:username` em nova aba (se provider tem username). Drawer atual vira atalho secundário "Ver detalhes rápidos".
+- **ProjectTeamTab**: nome/avatar de membros vira `<Link to="/u/:username">` quando o membro tem perfil público.
+- **Avaliações/Contacts list** (`Professionals.tsx`): linkar nome para perfil quando público.
+- **Header do app** (`AppLayout`): no menu do avatar, novo item "Meu perfil público" → `/u/<meu_username>`; mostra "Ative em Configurações" se desligado.
+
+### 5. Rota pública
+
+`/u/:username` já existe; garantir que está fora do `ProtectedRoute` e que `ProfileContext` não força redirect. Página usa `supabase.rpc('get_public_profile', ...)` sem sessão.
+
+### Detalhes técnicos
 
 ```text
-Artista vê card de prestador
-  → "Solicitar orçamento"
-  → Modal com briefing curto (descrição, prazo desejado, referência opcional, orçamento aproximado)
-  → Cria service_request (vinculado ao project_id)
-  → Notificação para o prestador (in-app se for usuário; e-mail manual via link copiável se for contato/curado, seguindo o padrão MVP de "convite manual")
-  → Prestador responde com service_proposal (valor, prazo, mensagem)
-  → Artista aprova/recusa
-  → Se aprovado, prestador vira project_member automaticamente
+profiles
+├─ public_profile_enabled (bool)  ← opt-in web aberta
+├─ show_public_email      (bool)
+├─ show_public_whatsapp   (bool)
+└─ allow_global_listing   (bool)  ← já existe, controla marketplace interno
+
+RPC public.get_public_profile(p_username) → row mascarada
+View public_profiles_view (não usada por anon direto; auxiliar)
 ```
 
-Negociação/pagamento ficam fora (consistente com a constraint "Automated email/WhatsApp invites disabled for MVP").
+Arquivos tocados (frontend):
+- `src/pages/PublicProfile.tsx` (refino)
+- `src/pages/Settings.tsx` (novo bloco opt-in)
+- `src/components/marketplace/ProviderCard.tsx` (link para perfil)
+- `src/components/project-hub/ProjectTeamTab.tsx` (linkar membros)
+- `src/pages/Professionals.tsx` (linkar nomes)
+- `src/components/layout/AppLayout.tsx` (item no menu)
+- `src/hooks/usePublicProfile.ts` (novo, usa RPC)
 
-### 4. Modelo de dados (novas tabelas)
-
-- **`marketplace_curated_providers`** — registros admin-managed (nome, especialidade, bio, portfólio_url, contato, status).
-- **`service_requests`** — pedidos abertos por artistas: `project_id`, `requester_user_id`, `specialty_needed`, `briefing`, `desired_deadline`, `budget_hint`, `status` (open/closed/cancelled).
-- **`service_proposals`** — respostas dos prestadores: `request_id`, `provider_ref` (poly: user_id OU professional_id OU curated_id), `price`, `delivery_days`, `message`, `status` (sent/accepted/rejected/withdrawn).
-- **View `marketplace_providers`** — UNION ALL das três origens, expondo apenas campos públicos (nada de e-mail/telefone até o artista solicitar orçamento).
-
-RLS:
-- `service_requests`: dono é o `requester_user_id`; prestador alvo lê via RPC `SECURITY DEFINER` filtrado por proposta vinculada.
-- `service_proposals`: prestador gerencia as suas; requester lê as do seu request.
-- `marketplace_curated_providers`: admin escreve; authenticated lê quando `status = 'approved'`.
-- View `marketplace_providers`: SECURITY INVOKER, respeita as RLS das tabelas-base.
-
-### 5. UI (rotas e componentes)
-
-Sem nova rota de topo (decisão do usuário: "acionado por contexto"). Apenas:
-
-- `src/components/marketplace/MarketplaceSheet.tsx` — drawer com filtros (especialidade, gênero, estado, avaliação) e grade de cards.
-- `src/components/marketplace/ProviderCard.tsx` — avatar, nome, especialidade, ★ média, badge da origem (Artista StudioFlow / Indicado / Curado).
-- `src/components/marketplace/RequestQuoteModal.tsx` — formulário de briefing.
-- `src/components/marketplace/ProposalsInbox.tsx` — lista de propostas recebidas (para o prestador) e enviadas (para o artista), acessível via aba em `/professionals` chamada "Marketplace".
-- Aba nova em `/professionals`: "Descobrir" (vitrine geral) e "Minhas solicitações".
-- Gatilhos contextuais: `ProjectTeamTab` ganha `<MissingRoleHint specialty="Mix Engineer" />` que abre o sheet.
-
-### 6. Curadoria admin
-
-Nova rota `/admin/marketplace` (acessível só com `has_role(admin)`):
-- Lista `pending_review` de contatos opt-in + outsiders.
-- Ações: aprovar, rejeitar (com motivo), editar.
-- Reusa padrão visual de `/admin/reference-tracks`.
-
-### 7. Notificações e analytics
-
-- Notification in-app quando: nova proposta recebida; proposta aceita/recusada; novo request bate com a especialidade do prestador (apenas usuários StudioFlow).
-- Analytics events: `marketplace_sheet_opened`, `quote_requested`, `proposal_sent`, `proposal_accepted`.
-
-### 8. Fora de escopo (explicitamente)
-
-- Pagamento na plataforma / escrow (esse é o caminho do tier "transacional", não escolhido).
-- Convites/notificações automáticos por e-mail ou WhatsApp para contatos não-usuários (constraint MVP) — sempre link copiável.
-- Re-introdução de `/studio` ou `/criativo` (constraint do projeto).
-
-### 9. Entregáveis em ordem
-
-1. Migração: `marketplace_curated_providers`, `service_requests`, `service_proposals`, view `marketplace_providers`, RLS + RPCs.
-2. Hook `useMarketplaceProviders(filters)` + `useServiceRequests` + `useServiceProposals`.
-3. Componentes UI (Sheet, Card, RequestModal, Inbox).
-4. Integração contextual em `ProjectTeamTab` (`MissingRoleHint`) e aba "Descobrir" em `/professionals`.
-5. Painel admin `/admin/marketplace` para curadoria.
-6. Notificações + analytics.
-7. Memória do projeto: registrar nova memória `funcionalidades/marketplace-de-profissionais`.
-
-### Pontos a confirmar antes de codar
-
-- **Avaliação**: usar `professional_ratings` atual (privada por artista) ou criar pontuação agregada pública para o marketplace? Sugestão: agregar via RPC `get_public_provider_rating(provider_ref)` para não vazar avaliações individuais.
-- **Limite anti-spam**: máximo de N requests abertos por artista por semana? Sugestão: 10/semana.
-- **Visibilidade do contato**: e-mail/telefone do prestador só aparecem para o artista após a proposta ser aceita?
+### Fora de escopo
+- Pagamento real (mantém transações off-platform conforme MVP do marketplace).
+- Indexação avançada / sitemap dinâmico (apenas meta tags básicas nesta entrega).
