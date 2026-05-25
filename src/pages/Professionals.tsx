@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
-import { Users, Plus, Filter } from "lucide-react";
+import { Users, Plus, Filter, Store } from "lucide-react";
+import { MarketplaceSheet } from "@/components/marketplace/MarketplaceSheet";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,7 @@ export default function Professionals() {
   const [editTarget, setEditTarget] = useState<Professional | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Professional | null>(null);
+  const [marketplaceOpen, setMarketplaceOpen] = useState(false);
 
   const specialties = useMemo(
     () => Array.from(new Set(professionals.map((p) => p.specialty).filter(Boolean))).sort(),
