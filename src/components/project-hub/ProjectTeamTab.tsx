@@ -23,6 +23,8 @@ import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import type { Professional } from "@/data/mockData";
 import { MissingRoleHint } from "@/components/marketplace/MissingRoleHint";
+import { useDismissedHints } from "@/hooks/useDismissedHints";
+
 import { MarketplaceSheet } from "@/components/marketplace/MarketplaceSheet";
 import { Store } from "lucide-react";
 
