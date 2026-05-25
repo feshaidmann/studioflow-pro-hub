@@ -784,6 +784,63 @@ export type Database = {
         }
         Relationships: []
       }
+      marketplace_curated_providers: {
+        Row: {
+          avatar_url: string
+          bio: string
+          city: string
+          contact_email: string
+          contact_phone: string
+          created_at: string
+          curated_by: string | null
+          genres: string[]
+          id: string
+          name: string
+          notes: string
+          portfolio_url: string
+          specialty: string
+          state: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string
+          bio?: string
+          city?: string
+          contact_email?: string
+          contact_phone?: string
+          created_at?: string
+          curated_by?: string | null
+          genres?: string[]
+          id?: string
+          name: string
+          notes?: string
+          portfolio_url?: string
+          specialty?: string
+          state?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string
+          bio?: string
+          city?: string
+          contact_email?: string
+          contact_phone?: string
+          created_at?: string
+          curated_by?: string | null
+          genres?: string[]
+          id?: string
+          name?: string
+          notes?: string
+          portfolio_url?: string
+          specialty?: string
+          state?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       mix_tracks: {
         Row: {
           comp_gr_db: number
@@ -2261,6 +2318,114 @@ export type Database = {
           },
         ]
       }
+      service_proposals: {
+        Row: {
+          created_at: string
+          delivery_days: number
+          id: string
+          message: string
+          price: number
+          provider_curated_id: string | null
+          provider_professional_id: string | null
+          provider_user_id: string | null
+          request_id: string
+          responder_user_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          delivery_days?: number
+          id?: string
+          message?: string
+          price?: number
+          provider_curated_id?: string | null
+          provider_professional_id?: string | null
+          provider_user_id?: string | null
+          request_id: string
+          responder_user_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          delivery_days?: number
+          id?: string
+          message?: string
+          price?: number
+          provider_curated_id?: string | null
+          provider_professional_id?: string | null
+          provider_user_id?: string | null
+          request_id?: string
+          responder_user_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_proposals_provider_curated_id_fkey"
+            columns: ["provider_curated_id"]
+            isOneToOne: false
+            referencedRelation: "marketplace_curated_providers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_proposals_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "service_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      service_requests: {
+        Row: {
+          briefing: string
+          budget_hint: string
+          closed_at: string | null
+          created_at: string
+          desired_deadline: string | null
+          id: string
+          project_id: string | null
+          reference_url: string
+          requester_user_id: string
+          specialty_needed: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          briefing?: string
+          budget_hint?: string
+          closed_at?: string | null
+          created_at?: string
+          desired_deadline?: string | null
+          id?: string
+          project_id?: string | null
+          reference_url?: string
+          requester_user_id: string
+          specialty_needed?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Update: {
+          briefing?: string
+          budget_hint?: string
+          closed_at?: string | null
+          created_at?: string
+          desired_deadline?: string | null
+          id?: string
+          project_id?: string | null
+          reference_url?: string
+          requester_user_id?: string
+          specialty_needed?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       task_rules: {
         Row: {
           created_at: string
@@ -2598,8 +2763,30 @@ export type Database = {
         }
         Relationships: []
       }
+      marketplace_providers: {
+        Row: {
+          accept_invites: boolean | null
+          avatar_url: string | null
+          bio: string | null
+          city: string | null
+          genres: string[] | null
+          handle: string | null
+          is_user: boolean | null
+          name: string | null
+          projects_completed: number | null
+          provider_ref: string | null
+          source: string | null
+          specialties: string[] | null
+          state: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
+      accept_service_proposal: {
+        Args: { p_proposal_id: string }
+        Returns: Json
+      }
       count_reference_tracks_by_genre: {
         Args: { p_genre: string }
         Returns: number
@@ -2681,6 +2868,31 @@ export type Database = {
           valence: number
         }[]
       }
+      get_marketplace_providers: {
+        Args: {
+          p_genre?: string
+          p_limit?: number
+          p_offset?: number
+          p_search?: string
+          p_specialty?: string
+          p_state?: string
+        }
+        Returns: {
+          accept_invites: boolean
+          avatar_url: string
+          bio: string
+          city: string
+          genres: string[]
+          handle: string
+          is_user: boolean
+          name: string
+          projects_completed: number
+          provider_ref: string
+          source: string
+          specialties: string[]
+          state: string
+        }[]
+      }
       get_member_projects: {
         Args: never
         Returns: {
@@ -2710,6 +2922,13 @@ export type Database = {
           name: string
           project_type: string
           stage: string
+        }[]
+      }
+      get_provider_public_rating: {
+        Args: { p_provider_email?: string; p_provider_name: string }
+        Returns: {
+          avg_stars: number
+          rating_count: number
         }[]
       }
       get_public_profile: {

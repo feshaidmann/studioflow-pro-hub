@@ -22,6 +22,9 @@ import { format, isPast, isToday, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import type { Professional } from "@/data/mockData";
+import { MissingRoleHint } from "@/components/marketplace/MissingRoleHint";
+import { MarketplaceSheet } from "@/components/marketplace/MarketplaceSheet";
+import { Store } from "lucide-react";
 
 /* ── Types ── */
 type DeliveryStatus = "convidado" | "ativo" | "aguardando" | "atrasado" | "entregou" | "concluido";
@@ -70,6 +73,18 @@ export default function ProjectTeamTab({ projectId }: ProjectTeamTabProps) {
   const [saving, setSaving] = useState(false);
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [removeTarget, setRemoveTarget] = useState<{ id: string; name: string } | null>(null);
+  const [marketplaceOpen, setMarketplaceOpen] = useState(false);
+
+  // Detecta papéis ausentes comuns para sugerir o marketplace
+  const teamRoles = useMemo(() => team.map((m) => (m.role || "").toLowerCase()), [team]);
+  const missingRoles = useMemo(() => {
+    const needs: string[] = [];
+    const has = (kw: string) => teamRoles.some((r) => r.includes(kw));
+    if (!has("mix")) needs.push("Mix Engineer");
+    if (!has("master")) needs.push("Mastering Engineer");
+    if (!has("design") && !has("capa")) needs.push("Designer Gráfico");
+    return needs.slice(0, 2);
+  }, [teamRoles]);
 
   // Fetch invitations + member extras
   useEffect(() => {
@@ -235,9 +250,15 @@ export default function ProjectTeamTab({ projectId }: ProjectTeamTabProps) {
       <div className="flex flex-col items-center justify-center py-12 gap-3 text-center">
         <Users className="h-8 w-8 text-muted-foreground/30" />
         <p className="text-sm text-muted-foreground">Nenhum colaborador neste projeto ainda.</p>
-        <Button variant="outline" size="sm" className="gap-1.5 mt-2" onClick={() => navigate(`/projects?id=${projectId}&addMember=1`)}>
-          <UserPlus className="h-3.5 w-3.5" /> Adicionar membro
-        </Button>
+        <div className="flex gap-2 mt-2">
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => navigate(`/projects?id=${projectId}&addMember=1`)}>
+            <UserPlus className="h-3.5 w-3.5" /> Adicionar membro
+          </Button>
+          <Button size="sm" className="gap-1.5" onClick={() => setMarketplaceOpen(true)}>
+            <Store className="h-3.5 w-3.5" /> Buscar no marketplace
+          </Button>
+        </div>
+        <MarketplaceSheet open={marketplaceOpen} onOpenChange={setMarketplaceOpen} projectId={projectId} />
       </div>
     );
   }
@@ -253,6 +274,9 @@ export default function ProjectTeamTab({ projectId }: ProjectTeamTabProps) {
         <div className="flex items-center gap-1.5 flex-wrap">
           <Button variant="outline" size="sm" className="h-6 text-[10px] gap-1" onClick={() => navigate(`/projects?id=${projectId}&addMember=1`)}>
             <UserPlus className="h-3 w-3" /> Adicionar
+          </Button>
+          <Button variant="outline" size="sm" className="h-6 text-[10px] gap-1" onClick={() => setMarketplaceOpen(true)}>
+            <Store className="h-3 w-3" /> Marketplace
           </Button>
           {Object.entries(statusCounts).map(([status, count]) => {
             const cfg = STATUS_CONFIG[status as DeliveryStatus];
@@ -275,6 +299,15 @@ export default function ProjectTeamTab({ projectId }: ProjectTeamTabProps) {
           )}
         </div>
       </div>
+
+      {/* Sugestões contextuais do marketplace */}
+      {missingRoles.length > 0 && (
+        <div className="space-y-2">
+          {missingRoles.map((role) => (
+            <MissingRoleHint key={role} specialty={role} projectId={projectId} />
+          ))}
+        </div>
+      )}
 
       {/* Member Cards */}
       {filteredTeam.map((prof) => {
@@ -556,6 +589,8 @@ export default function ProjectTeamTab({ projectId }: ProjectTeamTabProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <MarketplaceSheet open={marketplaceOpen} onOpenChange={setMarketplaceOpen} projectId={projectId} />
     </div>
   );
 }

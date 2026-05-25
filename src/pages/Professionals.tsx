@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
-import { Users, Plus, Filter } from "lucide-react";
+import { Users, Plus, Filter, Store } from "lucide-react";
+import { MarketplaceSheet } from "@/components/marketplace/MarketplaceSheet";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,7 @@ export default function Professionals() {
   const [editTarget, setEditTarget] = useState<Professional | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Professional | null>(null);
+  const [marketplaceOpen, setMarketplaceOpen] = useState(false);
 
   const specialties = useMemo(
     () => Array.from(new Set(professionals.map((p) => p.specialty).filter(Boolean))).sort(),
@@ -80,9 +82,14 @@ export default function Professionals() {
           </h1>
           <p className="text-muted-foreground mt-1">Sua agenda de profissionais — músicos, engenheiros e colaboradores.</p>
         </div>
-        <Button onClick={openCreate} className="gap-2 active:scale-95 transition-transform">
-          <Plus className="h-4 w-4" /> Novo Contato
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setMarketplaceOpen(true)} className="gap-2">
+            <Store className="h-4 w-4" /> Marketplace
+          </Button>
+          <Button onClick={openCreate} className="gap-2 active:scale-95 transition-transform">
+            <Plus className="h-4 w-4" /> Novo Contato
+          </Button>
+        </div>
       </header>
 
       <Card className="glass-card animate-fade-in" style={{ animationDelay: "0.1s" }}>
@@ -171,6 +178,8 @@ export default function Professionals() {
           setDeleteTarget(null);
         }}
       />
+
+      <MarketplaceSheet open={marketplaceOpen} onOpenChange={setMarketplaceOpen} />
     </div>
   );
 }
