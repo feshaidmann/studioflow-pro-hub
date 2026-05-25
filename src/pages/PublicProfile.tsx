@@ -46,12 +46,17 @@ interface DeliveryHistoryItem {
 
 export default function PublicProfile() {
   const { username } = useParams<{ username: string }>();
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const [profile, setProfile] = useState<PublicProfileData | null>(null);
   const [ratings, setRatings] = useState<RatingsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [contactCopied, setContactCopied] = useState<"email" | "wa" | null>(null);
   const [history, setHistory] = useState<DeliveryHistoryItem[]>([]);
   const [workLinks, setWorkLinks] = useState<Array<{ title: string; url: string }>>([]);
+  const [quoteOpen, setQuoteOpen] = useState(false);
+
 
   useEffect(() => {
     if (!username) return;
