@@ -32,6 +32,7 @@ export function MarketplaceSheet({ open, onOpenChange, initialSpecialty, initial
   });
 
   const [quoteTarget, setQuoteTarget] = useState<MarketplaceProvider | null>(null);
+  const [profileTarget, setProfileTarget] = useState<MarketplaceProvider | null>(null);
 
   return (
     <>
