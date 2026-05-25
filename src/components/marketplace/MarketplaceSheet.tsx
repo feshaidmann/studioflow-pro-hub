@@ -7,6 +7,7 @@ import { useMarketplaceProviders } from "@/hooks/useMarketplace";
 import { SPECIALTY_OPTIONS } from "@/constants/specialtyOptions";
 import { BRAZIL_STATES } from "@/constants/brazilStates";
 import { ProviderCard } from "./ProviderCard";
+import { ProviderProfileSheet } from "./ProviderProfileSheet";
 import { RequestQuoteModal } from "./RequestQuoteModal";
 import type { MarketplaceProvider } from "@/types/marketplace";
 
@@ -31,6 +32,7 @@ export function MarketplaceSheet({ open, onOpenChange, initialSpecialty, initial
   });
 
   const [quoteTarget, setQuoteTarget] = useState<MarketplaceProvider | null>(null);
+  const [profileTarget, setProfileTarget] = useState<MarketplaceProvider | null>(null);
 
   return (
     <>
@@ -87,7 +89,12 @@ export function MarketplaceSheet({ open, onOpenChange, initialSpecialty, initial
               </div>
             ) : (
               providers.map((p) => (
-                <ProviderCard key={`${p.source}-${p.provider_ref}`} provider={p} onRequestQuote={setQuoteTarget} />
+                <ProviderCard
+                  key={`${p.source}-${p.provider_ref}`}
+                  provider={p}
+                  onRequestQuote={setQuoteTarget}
+                  onOpenProfile={setProfileTarget}
+                />
               ))
             )}
           </div>
@@ -100,6 +107,16 @@ export function MarketplaceSheet({ open, onOpenChange, initialSpecialty, initial
         provider={quoteTarget}
         projectId={projectId}
         specialty={specialty === "all" ? undefined : specialty}
+      />
+
+      <ProviderProfileSheet
+        provider={profileTarget}
+        open={!!profileTarget}
+        onOpenChange={(v) => !v && setProfileTarget(null)}
+        onRequestQuote={(p) => {
+          setProfileTarget(null);
+          setQuoteTarget(p);
+        }}
       />
     </>
   );
