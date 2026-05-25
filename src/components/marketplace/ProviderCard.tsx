@@ -36,13 +36,26 @@ export function ProviderCard({ provider, onRequestQuote }: Props) {
         )}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <p className="font-medium text-sm truncate">{provider.name}</p>
+            {provider.handle ? (
+              <Link
+                to={`/u/${provider.handle}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium text-sm truncate hover:text-primary inline-flex items-center gap-1"
+              >
+                {provider.name}
+                <ExternalLink className="h-3 w-3 text-muted-foreground" />
+              </Link>
+            ) : (
+              <p className="font-medium text-sm truncate">{provider.name}</p>
+            )}
             <Badge variant="outline" className={`text-[10px] gap-1 ${badge.cls}`}>
               <BadgeIcon className="h-2.5 w-2.5" />
               {badge.label}
             </Badge>
           </div>
           <p className="text-xs text-muted-foreground truncate">{provider.specialties.filter(Boolean).join(" · ") || "Sem especialidade"}</p>
+
           {(provider.city || provider.state) && (
             <p className="text-[11px] text-muted-foreground flex items-center gap-1 mt-0.5">
               <MapPin className="h-3 w-3" /> {[provider.city, provider.state].filter(Boolean).join(" / ")}
