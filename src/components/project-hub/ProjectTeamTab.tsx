@@ -22,6 +22,9 @@ import { format, isPast, isToday, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import type { Professional } from "@/data/mockData";
+import { MissingRoleHint } from "@/components/marketplace/MissingRoleHint";
+import { MarketplaceSheet } from "@/components/marketplace/MarketplaceSheet";
+import { Store } from "lucide-react";
 
 /* ── Types ── */
 type DeliveryStatus = "convidado" | "ativo" | "aguardando" | "atrasado" | "entregou" | "concluido";
