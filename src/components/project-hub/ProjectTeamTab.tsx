@@ -300,6 +300,15 @@ export default function ProjectTeamTab({ projectId }: ProjectTeamTabProps) {
         </div>
       </div>
 
+      {/* Sugestões contextuais do marketplace */}
+      {missingRoles.length > 0 && (
+        <div className="space-y-2">
+          {missingRoles.map((role) => (
+            <MissingRoleHint key={role} specialty={role} projectId={projectId} />
+          ))}
+        </div>
+      )}
+
       {/* Member Cards */}
       {filteredTeam.map((prof) => {
         const token = prof.email ? inviteTokens[prof.email] : null;
