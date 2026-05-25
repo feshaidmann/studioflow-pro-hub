@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Search, Store } from "lucide-react";
 import { useMarketplaceProviders } from "@/hooks/useMarketplace";
 import { SPECIALTY_OPTIONS } from "@/constants/specialtyOptions";
-import { BR_STATES } from "@/constants/brazilStates";
+import { BRAZIL_STATES } from "@/constants/brazilStates";
 import { ProviderCard } from "./ProviderCard";
 import { RequestQuoteModal } from "./RequestQuoteModal";
 import type { MarketplaceProvider } from "@/types/marketplace";
@@ -69,7 +69,7 @@ export function MarketplaceSheet({ open, onOpenChange, initialSpecialty, initial
                 <SelectTrigger><SelectValue placeholder="Estado" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos estados</SelectItem>
-                  {BR_STATES.map((s) => (
+                  {BRAZIL_STATES.map((s) => (
                     <SelectItem key={s.uf} value={s.uf}>{s.uf}</SelectItem>
                   ))}
                 </SelectContent>
