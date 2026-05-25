@@ -17,6 +17,8 @@ import { toast } from "sonner";
 import { User, Save, ListChecks, DollarSign, CalendarClock, Clock, Mail, Disc3, Megaphone, Loader2, FlaskConical, Activity, Users, UserCircle, ChevronRight, MapPin, Globe, Palette, Sun, Bell, BellOff } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import CaptadorOptInSection from "@/components/captadores/CaptadorOptInSection";
+import PublicProfileSection from "@/components/profile/PublicProfileSection";
+
 
 const RULE_ICONS: Record<string, React.ElementType> = {
   inactivity:     Clock,
