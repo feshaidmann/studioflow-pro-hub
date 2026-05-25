@@ -104,6 +104,7 @@ export function ProviderProfileSheet({ provider, open, onOpenChange, onRequestQu
             <Send className="h-3.5 w-3.5" /> Solicitar orçamento
           </Button>
         </div>
+        )}
       </SheetContent>
     </Sheet>
   );
