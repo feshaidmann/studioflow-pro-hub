@@ -19,9 +19,8 @@ const SOURCE_BADGE: Record<MarketplaceProvider["source"], { label: string; icon:
 };
 
 export function ProviderProfileSheet({ provider, open, onOpenChange, onRequestQuote }: Props) {
-  if (!provider) return null;
-  const badge = SOURCE_BADGE[provider.source];
-  const BadgeIcon = badge.icon;
+  const badge = provider ? SOURCE_BADGE[provider.source] : null;
+  const BadgeIcon = badge?.icon;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -33,6 +32,7 @@ export function ProviderProfileSheet({ provider, open, onOpenChange, onRequestQu
           </SheetDescription>
         </SheetHeader>
 
+        {provider && badge && BadgeIcon && (
         <div className="mt-6 space-y-5">
           <div className="flex items-start gap-4">
             {provider.avatar_url ? (
