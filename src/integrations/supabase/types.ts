@@ -1742,6 +1742,9 @@ export type Database = {
           primary_genre: string | null
           projects_completed: number
           public_email: string
+          public_profile_enabled: boolean
+          show_public_email: boolean
+          show_public_whatsapp: boolean
           specialties: string[]
           state: string | null
           track_view_mode: string
@@ -1780,6 +1783,9 @@ export type Database = {
           primary_genre?: string | null
           projects_completed?: number
           public_email?: string
+          public_profile_enabled?: boolean
+          show_public_email?: boolean
+          show_public_whatsapp?: boolean
           specialties?: string[]
           state?: string | null
           track_view_mode?: string
@@ -1818,6 +1824,9 @@ export type Database = {
           primary_genre?: string | null
           projects_completed?: number
           public_email?: string
+          public_profile_enabled?: boolean
+          show_public_email?: boolean
+          show_public_whatsapp?: boolean
           specialties?: string[]
           state?: string | null
           track_view_mode?: string
@@ -2943,6 +2952,7 @@ export type Database = {
           id: string
           projects_completed: number
           public_email: string
+          public_profile_enabled: boolean
           specialties: string[]
           username: string
           whatsapp: string
