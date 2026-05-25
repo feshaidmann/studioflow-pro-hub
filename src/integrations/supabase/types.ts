@@ -841,6 +841,36 @@ export type Database = {
         }
         Relationships: []
       }
+      marketplace_hint_dismissals: {
+        Row: {
+          created_at: string
+          id: string
+          project_id: string
+          snooze_until: string | null
+          specialty: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          project_id: string
+          snooze_until?: string | null
+          specialty: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          project_id?: string
+          snooze_until?: string | null
+          specialty?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       mix_tracks: {
         Row: {
           comp_gr_db: number

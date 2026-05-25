@@ -23,6 +23,8 @@ import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import type { Professional } from "@/data/mockData";
 import { MissingRoleHint } from "@/components/marketplace/MissingRoleHint";
+import { useDismissedHints } from "@/hooks/useDismissedHints";
+
 import { MarketplaceSheet } from "@/components/marketplace/MarketplaceSheet";
 import { Store } from "lucide-react";
 
@@ -75,7 +77,8 @@ export default function ProjectTeamTab({ projectId }: ProjectTeamTabProps) {
   const [removeTarget, setRemoveTarget] = useState<{ id: string; name: string } | null>(null);
   const [marketplaceOpen, setMarketplaceOpen] = useState(false);
 
-  // Detecta papéis ausentes comuns para sugerir o marketplace
+  // Sugestões de papéis ausentes (filtrando dismissals do usuário)
+  const { dismissed: dismissedHints, dismiss: dismissHint } = useDismissedHints(projectId);
   const teamRoles = useMemo(() => team.map((m) => (m.role || "").toLowerCase()), [team]);
   const missingRoles = useMemo(() => {
     const needs: string[] = [];
@@ -83,8 +86,9 @@ export default function ProjectTeamTab({ projectId }: ProjectTeamTabProps) {
     if (!has("mix")) needs.push("Mix Engineer");
     if (!has("master")) needs.push("Mastering Engineer");
     if (!has("design") && !has("capa")) needs.push("Designer Gráfico");
-    return needs.slice(0, 2);
-  }, [teamRoles]);
+    return needs.filter((r) => !dismissedHints.has(r)).slice(0, 2);
+  }, [teamRoles, dismissedHints]);
+
 
   // Fetch invitations + member extras
   useEffect(() => {
@@ -304,8 +308,9 @@ export default function ProjectTeamTab({ projectId }: ProjectTeamTabProps) {
       {missingRoles.length > 0 && (
         <div className="space-y-2">
           {missingRoles.map((role) => (
-            <MissingRoleHint key={role} specialty={role} projectId={projectId} />
+            <MissingRoleHint key={role} specialty={role} projectId={projectId} onDismiss={dismissHint} />
           ))}
+
         </div>
       )}
 
