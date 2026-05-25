@@ -308,8 +308,9 @@ export default function ProjectTeamTab({ projectId }: ProjectTeamTabProps) {
       {missingRoles.length > 0 && (
         <div className="space-y-2">
           {missingRoles.map((role) => (
-            <MissingRoleHint key={role} specialty={role} projectId={projectId} />
+            <MissingRoleHint key={role} specialty={role} projectId={projectId} onDismiss={dismissHint} />
           ))}
+
         </div>
       )}
 
