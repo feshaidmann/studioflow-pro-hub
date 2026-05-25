@@ -178,6 +178,8 @@ export default function Professionals() {
           setDeleteTarget(null);
         }}
       />
+
+      <MarketplaceSheet open={marketplaceOpen} onOpenChange={setMarketplaceOpen} />
     </div>
   );
 }
