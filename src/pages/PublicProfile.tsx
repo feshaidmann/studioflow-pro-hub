@@ -437,8 +437,7 @@ export default function PublicProfile() {
           is_user: true,
         } satisfies MarketplaceProvider) : null}
       />
-
-      </div>
     </div>
   );
+
 }
