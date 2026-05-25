@@ -51,10 +51,10 @@ const gestaoItems = [
   { labelKey: "nav.agenda",        path: "/agenda",        icon: CalendarDays, proOnly: false, mobileLabel: "" },  // [1]
   // ── Ferramentas — ordenadas pela jornada do artista ──────────────────
   { labelKey: "nav.musicdna",      path: "/music-dna",     icon: Dna,          proOnly: false, mobileLabel: "nav.musicdna.short" }, // [2] — entenda a faixa primeiro
-  { labelKey: "nav.visualDirection", path: "/projects",      icon: Palette,      proOnly: false, mobileLabel: "" },  // [3] — Direção Visual (briefing para designer)
-  { labelKey: "nav.carreira",      path: "/carreira",      icon: Trophy,       proOnly: false, mobileLabel: "" },  // [4] — editais + palcos unificados
-  { labelKey: "nav.professionals", path: "/professionals", icon: Users,        proOnly: false, mobileLabel: "" },  // [5] — equipe conforme necessidade
-  { labelKey: "nav.captadores",    path: "/captadores",    icon: Megaphone,    proOnly: false, mobileLabel: "" },  // [6] — marketplace de captadores
+  // Direção Visual removida do menu principal — acessível apenas dentro do contexto de cada projeto
+  { labelKey: "nav.carreira",      path: "/carreira",      icon: Trophy,       proOnly: false, mobileLabel: "" },  // [3] — editais + palcos unificados
+  { labelKey: "nav.professionals", path: "/professionals", icon: Users,        proOnly: false, mobileLabel: "" },  // [4] — equipe conforme necessidade
+  { labelKey: "nav.captadores",    path: "/captadores",    icon: Megaphone,    proOnly: false, mobileLabel: "" },  // [5] — marketplace de captadores
 ];
 
 // Sub-labels descritivos curtos (P2) — apenas para itens do drawer "Mais"
