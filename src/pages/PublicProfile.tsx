@@ -1,15 +1,20 @@
 import { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   MapPin, Mail, Phone, Star, Briefcase, CalendarDays,
-  Share2, Check, Music, ExternalLink, AlertCircle,
+  Share2, Check, Music, ExternalLink, AlertCircle, Send, UserPlus, Copy,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useAuth } from "@/contexts/AuthContext";
+import { RequestQuoteModal } from "@/components/marketplace/RequestQuoteModal";
+import type { MarketplaceProvider } from "@/types/marketplace";
+import { toast } from "sonner";
+
 
 interface PublicProfileData {
   id: string;
