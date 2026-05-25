@@ -73,6 +73,18 @@ export default function ProjectTeamTab({ projectId }: ProjectTeamTabProps) {
   const [saving, setSaving] = useState(false);
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [removeTarget, setRemoveTarget] = useState<{ id: string; name: string } | null>(null);
+  const [marketplaceOpen, setMarketplaceOpen] = useState(false);
+
+  // Detecta papéis ausentes comuns para sugerir o marketplace
+  const teamRoles = useMemo(() => team.map((m) => (m.role || "").toLowerCase()), [team]);
+  const missingRoles = useMemo(() => {
+    const needs: string[] = [];
+    const has = (kw: string) => teamRoles.some((r) => r.includes(kw));
+    if (!has("mix")) needs.push("Mix Engineer");
+    if (!has("master")) needs.push("Mastering Engineer");
+    if (!has("design") && !has("capa")) needs.push("Designer Gráfico");
+    return needs.slice(0, 2);
+  }, [teamRoles]);
 
   // Fetch invitations + member extras
   useEffect(() => {
