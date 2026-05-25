@@ -250,9 +250,15 @@ export default function ProjectTeamTab({ projectId }: ProjectTeamTabProps) {
       <div className="flex flex-col items-center justify-center py-12 gap-3 text-center">
         <Users className="h-8 w-8 text-muted-foreground/30" />
         <p className="text-sm text-muted-foreground">Nenhum colaborador neste projeto ainda.</p>
-        <Button variant="outline" size="sm" className="gap-1.5 mt-2" onClick={() => navigate(`/projects?id=${projectId}&addMember=1`)}>
-          <UserPlus className="h-3.5 w-3.5" /> Adicionar membro
-        </Button>
+        <div className="flex gap-2 mt-2">
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => navigate(`/projects?id=${projectId}&addMember=1`)}>
+            <UserPlus className="h-3.5 w-3.5" /> Adicionar membro
+          </Button>
+          <Button size="sm" className="gap-1.5" onClick={() => setMarketplaceOpen(true)}>
+            <Store className="h-3.5 w-3.5" /> Buscar no marketplace
+          </Button>
+        </div>
+        <MarketplaceSheet open={marketplaceOpen} onOpenChange={setMarketplaceOpen} projectId={projectId} />
       </div>
     );
   }
@@ -268,6 +274,9 @@ export default function ProjectTeamTab({ projectId }: ProjectTeamTabProps) {
         <div className="flex items-center gap-1.5 flex-wrap">
           <Button variant="outline" size="sm" className="h-6 text-[10px] gap-1" onClick={() => navigate(`/projects?id=${projectId}&addMember=1`)}>
             <UserPlus className="h-3 w-3" /> Adicionar
+          </Button>
+          <Button variant="outline" size="sm" className="h-6 text-[10px] gap-1" onClick={() => setMarketplaceOpen(true)}>
+            <Store className="h-3 w-3" /> Marketplace
           </Button>
           {Object.entries(statusCounts).map(([status, count]) => {
             const cfg = STATUS_CONFIG[status as DeliveryStatus];
