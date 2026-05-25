@@ -108,6 +108,16 @@ export function MarketplaceSheet({ open, onOpenChange, initialSpecialty, initial
         projectId={projectId}
         specialty={specialty === "all" ? undefined : specialty}
       />
+
+      <ProviderProfileSheet
+        provider={profileTarget}
+        open={!!profileTarget}
+        onOpenChange={(v) => !v && setProfileTarget(null)}
+        onRequestQuote={(p) => {
+          setProfileTarget(null);
+          setQuoteTarget(p);
+        }}
+      />
     </>
   );
 }
