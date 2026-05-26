@@ -81,8 +81,13 @@ function showOverlay(reason: string) {
   `;
   document.body.appendChild(el);
   document.getElementById("sf-reload-guard-continue")?.addEventListener("click", () => {
+    // Limpa o estado para sair do cooldown e não reaparecer no próximo load.
+    try {
+      sessionStorage.removeItem(STORAGE_KEY);
+    } catch { /* noop */ }
     el.remove();
   });
+
   document.getElementById("sf-reload-guard-reload")?.addEventListener("click", () => {
     // Limpa o estado antes de recarregar manualmente.
     try {
