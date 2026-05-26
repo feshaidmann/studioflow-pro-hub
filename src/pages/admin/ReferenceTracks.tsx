@@ -204,11 +204,8 @@ export default function ReferenceTracks() {
     }
   };
 
-  // Benchmarks agora derivam em tempo real da view — não há mais "recalcular".
-  const handleRecalcAll = async () => {
-    toast.info("Benchmarks agora são atualizados automaticamente pela view unificada.");
-    refreshMeta();
-  };
+  // Benchmarks agora derivam em tempo real da view unificada — sem ação manual.
+
 
   const previewBadges = useMemo(() => {
     if (!preview) return null;
