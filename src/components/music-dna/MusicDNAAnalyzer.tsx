@@ -1276,13 +1276,18 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
   const keyValue = realAnalysis?.key ?? null;
   const durationValue = realAnalysis ? formatDuration(realAnalysis.duration_sec) : null;
 
-  // Só exibe itens com texto qualitativo real — os MetricCards já mostram valores/alvos.
+  // Só exibe itens com avaliação qualitativa real e acionável — MetricCards já mostram valores/alvos.
+  // Heurística: rejeita textos curtos, genéricos ("ok", "dentro do alvo") ou sem verbo de ação/recomendação.
+  const ACTIONABLE_RX = /\b(ajust|reduz|aument|considere|recomend|evite|use|adicion|comprim|equaliz|cort|atenu|reforc|suaviz|alvo|abaixo|acima|sugiro|sugere|precisa|deveria|pode|risco|atenção|cuidado|melhor)/i;
   const technicalItems = (diagnostico_tecnico ? [
     { label: "LUFS", help: "volume percebido em plataformas", text: diagnostico_tecnico.lufs_avaliacao },
     { label: "True Peak", help: "risco de distorção após compressão/streaming", text: diagnostico_tecnico.true_peak_avaliacao },
     { label: "Dynamic Range", help: "variação entre trechos suaves e fortes", text: diagnostico_tecnico.dynamic_range_avaliacao },
     { label: "Espectro", help: "brilho, presença e distribuição de frequências", text: diagnostico_tecnico.espectro_avaliacao },
-  ] : []).filter((it) => typeof it.text === "string" && it.text.trim().length >= 40);
+  ] : []).filter((it) => {
+    const t = typeof it.text === "string" ? it.text.trim() : "";
+    return t.length >= 60 && ACTIONABLE_RX.test(t);
+  });
 
   // Breadcrumb data
   const projectId = (input as { projectId?: string }).projectId;
