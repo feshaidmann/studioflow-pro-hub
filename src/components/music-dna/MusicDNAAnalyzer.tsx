@@ -1340,15 +1340,16 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
         <TrackVersionsPanel trackName={input.name} currentAnalysisId={savedAnalysisId} />
       )}
 
-      <PlatformCompatibilityCard lufs={lufsValue} />
-
       <div className="sticky top-2 z-20 -mx-1 flex gap-1.5 overflow-x-auto rounded-lg border border-border bg-background/95 p-1 backdrop-blur animate-fade-in">
         {[
-          { label: "Resumo", id: "dna-resumo" },
-          { label: "Diagnóstico", id: "dna-acoes" },
-          { label: "Identidade", id: "dna-identidade" },
-          { label: "Técnico", id: "dna-tecnico" },
-        ].map((item) => (
+          { label: "Resumo", id: "dna-resumo", show: true },
+          { label: "Diagnóstico", id: "dna-acoes", show: true },
+          { label: "Identidade", id: "dna-identidade", show: true },
+          { label: "Referências", id: "dna-referencias", show: true },
+          { label: "Técnico", id: "dna-tecnico", show: true },
+          { label: "Seções", id: "dna-secoes", show: !!analise_seccoes || (realAnalysis?.sections?.length ?? 0) > 0 },
+          { label: "Perfil", id: "dna-perfil", show: true },
+        ].filter((i) => i.show).map((item) => (
           <Button
             key={item.id}
             type="button"
