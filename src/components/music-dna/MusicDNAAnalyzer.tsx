@@ -58,7 +58,7 @@ import {
 
 import {
   useMusicDNA,
-  FEATURE_KEYS, FEATURE_LABELS,
+  GENRE_PRESETS, calcDistance,
   GENRE_PRESETS, calcDistance,
   toRadarData,
   type TrackInput, type Genre,
