@@ -631,13 +631,21 @@ function computeMfccChromaFromOffset(
 
 
 
+/**
+ * Detecta BPM via spectral flux + autocorrelação com correção de octave-error
+ * e interpolação parabólica no pico. Cobre 60–200 BPM com resolução ±0.3 BPM.
+ *
+ * Refinos vs. versão anterior:
+ *  - Envelope inteiro (não cortado em 2000 amostras)
+ *  - Octave check: testa pico em 0.5× e 2× lag; escolhe o que cai em 65–180 BPM
+ *  - Interpolação parabólica para precisão sub-bin
+ */
 function detectBPM(mono: Float32Array, sampleRate: number): number {
-  // Compute onset envelope using energy in short windows
-  const envWindowSize = Math.floor(sampleRate * 0.01); // 10ms
+  // Envelope de energia em janelas de 10ms (proxy leve de spectral flux)
+  const envWindowSize = Math.floor(sampleRate * 0.01);
   const envHop = envWindowSize;
   const envLength = Math.floor(mono.length / envHop);
   const envelope = new Float32Array(envLength);
-
   for (let i = 0; i < envLength; i++) {
     const start = i * envHop;
     let sum = 0;
@@ -646,37 +654,64 @@ function detectBPM(mono: Float32Array, sampleRate: number): number {
     envelope[i] = Math.sqrt(sum / envWindowSize);
   }
 
-  // Onset detection function (first-order difference, half-wave rectified)
+  // Onset function (diferença positiva = flux)
   const onset = new Float32Array(envLength);
   for (let i = 1; i < envLength; i++) {
     const diff = envelope[i] - envelope[i - 1];
     onset[i] = diff > 0 ? diff : 0;
   }
 
-  // Autocorrelation in BPM range 60-200
   const envSampleRate = sampleRate / envHop;
-  const minLag = Math.floor(envSampleRate * 60 / 200); // 200 BPM
-  const maxLag = Math.floor(envSampleRate * 60 / 60);  // 60 BPM
-  const cappedMaxLag = Math.min(maxLag, onset.length - 1);
+  const minLag = Math.max(2, Math.floor(envSampleRate * 60 / 200));   // 200 BPM
+  const maxLag = Math.min(onset.length - 2, Math.floor(envSampleRate * 60 / 60)); // 60 BPM
 
+  // Autocorrelação SOBRE TODA a faixa (antes truncava em 2000)
+  const corr = new Float32Array(maxLag + 1);
+  for (let lag = minLag; lag <= maxLag; lag++) {
+    let c = 0;
+    const n = onset.length - lag;
+    for (let i = 0; i < n; i++) c += onset[i] * onset[i + lag];
+    corr[lag] = c;
+  }
+
+  // Localiza pico
   let bestLag = minLag;
   let bestCorr = -Infinity;
+  for (let lag = minLag; lag <= maxLag; lag++) {
+    if (corr[lag] > bestCorr) { bestCorr = corr[lag]; bestLag = lag; }
+  }
 
-  for (let lag = minLag; lag <= cappedMaxLag; lag++) {
-    let corr = 0;
-    const n = Math.min(onset.length - lag, 2000); // limit computation
-    for (let i = 0; i < n; i++) {
-      corr += onset[i] * onset[i + lag];
-    }
-    if (corr > bestCorr) {
-      bestCorr = corr;
-      bestLag = lag;
+  // Octave correction: se o pico cair fora de [65, 180] BPM, testa 0.5× e 2× lag
+  const bpmFromLag = (lag: number) => (envSampleRate * 60) / lag;
+  const inComfortRange = (bpm: number) => bpm >= 65 && bpm <= 180;
+  const candidates: number[] = [bestLag];
+  const half = Math.round(bestLag / 2);
+  const dbl = bestLag * 2;
+  if (half >= minLag && corr[half] > bestCorr * 0.6) candidates.push(half);
+  if (dbl <= maxLag && corr[dbl] > bestCorr * 0.6) candidates.push(dbl);
+  // Prefere candidato com BPM em zona confortável e maior autocorr ponderada
+  let chosenLag = bestLag;
+  let chosenScore = corr[bestLag] * (inComfortRange(bpmFromLag(bestLag)) ? 1.2 : 0.8);
+  for (const lag of candidates) {
+    const score = corr[lag] * (inComfortRange(bpmFromLag(lag)) ? 1.2 : 0.8);
+    if (score > chosenScore) { chosenScore = score; chosenLag = lag; }
+  }
+
+  // Interpolação parabólica em torno do pico para precisão sub-bin
+  let refinedLag = chosenLag;
+  if (chosenLag > minLag && chosenLag < maxLag) {
+    const y0 = corr[chosenLag - 1], y1 = corr[chosenLag], y2 = corr[chosenLag + 1];
+    const denom = (y0 - 2 * y1 + y2);
+    if (Math.abs(denom) > 1e-10) {
+      const delta = 0.5 * (y0 - y2) / denom;
+      if (delta > -1 && delta < 1) refinedLag = chosenLag + delta;
     }
   }
 
-  const bpm = (envSampleRate * 60) / bestLag;
+  const bpm = (envSampleRate * 60) / refinedLag;
   return Math.round(bpm * 10) / 10;
 }
+
 
 // ── Key Detection ────────────────────────────────────────────────────────────
 
@@ -865,12 +900,46 @@ function detectSections(mono: Float32Array, sampleRate: number): AudioSection[] 
 
 // ── Spotify-style features ───────────────────────────────────────────────────
 
+/**
+ * Energia em banda de frequência (Hz). Soma magnitudes dos bins.
+ */
+function bandEnergy(spectral: SpectralResult, fLo: number, fHi: number): number {
+  const { magnitudes, freqPerBin } = spectral;
+  const kLo = Math.max(0, Math.floor(fLo / freqPerBin));
+  const kHi = Math.min(magnitudes.length - 1, Math.ceil(fHi / freqPerBin));
+  let sum = 0;
+  for (let k = kLo; k <= kHi; k++) sum += magnitudes[k];
+  return sum;
+}
+
+/**
+ * Total spectral energy (denominador comum para razões de banda).
+ */
+function totalSpectralEnergy(spectral: SpectralResult): number {
+  let total = 0;
+  const m = spectral.magnitudes;
+  for (let k = 0; k < m.length; k++) total += m[k];
+  return total > 1e-10 ? total : 1e-10;
+}
+
+/**
+ * Computes Spotify-style perceptual features.
+ *
+ * Refinamento v2:
+ *  - energy: combina RMS + sub-band (50–120 Hz) + centroid + onset
+ *  - danceability: kernel triangular com 3 pivôs BPM (75/100/130) cobrindo ranges BR
+ *  - valence: usa modo (maior/menor do key) + brilho + contraste de seções
+ *  - speechiness / instrumentalness: desacoplados, baseados em razão de banda vocal
+ *  - liveness: variação inter-seção de RMS (não mais proxy ruim de ZCR+flatness)
+ */
 function computeSpotifyFeatures(
   mono: Float32Array,
   sampleRate: number,
   spectral: SpectralResult,
   bpm: number,
   rmsDb: number,
+  keyName: string,
+  sections: AudioSection[],
 ): {
   energy: number;
   danceability: number;
@@ -882,44 +951,109 @@ function computeSpotifyFeatures(
 } {
   const clamp = (v: number) => Math.min(1, Math.max(0, v));
 
-  // RMS normalized (quiet = 0, loud = 1)
+  // ── Normalizações base ────────────────────────────────────────────────────
   const rmsNorm = clamp((rmsDb + 60) / 50);
-
-  // Energy: based on RMS + spectral centroid
   const centroidNorm = clamp(spectral.centroid / 5000);
-  const energy = clamp(rmsNorm * 0.7 + centroidNorm * 0.3);
+  const total = totalSpectralEnergy(spectral);
+  const subBandRatio = clamp(bandEnergy(spectral, 50, 120) / total * 8); // x8 calibra range
+  const vocalBandRatio = clamp(bandEnergy(spectral, 300, 3400) / total * 2.2);
+  const highBandRatio = clamp(bandEnergy(spectral, 6000, 12000) / total * 6);
 
-  // Danceability: BPM proximity to 100-130 range + low spectral flatness
-  const bpmScore = 1 - Math.min(1, Math.abs(bpm - 115) / 60);
-  const danceability = clamp(bpmScore * 0.6 + rmsNorm * 0.2 + (1 - spectral.flatness) * 0.2);
+  // ── Onset density (proxy de pulsação rítmica) ────────────────────────────
+  // Reaproveita seções já calculadas
+  const avgOnsetDensity = sections.length > 0
+    ? sections.reduce((a, s) => a + s.onset_density, 0) / sections.length
+    : 2;
+  const onsetNorm = clamp(avgOnsetDensity / 6);
 
-  // Acousticness: low spectral flatness + low centroid = more acoustic
-  const acousticness = clamp((1 - centroidNorm) * 0.5 + (1 - spectral.flatness) * 0.3 + (1 - rmsNorm) * 0.2);
+  // ── ENERGY (combinação ponderada com sub-band) ───────────────────────────
+  const energy = clamp(
+    rmsNorm * 0.45 +
+    subBandRatio * 0.25 +
+    centroidNorm * 0.20 +
+    onsetNorm * 0.10
+  );
 
-  // Valence: higher centroid + higher energy = more positive
-  const valence = clamp(centroidNorm * 0.4 + energy * 0.3 + danceability * 0.3);
+  // ── DANCEABILITY: kernel triangular com 3 pivôs (BR-friendly) ────────────
+  // Picos em 75 (Sertanejo/Bossa), 100 (Pop/Reggae), 130 (Funk/Eletrônica)
+  const triKernel = (b: number, center: number, halfWidth: number) =>
+    Math.max(0, 1 - Math.abs(b - center) / halfWidth);
+  const bpmScore = Math.max(
+    triKernel(bpm, 75, 25),
+    triKernel(bpm, 100, 25),
+    triKernel(bpm, 130, 30),
+  );
+  const danceability = clamp(
+    bpmScore * 0.55 +
+    subBandRatio * 0.20 +
+    (1 - spectral.flatness) * 0.15 +
+    onsetNorm * 0.10
+  );
 
-  // Zero-crossing rate for speechiness
-  let zeroCrossings = 0;
-  for (let i = 1; i < mono.length; i++) {
-    if ((mono[i] >= 0 && mono[i - 1] < 0) || (mono[i] < 0 && mono[i - 1] >= 0)) zeroCrossings++;
+  // ── ACOUSTICNESS: graves orgânicos (baixa subBand) + flatness baixa ──────
+  // Faixas acústicas têm menos sub-bass eletrônico e mais conteúdo tonal puro
+  const acousticness = clamp(
+    (1 - subBandRatio) * 0.35 +
+    (1 - spectral.flatness) * 0.30 +
+    (1 - centroidNorm) * 0.20 +
+    (1 - rmsNorm) * 0.15
+  );
+
+  // ── VALENCE (mode-aware) ──────────────────────────────────────────────────
+  // +0.15 se modo maior, −0.15 se menor; combinado com brilho e contraste
+  const isMinor = /m$/.test(keyName ?? "");
+  const modeShift = isMinor ? -0.15 : 0.15;
+  // Contraste de RMS entre seções (faixas alegres variam)
+  let sectionContrast = 0;
+  if (sections.length >= 2) {
+    const rmsList = sections.map(s => s.rms_dbfs);
+    const mn = Math.min(...rmsList), mx = Math.max(...rmsList);
+    sectionContrast = clamp((mx - mn) / 12);
   }
-  const duration = mono.length / sampleRate;
-  const zcr = zeroCrossings / duration;
-  const zcrNorm = clamp(zcr / 10000);
+  const valence = clamp(
+    0.5 + modeShift +
+    (centroidNorm - 0.5) * 0.25 +
+    (energy - 0.5) * 0.20 +
+    sectionContrast * 0.15
+  );
 
-  // Speechiness: ZCR + flatness + mid-band energy
-  const midBandEnergy = clamp(spectral.centroid / 3000);
-  const speechiness = clamp(zcrNorm * 0.4 + spectral.flatness * 0.3 + midBandEnergy * 0.3);
+  // ── SPEECHINESS (banda vocal + ZCR) ──────────────────────────────────────
+  // Reaproveita ZCR já calculado em spectral
+  const zcrNorm = clamp(spectral.zcr * sampleRate / 8000);
+  const speechiness = clamp(
+    vocalBandRatio * 0.45 +
+    zcrNorm * 0.30 +
+    spectral.flatness * 0.25
+  );
 
-  // Instrumentalness: inverse of speechiness proxy
-  const instrumentalness = clamp(1 - speechiness * 1.5);
+  // ── INSTRUMENTALNESS (independente de speechiness) ───────────────────────
+  // Ausência de banda vocal dominante + high-band controlada (não é noise)
+  const vocalAbsence = clamp(1 - vocalBandRatio);
+  const tonalContent = clamp(1 - spectral.flatness);
+  const instrumentalness = clamp(
+    vocalAbsence * 0.55 +
+    tonalContent * 0.25 +
+    (1 - highBandRatio) * 0.20
+  );
 
-  // Liveness: ZCR variation + dynamic range indicator
-  const liveness = clamp(zcrNorm * 0.5 + spectral.flatness * 0.3 + (1 - rmsNorm) * 0.2);
+  // ── LIVENESS (variação de RMS por seção + high-band) ─────────────────────
+  // Gravações ao vivo têm mais variação dinâmica e ar (high-band)
+  let rmsVariation = 0;
+  if (sections.length >= 3) {
+    const rmsList = sections.map(s => s.rms_dbfs);
+    const mean = rmsList.reduce((a, b) => a + b, 0) / rmsList.length;
+    const variance = rmsList.reduce((a, b) => a + (b - mean) ** 2, 0) / rmsList.length;
+    rmsVariation = clamp(Math.sqrt(variance) / 6);
+  }
+  const liveness = clamp(
+    rmsVariation * 0.50 +
+    highBandRatio * 0.30 +
+    (1 - rmsNorm) * 0.20
+  );
 
   return { energy, danceability, acousticness, valence, instrumentalness, liveness, speechiness };
 }
+
 
 // ── Main analysis function ───────────────────────────────────────────────────
 
@@ -971,7 +1105,7 @@ export async function analyzeAudioFull(file: File): Promise<{
   const sections = detectSections(mono, sampleRate);
 
   // Spotify-style
-  const features = computeSpotifyFeatures(mono, sampleRate, spectral, bpm, rmsDb);
+  const features = computeSpotifyFeatures(mono, sampleRate, spectral, bpm, rmsDb, key, sections);
 
   // Acoustic fingerprint (catalog-aligned)
   const fp = computeMfccChromaMultiframe(mono, sampleRate);

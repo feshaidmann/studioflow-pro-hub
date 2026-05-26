@@ -80,43 +80,117 @@ function rmsDbfs(samples: Float32Array): number {
   return rms > 0 ? 20 * Math.log10(rms) : -Infinity;
 }
 
-/** Compute True Peak in dBTP (simplified) */
+/**
+ * True Peak (dBTP) com 4× oversampling Catmull-Rom (alinhado ao cliente).
+ * Captura inter-sample peaks que sample-peak puro perde (+0.5 a +1.5 dB típico
+ * em material limitado). Aproximação leve da recomendação ITU-R BS.1770.
+ */
 function truePeak(samples: Float32Array): number {
   let peak = 0;
-  for (let i = 0; i < samples.length; i++) {
+  const n = samples.length;
+  for (let i = 0; i < n; i++) {
     const abs = Math.abs(samples[i]);
     if (abs > peak) peak = abs;
+  }
+  for (let i = 1; i < n - 2; i++) {
+    const p0 = samples[i - 1], p1 = samples[i], p2 = samples[i + 1], p3 = samples[i + 2];
+    const a0 = 2 * p1;
+    const a1 = -p0 + p2;
+    const a2 = 2 * p0 - 5 * p1 + 4 * p2 - p3;
+    const a3 = -p0 + 3 * p1 - 3 * p2 + p3;
+    for (let k = 1; k < 4; k++) {
+      const t = k * 0.25;
+      const v = 0.5 * (a0 + a1 * t + a2 * t * t + a3 * t * t * t);
+      const abs = Math.abs(v);
+      if (abs > peak) peak = abs;
+    }
   }
   return peak > 0 ? 20 * Math.log10(peak) : -Infinity;
 }
 
-/** Simplified LUFS (integrated loudness) */
-function estimateLufs(samples: Float32Array, sampleRate: number): number {
-  // Use 400ms windows
-  const windowSize = Math.floor(sampleRate * 0.4);
-  const windows: number[] = [];
+// ── K-weighting (ITU-R BS.1770 / EBU R128) — paridade com cliente ──────────
+interface Biquad { b0: number; b1: number; b2: number; a1: number; a2: number; }
 
-  for (let i = 0; i < samples.length - windowSize; i += windowSize) {
-    let sum = 0;
-    for (let j = 0; j < windowSize; j++) {
-      sum += samples[i + j] * samples[i + j];
-    }
-    const power = sum / windowSize;
-    if (power > 0) {
-      windows.push(power);
-    }
-  }
-
-  if (windows.length === 0) return -Infinity;
-
-  // Gated measurement (absolute gate at -70 LUFS)
-  const absGate = Math.pow(10, -70 / 10);
-  const gated = windows.filter((p) => p > absGate);
-  if (gated.length === 0) return -Infinity;
-
-  const avgPower = gated.reduce((a, b) => a + b, 0) / gated.length;
-  return -0.691 + 10 * Math.log10(avgPower);
+function designHighShelf(fc: number, gainDb: number, q: number, sr: number): Biquad {
+  const A = Math.pow(10, gainDb / 40);
+  const w0 = 2 * Math.PI * fc / sr;
+  const cosw = Math.cos(w0);
+  const sinw = Math.sin(w0);
+  const alpha = sinw / (2 * q);
+  const sqrtA2alpha = 2 * Math.sqrt(A) * alpha;
+  const b0 =    A * ((A + 1) + (A - 1) * cosw + sqrtA2alpha);
+  const b1 = -2 * A * ((A - 1) + (A + 1) * cosw);
+  const b2 =    A * ((A + 1) + (A - 1) * cosw - sqrtA2alpha);
+  const a0 =        (A + 1) - (A - 1) * cosw + sqrtA2alpha;
+  const a1 =    2 * ((A - 1) - (A + 1) * cosw);
+  const a2 =        (A + 1) - (A - 1) * cosw - sqrtA2alpha;
+  return { b0: b0 / a0, b1: b1 / a0, b2: b2 / a0, a1: a1 / a0, a2: a2 / a0 };
 }
+
+function designHighPass(fc: number, q: number, sr: number): Biquad {
+  const w0 = 2 * Math.PI * fc / sr;
+  const cosw = Math.cos(w0);
+  const sinw = Math.sin(w0);
+  const alpha = sinw / (2 * q);
+  const b0 =  (1 + cosw) / 2;
+  const b1 = -(1 + cosw);
+  const b2 =  (1 + cosw) / 2;
+  const a0 =   1 + alpha;
+  const a1 =  -2 * cosw;
+  const a2 =   1 - alpha;
+  return { b0: b0 / a0, b1: b1 / a0, b2: b2 / a0, a1: a1 / a0, a2: a2 / a0 };
+}
+
+function applyBiquad(input: Float32Array, biquad: Biquad): Float32Array {
+  const out = new Float32Array(input.length);
+  let x1 = 0, x2 = 0, y1 = 0, y2 = 0;
+  const { b0, b1, b2, a1, a2 } = biquad;
+  for (let i = 0; i < input.length; i++) {
+    const x0 = input[i];
+    const y0 = b0 * x0 + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2;
+    out[i] = y0;
+    x2 = x1; x1 = x0;
+    y2 = y1; y1 = y0;
+  }
+  return out;
+}
+
+function applyKWeighting(mono: Float32Array, sampleRate: number): Float32Array {
+  const preFilter = designHighShelf(1681.974, 3.999, 0.7071752, sampleRate);
+  const rlbFilter = designHighPass(38.135, 0.5003270, sampleRate);
+  return applyBiquad(applyBiquad(mono, preFilter), rlbFilter);
+}
+
+/**
+ * LUFS BS.1770 completo: K-weighting → janelas 400ms (hop 100ms) → gating
+ * absoluto (-70) e relativo (-10 LU). Paridade com pipeline do cliente.
+ */
+function estimateLufs(samples: Float32Array, sampleRate: number): number {
+  const weighted = applyKWeighting(samples, sampleRate);
+  const blockSize = Math.floor(sampleRate * 0.4);
+  const hop = Math.floor(sampleRate * 0.1);
+  const meanSquares: number[] = [];
+  for (let start = 0; start + blockSize <= weighted.length; start += hop) {
+    let sum = 0;
+    for (let i = start; i < start + blockSize; i++) sum += weighted[i] * weighted[i];
+    meanSquares.push(sum / blockSize);
+  }
+  if (meanSquares.length === 0) return -Infinity;
+
+  const blockLoudness = meanSquares.map(ms => -0.691 + 10 * Math.log10(Math.max(ms, 1e-12)));
+  const absGated = blockLoudness.filter(l => l > -70);
+  if (absGated.length === 0) return -Infinity;
+
+  const ungatedMs = meanSquares.filter((_, i) => blockLoudness[i] > -70);
+  const meanUngated = ungatedMs.reduce((a, b) => a + b, 0) / ungatedMs.length;
+  const relThresh = -0.691 + 10 * Math.log10(Math.max(meanUngated, 1e-12)) - 10;
+
+  const finalMs = meanSquares.filter((_, i) => blockLoudness[i] > -70 && blockLoudness[i] >= relThresh);
+  if (finalMs.length === 0) return -Infinity;
+  const meanFinal = finalMs.reduce((a, b) => a + b, 0) / finalMs.length;
+  return -0.691 + 10 * Math.log10(meanFinal);
+}
+
 
 /** Compute dynamic range (difference between loud and quiet sections) */
 function dynamicRange(samples: Float32Array, sampleRate: number): number {
