@@ -115,10 +115,9 @@ export function useSavedAnalyses() {
           });
       } catch { /* silencioso: telemetria não pode quebrar o save */ }
 
+      // Benchmarks agora vêm de uma VIEW agregada em tempo real — nada para recalcular.
       if (diagnosis.genero_classificado) {
-        Promise.resolve(supabase.rpc("recalcular_benchmark_genero" as never, { p_genero: diagnosis.genero_classificado } as never))
-          .then(() => queryClient.invalidateQueries({ queryKey: ["music-dna-benchmarks"] }))
-          .catch(() => undefined);
+        queryClient.invalidateQueries({ queryKey: ["music-dna-benchmarks"] });
       }
       return {
         id: (data as any).id as string,

@@ -239,10 +239,12 @@ serve(async (req: Request) => {
         .select()
         .single();
       if (insertError) throw insertError;
-      const genre = p.genero ?? p.genre;
-      if (genre) adminClient.rpc("recalcular_benchmark_genero", { p_genero: genre }).catch(() => undefined);
+      // Benchmarks agora são uma VIEW agregada em tempo real — nada para recalcular.
       return jsonResponse({ success: true, analysis });
     }
+
+    void p; // (preserva referência)
+
 
     if (!prompt?.trim()) {
       return jsonResponse({ error: "prompt is required" }, 400);
@@ -261,12 +263,9 @@ serve(async (req: Request) => {
     const trackFeatures = (payload.track_features ?? payload.features ?? {}) as Record<string, unknown>;
 
     if (targetGenre) {
-      const { data: bm } = await adminClient
-        .from("music_dna_benchmarks")
-        .select("*")
-        .eq("genero", targetGenre)
-        .maybeSingle();
-      benchmark = bm;
+      // RPC unificada com fallback automático por gênero pai
+      const { data: bmRows } = await adminClient.rpc("get_benchmark_for_genre", { p_genero: targetGenre });
+      benchmark = Array.isArray(bmRows) ? bmRows[0] ?? null : bmRows ?? null;
 
       const { data: refs } = await adminClient.rpc("get_genre_reference_examples", {
         p_genero: targetGenre,

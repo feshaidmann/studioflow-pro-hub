@@ -154,12 +154,10 @@ Deno.serve(async (req) => {
     for (const g of (row?.genres_updated ?? []) as string[]) allGenres.add(g);
   }
 
-  // Recalc benchmarks for affected genres (best-effort)
+  // Benchmarks agora são uma VIEW agregada em tempo real — nada para recalcular.
   const recalcResults: Record<string, string> = {};
-  for (const g of allGenres) {
-    const { error } = await admin.rpc("recalcular_benchmark_genero", { p_genero: g });
-    recalcResults[g] = error ? `error: ${error.message}` : "ok";
-  }
+  for (const g of allGenres) recalcResults[g] = "view-derived";
+
 
   // Log
   await admin.from("function_logs").insert({
