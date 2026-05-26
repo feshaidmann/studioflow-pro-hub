@@ -514,11 +514,6 @@ function ExecutiveSummary({ diagnosis, onAddAllSteps, allStepsAdded, analysisId,
           {/* CTA primário + chips de confiança */}
           <div className="flex flex-wrap items-center justify-between gap-3 pt-1 border-t border-border/60">
             <div className="flex flex-wrap gap-1.5">
-              {totalCompared > 0 && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-muted/50 border border-border px-2 py-0.5 text-[11px] font-mono text-foreground/70">
-                  Catálogo: {totalCompared.toLocaleString("pt-BR")} faixas
-                </span>
-              )}
               {typeof duration === "number" && Number.isFinite(duration) && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-muted/50 border border-border px-2 py-0.5 text-[11px] font-mono text-foreground/70">
                   Trecho: 0:00–{formatDuration(duration)}
