@@ -407,9 +407,8 @@ function ExecutiveSummary({ diagnosis, onAddAllSteps, allStepsAdded, analysisId,
     (v) => typeof v === "number" && Number.isFinite(v),
   );
 
-  const primaryStrength = diagnosis.pontos_fortes?.[0] ?? "A faixa já apresenta uma identidade sonora reconhecível.";
-  const mainBottleneck = diagnosis.gargalos_criativos?.[0] ?? "Vale refinar o contraste entre seções antes da finalização.";
-  const nextAction = diagnosis.proximos_passos?.[0]?.acao ?? diagnosis.sugestoes_arranjo?.[0] ?? "Revisar mix e arranjo com foco no ponto mais sensível do diagnóstico.";
+  // (Cards "Força/Gargalo/Próxima ação" foram removidos do resumo:
+  // o 1º item dessas listas já aparece na seção "Diagnóstico" logo abaixo.)
 
   // Status só vira "Pronta" se TODAS as métricas críticas existem e estão dentro do alvo
   const status = !hasCoreMetrics
