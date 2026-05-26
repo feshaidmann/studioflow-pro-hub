@@ -1261,12 +1261,13 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
   const keyValue = realAnalysis?.key ?? null;
   const durationValue = realAnalysis ? formatDuration(realAnalysis.duration_sec) : null;
 
-  const technicalItems = diagnostico_tecnico ? [
+  // Só exibe itens com texto qualitativo real — os MetricCards já mostram valores/alvos.
+  const technicalItems = (diagnostico_tecnico ? [
     { label: "LUFS", help: "volume percebido em plataformas", text: diagnostico_tecnico.lufs_avaliacao },
     { label: "True Peak", help: "risco de distorção após compressão/streaming", text: diagnostico_tecnico.true_peak_avaliacao },
     { label: "Dynamic Range", help: "variação entre trechos suaves e fortes", text: diagnostico_tecnico.dynamic_range_avaliacao },
     { label: "Espectro", help: "brilho, presença e distribuição de frequências", text: diagnostico_tecnico.espectro_avaliacao },
-  ] : [];
+  ] : []).filter((it) => typeof it.text === "string" && it.text.trim().length >= 40);
 
   // Breadcrumb data
   const projectId = (input as { projectId?: string }).projectId;
