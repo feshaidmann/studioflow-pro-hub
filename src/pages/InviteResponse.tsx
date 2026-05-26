@@ -140,13 +140,11 @@ export default function InviteResponse() {
   useEffect(() => {
     if (!token) { setPageState("not_found"); return; }
     supabase
-      .from("project_invitations")
-      .select("*, project:projects(name, artist)")
-      .eq("token", token)
-      .maybeSingle()
+      .rpc("get_invitation_by_token", { p_token: token })
       .then(({ data, error }) => {
-        if (error || !data) { setPageState("not_found"); return; }
-        const inv = data as unknown as InvitationData;
+        const row = Array.isArray(data) ? data[0] : data;
+        if (error || !row) { setPageState("not_found"); return; }
+        const inv = { ...row, project: (row as any).project ?? null } as unknown as InvitationData;
         if (inv.status === "revoked") { setPageState("revoked"); return; }
         if (inv.status === "expired") { setPageState("expired"); return; }
         if (inv.status !== "pending") { setPageState("already_responded"); setInvitation(inv); return; }
