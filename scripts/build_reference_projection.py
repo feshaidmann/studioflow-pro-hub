@@ -59,7 +59,35 @@ def get_conn():
 
 
 def fetch_rows():
-    sql = """
+    # psycopg2 não funciona com o pooler do Supabase (encoding ausente no
+    # startup), então usamos `psql` em modo CSV. O ambiente já tem PG* configurado.
+    import csv
+    import io
+    import subprocess
+    cmd = ["psql", "-X", "-A", "-F", "\t", "--csv", "-c", sql]
+    out = subprocess.check_output(cmd, text=True)
+    reader = csv.DictReader(io.StringIO(out))
+    rows = []
+    for r in reader:
+        # mfcc vem como string "{v1,v2,...}" do array Postgres
+        raw_mfcc = (r.get("mfcc") or "").strip()
+        if raw_mfcc.startswith("{") and raw_mfcc.endswith("}"):
+            mfcc = [float(x) for x in raw_mfcc[1:-1].split(",") if x]
+        else:
+            mfcc = []
+        rows.append({
+            "band": r.get("band") or "",
+            "genre": r.get("genre") or "",
+            "lufs_integrated":    float(r["lufs_integrated"]),
+            "dynamic_range_db":   float(r["dynamic_range_db"]),
+            "spectral_centroid":  float(r["spectral_centroid"]),
+            "spectral_rolloff":   float(r["spectral_rolloff"]),
+            "spectral_bandwidth": float(r["spectral_bandwidth"]),
+            "zero_crossing_rate": float(r["zero_crossing_rate"]),
+            "tempo_bpm":          float(r["tempo_bpm"]),
+            "mfcc": mfcc,
+        })
+    return rows
         SELECT band, genre,
                lufs_integrated, dynamic_range_db,
                spectral_centroid, spectral_rolloff, spectral_bandwidth,
