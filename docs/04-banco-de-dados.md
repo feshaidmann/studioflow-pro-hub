@@ -48,6 +48,16 @@ Todas as tabelas têm **RLS ativada**. As políticas estão detalhadas em [05-se
 | `genre_mismatch_feedback` | Calibração de classificador por usuário (Falso/Correto) |
 | `music_external_metadata` | Cache 30 dias de Deezer/MusicBrainz/ListenBrainz |
 
+### Mapa Timbral (UMAP)
+
+`public/data/reference_projection.json` (v2) alimenta o componente `TimbralMap`
+no DNA Musical. É gerado offline a partir de `music_reference_tracks` pelo
+script `scripts/build_reference_projection.py` (UMAP 2D + KMeans k=8 sobre
+LUFS, DR, centroid, rolloff, bandwidth, ZCR, BPM e MFCC[1..6]). O cliente
+projeta o ponto do usuário via k-NN no espaço padronizado salvo no JSON
+(UMAP não tem inverse-transform). **Regerar manualmente** quando o banco de
+referências mudar significativamente.
+
 ## Colaboração
 
 | Tabela | Descrição |
