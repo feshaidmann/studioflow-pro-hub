@@ -298,27 +298,49 @@ serve(async (req: Request) => {
     // Estratégia: se há boa cobertura do gênero (>=20 faixas), usa strict_genre.
     // Caso contrário, busca no catálogo inteiro com bônus de gênero (-0.25) ajudando a priorizar.
     const useStrictGenre = !!targetGenre && catalogGenreCount >= 20;
+
+    // Validate and coerce MFCC / chroma arrays from the client payload (cosine
+    // similarity vectors — must be exact length for the SQL function to use them).
+    const toFloat8Array = (v: unknown, expectedLen: number): number[] | null => {
+      if (!Array.isArray(v) || v.length !== expectedLen) return null;
+      const out: number[] = [];
+      for (const x of v) {
+        const n = Number(x);
+        if (!Number.isFinite(n)) return null;
+        out.push(n);
+      }
+      return out;
+    };
+    const mfccArr = toFloat8Array(trackFeatures.mfcc, 13);
+    const chromaArr = toFloat8Array(trackFeatures.chroma_cens, 12);
+
     const rpcArgs = {
+      // Reliable scalar features (high weight)
       p_tempo_bpm: num(trackFeatures.tempo) ?? num(trackFeatures.tempo_bpm) ?? num(trackFeatures.bpm),
       p_lufs_integrated: num(trackFeatures.lufs_integrated) ?? num(trackFeatures.lufs),
+      p_dynamic_range_db: num(trackFeatures.dynamic_range_db) ?? num(trackFeatures.dynamic_range_lu),
+      p_spectral_centroid: num(trackFeatures.spectral_centroid_hz) ?? num(trackFeatures.spectral_centroid),
+      p_spectral_flatness: num(trackFeatures.spectral_flatness),
+      p_spectral_rolloff: num(trackFeatures.spectral_rolloff_hz) ?? num(trackFeatures.spectral_rolloff),
+      p_spectral_bandwidth: num(trackFeatures.spectral_bandwidth),
+      p_zero_crossing_rate: num(trackFeatures.zero_crossing_rate) ?? num(trackFeatures.zcr),
+      // Acoustic fingerprint (highest weight when available)
+      p_mfcc: mfccArr,
+      p_chroma_cens: chromaArr,
+      // Unreliable Spotify-style features (low weight)
       p_energy: num(trackFeatures.energy),
       p_danceability: num(trackFeatures.danceability),
       p_valence: num(trackFeatures.valence),
       p_acousticness: num(trackFeatures.acousticness),
       p_instrumentalness: num(trackFeatures.instrumentalness),
-      p_dynamic_range_db: num(trackFeatures.dynamic_range_db) ?? num(trackFeatures.dynamic_range_lu),
-      p_spectral_centroid: num(trackFeatures.spectral_centroid_hz) ?? num(trackFeatures.spectral_centroid),
+      p_speechiness: num(trackFeatures.speechiness),
+      p_liveness: num(trackFeatures.liveness),
+      // Metadata
+      p_key_name: str(trackFeatures.key_name) ?? str(trackFeatures.key),
+      p_mode: str(trackFeatures.mode) ?? str(trackFeatures.mode_name),
       p_genre: targetGenre ?? null,
       p_limit: 6,
       p_strict_genre: useStrictGenre,
-      p_speechiness: num(trackFeatures.speechiness),
-      p_liveness: num(trackFeatures.liveness),
-      p_spectral_bandwidth: num(trackFeatures.spectral_bandwidth),
-      p_spectral_rolloff: num(trackFeatures.spectral_rolloff),
-      p_spectral_flatness: num(trackFeatures.spectral_flatness),
-      p_zero_crossing_rate: num(trackFeatures.zero_crossing_rate) ?? num(trackFeatures.zcr),
-      p_key_name: str(trackFeatures.key_name) ?? str(trackFeatures.key),
-      p_mode: str(trackFeatures.mode) ?? str(trackFeatures.mode_name),
     };
     const { data: neighbors, error: nnError } = await adminClient.rpc("find_nearest_reference_tracks", rpcArgs);
     if (nnError) console.error("[music-dna-analyze] nearest neighbors error:", nnError);
