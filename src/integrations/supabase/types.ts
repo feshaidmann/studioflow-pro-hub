@@ -973,6 +973,7 @@ export type Database = {
           project_id: string | null
           speechiness: number | null
           spotify_id: string | null
+          stage: string | null
           summary_variant: string
           summary_variant_assigned_at: string | null
           tempo_bpm: number | null
@@ -1014,6 +1015,7 @@ export type Database = {
           project_id?: string | null
           speechiness?: number | null
           spotify_id?: string | null
+          stage?: string | null
           summary_variant?: string
           summary_variant_assigned_at?: string | null
           tempo_bpm?: number | null
@@ -1055,6 +1057,7 @@ export type Database = {
           project_id?: string | null
           speechiness?: number | null
           spotify_id?: string | null
+          stage?: string | null
           summary_variant?: string
           summary_variant_assigned_at?: string | null
           tempo_bpm?: number | null
