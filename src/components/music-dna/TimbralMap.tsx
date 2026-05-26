@@ -58,7 +58,7 @@ function buildUserVector(
     let v: number | null | undefined;
     if (name.startsWith("mfcc_")) {
       const idx = Number(name.slice(5));
-      const arr = (user["mfcc"] ?? user["mfccs"]) as number[] | undefined;
+      const arr = (user["mfcc"] ?? user["mfccs"]) as unknown as number[] | undefined;
       v = Array.isArray(arr) ? arr[idx] : undefined;
     } else {
       v = user[name] as number | undefined;
@@ -151,7 +151,7 @@ export function TimbralMap({ user }: Props) {
       .map((f) => {
         if (f.startsWith("mfcc_")) {
           const idx = Number(f.slice(5));
-          const arr = (user["mfcc"] ?? user["mfccs"]) as number[] | undefined;
+          const arr = (user["mfcc"] ?? user["mfccs"]) as unknown as number[] | undefined;
           return Array.isArray(arr) ? arr[idx] : undefined;
         }
         return user[f];
