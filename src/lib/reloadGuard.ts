@@ -12,10 +12,11 @@
  * a partir de main.tsx, antes do React montar.
  */
 
-const STORAGE_KEY = "sf_reload_guard_v1";
+const STORAGE_KEY = "sf_reload_guard_v2";
 const WINDOW_MS = 10_000;       // janela deslizante
-const MAX_LOADS = 6;            // mais que isso em 10s = loop
-const COOLDOWN_MS = 30_000;     // tempo que o breaker fica ativo
+const MAX_LOADS = 10;           // mais que isso em 10s = loop (tolerante a HMR)
+const COOLDOWN_MS = 15_000;     // tempo que o breaker fica ativo
+
 
 type State = { ts: number[]; trippedAt?: number };
 
@@ -80,8 +81,13 @@ function showOverlay(reason: string) {
   `;
   document.body.appendChild(el);
   document.getElementById("sf-reload-guard-continue")?.addEventListener("click", () => {
+    // Limpa o estado para sair do cooldown e não reaparecer no próximo load.
+    try {
+      sessionStorage.removeItem(STORAGE_KEY);
+    } catch { /* noop */ }
     el.remove();
   });
+
   document.getElementById("sf-reload-guard-reload")?.addEventListener("click", () => {
     // Limpa o estado antes de recarregar manualmente.
     try {
@@ -94,10 +100,13 @@ function showOverlay(reason: string) {
 
 const nativeReload = window.location.reload.bind(window.location);
 
-function tripBreaker(reason: string) {
-  const state = readState();
-  state.trippedAt = Date.now();
-  writeState(state);
+function tripBreaker(reason: string, opts: { persist?: boolean } = { persist: true }) {
+  if (opts.persist !== false) {
+    const state = readState();
+    state.trippedAt = Date.now();
+    writeState(state);
+  }
+
 
   // 1. Bloqueia reload programático.
   try {
@@ -135,9 +144,11 @@ export function initReloadGuard() {
 
   // Se o breaker já está ativo dentro da janela de cooldown, mantém travado.
   if (state.trippedAt && now - state.trippedAt < COOLDOWN_MS) {
-    tripBreaker("cooldown ativo após detecção anterior");
+    // Não reescreve trippedAt — caso contrário o cooldown se estende a cada reload.
+    tripBreaker("cooldown ativo após detecção anterior", { persist: false });
     return;
   }
+
 
   // Janela deslizante de timestamps de page-load.
   const recent = state.ts.filter((t) => now - t < WINDOW_MS);
