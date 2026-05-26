@@ -1439,7 +1439,7 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
           </div>
         </DiagCard>
 
-        <DiagCard icon="🎛️" title="Sugestões de arranjo, timbragem e mix" variant="primary">
+        <DiagCard icon="🎛️" title="Sugestões de arranjo, timbragem e mix" variant="primary" aiBadge>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
             {(sugestoes_arranjo ?? []).map((s, i) => {
               const key = `arranjo-${i}`;
