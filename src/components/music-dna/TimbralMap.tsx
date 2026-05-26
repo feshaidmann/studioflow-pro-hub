@@ -2,9 +2,13 @@ import { useEffect, useMemo, useState } from "react";
 import { Map as MapIcon } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-interface ProjectionData {
+interface ProjectionDataV2 {
+  version: 2;
+  method: "umap";
   scaler: { features: string[]; mean: number[]; scale: number[] };
-  pca: { components: number[][]; mean: number[] };
+  umap: { n_neighbors: number; min_dist: number; seed: number };
+  clusters: { k: number };
+  z: number[][];
   points: { x: number; y: number; g?: string; c?: number }[];
 }
 
@@ -23,44 +27,146 @@ const CLUSTER_COLORS = [
   "hsl(330 60% 55%)",
 ];
 
-let cached: ProjectionData | null = null;
-async function loadProjection(): Promise<ProjectionData | null> {
+const K_NEIGHBORS = 15;
+
+let cached: ProjectionDataV2 | null = null;
+async function loadProjection(): Promise<ProjectionDataV2 | null> {
   if (cached) return cached;
   try {
     const res = await fetch("/data/reference_projection.json");
     if (!res.ok) return null;
-    cached = (await res.json()) as ProjectionData;
+    const json = await res.json();
+    if (json?.version !== 2 || !Array.isArray(json?.z) || !Array.isArray(json?.points)) {
+      // eslint-disable-next-line no-console
+      console.warn("[TimbralMap] reference_projection.json desatualizado (esperado v2 UMAP). Rode scripts/build_reference_projection.py.");
+      return null;
+    }
+    cached = json as ProjectionDataV2;
     return cached;
   } catch {
     return null;
   }
 }
 
-function projectUser(user: Record<string, number | undefined | null>, data: ProjectionData): { x: number; y: number } | null {
-  const z: number[] = [];
-  for (let i = 0; i < data.scaler.features.length; i++) {
-    const key = data.scaler.features[i];
-    const v = user[key];
-    if (typeof v !== "number" || Number.isNaN(v)) return null;
-    z.push((v - data.scaler.mean[i]) / (data.scaler.scale[i] || 1));
+/** Aplica clip/log iguais ao gerador Python para gerar o vetor cru x. */
+function buildUserVector(
+  user: Record<string, number | undefined | null>,
+  features: string[],
+): number[] | null {
+  const out: number[] = [];
+  for (const name of features) {
+    let v: number | null | undefined;
+    if (name.startsWith("mfcc_")) {
+      const idx = Number(name.slice(5));
+      const arr = (user["mfcc"] ?? user["mfccs"]) as unknown as number[] | undefined;
+      v = Array.isArray(arr) ? arr[idx] : undefined;
+    } else {
+      v = user[name] as number | undefined;
+    }
+    if (typeof v !== "number" || !Number.isFinite(v)) return null;
+
+    switch (name) {
+      case "lufs_integrated":
+        v = Math.max(-30, Math.min(-5, v));
+        break;
+      case "dynamic_range_db":
+        v = Math.max(0, Math.min(30, v));
+        break;
+      case "tempo_bpm":
+        v = Math.max(50, Math.min(200, v));
+        break;
+      case "spectral_centroid":
+      case "spectral_rolloff":
+      case "spectral_bandwidth":
+        v = Math.log(Math.max(v, 1));
+        break;
+    }
+    out.push(v);
   }
-  const project = (axis: number) => {
-    const comp = data.pca.components[axis];
+  return out;
+}
+
+/** Padroniza com o mesmo scaler salvo no JSON. */
+function standardize(x: number[], data: ProjectionDataV2): number[] {
+  const { mean, scale } = data.scaler;
+  return x.map((v, i) => (v - mean[i]) / (scale[i] || 1));
+}
+
+/**
+ * Projeta o ponto do usuário no plano UMAP via média ponderada dos K vizinhos
+ * mais próximos no espaço padronizado (UMAP não tem inverse-transform).
+ */
+function projectUserByKNN(
+  z: number[],
+  data: ProjectionDataV2,
+  k = K_NEIGHBORS,
+): { x: number; y: number } | null {
+  const refs = data.z;
+  const pts = data.points;
+  if (refs.length === 0 || refs[0].length !== z.length) return null;
+
+  // distâncias euclidianas
+  const dists: { d: number; i: number }[] = new Array(refs.length);
+  for (let i = 0; i < refs.length; i++) {
+    const r = refs[i];
     let s = 0;
-    for (let i = 0; i < comp.length; i++) s += comp[i] * z[i];
-    return s;
-  };
-  return { x: project(0), y: project(1) };
+    for (let j = 0; j < z.length; j++) {
+      const diff = z[j] - r[j];
+      s += diff * diff;
+    }
+    dists[i] = { d: Math.sqrt(s), i };
+  }
+  dists.sort((a, b) => a.d - b.d);
+  const top = dists.slice(0, Math.min(k, dists.length));
+
+  // pesos ∝ 1 / (d + ε); se o mais próximo é virtualmente zero, ancora nele.
+  const eps = 1e-6;
+  if (top[0].d < eps) {
+    const p = pts[top[0].i];
+    return { x: p.x, y: p.y };
+  }
+  let wsum = 0;
+  let x = 0;
+  let y = 0;
+  for (const { d, i } of top) {
+    const w = 1 / (d + eps);
+    wsum += w;
+    x += w * pts[i].x;
+    y += w * pts[i].y;
+  }
+  return { x: x / wsum, y: y / wsum };
 }
 
 export function TimbralMap({ user }: Props) {
-  const [data, setData] = useState<ProjectionData | null>(null);
+  const [data, setData] = useState<ProjectionDataV2 | null>(null);
 
   useEffect(() => {
     loadProjection().then(setData);
   }, []);
 
-  const userPoint = useMemo(() => (data ? projectUser(user, data) : null), [data, user]);
+  // Chave estável para memoizar com base nos valores relevantes do usuário.
+  const userKey = useMemo(() => {
+    if (!data) return "";
+    return data.scaler.features
+      .map((f) => {
+        if (f.startsWith("mfcc_")) {
+          const idx = Number(f.slice(5));
+          const arr = (user["mfcc"] ?? user["mfccs"]) as unknown as number[] | undefined;
+          return Array.isArray(arr) ? arr[idx] : undefined;
+        }
+        return user[f];
+      })
+      .join("|");
+  }, [data, user]);
+
+  const userPoint = useMemo(() => {
+    if (!data) return null;
+    const x = buildUserVector(user, data.scaler.features);
+    if (!x) return null;
+    const z = standardize(x, data);
+    return projectUserByKNN(z, data);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data, userKey]);
 
   if (!data) {
     return (
@@ -78,7 +184,6 @@ export function TimbralMap({ user }: Props) {
     );
   }
 
-  // Determine viewbox bounds from points
   const xs = data.points.map((p) => p.x);
   const ys = data.points.map((p) => p.y);
   if (userPoint) {
@@ -100,7 +205,7 @@ export function TimbralMap({ user }: Props) {
       <CardHeader className="pb-3">
         <CardTitle className="text-sm flex items-center gap-2">
           <MapIcon className="h-4 w-4 text-primary" />
-          Mapa timbral (PCA do banco de referência)
+          Mapa timbral (UMAP do banco de referência)
         </CardTitle>
         <p className="text-xs text-muted-foreground">
           {data.points.length} faixas projetadas em 2D. Sua faixa em vermelho. Vizinhos = sonoridade parecida.
