@@ -14,6 +14,21 @@ export type Database = {
   }
   public: {
     Tables: {
+      _genre_import_staging: {
+        Row: {
+          band_norm: string
+          genre_raw: string
+        }
+        Insert: {
+          band_norm: string
+          genre_raw: string
+        }
+        Update: {
+          band_norm?: string
+          genre_raw?: string
+        }
+        Relationships: []
+      }
       ai_conversations: {
         Row: {
           created_at: string
