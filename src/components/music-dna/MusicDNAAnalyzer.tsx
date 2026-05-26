@@ -513,19 +513,9 @@ function ExecutiveSummary({ diagnosis, onAddAllSteps, allStepsAdded, analysisId,
             </div>
           )}
 
-          {/* CTA primário + chips de confiança */}
-          <div className="flex flex-wrap items-center justify-between gap-3 pt-1 border-t border-border/60">
-            <div className="flex flex-wrap gap-1.5">
-              {typeof duration === "number" && Number.isFinite(duration) && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-muted/50 border border-border px-2 py-0.5 text-[11px] font-mono text-foreground/70">
-                  Trecho: 0:00–{formatDuration(duration)}
-                </span>
-              )}
-              <span className="inline-flex items-center gap-1 rounded-full bg-muted/50 border border-border px-2 py-0.5 text-[11px] font-mono text-foreground/70">
-                {hasCoreMetrics ? "Métricas globais OK" : "Métricas globais parciais"}
-              </span>
-            </div>
-            {stepsCount > 0 && (
+          {/* CTA primário */}
+          {stepsCount > 0 && (
+            <div className="flex flex-wrap items-center justify-end gap-3 pt-1 border-t border-border/60">
               <Button
                 size="sm"
                 onClick={onAddAllSteps}
@@ -538,8 +528,9 @@ function ExecutiveSummary({ diagnosis, onAddAllSteps, allStepsAdded, analysisId,
                   <><ListPlus className="h-3.5 w-3.5" /> Adicionar {stepsCount} ações ao checklist</>
                 )}
               </Button>
-            )}
-          </div>
+            </div>
+          )}
+
         </CardContent>
       </Card>
     </section>
