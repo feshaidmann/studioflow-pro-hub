@@ -1,48 +1,50 @@
-## Refinos na seção "Compatibilidade com playlists"
+## Relatório de auditoria do import de gêneros
 
-Apenas UI/apresentação em `src/components/music-dna/PlaylistMatchCard.tsx`. Sem mudar lógica de matching nem dados.
+Tarefa one-off: gerar arquivos para download (não tocar na UI). Vou consultar `music_reference_tracks` e `music_reference_tracks_genre_backup` e produzir relatórios em Markdown + CSVs em `/mnt/documents/`.
 
-### Problemas identificados na screenshot
+### Conteúdo do relatório (Markdown)
 
-1. **Nomes duplicados sem distinção** — "Indie BR Soft" aparece em 1º (39%) e 2º (37%) com descrição idêntica. No banco são clusters diferentes (slugs `indie-br-soft` e `indie-br-soft-2`), mas o usuário não vê diferença.
-2. **Hierarquia fraca** — best match tem o mesmo peso visual dos outros dois; só um badge pequeno o diferencia.
-3. **Gaps pouco acionáveis** — `0.81 → 0.48` mostra origem/destino mas não a direção da mudança (reduzir/aumentar) nem ordem de grandeza relativa.
-4. **Texto de header confuso** — "294 faixas no mais próximo" mistura contexto do best match no parágrafo geral.
-5. **Sample tracks** — só nome da banda, sem indicação de que são exemplos reais do cluster.
-6. **Score sem qualificação** — 39% parece "ruim" sem contexto; faltam faixas qualitativas (Forte/Médio/Fraco).
+1. **Resumo executivo**
+   - Total de faixas no catálogo, com backup, atualizadas, sem alteração, não casadas.
+   - Datas: `backed_up_at` (snapshot pré-import) e janela do import.
 
-### Mudanças propostas
+2. **Top 30 gêneros — antes × depois**
+   - Tabela lado a lado (count antes do backup vs count atual) + variação absoluta e %.
+   - Destaque para gêneros que sumiram (ex.: "Rock Alternativo BR", "Pop Brasileiro") e que cresceram (Rock, Pop, Jazz puros).
 
-**Header**
-- Manter título + ícone.
-- Substituir parágrafo por descrição mais curta e neutra: "Comparamos sua faixa contra clusters do banco de referência. Score = quão próxima ela está do perfil sonoro de cada cluster."
-- Mover a contagem "X faixas" para dentro de cada card (mais preciso).
+3. **Matriz de mudanças (churn)**
+   - Top 30 transições `genre_prev → genre_atual` por volume.
+   - Permite ver, por exemplo, "Rock Alternativo BR → Rock: 5.310 faixas".
 
-**Card do best match (destacado)**
-- Fundo sutil `bg-primary/5` + borda `border-primary/30` para separar do resto.
-- Título maior (`text-base`), badge "Melhor match" mantida.
-- Score grande à direita (`text-2xl font-mono`) com qualificador abaixo ("Forte" ≥60%, "Médio" 30-59%, "Fraco" <30%).
-- Linha de metadata: `294 faixas · cluster #1`.
-- Bloco "Pontos para se aproximar" com ícones direcionais: ↓ vermelho-tênue se precisa reduzir, ↑ verde-tênue se precisa aumentar. Valor formatado com delta relativo: `Energia · reduzir −0.33 (0.81 → 0.48)`.
-- Sample tracks: prefixo "Faixas típicas desse perfil:" e exibir até 4 com `band` em itálico.
+4. **Faixas atualizadas**
+   - Sample de 50 + total. CSV completo separado.
 
-**Cards 2 e 3 (compactos)**
-- Layout mais denso: nome + score na mesma linha, barra fina, sem gaps nem samples (clicáveis no futuro para expandir, fora do escopo).
-- Quando o `name` do perfil já apareceu acima, anexar sufixo discreto: `Indie BR Soft · variante B` (derivado do slug `-2`, `-3`…).
+5. **Faixas sem alteração**
+   - Apenas contagem por gênero (não faz sentido listar 19k).
 
-**Disambiguação de nomes duplicados**
-- Helper local: ao renderizar, se um `profile.name` já apareceu, gera label "{name} · variante B/C/…" baseado na ordem de aparição. Não muda o dado.
+6. **Faixas no CSV não casadas** (band+filename sem match)
+   - Lista completa (foram 13). CSV separado.
 
-**Estado de carregamento**
-- Trocar "Calculando…" por 3 skeletons (`Skeleton` do shadcn) imitando a altura dos cards.
+7. **Anomalias e observações**
+   - Faixas com `genre_prev` vazio que ganharam gênero (cobertura nova).
+   - Faixas que perderam gênero (caso existam).
+   - Quarentena vs ativas após o import.
 
-**Acessibilidade & responsivo**
-- `Progress` ganha `aria-label` com nome do cluster e score.
-- Gaps usam `flex-wrap` para não quebrar em telas estreitas.
+### Artefatos gerados em `/mnt/documents/`
+
+- `genre_import_audit.md` — relatório principal.
+- `genre_import_updated.csv` — todas as faixas com mudança (`band; filename; genre_prev; genre_now`).
+- `genre_import_unmatched.csv` — linhas do CSV original sem match no catálogo.
+- `genre_top_before_after.csv` — tabela top gêneros antes/depois.
+- `genre_churn_matrix.csv` — `from_genre; to_genre; count`.
+
+### Execução
+
+- Tudo via consultas SQL (`supabase--read_query`) + script Python local para montar Markdown e CSVs.
+- Sem migrations, sem mudança de schema.
+- QA: abrir o `.md` e os CSVs após gerados para confirmar números coerentes (updated=10.681, unchanged=19.072, unmatched=13 conforme execução anterior).
 
 ### Fora do escopo
-- Não tocar em `playlistMatch.ts`, banco, ou cálculo de score.
-- Não consolidar clusters duplicados no banco (decisão separada — se quiser, faço numa segunda etapa).
 
-### Arquivo afetado
-- `src/components/music-dna/PlaylistMatchCard.tsx` (única edição)
+- Não regenero `playlist_profiles` (assunto separado).
+- Não consolido clusters duplicados ("Indie BR Soft" variantes).
