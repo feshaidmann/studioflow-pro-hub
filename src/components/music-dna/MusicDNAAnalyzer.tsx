@@ -474,18 +474,6 @@ function ExecutiveSummary({ diagnosis, onAddAllSteps, allStepsAdded, analysisId,
               </Badge>
             </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-            {[
-              { label: "Força principal", text: primaryStrength },
-              { label: "Gargalo principal", text: mainBottleneck },
-              { label: "Próxima ação", text: nextAction },
-            ].map((item) => (
-              <div key={item.label} className="rounded-lg bg-muted/30 border border-border p-3">
-                <p className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground mb-1">{item.label}</p>
-                <p className="text-sm leading-relaxed text-foreground/85">{item.text}</p>
-              </div>
-            ))}
-          </div>
 
           {/* Feedback A/B */}
           {analysisId && (
