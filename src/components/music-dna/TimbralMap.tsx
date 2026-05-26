@@ -175,14 +175,18 @@ export function TimbralMap({ user }: Props) {
       .join("|");
   }, [data, user]);
 
-  const userPoint = useMemo(() => {
+  const userResult = useMemo(() => {
     if (!data) return null;
-    const x = buildUserVector(user, data.scaler.features);
-    if (!x) return null;
-    const z = standardize(x, data);
-    return projectUserByKNN(z, data);
+    const built = buildUserVector(user, data.scaler.features, data.scaler.mean);
+    if (!built) return null;
+    const z = standardize(built.x, data);
+    const point = projectUserByKNN(z, data);
+    if (!point) return null;
+    return { point, present: built.present, missing: built.missing };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data, userKey]);
+  const userPoint = userResult?.point ?? null;
+  const isImputed = !!userResult && userResult.missing.length > 0;
 
   if (!data) {
     return (
