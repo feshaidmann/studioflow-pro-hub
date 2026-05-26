@@ -1,0 +1,11 @@
+# StudioFlow
+
+> Plataforma de gestão para artistas independentes brasileiros — projetos musicais, financeiro, equipe, editais e IA criativa em um só app.
+
+StudioFlow centraliza o fluxo de trabalho do artista independente: do início do projeto ao lançamento, com módulos integrados de gestão financeira, agenda, equipe, editais e palcos, análise de DNA musical e direção visual assistida por IA.
+
+## Pages
+
+- [Home](/): Visão geral do produto, benefícios e cadastro.
+- [Entrar](/auth): Login e cadastro de novos usuários.
+- [Legal](/legal): Termos de uso e política de privacidade.
