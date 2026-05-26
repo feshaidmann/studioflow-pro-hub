@@ -1358,11 +1358,10 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
         {[
           { label: "Resumo", id: "dna-resumo", show: true },
           { label: "Diagnóstico", id: "dna-acoes", show: true },
-          { label: "Identidade", id: "dna-identidade", show: true },
-          { label: "Referências", id: "dna-referencias", show: true },
           { label: "Técnico", id: "dna-tecnico", show: true },
           { label: "Seções", id: "dna-secoes", show: !!analise_seccoes || (realAnalysis?.sections?.length ?? 0) > 0 },
-          { label: "Perfil", id: "dna-perfil", show: true },
+          { label: "Identidade", id: "dna-identidade", show: true },
+          { label: "Referências", id: "dna-referencias", show: true },
         ].filter((i) => i.show).map((item) => (
           <Button
             key={item.id}
