@@ -276,6 +276,11 @@ export function TimbralMap({ user }: Props) {
             Faltam features para posicionar a faixa no mapa.
           </p>
         )}
+        {userPoint && isImputed && (
+          <p className="text-[11px] text-muted-foreground mt-2">
+            Projeção aproximada — {userResult!.missing.length} de {data.scaler.features.length} features não foram extraídas.
+          </p>
+        )}
       </CardContent>
     </Card>
   );
