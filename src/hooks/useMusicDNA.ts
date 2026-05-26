@@ -621,19 +621,26 @@ export function useMusicDNA(): UseMusicDNAReturn {
         track_name: input.name,
         classifier_hint: classifierHint,
         track_features: {
+          // ── Acoustic fingerprint — primary similarity signal ──────────────
+          mfcc: (realAnalysis as any).mfcc,
+          chroma_cens: (realAnalysis as any).chroma_cens,
+          zero_crossing_rate: (realAnalysis as any).zcr ?? (realAnalysis as any).zero_crossing_rate,
+          // ── Reliable scalar features (high weight in SQL) ─────────────────
           tempo_bpm: realAnalysis.bpm,
           lufs_integrated: calibrated.lufs_integrated,
+          dynamic_range_db: realAnalysis.dynamic_range_lu,
+          spectral_centroid_hz: calibrated.spectral_centroid_hz,
+          spectral_rolloff: calibrated.spectral_rolloff,
+          spectral_flatness: calibrated.spectral_flatness,
+          // ── Unreliable Spotify-style features (low weight in SQL) ─────────
           energy: realAnalysis.energy,
           danceability: realAnalysis.danceability,
           valence: realAnalysis.valence,
           acousticness: realAnalysis.acousticness,
           instrumentalness: realAnalysis.instrumentalness,
-          dynamic_range_db: realAnalysis.dynamic_range_lu,
-          spectral_centroid_hz: calibrated.spectral_centroid_hz,
-          spectral_rolloff: calibrated.spectral_rolloff,
-          spectral_flatness: calibrated.spectral_flatness,
           speechiness: realAnalysis.speechiness,
           liveness: realAnalysis.liveness,
+          // ── Metadata ──────────────────────────────────────────────────────
           key_name: (realAnalysis.key ?? "").replace(/m$/, "") || null,
           mode: /m$/.test(realAnalysis.key ?? "") ? "minor" : "major",
         },

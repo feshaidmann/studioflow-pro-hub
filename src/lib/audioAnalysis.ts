@@ -808,7 +808,7 @@ export async function analyzeAudioFull(file: File): Promise<{
   const features = computeSpotifyFeatures(mono, sampleRate, spectral, bpm, rmsDb);
 
   // Acoustic fingerprint (catalog-aligned)
-  const fp = computeMfccChroma(spectral.magnitudes, spectral.freqPerBin, sampleRate);
+  const fp = computeMfccChromaMultiframe(mono, sampleRate);
   const round4 = (v: number) => Math.round(v * 10000) / 10000;
 
   const r = (v: number) => Math.round(v * 10) / 10;
