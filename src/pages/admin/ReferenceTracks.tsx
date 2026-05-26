@@ -204,20 +204,10 @@ export default function ReferenceTracks() {
     }
   };
 
+  // Benchmarks agora derivam em tempo real da view — não há mais "recalcular".
   const handleRecalcAll = async () => {
-    setRecalcAll(true);
-    try {
-      const genres = coverage.filter((r) => r.refTracks > 0).map((r) => r.genre);
-      let ok = 0, fail = 0;
-      for (const g of genres) {
-        const { error } = await supabase.rpc("recalcular_benchmark_genero" as never, { p_genero: g } as never);
-        if (error) fail++; else ok++;
-      }
-      toast.success(`Recalculado: ${ok} ok, ${fail} falhas`);
-      refreshMeta();
-    } finally {
-      setRecalcAll(false);
-    }
+    toast.info("Benchmarks agora são atualizados automaticamente pela view unificada.");
+    refreshMeta();
   };
 
   const previewBadges = useMemo(() => {

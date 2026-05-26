@@ -631,7 +631,7 @@ export function useMusicDNA(): UseMusicDNAReturn {
         const { data: bm } = await supabase
           .from("music_dna_benchmarks")
           .select("genero,total_faixas,avg_tempo_bpm,avg_danceability,avg_energy,avg_acousticness,avg_instrumentalness,avg_valence,avg_speechiness,avg_loudness_db")
-          .gte("total_faixas", 20);
+          .gte("total_faixas", 5);
         classifierProfiles = mergeProfiles(HARDCODED_GENRE_PROFILES, (bm ?? []) as BenchmarkRow[]);
       } catch (e) {
         console.warn("[music-dna] benchmarks fetch falhou; classificador usa só perfis hardcoded", e);

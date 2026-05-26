@@ -21,6 +21,7 @@ export interface SpotifyFeatures {
 export interface MusicDnaBenchmark {
   genero: string;
   total_faixas: number;
+  total_artistas?: number | null;
   avg_danceability: number | null;
   avg_energy: number | null;
   avg_loudness_db: number | null;

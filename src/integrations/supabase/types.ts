@@ -1076,7 +1076,7 @@ export type Database = {
           },
         ]
       }
-      music_dna_benchmarks: {
+      music_dna_benchmarks_legacy_backup: {
         Row: {
           atualizado_em: string | null
           avg_acousticness: number | null
@@ -1093,8 +1093,8 @@ export type Database = {
           avg_tempo_bpm: number | null
           avg_valence: number | null
           avg_zero_crossing_rate: number | null
-          genero: string
-          id: string
+          genero: string | null
+          id: string | null
           top_keys: Json | null
           total_faixas: number | null
         }
@@ -1114,8 +1114,8 @@ export type Database = {
           avg_tempo_bpm?: number | null
           avg_valence?: number | null
           avg_zero_crossing_rate?: number | null
-          genero: string
-          id?: string
+          genero?: string | null
+          id?: string | null
           top_keys?: Json | null
           total_faixas?: number | null
         }
@@ -1135,8 +1135,8 @@ export type Database = {
           avg_tempo_bpm?: number | null
           avg_valence?: number | null
           avg_zero_crossing_rate?: number | null
-          genero?: string
-          id?: string
+          genero?: string | null
+          id?: string | null
           top_keys?: Json | null
           total_faixas?: number | null
         }
@@ -2859,6 +2859,31 @@ export type Database = {
         }
         Relationships: []
       }
+      music_dna_benchmarks: {
+        Row: {
+          atualizado_em: string | null
+          avg_acousticness: number | null
+          avg_danceability: number | null
+          avg_dynamic_range_db: number | null
+          avg_energy: number | null
+          avg_instrumentalness: number | null
+          avg_liveness: number | null
+          avg_loudness_db: number | null
+          avg_lufs: number | null
+          avg_spectral_centroid: number | null
+          avg_spectral_flatness: number | null
+          avg_speechiness: number | null
+          avg_tempo_bpm: number | null
+          avg_valence: number | null
+          avg_zero_crossing_rate: number | null
+          genero: string | null
+          id: string | null
+          top_keys: Json | null
+          total_artistas: number | null
+          total_faixas: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       accept_service_proposal: {
@@ -2921,7 +2946,40 @@ export type Database = {
           zero_crossing_rate: number
         }[]
       }
+      genre_canonical: { Args: { p_genre: string }; Returns: string }
+      genre_parent: { Args: { p_genero: string }; Returns: string }
       get_auth_email: { Args: never; Returns: string }
+      get_benchmark_for_genre: {
+        Args: { p_genero: string }
+        Returns: {
+          atualizado_em: string | null
+          avg_acousticness: number | null
+          avg_danceability: number | null
+          avg_dynamic_range_db: number | null
+          avg_energy: number | null
+          avg_instrumentalness: number | null
+          avg_liveness: number | null
+          avg_loudness_db: number | null
+          avg_lufs: number | null
+          avg_spectral_centroid: number | null
+          avg_spectral_flatness: number | null
+          avg_speechiness: number | null
+          avg_tempo_bpm: number | null
+          avg_valence: number | null
+          avg_zero_crossing_rate: number | null
+          genero: string | null
+          id: string | null
+          top_keys: Json | null
+          total_artistas: number | null
+          total_faixas: number | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "music_dna_benchmarks"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       get_extract_metrics: {
         Args: { p_days?: number }
         Returns: {
