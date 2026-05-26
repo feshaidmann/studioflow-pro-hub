@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import { Map as MapIcon } from "lucide-react";
+import { ChevronDown, Map as MapIcon } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+
 
 interface ProjectionDataV2 {
   version: 2;
@@ -281,53 +283,57 @@ export function TimbralMap({ user }: Props) {
             Projeção aproximada — {userResult!.missing.length} de {data.scaler.features.length} features não foram extraídas.
           </p>
         )}
-        <div className="mt-3 pt-3 border-t border-border/50">
-          <p className="text-[11px] font-medium text-muted-foreground mb-1.5">
-            Dimensões analisadas ({data.scaler.features.length})
-          </p>
-          <div className="flex flex-wrap gap-1">
-            {(() => {
-              const LABELS: Record<string, string> = {
-                lufs_integrated: "LUFS integrado",
-                dynamic_range_db: "Faixa dinâmica (dB)",
-                spectral_centroid: "Centroide espectral",
-                spectral_rolloff: "Rolloff espectral",
-                spectral_bandwidth: "Largura de banda",
-                zero_crossing_rate: "Zero-crossing rate",
-                tempo_bpm: "Andamento (BPM)",
-              };
-              const missing = new Set(userResult?.missing ?? []);
-              const features = data.scaler.features;
-              const mfccFeats = features.filter((f) => f.startsWith("mfcc_"));
-              const scalarFeats = features.filter((f) => !f.startsWith("mfcc_"));
-              const chips: { key: string; label: string; imputed: boolean }[] = scalarFeats.map((f) => ({
-                key: f,
-                label: LABELS[f] ?? f,
-                imputed: missing.has(f),
-              }));
-              if (mfccFeats.length > 0) {
-                const nums = mfccFeats
-                  .map((f) => Number(f.slice(5)))
-                  .filter((n) => Number.isFinite(n))
-                  .sort((a, b) => a - b);
-                const range = nums.length > 1 ? `${nums[0]}–${nums[nums.length - 1]}` : `${nums[0]}`;
-                const allImputed = mfccFeats.every((f) => missing.has(f));
-                chips.push({ key: "mfcc", label: `MFCC ${range}`, imputed: allImputed });
-              }
-              return chips.map((c) => (
-                <span
-                  key={c.key}
-                  title={c.imputed ? "Feature não extraída — valor imputado" : undefined}
-                  className={`inline-flex items-center rounded-md border border-border bg-muted/40 px-1.5 py-0.5 text-[10px] text-foreground/80 ${
-                    c.imputed ? "opacity-50 line-through decoration-dotted" : ""
-                  }`}
-                >
-                  {c.label}
-                </span>
-              ));
-            })()}
-          </div>
-        </div>
+        <Collapsible className="mt-3 pt-3 border-t border-border/50">
+          <CollapsibleTrigger className="flex w-full items-center justify-between text-[11px] font-medium text-muted-foreground hover:text-foreground transition-colors group">
+            <span>Ver features usadas na projeção ({data.scaler.features.length})</span>
+            <ChevronDown className="h-3 w-3 transition-transform group-data-[state=open]:rotate-180" />
+          </CollapsibleTrigger>
+          <CollapsibleContent className="pt-2">
+            <div className="flex flex-wrap gap-1">
+              {(() => {
+                const LABELS: Record<string, string> = {
+                  lufs_integrated: "LUFS integrado",
+                  dynamic_range_db: "Faixa dinâmica (dB)",
+                  spectral_centroid: "Centroide espectral",
+                  spectral_rolloff: "Rolloff espectral",
+                  spectral_bandwidth: "Largura de banda",
+                  zero_crossing_rate: "Zero-crossing rate",
+                  tempo_bpm: "Andamento (BPM)",
+                };
+                const missing = new Set(userResult?.missing ?? []);
+                const features = data.scaler.features;
+                const mfccFeats = features.filter((f) => f.startsWith("mfcc_"));
+                const scalarFeats = features.filter((f) => !f.startsWith("mfcc_"));
+                const chips: { key: string; label: string; imputed: boolean }[] = scalarFeats.map((f) => ({
+                  key: f,
+                  label: LABELS[f] ?? f,
+                  imputed: missing.has(f),
+                }));
+                if (mfccFeats.length > 0) {
+                  const nums = mfccFeats
+                    .map((f) => Number(f.slice(5)))
+                    .filter((n) => Number.isFinite(n))
+                    .sort((a, b) => a - b);
+                  const range = nums.length > 1 ? `${nums[0]}–${nums[nums.length - 1]}` : `${nums[0]}`;
+                  const allImputed = mfccFeats.every((f) => missing.has(f));
+                  chips.push({ key: "mfcc", label: `MFCC ${range}`, imputed: allImputed });
+                }
+                return chips.map((c) => (
+                  <span
+                    key={c.key}
+                    title={c.imputed ? "Feature não extraída — valor imputado" : undefined}
+                    className={`inline-flex items-center rounded-md border border-border bg-muted/40 px-1.5 py-0.5 text-[10px] text-foreground/80 ${
+                      c.imputed ? "opacity-50 line-through decoration-dotted" : ""
+                    }`}
+                  >
+                    {c.label}
+                  </span>
+                ));
+              })()}
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
+
       </CardContent>
     </Card>
   );
