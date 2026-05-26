@@ -402,7 +402,7 @@ function ExecutiveSummary({ diagnosis, onAddAllSteps, allStepsAdded, analysisId,
   const truePeak = diagnosis.realAnalysis?.true_peak_dbtp;
   const lufs = diagnosis.realAnalysis?.lufs_integrated;
   const dynamicRange = diagnosis.realAnalysis?.dynamic_range_lu;
-  const duration = diagnosis.realAnalysis?.duration_sec;
+  // (duration/formatDuration removidos: a Duração já aparece no MetricCard "Duração")
   const hasCoreMetrics = [truePeak, lufs, dynamicRange].every(
     (v) => typeof v === "number" && Number.isFinite(v),
   );
