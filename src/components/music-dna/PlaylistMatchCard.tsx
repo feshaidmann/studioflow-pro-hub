@@ -151,7 +151,12 @@ export function PlaylistMatchCard({ user }: Props) {
               className="h-1.5"
               aria-label={`Compatibilidade com ${displayNames[0]}: ${Math.round(best.score * 100)}%`}
             />
-            {best.gaps.length > 0 && (
+            {best.score < 0.5 && (
+              <p className="text-[11px] leading-relaxed text-muted-foreground bg-muted/40 border border-border/60 rounded-md px-2 py-1.5">
+                Nenhum cluster com afinidade forte (≥60%). Sua faixa tem um perfil próprio — use os deltas abaixo como direção, não como obrigação.
+              </p>
+            )}
+
               <div className="text-[11px] space-y-1.5 pt-1">
                 <span className="block font-medium text-foreground/80">Pontos para se aproximar:</span>
                 <ul className="space-y-1">
