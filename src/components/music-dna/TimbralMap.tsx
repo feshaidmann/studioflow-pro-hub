@@ -13,7 +13,7 @@ interface ProjectionDataV2 {
 }
 
 interface Props {
-  user: Record<string, number | undefined | null>;
+  user: Record<string, number | number[] | undefined | null>;
 }
 
 const CLUSTER_COLORS = [
@@ -48,13 +48,22 @@ async function loadProjection(): Promise<ProjectionDataV2 | null> {
   }
 }
 
-/** Aplica clip/log iguais ao gerador Python para gerar o vetor cru x. */
+/** Aplica clip/log iguais ao gerador Python para gerar o vetor cru x.
+ *  Features ausentes são imputadas com a média do scaler (z=0 após padronização),
+ *  evitando que o ponto deixe de aparecer só por faltar 1-2 dimensões.
+ *  Retorna null apenas se a cobertura for muito baixa (< MIN_PRESENT).
+ */
+const MIN_PRESENT = 6; // de 13 features
 function buildUserVector(
-  user: Record<string, number | undefined | null>,
+  user: Record<string, number | number[] | undefined | null>,
   features: string[],
-): number[] | null {
+  mean: number[],
+): { x: number[]; present: number; missing: string[] } | null {
   const out: number[] = [];
-  for (const name of features) {
+  const missing: string[] = [];
+  let present = 0;
+  for (let i = 0; i < features.length; i++) {
+    const name = features[i];
     let v: number | null | undefined;
     if (name.startsWith("mfcc_")) {
       const idx = Number(name.slice(5));
@@ -63,7 +72,12 @@ function buildUserVector(
     } else {
       v = user[name] as number | undefined;
     }
-    if (typeof v !== "number" || !Number.isFinite(v)) return null;
+
+    if (typeof v !== "number" || !Number.isFinite(v)) {
+      out.push(mean[i]); // imputação → contribuição neutra após padronização
+      missing.push(name);
+      continue;
+    }
 
     switch (name) {
       case "lufs_integrated":
@@ -82,8 +96,10 @@ function buildUserVector(
         break;
     }
     out.push(v);
+    present++;
   }
-  return out;
+  if (present < MIN_PRESENT) return null;
+  return { x: out, present, missing };
 }
 
 /** Padroniza com o mesmo scaler salvo no JSON. */
@@ -159,14 +175,18 @@ export function TimbralMap({ user }: Props) {
       .join("|");
   }, [data, user]);
 
-  const userPoint = useMemo(() => {
+  const userResult = useMemo(() => {
     if (!data) return null;
-    const x = buildUserVector(user, data.scaler.features);
-    if (!x) return null;
-    const z = standardize(x, data);
-    return projectUserByKNN(z, data);
+    const built = buildUserVector(user, data.scaler.features, data.scaler.mean);
+    if (!built) return null;
+    const z = standardize(built.x, data);
+    const point = projectUserByKNN(z, data);
+    if (!point) return null;
+    return { point, present: built.present, missing: built.missing };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data, userKey]);
+  const userPoint = userResult?.point ?? null;
+  const isImputed = !!userResult && userResult.missing.length > 0;
 
   if (!data) {
     return (
@@ -254,6 +274,11 @@ export function TimbralMap({ user }: Props) {
         {!userPoint && (
           <p className="text-[11px] text-muted-foreground mt-2">
             Faltam features para posicionar a faixa no mapa.
+          </p>
+        )}
+        {userPoint && isImputed && (
+          <p className="text-[11px] text-muted-foreground mt-2">
+            Projeção aproximada — {userResult!.missing.length} de {data.scaler.features.length} features não foram extraídas.
           </p>
         )}
       </CardContent>
