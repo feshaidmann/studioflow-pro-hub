@@ -50,10 +50,12 @@ UMAP_PARAMS = dict(n_neighbors=25, min_dist=0.15, metric="euclidean", random_sta
 
 
 def get_conn():
+    # client_encoding explicito porque o pooler do Supabase (modo transaction)
+    # não retorna o parâmetro no startup e o psycopg2 rejeita a conexão.
     url = os.environ.get("SUPABASE_DB_URL")
     if url:
-        return psycopg2.connect(url)
-    return psycopg2.connect()
+        return psycopg2.connect(url, client_encoding="UTF8")
+    return psycopg2.connect(client_encoding="UTF8")
 
 
 def fetch_rows():
