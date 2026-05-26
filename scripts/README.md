@@ -16,7 +16,7 @@ DNA Musical) a partir de `public.music_reference_tracks`.
 Execução:
 
 ```bash
-python -m pip install --no-cache-dir umap-learn scikit-learn psycopg2-binary numpy
+python -m pip install --no-cache-dir umap-learn scikit-learn numpy
 python scripts/build_reference_projection.py
 ```
 
