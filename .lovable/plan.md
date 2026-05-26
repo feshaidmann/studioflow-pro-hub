@@ -1,75 +1,108 @@
-## Objetivo
+## Refatorar o Mapa Timbral — UMAP + features espectrais clássicas
 
-Preencher e corrigir a coluna `genre` da tabela `music_reference_tracks` a partir do CSV `music_analysis_full_genre.csv` (846 bandas × 1 gênero cada), aplicando as decisões aprovadas:
+Hoje o `TimbralMap` carrega `public/data/reference_projection.json` (gerado fora do repo) com PCA 2D sobre 8 features de alto nível (`lufs_integrated`, `dynamic_range_db`, `spectral_centroid`, `tempo_bpm`, `energy`, `danceability`, `valence`, `acousticness`). O componente projeta o usuário aplicando `scaler` + componentes PCA diretamente no navegador.
 
-1. **Sobrescrever tudo** — CSV vira fonte única de verdade.
-2. **Ignorar gêneros lixo** — não regravar quando o CSV traz valor inválido.
-3. **Canonizar** via `public.genre_canonical()` antes de gravar.
-4. **Match case-insensitive + trim** entre CSV.band e DB.band.
+Este refactor mantém o **componente visual praticamente como está** e foca no **modelo de projeção** e nas **features** que o alimentam.
 
-## Como vai funcionar
+---
 
-### 1. Staging em tabela temporária
+### 1. Novo conjunto de features (espectrais clássicas)
 
-Em vez de fazer 846 UPDATEs separados, vou:
+Auditoria atual em `music_reference_tracks` (não quarentenadas, 3.653 linhas):
 
-a. Criar migration que monta uma tabela de staging `_genre_import_staging(band_norm text, genre_raw text)`.
-b. Popular via `INSERT` (uso a ferramenta de inserção do Supabase) com as 846 linhas extraídas do CSV. Apenas duas colunas — payload pequeno (~30 KB).
-c. Rodar um único `UPDATE ... FROM staging` que faz todo o trabalho.
-d. `DROP TABLE _genre_import_staging` ao final.
+| Feature | Coverage |
+|---|---|
+| `lufs_integrated`, `dynamic_range_db`, `spectral_centroid`, `spectral_rolloff` | 3.650 |
+| `spectral_bandwidth`, `zero_crossing_rate`, `mfcc` | 2.129 |
+| `tempo_bpm` | 2.060 |
+| `spectral_flatness`, `spectral_contrast` | 0 (descartadas) |
 
-### 2. Filtro de "lixo"
+Features finais que alimentam o modelo (todas escaláveis, log/clip onde indicado):
 
-Lista bloqueada (case-insensitive, comparada ao valor cru do CSV antes de canonizar):
+1. `lufs_integrated` (clip [-30, -5])
+2. `dynamic_range_db` (clip [0, 30])
+3. `spectral_centroid` (log)
+4. `spectral_rolloff` (log)
+5. `spectral_bandwidth` (log)
+6. `zero_crossing_rate`
+7. `tempo_bpm` (clip [50, 200])
+8. `mfcc[1..6]` — primeiros 6 coeficientes (timbre macro), descartando o coef. 0 (energia)
 
+Total: ~13 dimensões. Linhas com qualquer feature obrigatória nula são excluídas (≈2.000 faixas restantes — amostra suficiente para UMAP).
+
+Padronização: `StandardScaler` (z-score) sobre o conjunto de referência.
+
+### 2. Trocar PCA → UMAP
+
+- Algoritmo: **UMAP 2D** (`n_neighbors=25`, `min_dist=0.15`, `metric='euclidean'`, `random_state=42`).
+- Clustering recalculado por **k-means (k=8)** sobre as coordenadas UMAP, para manter a coluna `c` (cor do cluster) usada hoje.
+- Sem t-SNE: UMAP é determinístico (com seed) e mais leve.
+
+### 3. Projeção do ponto do usuário (problema central)
+
+UMAP não tem transformação fechada como o PCA. Estratégia adotada: **k-NN no espaço padronizado de features**, posicionando o usuário pela média ponderada das coordenadas UMAP dos vizinhos.
+
+1. No script: persiste `scaler` (mean/scale por feature) e a matriz `Z` (features padronizadas) das referências no JSON.
+2. No cliente: padroniza o vetor do usuário com o mesmo `scaler`, calcula distância euclidiana para todas as Z, pega os top-K (K=15) e calcula `userPoint = Σ wᵢ · UMAPᵢ` com `wᵢ ∝ 1 / (dᵢ + ε)`.
+
+Se faltar qualquer feature obrigatória no usuário, o mapa segue mostrando a nuvem e a mensagem "Faltam features..." (como hoje).
+
+### 4. Novo formato do `reference_projection.json`
+
+```json
+{
+  "version": 2,
+  "method": "umap",
+  "scaler": {
+    "features": ["lufs_integrated", "...", "mfcc_1", "...", "mfcc_6"],
+    "mean": [...],
+    "scale": [...]
+  },
+  "umap": { "n_neighbors": 25, "min_dist": 0.15, "seed": 42 },
+  "z": [[...features padronizadas...], ...],   // float16 arredondado a 3 casas
+  "points": [{ "x": 1.23, "y": -0.45, "g": "Rock", "c": 3 }, ...],
+  "clusters": { "k": 8 }
+}
 ```
-'', 'unknown', 'n/a', 'audiobook', 'non-music', 'soundtrack',
-'special purpose artist', 'composer', 'fictional band',
-'male vocalist', 'british', 'english', 'brazilian',
-'to clean up', 'eric alexander', 'joelho de porco',
-'joe meek 60s telstar'
-```
 
-Linhas com gênero nesta lista são removidas do staging antes do UPDATE → as faixas correspondentes ficam intocadas no banco.
+Tamanho estimado: ~2.000 pontos × (13 features + 2 coords) ≈ 350–500 KB. Aceitável (lazy-loaded uma vez por sessão).
 
-### 3. UPDATE final
+### 5. Gerador (novo script no repo)
 
-```sql
-UPDATE public.music_reference_tracks t
-   SET genre = COALESCE(public.genre_canonical(s.genre_raw), s.genre_raw),
-       updated_at = now()
-  FROM _genre_import_staging s
- WHERE lower(btrim(t.band)) = s.band_norm
-   AND COALESCE(public.genre_canonical(s.genre_raw), s.genre_raw) IS DISTINCT FROM t.genre;
-```
+Criar `scripts/build_reference_projection.py`:
 
-- `genre_canonical` devolve `NULL` para gêneros considerados ruído pela função (já cobre alguns casos extras como `'(sem)'`).
-- O `COALESCE` garante que, se `genre_canonical` retornar `NULL` para algo que escapou da blocklist, gravamos o valor literal do CSV em vez de apagar o gênero existente.
-- Cláusula `IS DISTINCT FROM` evita gravações desnecessárias.
+- Conecta no banco via `PG*` envs e seleciona faixas não quarentenadas com as features obrigatórias presentes.
+- Aplica clip/log/StandardScaler, roda UMAP + KMeans.
+- Escreve `public/data/reference_projection.json` (formato acima).
+- README curto de execução: `pip install umap-learn scikit-learn psycopg2-binary numpy && python scripts/build_reference_projection.py`.
 
-### 4. Relatório pós-execução
+Execução é **manual / offline** (não é parte do build do Vite). Documentar em `docs/04-banco-de-dados.md` que o JSON é regenerado quando o banco de referências muda significativamente.
 
-Após o UPDATE rodo um `SELECT` de auditoria (via read_query) e devolvo no chat:
+### 6. Mudanças no componente `src/components/music-dna/TimbralMap.tsx`
 
-- Linhas atualizadas vs. inalteradas.
-- Bandas do CSV que não bateram com nenhum registro no banco (após normalização).
-- Bandas no banco que continuam sem gênero (não estavam no CSV).
-- Top-20 gêneros após a operação, para conferência visual.
+Apenas o necessário para o novo formato + projeção via k-NN. UI inalterada (mesmo card, mesmas cores, mesmo SVG):
 
-## Etapas
+- Substituir `projectUser` (PCA) por `projectUserByKNN(user, data, k=15)`.
+- Aceitar `version: 2` no JSON; manter fallback que rejeita versão antiga com aviso console.
+- Memoizar a padronização do vetor do usuário e o cálculo de distâncias com `useMemo` em cima de `data` + chaves estáveis do `user`.
 
-1. **Migration** — cria `_genre_import_staging` (temp permanente até o próximo passo) + função auxiliar opcional. Aprovação do usuário no popup do Supabase.
-2. **Insert** — popular staging com as 846 tuplas `(band_norm, genre_raw)`. Geração local do SQL a partir do CSV já copiado em `/tmp/genres.csv`.
-3. **Migration final** — roda o UPDATE em massa e dropa a tabela de staging.
-4. **Auditoria** — `read_query` com as 4 consultas acima; resumo no chat.
+### 7. Fora de escopo
 
-## Riscos e mitigações
+- Lista textual de vizinhos (usuário pediu para manter como está).
+- Mudanças visuais (eixos, legenda, tooltips, zoom).
+- Retreinar/recalcular features faltantes em `music_reference_tracks` (ex. preencher `spectral_flatness`).
+- Recalcular o JSON automaticamente em produção — fica como script manual.
 
-- **Bandas com nome diferente entre CSV e banco** (ex.: "Beatles" vs "The Beatles"): não tento fuzzy-match para evitar falsos positivos; entram no relatório de não-batidas para você decidir caso a caso.
-- **Rollback**: como vamos sobrescrever, preparo o `INSERT` da staging guardando também o `genre` antigo numa coluna `genre_prev text` — assim, se você quiser reverter, basta um único `UPDATE` de espelho. A tabela de staging é dropada ao final, mas posso opcionalmente persistir um snapshot em `public.music_reference_tracks_genre_backup` antes de dropar (recomendo manter por 30 dias).
-- **Tamanho do payload**: 846 linhas × 2 colunas curtas = ~30 KB, bem abaixo do limite da ferramenta de insert.
+### 8. Passos de implementação (quando entrar em build mode)
 
-## Fora de escopo nesta tarefa
+1. Adicionar `scripts/build_reference_projection.py` + breve README.
+2. Rodar o script localmente (ou pedir ao usuário para rodar) e substituir `public/data/reference_projection.json`.
+3. Atualizar `src/components/music-dna/TimbralMap.tsx` para o formato v2 e k-NN.
+4. Documentar regeneração em `docs/04-banco-de-dados.md` (seção do pipeline de referências).
+5. Smoke test no preview: abrir uma análise de DNA musical existente, verificar nuvem + ponto vermelho posicionado.
 
-- Ajustes no algoritmo de similaridade do prompt `prompt_lovable_music_dna_fix.md` — abro plano separado após esta tarefa, conforme você confirmar.
-- Limpeza dos 23 registros com `band` parecendo nome de arquivo (problema antigo de importação) — relato no fim, mas não toco.
+### Riscos
+
+- Coverage de `mfcc`/`bandwidth` (~2.129) reduz a amostra para ~⅔ do que o PCA atual usava (3.650). Mitigação: se a amostra final ficar < 1.500 faixas, cair para um subset sem MFCC e manter `bandwidth` + `zcr` opcionais (decidir após primeira execução do script).
+- JSON cresce (~400 KB vs ~70 KB atual). Aceitável dado o lazy-load + cache.
+- k-NN no cliente sobre 2.000 × 13 floats é O(n·d) ≈ 26k ops — instantâneo.
