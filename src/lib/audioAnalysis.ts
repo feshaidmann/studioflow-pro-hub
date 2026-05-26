@@ -1105,7 +1105,7 @@ export async function analyzeAudioFull(file: File): Promise<{
   const sections = detectSections(mono, sampleRate);
 
   // Spotify-style
-  const features = computeSpotifyFeatures(mono, sampleRate, spectral, bpm, rmsDb);
+  const features = computeSpotifyFeatures(mono, sampleRate, spectral, bpm, rmsDb, key, sections);
 
   // Acoustic fingerprint (catalog-aligned)
   const fp = computeMfccChromaMultiframe(mono, sampleRate);
