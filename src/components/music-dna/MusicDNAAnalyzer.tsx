@@ -1550,32 +1550,87 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
         </div>
       </DetailSection>
 
-      {analise_seccoes && (
-        <DetailSection id="dna-secoes" icon="📊" title="Análise de seções">
-          <DiagCard icon="📊" title="Análise de Seções" variant="default">
-            <div className="space-y-3">
-              <div className="bg-muted/30 rounded-lg p-3">
-                <p className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground mb-1">
-                  Contraste Verso → Refrão
-                </p>
-                <p className="text-xs leading-relaxed">{analise_seccoes.contraste_verso_refrao}</p>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <div className="bg-primary/5 rounded-lg p-3 border border-primary/20">
-                  <p className="text-[11px] font-mono uppercase tracking-widest text-primary mb-1">
-                    Seção mais forte
-                  </p>
-                  <p className="text-xs leading-relaxed">{analise_seccoes.secao_mais_forte}</p>
+      {(analise_seccoes || (realAnalysis?.sections && realAnalysis.sections.length > 0)) && (
+        <DetailSection id="dna-secoes" icon="📊" title="Seções da faixa">
+          <Card className="animate-fade-in">
+            <CardHeader className="pb-2 px-4 pt-3">
+              <CardTitle className="flex items-center gap-2 text-[11px] font-mono uppercase tracking-wider text-primary">
+                <span>📊</span> Seções da faixa
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="px-4 pb-4 space-y-3">
+              {realAnalysis?.sections && realAnalysis.sections.length > 0 && (
+                <div>
+                  <div className="flex gap-0.5 h-6 rounded overflow-hidden">
+                    {realAnalysis.sections.map((s, i) => {
+                      const totalDuration = realAnalysis.duration_sec;
+                      const width = ((s.end_sec - s.start_sec) / totalDuration) * 100;
+                      const colors: Record<string, string> = {
+                        intro: "bg-primary/20",
+                        verse: "bg-primary/40",
+                        pre_chorus: "bg-accent/40",
+                        chorus: "bg-primary/80",
+                        bridge: "bg-secondary/70",
+                        outro: "bg-muted-foreground/30",
+                      };
+                      return (
+                        <div
+                          key={i}
+                          className={cn("flex items-center justify-center text-[7px] font-mono text-foreground/80 uppercase", colors[s.label] || "bg-muted")}
+                          style={{ width: `${width}%` }}
+                          title={`${s.label} (${s.start_sec.toFixed(0)}s–${s.end_sec.toFixed(0)}s) · LUFS ${s.lufs} · E ${Math.round(s.energy * 100)}%`}
+                        >
+                          {width > 8 ? s.label.replace("_", " ") : ""}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="flex gap-3 mt-2 flex-wrap">
+                    {[
+                      { label: "intro", color: "bg-primary/20" },
+                      { label: "verse", color: "bg-primary/40" },
+                      { label: "pre chorus", color: "bg-accent/40" },
+                      { label: "chorus", color: "bg-primary/80" },
+                      { label: "bridge", color: "bg-secondary/70" },
+                      { label: "outro", color: "bg-muted-foreground/30" },
+                    ].filter(l => realAnalysis.sections.some(s => s.label === l.label.replace(" ", "_")))
+                      .map(l => (
+                        <div key={l.label} className="flex items-center gap-1">
+                          <div className={cn("w-2 h-2 rounded-sm", l.color)} />
+                          <span className="text-[11px] font-mono uppercase text-muted-foreground">{l.label}</span>
+                        </div>
+                      ))
+                    }
+                  </div>
                 </div>
-                <div className="bg-destructive/5 rounded-lg p-3 border border-destructive/20">
-                  <p className="text-[11px] font-mono uppercase tracking-widest text-destructive mb-1">
-                    Seção mais fraca
-                  </p>
-                  <p className="text-xs leading-relaxed">{analise_seccoes.secao_mais_fraca}</p>
+              )}
+
+              {analise_seccoes && (
+                <div className="space-y-2 pt-1">
+                  <div className="bg-muted/30 rounded-lg p-3">
+                    <p className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground mb-1">
+                      Contraste Verso → Refrão
+                    </p>
+                    <p className="text-xs leading-relaxed">{analise_seccoes.contraste_verso_refrao}</p>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div className="bg-primary/5 rounded-lg p-3 border border-primary/20">
+                      <p className="text-[11px] font-mono uppercase tracking-widest text-primary mb-1">
+                        Seção mais forte
+                      </p>
+                      <p className="text-xs leading-relaxed">{analise_seccoes.secao_mais_forte}</p>
+                    </div>
+                    <div className="bg-destructive/5 rounded-lg p-3 border border-destructive/20">
+                      <p className="text-[11px] font-mono uppercase tracking-widest text-destructive mb-1">
+                        Seção mais fraca
+                      </p>
+                      <p className="text-xs leading-relaxed">{analise_seccoes.secao_mais_fraca}</p>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
-          </DiagCard>
+              )}
+            </CardContent>
+          </Card>
         </DetailSection>
       )}
 
@@ -1600,60 +1655,6 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
         </Card>
       </DetailSection>
 
-      {realAnalysis?.sections && realAnalysis.sections.length > 0 && (
-        <DetailSection id="dna-timeline" icon="🎬" title="Timeline de seções">
-          <Card className="animate-fade-in">
-            <CardHeader className="pb-2 px-4 pt-3">
-              <CardTitle className="flex items-center gap-2 text-[11px] font-mono uppercase tracking-wider text-muted-foreground">
-                <span>🎬</span> Timeline de Seções
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="px-4 pb-4">
-              <div className="flex gap-0.5 h-6 rounded overflow-hidden">
-                {realAnalysis.sections.map((s, i) => {
-                  const totalDuration = realAnalysis.duration_sec;
-                  const width = ((s.end_sec - s.start_sec) / totalDuration) * 100;
-                  const colors: Record<string, string> = {
-                    intro: "bg-primary/20",
-                    verse: "bg-primary/40",
-                    pre_chorus: "bg-accent/40",
-                    chorus: "bg-primary/80",
-                    bridge: "bg-secondary/70",
-                    outro: "bg-muted-foreground/30",
-                  };
-                  return (
-                    <div
-                      key={i}
-                      className={cn("flex items-center justify-center text-[7px] font-mono text-foreground/80 uppercase", colors[s.label] || "bg-muted")}
-                      style={{ width: `${width}%` }}
-                      title={`${s.label} (${s.start_sec.toFixed(0)}s–${s.end_sec.toFixed(0)}s) · LUFS ${s.lufs} · E ${Math.round(s.energy * 100)}%`}
-                    >
-                      {width > 8 ? s.label.replace("_", " ") : ""}
-                    </div>
-                  );
-                })}
-              </div>
-              <div className="flex gap-3 mt-2 flex-wrap">
-                {[
-                  { label: "intro", color: "bg-primary/20" },
-                  { label: "verse", color: "bg-primary/40" },
-                  { label: "pre chorus", color: "bg-accent/40" },
-                  { label: "chorus", color: "bg-primary/80" },
-                  { label: "bridge", color: "bg-secondary/70" },
-                  { label: "outro", color: "bg-muted-foreground/30" },
-                ].filter(l => realAnalysis.sections.some(s => s.label === l.label.replace(" ", "_")))
-                  .map(l => (
-                    <div key={l.label} className="flex items-center gap-1">
-                      <div className={cn("w-2 h-2 rounded-sm", l.color)} />
-                      <span className="text-[11px] font-mono uppercase text-muted-foreground">{l.label}</span>
-                    </div>
-                  ))
-                }
-              </div>
-            </CardContent>
-          </Card>
-        </DetailSection>
-      )}
 
       {/* AcousticMatchPanel removido do resultado: as referências unificadas (catálogo + IA) já cobrem o caso de uso. */}
 
