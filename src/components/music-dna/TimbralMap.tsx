@@ -13,7 +13,7 @@ interface ProjectionDataV2 {
 }
 
 interface Props {
-  user: Record<string, number | undefined | null>;
+  user: Record<string, number | number[] | undefined | null>;
 }
 
 const CLUSTER_COLORS = [
