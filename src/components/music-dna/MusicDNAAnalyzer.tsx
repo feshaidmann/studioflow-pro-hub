@@ -430,8 +430,7 @@ function ExecutiveSummary({ diagnosis, onAddAllSteps, allStepsAdded, analysisId,
 
   // Confiança da análise
   const totalCompared = diagnosis.catalogTotalCompared ?? 0;
-  const formatDuration = (sec: number) =>
-    `${Math.floor(sec / 60)}:${String(Math.round(sec % 60)).padStart(2, "0")}`;
+
   const stepsCount = diagnosis.proximos_passos?.length ?? 0;
 
   const handleCopy = () => {
