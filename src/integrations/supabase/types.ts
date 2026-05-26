@@ -2826,6 +2826,10 @@ export type Database = {
         Args: { p_proposal_id: string }
         Returns: Json
       }
+      cosine_similarity_f8: {
+        Args: { a: number[]; b: number[] }
+        Returns: number
+      }
       count_reference_tracks_by_genre: {
         Args: { p_genre: string }
         Returns: number
@@ -2834,6 +2838,7 @@ export type Database = {
       find_nearest_reference_tracks: {
         Args: {
           p_acousticness?: number
+          p_chroma_cens?: number[]
           p_danceability?: number
           p_dynamic_range_db?: number
           p_energy?: number
@@ -2843,6 +2848,7 @@ export type Database = {
           p_limit?: number
           p_liveness?: number
           p_lufs_integrated?: number
+          p_mfcc?: number[]
           p_mode?: string
           p_spectral_bandwidth?: number
           p_spectral_centroid?: number
@@ -2858,8 +2864,6 @@ export type Database = {
           acousticness: number
           band: string
           danceability: number
-          dims_total: number
-          dims_used: number
           dynamic_range_db: number
           energy: number
           filename: string

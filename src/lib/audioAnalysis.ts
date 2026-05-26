@@ -463,6 +463,172 @@ function computeMfccChroma(
   return { mfcc, chroma: chromaOut };
 }
 
+// ── Multi-frame MFCC + Chroma with Cepstral Mean Subtraction ────────────────
+// Aligns with Python/Librosa per-frame analysis used to populate the reference
+// catalog, so cosine similarity between browser and Python pipelines becomes
+// reliable across recordings of the same track.
+function computeMfccChromaMultiframe(
+  mono: Float32Array,
+  sampleRate: number,
+): { mfcc: number[]; chroma: number[] } {
+  const FFT_SIZE = 2048;
+  const BIN_COUNT = FFT_SIZE / 2;
+  const FREQ_PER_BIN = sampleRate / FFT_SIZE;
+  const NUM_FILTERS = 40;
+  const NUM_COEFS = 13;
+  const MAX_FRAMES = 60;
+
+  const hzToMel = (hz: number) => 2595 * Math.log10(1 + hz / 700);
+  const melToHz = (mel: number) => 700 * (Math.pow(10, mel / 2595) - 1);
+
+  const lowMel = hzToMel(0);
+  const highMel = hzToMel(sampleRate / 2);
+  const melPts = new Float64Array(NUM_FILTERS + 2);
+  for (let i = 0; i < melPts.length; i++) {
+    melPts[i] = lowMel + (i * (highMel - lowMel)) / (NUM_FILTERS + 1);
+  }
+  const binPts = new Float64Array(NUM_FILTERS + 2);
+  for (let i = 0; i < binPts.length; i++) {
+    binPts[i] = melToHz(melPts[i]) / FREQ_PER_BIN;
+  }
+
+  const SKIP_SAMPLES = Math.floor(sampleRate * 2);
+  const analyzable = mono.length - 2 * SKIP_SAMPLES - FFT_SIZE;
+  if (analyzable <= 0) {
+    const centre = Math.max(0, Math.floor(mono.length / 2) - FFT_SIZE / 2);
+    return computeMfccChromaFromOffset(
+      mono, centre, FFT_SIZE, BIN_COUNT, FREQ_PER_BIN,
+      NUM_FILTERS, NUM_COEFS, binPts,
+    );
+  }
+
+  const stride = Math.max(1, Math.floor(analyzable / MAX_FRAMES));
+  const frameOffsets: number[] = [];
+  for (let i = 0; i < MAX_FRAMES; i++) {
+    const off = SKIP_SAMPLES + i * stride;
+    if (off + FFT_SIZE > mono.length - SKIP_SAMPLES) break;
+    frameOffsets.push(off);
+  }
+  if (frameOffsets.length === 0) frameOffsets.push(SKIP_SAMPLES);
+
+  const allMfcc: number[][] = [];
+  const accumChroma = new Float64Array(12);
+
+  for (const offset of frameOffsets) {
+    const { mfcc, chroma } = computeMfccChromaFromOffset(
+      mono, offset, FFT_SIZE, BIN_COUNT, FREQ_PER_BIN,
+      NUM_FILTERS, NUM_COEFS, binPts,
+    );
+    allMfcc.push(mfcc);
+    for (let i = 0; i < 12; i++) accumChroma[i] += chroma[i];
+  }
+
+  const N = allMfcc.length;
+
+  // Cepstral Mean Subtraction (CMS)
+  const meanCoef = new Float64Array(NUM_COEFS);
+  for (const m of allMfcc) {
+    for (let c = 0; c < NUM_COEFS; c++) meanCoef[c] += m[c];
+  }
+  for (let c = 0; c < NUM_COEFS; c++) meanCoef[c] /= N;
+
+  const cmsVectors = allMfcc.map(m => m.map((v, c) => v - meanCoef[c]));
+
+  const globalMfcc = new Float64Array(NUM_COEFS);
+  for (const v of cmsVectors) {
+    for (let c = 0; c < NUM_COEFS; c++) globalMfcc[c] += v[c];
+  }
+  for (let c = 0; c < NUM_COEFS; c++) globalMfcc[c] /= N;
+
+  let chromaNorm = 0;
+  for (let i = 0; i < 12; i++) {
+    accumChroma[i] /= N;
+    chromaNorm += accumChroma[i] * accumChroma[i];
+  }
+  chromaNorm = Math.sqrt(chromaNorm);
+  const chromaOut: number[] = new Array(12);
+  for (let i = 0; i < 12; i++) {
+    chromaOut[i] = chromaNorm > 1e-10 ? accumChroma[i] / chromaNorm : 0;
+  }
+
+  const round4 = (v: number) => Math.round(v * 10000) / 10000;
+  return {
+    mfcc: Array.from(globalMfcc).map(round4),
+    chroma: chromaOut.map(round4),
+  };
+}
+
+function computeMfccChromaFromOffset(
+  mono: Float32Array,
+  offset: number,
+  fftSize: number,
+  binCount: number,
+  freqPerBin: number,
+  numFilters: number,
+  numCoefs: number,
+  binPts: Float64Array,
+): { mfcc: number[]; chroma: number[] } {
+  const magnitudes = new Float64Array(binCount);
+  for (let k = 0; k < binCount; k++) {
+    let re = 0, im = 0;
+    for (let n = 0; n < fftSize; n++) {
+      const sample = offset + n < mono.length ? mono[offset + n] : 0;
+      const w = 0.5 * (1 - Math.cos((2 * Math.PI * n) / (fftSize - 1)));
+      const angle = (2 * Math.PI * k * n) / fftSize;
+      re += sample * w * Math.cos(angle);
+      im -= sample * w * Math.sin(angle);
+    }
+    magnitudes[k] = Math.sqrt(re * re + im * im);
+  }
+
+  const melEnergies = new Float64Array(numFilters);
+  for (let m = 0; m < numFilters; m++) {
+    const left = binPts[m];
+    const center = binPts[m + 1];
+    const right = binPts[m + 2];
+    let sum = 0;
+    const kStart = Math.max(0, Math.floor(left));
+    const kEnd = Math.min(binCount - 1, Math.ceil(right));
+    for (let k = kStart; k <= kEnd; k++) {
+      let weight = 0;
+      if (k >= left && k <= center) {
+        weight = (k - left) / Math.max(center - left, 1e-10);
+      } else if (k > center && k <= right) {
+        weight = (right - k) / Math.max(right - center, 1e-10);
+      }
+      if (weight > 0) sum += magnitudes[k] * weight;
+    }
+    melEnergies[m] = Math.log(sum + 1e-10);
+  }
+
+  const mfcc: number[] = new Array(numCoefs);
+  for (let i = 0; i < numCoefs; i++) {
+    let s = 0;
+    for (let m = 0; m < numFilters; m++) {
+      s += melEnergies[m] * Math.cos((Math.PI * i * (m + 0.5)) / numFilters);
+    }
+    mfcc[i] = s;
+  }
+
+  const chroma = new Float64Array(12);
+  for (let k = 1; k < binCount; k++) {
+    const freq = k * freqPerBin;
+    if (freq < 27.5 || freq > 5000) continue;
+    const pc = Math.round(12 * Math.log2(freq / 440)) % 12;
+    const idx = (pc + 12) % 12;
+    chroma[idx] += magnitudes[k];
+  }
+  let norm = 0;
+  for (let i = 0; i < 12; i++) norm += chroma[i] * chroma[i];
+  norm = Math.sqrt(norm);
+  const chromaOut: number[] = new Array(12);
+  for (let i = 0; i < 12; i++) chromaOut[i] = norm > 1e-10 ? chroma[i] / norm : 0;
+
+  return { mfcc, chroma: chromaOut };
+}
+
+
+
 
 
 function detectBPM(mono: Float32Array, sampleRate: number): number {
@@ -808,7 +974,7 @@ export async function analyzeAudioFull(file: File): Promise<{
   const features = computeSpotifyFeatures(mono, sampleRate, spectral, bpm, rmsDb);
 
   // Acoustic fingerprint (catalog-aligned)
-  const fp = computeMfccChroma(spectral.magnitudes, spectral.freqPerBin, sampleRate);
+  const fp = computeMfccChromaMultiframe(mono, sampleRate);
   const round4 = (v: number) => Math.round(v * 10000) / 10000;
 
   const r = (v: number) => Math.round(v * 10) / 10;
