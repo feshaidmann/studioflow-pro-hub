@@ -138,9 +138,11 @@ export function initReloadGuard() {
 
   // Se o breaker já está ativo dentro da janela de cooldown, mantém travado.
   if (state.trippedAt && now - state.trippedAt < COOLDOWN_MS) {
-    tripBreaker("cooldown ativo após detecção anterior");
+    // Não reescreve trippedAt — caso contrário o cooldown se estende a cada reload.
+    tripBreaker("cooldown ativo após detecção anterior", { persist: false });
     return;
   }
+
 
   // Janela deslizante de timestamps de page-load.
   const recent = state.ts.filter((t) => now - t < WINDOW_MS);
