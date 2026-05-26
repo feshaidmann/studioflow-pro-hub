@@ -176,11 +176,8 @@ export default function Onboarding() {
     });
   };
 
-  const headerCount = useMemo(() => {
-    const n = matches?.editais.length ?? 0;
-    const m = matches?.pros.length ?? 0;
-    return { n, m };
-  }, [matches]);
+
+
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
