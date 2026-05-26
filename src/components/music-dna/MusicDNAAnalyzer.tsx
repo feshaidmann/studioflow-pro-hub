@@ -260,7 +260,11 @@ function BenchmarkPanel({ diagnosis, benchmark }: { diagnosis: DiagnosisResult; 
             <div className="rounded-lg bg-muted/30 border border-border p-3">
               <p className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground">Fonte</p>
               <p className="text-sm font-semibold">{benchmarkSource}</p>
+              {benchmark && (
+                <p className="text-[10px] font-mono text-muted-foreground mt-0.5">Recalculado a cada nova faixa importada</p>
+              )}
             </div>
+
             <div className="rounded-lg bg-muted/30 border border-border p-3">
               <p className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground">Benchmark</p>
               <p className="text-sm font-semibold">{benchmarkLabel}</p>
@@ -328,9 +332,11 @@ function PriorityBadge({ priority }: { priority: "Alta" | "Média" | "Baixa" }) 
   );
 }
 
-function DiagCard({ icon, title, variant = "default", children }: {
+function DiagCard({ icon, title, variant = "default", aiBadge = false, children }: {
   icon: string; title: string;
   variant?: "primary" | "success" | "destructive" | "default";
+  /** Marca explicitamente que o conteúdo é interpretação da IA, não medição direta. */
+  aiBadge?: boolean;
   children: React.ReactNode;
 }) {
   const border = {
@@ -349,16 +355,27 @@ function DiagCard({ icon, title, variant = "default", children }: {
   return (
     <Card className={cn("border-l-4 animate-fade-in", border)}>
       <CardHeader className="pb-2 px-4 pt-3">
-        <CardTitle className={cn(
-          "flex items-center gap-2 text-[11px] font-mono uppercase tracking-wider", color
-        )}>
-          <span>{icon}</span>{title}
-        </CardTitle>
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <CardTitle className={cn(
+            "flex items-center gap-2 text-[11px] font-mono uppercase tracking-wider", color
+          )}>
+            <span>{icon}</span>{title}
+          </CardTitle>
+          {aiBadge && (
+            <span
+              className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground border border-border rounded-full px-2 py-0.5"
+              title="Texto gerado pela IA a partir das métricas — interpretação, não medição"
+            >
+              IA · interpretação
+            </span>
+          )}
+        </div>
       </CardHeader>
       <CardContent className="px-4 pb-4">{children}</CardContent>
     </Card>
   );
 }
+
 
 function DetailSection({ id, title, icon, children }: {
   id: string;
@@ -402,7 +419,7 @@ function ExecutiveSummary({ diagnosis, onAddAllSteps, allStepsAdded, analysisId,
   const truePeak = diagnosis.realAnalysis?.true_peak_dbtp;
   const lufs = diagnosis.realAnalysis?.lufs_integrated;
   const dynamicRange = diagnosis.realAnalysis?.dynamic_range_lu;
-  const duration = diagnosis.realAnalysis?.duration_sec;
+  // (duration/formatDuration removidos: a Duração já aparece no MetricCard "Duração")
   const hasCoreMetrics = [truePeak, lufs, dynamicRange].every(
     (v) => typeof v === "number" && Number.isFinite(v),
   );
@@ -410,14 +427,16 @@ function ExecutiveSummary({ diagnosis, onAddAllSteps, allStepsAdded, analysisId,
   // (Cards "Força/Gargalo/Próxima ação" foram removidos do resumo:
   // o 1º item dessas listas já aparece na seção "Diagnóstico" logo abaixo.)
 
-  // Status só vira "Pronta" se TODAS as métricas críticas existem e estão dentro do alvo
+  // Thresholds alinhados aos targets dos MetricCards (Técnico) para evitar veredito conflitante.
+  // LUFS verde ∈ [−15, −13]; TP ≤ −1; DR ≥ 7. Faixa mais larga é considerada "boa base".
   const status = !hasCoreMetrics
     ? { label: "Análise incompleta", tone: "warning" as const }
-    : (truePeak as number) <= 0 && (lufs as number) >= -16 && (lufs as number) <= -10 && (dynamicRange as number) >= 7
+    : (truePeak as number) <= -1 && (lufs as number) >= -15 && (lufs as number) <= -13 && (dynamicRange as number) >= 7
     ? { label: "Pronta para streaming", tone: "success" as const }
     : (truePeak as number) > 0 || (dynamicRange as number) < 5
     ? { label: "Precisa revisão técnica", tone: "destructive" as const }
     : { label: "Boa base, precisa ajustes", tone: "primary" as const };
+
 
   const toneClass = {
     success: "bg-primary/10 text-primary border-primary/30",
@@ -428,8 +447,7 @@ function ExecutiveSummary({ diagnosis, onAddAllSteps, allStepsAdded, analysisId,
 
   // Confiança da análise
   const totalCompared = diagnosis.catalogTotalCompared ?? 0;
-  const formatDuration = (sec: number) =>
-    `${Math.floor(sec / 60)}:${String(Math.round(sec % 60)).padStart(2, "0")}`;
+
   const stepsCount = diagnosis.proximos_passos?.length ?? 0;
 
   const handleCopy = () => {
@@ -511,19 +529,9 @@ function ExecutiveSummary({ diagnosis, onAddAllSteps, allStepsAdded, analysisId,
             </div>
           )}
 
-          {/* CTA primário + chips de confiança */}
-          <div className="flex flex-wrap items-center justify-between gap-3 pt-1 border-t border-border/60">
-            <div className="flex flex-wrap gap-1.5">
-              {typeof duration === "number" && Number.isFinite(duration) && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-muted/50 border border-border px-2 py-0.5 text-[11px] font-mono text-foreground/70">
-                  Trecho: 0:00–{formatDuration(duration)}
-                </span>
-              )}
-              <span className="inline-flex items-center gap-1 rounded-full bg-muted/50 border border-border px-2 py-0.5 text-[11px] font-mono text-foreground/70">
-                {hasCoreMetrics ? "Métricas globais OK" : "Métricas globais parciais"}
-              </span>
-            </div>
-            {stepsCount > 0 && (
+          {/* CTA primário */}
+          {stepsCount > 0 && (
+            <div className="flex flex-wrap items-center justify-end gap-3 pt-1 border-t border-border/60">
               <Button
                 size="sm"
                 onClick={onAddAllSteps}
@@ -536,8 +544,9 @@ function ExecutiveSummary({ diagnosis, onAddAllSteps, allStepsAdded, analysisId,
                   <><ListPlus className="h-3.5 w-3.5" /> Adicionar {stepsCount} ações ao checklist</>
                 )}
               </Button>
-            )}
-          </div>
+            </div>
+          )}
+
         </CardContent>
       </Card>
     </section>
@@ -603,10 +612,16 @@ function MetricCard({ label, value, unit, help, target, range, digits = 1 }: {
           />
         </div>
       )}
+      {target && (
+        <p className="text-[10px] font-mono text-muted-foreground leading-tight">
+          alvo: {target.min} a {target.max}{unit ? ` ${unit}` : ""}
+        </p>
+      )}
       <p className="text-[11px] leading-tight text-foreground/70">{help}</p>
     </Card>
   );
 }
+
 function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
@@ -1316,9 +1331,8 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
                 {input.references.slice(0, 2).join(", ")}
               </span>
             )}
-            <Badge variant="outline" className="text-xs font-mono bg-muted/30 border-border text-foreground/75">
-              Fonte: {externalLookup?.fonte ?? "web_audio"}
-            </Badge>
+            {/* Badge "Fonte" removido — informação já vive no badge de confiança do Resumo Executivo */}
+
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
@@ -1344,11 +1358,10 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
         {[
           { label: "Resumo", id: "dna-resumo", show: true },
           { label: "Diagnóstico", id: "dna-acoes", show: true },
-          { label: "Identidade", id: "dna-identidade", show: true },
-          { label: "Referências", id: "dna-referencias", show: true },
           { label: "Técnico", id: "dna-tecnico", show: true },
           { label: "Seções", id: "dna-secoes", show: !!analise_seccoes || (realAnalysis?.sections?.length ?? 0) > 0 },
-          { label: "Perfil", id: "dna-perfil", show: true },
+          { label: "Identidade", id: "dna-identidade", show: true },
+          { label: "Referências", id: "dna-referencias", show: true },
         ].filter((i) => i.show).map((item) => (
           <Button
             key={item.id}
