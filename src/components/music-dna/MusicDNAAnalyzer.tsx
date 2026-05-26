@@ -1652,26 +1652,12 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
         </DetailSection>
       )}
 
-      <DetailSection id="dna-perfil" icon="📡" title="Perfil acústico">
-        <Card className="animate-scale-in">
-          <CardHeader className="pb-2 px-4 pt-3">
-            <CardTitle className="flex items-center gap-2 text-[11px] font-mono uppercase tracking-wider text-primary">
-              <span>📡</span> Perfil Acústico
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="px-4 pb-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
-              <AcousticRadar trackFeatures={trackFeatures} refFeatures={refFeatures} />
-              <div className="space-y-2.5">
-                {FEATURE_KEYS.map(k => (
-                  <FeatureBar key={k} label={FEATURE_LABELS[k]}
-                    value={trackFeatures[k]} refValue={refFeatures[k]} />
-                ))}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </DetailSection>
+      {/* Perfil acústico (Radar + Bars vs GENRE_PRESETS) removido:
+          os atributos estilo Spotify já são comparados em "Referências" via BenchmarkPanel
+          contra o banco real (music_dna_benchmarks). refFeatures permanece no diagnosis
+          para uso interno (acceptance signal, distância de catálogo). */}
+
+
 
 
       {/* AcousticMatchPanel removido do resultado: as referências unificadas (catálogo + IA) já cobrem o caso de uso. */}
