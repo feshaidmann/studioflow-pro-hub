@@ -646,9 +646,6 @@ export function useMusicDNA(): UseMusicDNAReturn {
         speechiness: realAnalysis.speechiness,
         loudness_rms_db: realAnalysis.lufs_integrated,
       }, classifierProfiles);
-      if (classifierHint) {
-        appendLog(`🎼  Classificador interno: ${classifierHint.detected} (${Math.round(classifierHint.score * 100)}%).`);
-      }
 
       const {
         content: rawText,
