@@ -2986,6 +2986,7 @@ export type Database = {
           specialties: string[]
           username: string
           whatsapp: string
+          work_links: Json
         }[]
       }
       get_public_profile_history: {
