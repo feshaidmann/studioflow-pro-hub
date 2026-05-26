@@ -1,63 +1,114 @@
-## Objetivo
 
-A engine de extra\u00e7\u00e3o ac\u00fastica (MFCC, chroma, LUFS, vizinhos por cosine) j\u00e1 est\u00e1 calibrada. O que est\u00e1 fora de contexto para o artista independente \u00e9 a **camada de interpreta\u00e7\u00e3o**: tom t\u00e9cnico demais, sugest\u00f5es de est\u00fadio profissional e refer\u00eancias mainstream. A mudan\u00e7a \u00e9 100% de prompt / persona / p\u00f3s-processamento \u2014 sem mexer no pipeline ac\u00fastico nem no schema do banco.
+# Music DNA — features acionáveis para indie
 
-## Mudan\u00e7as
+Escopo aprovado: só features acionáveis (curva espectral vs alvo, recomendações DIY, playlist match derivado do banco, estrutura), aproximações client-side para o que não roda, + PDF e projeção 2D. **Mantém** pipeline atual de extração (Web Audio + `useMusicDNA` + edge `music-dna-analyze`) e a tabela `music_reference_tracks` que já tem 3.6k faixas.
 
-### 1. Auto-detec\u00e7\u00e3o do n\u00edvel de produ\u00e7\u00e3o (`src/hooks/useMusicDNA.ts`)
+## O que entra
 
-Antes do `buildPrompt`, derivar uma heur\u00edstica `production_tier`:
-- **bedroom**: `lufs_integrated < -16` E (`dynamic_range_lu > 11` OU `liveness > 0.30` OU `true_peak_dbtp < -3`) \u2014 grava\u00e7\u00e3o caseira, sem master agressivo.
-- **mid**: faixa entre `-16` e `-10` LUFS, true peak razo\u00e1vel, sem sinais de hyper-limit.
-- **pro-leaning**: `lufs >= -10` E `dynamic_range_lu < 7` \u2014 master comercial.
+1. **Curva espectral vs alvo do gênero** (recomendação acionável de EQ)
+2. **Timeline de seções** + comparação de tempo até o 1º refrão
+3. **Sequência de acordes aproximada** (croma → Roman numerals) com leitura "tipo de progressão"
+4. **Playlist Match** — clusters derivados de `music_reference_tracks`
+5. **Recomendações de mix/master DIY** geradas a partir das métricas (não da LLM)
+6. **Projeção 2D do banco** (PCA pré-computado, offline) com ponto do artista plotado
+7. **Export PDF do dashboard** (client-side)
+8. **Reorganização do /music-dna em abas**: Resumo · Técnico · Comparação · Recomendações
 
-Injetar no prompt: `NIVEL_DE_PRODUCAO_DETECTADO: bedroom|mid|pro-leaning` e instruir o modelo a adaptar sugest\u00f5es proporcionalmente (bedroom \u2192 nunca recomendar est\u00fadio, mastering pago, monitores caros; sempre oferecer alternativa free/freemium).
+Fora desta entrega: A/B player com faixa vizinha (URLs públicas não existem), evolução temporal entre uploads, OAuth provider novo, qualquer backend Python.
 
-### 2. Reescrita da persona e do "FORMATO DE RESPOSTA" (`useMusicDNA.ts`, fun\u00e7\u00e3o `buildPrompt`)
+---
 
-Substituir a se\u00e7\u00e3o de instru\u00e7\u00f5es por campo (linhas 418\u2013431) por um bloco "Persona: parceiro de carreira do artista independente brasileiro" com regras duras:
+## 1. Edge function nova `music-dna-spectral-target` (Deno)
+Recebe `{ genre }` e devolve, por bandas (sub 20–60, bass 60–250, low-mid 250–500, mid 500–2k, hi-mid 2k–5k, presence 5k–10k, air 10k–20k), a **curva alvo** = média ponderada de `spectral_centroid/bandwidth/rolloff/flatness` das refs do gênero (cache 24h em memória da função). Saída inclui `lufs_target_p50` e `dr_target_p50`. Sem LLM, só SQL agregado.
 
-- Toda recomenda\u00e7\u00e3o em `diagnostico_tecnico.*`, `sugestoes_arranjo` e `proximos_passos` precisa terminar com **"como fazer"** acion\u00e1vel em uma frase, citando **um plugin gratuito** (TDR Nova, Youlean Loudness Meter 2 free, ReaPlugs, Voxengo SPAN, Vital, LoudMax, MeldaProduction free bundle) ou **um recurso nativo da DAW** (Reaper, Cakewalk, GarageBand, Audacity, BandLab).
-- Proibido sugerir: "mande para mastering profissional", "use Pro Tools", "alugue est\u00fadio", "contrate engenheiro" \u2014 a menos que `production_tier = pro-leaning` E o problema seja efetivamente fora do alcance DIY.
-- Proibido jarg\u00e3o em `proximos_passos` e `gargalos_criativos`: sem siglas (LUFS, dBTP, kHz) no `acao` \u2014 traduzir para "deixar o som mais alto sem distor\u00e7\u00e3o", "abrir espa\u00e7o entre o grave do bumbo e do baixo", etc. Manter siglas s\u00f3 em `diagnostico_tecnico.*` (que \u00e9 o campo expl\u00edcito de leitura t\u00e9cnica).
+Frontend: `SpectralTargetCurve.tsx` desenha 2 linhas (artista vs alvo) usando Recharts e marca bandas com desvio > X dB como "EQ sugerido: corte 2 dB em 2–5 kHz com Q baixo (TDR Nova / EQ nativo da DAW)".
 
-### 3. Refor\u00e7ar 4 pilares dos `proximos_passos`
+## 2. Timeline de seções
+A função `detectSections` já existe em `audioAnalysis.ts`. Novo componente `SectionsTimeline.tsx` (barras horizontais por seção, com label e duração). Mostra:
+- "Primeiro refrão começa em **45s** — mediana do banco no gênero: **30s** → considere encurtar a intro".
+- Cálculo do "tempo até refrão mediano" via edge function `music-dna-genre-stats` (uma nova RPC `get_genre_section_stats(p_genre)` baseada em `segments_count` e duração — aproximação grosseira; deixar nota técnica).
 
-A LLM deve garantir cobertura de pelo menos 3 dos 4 pilares quando relevante, etiquetando o `impacto` com tag entre colchetes:
-- `[Mix/Master DIY]` \u2014 ajuste sonoro execut\u00e1vel em casa
-- `[Distribui\u00e7\u00e3o]` \u2014 timing/pitch/Release Radar/canvas, considerando que o artista usa distribuidor self-service (DistroKid, Tratore, Onerpm, Amuse)
-- `[Identidade e posicionamento]` \u2014 como esse som conversa com nichos espec\u00edficos de playlist e p\u00fablico inicial
-- `[Ao vivo]` \u2014 como traduzir essa faixa para palco com setup enxuto (trio, voz+viol\u00e3o, base + ableton)
+## 3. Acordes aproximados
+Adicionar `extractChordSequence(audioBuffer)` em `audioAnalysis.ts`: janela 1s, croma 12-bin, casa com 24 templates (maior/menor) por correlação. Pós-processa em Roman numerals via tonalidade detectada. UI em `ChordSequenceCard.tsx` mostra os primeiros 16 acordes + classificação ("vi–IV–I–V — progressão pop comum"). Limitação documentada via tooltip.
 
-`prioridade` reordenada para favorecer o que d\u00e1 retorno mais r\u00e1pido ao indie (n\u00e3o o que um label faria).
+## 4. Playlist Match — clusters do banco
+Job offline (script Python local executado uma vez via `code--exec` e migration de seed) que:
+- Pega `music_reference_tracks` ativas, normaliza 8 features (lufs, dr, centroid, bpm, energy, dance, valence, acousticness).
+- Roda **K-Means k=8** → cada cluster vira uma "playlist" com label heurístico (`Chill Acoustic`, `Workout`, `Late Night`, `Indie BR Quiet`, etc., nomeados manualmente após inspeção dos centroides).
+- Salva centroides + label na nova tabela `playlist_profiles` (id, name, slug, vector jsonb, sample_tracks jsonb, created_at). RLS público leitura, admin escrita.
 
-### 4. Refer\u00eancias do cat\u00e1logo \u2014 etiqueta de patamar
+Runtime: hook novo `usePlaylistMatch(features)` → calcula distância euclidiana normalizada do vetor do artista a cada centroide, devolve top 5 com `compat_pct = 1 - d/dmax`. Componente `PlaylistMatchCard.tsx` lista + para a playlist alvo escolhida pelo usuário, mostra "Para chegar a esse perfil: BPM 128 → 110, acousticness 0.32 → 0.70" (delta por eixo, só dos eixos com diff > 1 desvio).
 
-Manter o ranking atual por similaridade t\u00e9cnica (vem do RPC `find_nearest_reference_tracks`). No `buildStructuredPrompt` (edge function `music-dna-analyze/index.ts`), enriquecer cada vizinho injetado no prompt com `tier_hint` derivado de regras simples sobre `lufs_integrated` e nome da banda quando o cat\u00e1logo tiver indica\u00e7\u00e3o de gravadora (`mainstream` se LUFS \u2265 \u201210 e dynamic_range < 7, sen\u00e3o `indie/medio`). Pedir ao modelo, em `referencias_proximas[].motivo`, mencionar se \u00e9 par "no mesmo patamar" ou "refer\u00eancia aspiracional".
+## 5. Recomendações DIY determinísticas
+Novo `src/lib/mixRecommendations.ts` puro:
+- Compressão (a partir de crest factor / DR): textos prontos com plugins free.
+- LUFS alvo (a partir de `lufs_integrated` + gênero): faixa segura por gênero.
+- EQ (a partir do delta da curva espectral): bandas a cortar/realçar.
+- True Peak (já existe `evaluateTruePeak`).
+Cada recomendação tem `prioridade`, `acao`, `como_fazer` (plugin free + DAW). Renderiza na aba **Recomendações** acima das sugestões da LLM.
 
-### 5. `diagnostico_resumo` \u2014 fechar com encoraja a\u00e7\u00e3o
+## 6. Projeção 2D do banco
+Script offline (uma vez) faz **PCA-2 sobre as 8 features normalizadas** das refs ativas → salva `public/data/reference_projection.json` (~3.6k pontos, ~250 KB) com `{x, y, genre, band}`. Frontend `TimbralMap.tsx` renderiza um scatter Recharts com pontos cinza por gênero e ponto colorido do artista (calculado runtime usando os mesmos pesos PCA salvos no JSON).
 
-\u00daltima frase obrigat\u00f3ria: um \u00fanico passo de maior impacto que o artista consegue executar sozinho nos pr\u00f3ximos 7 dias, sem comprar nada. Manter as variantes A/B existentes; alterar apenas o fechamento.
+Nota: PCA é honesto e leve. **Sem t-SNE/UMAP** (tooltip explica): t-SNE/UMAP exigiriam recomputo periódico e biblioteca pesada no cliente — escolha consciente para entregar valor agora.
 
-### 6. Targets de loudness por gen\u00e9ro \u2014 nota de contexto indie
+## 7. Export PDF
+Nova lib `jspdf` + `html2canvas`. Botão "Exportar PDF" na aba Resumo: captura cada aba (4 canvases) e empilha em A4. Cobre: cabeçalho com nome da faixa/artista/data, métricas-chave, gráficos, top recomendações. Logo + paleta do app.
 
-No bloco `GENRE_STREAMING_CONTEXT` (linhas 315+), adicionar prefixo padr\u00e3o para todos os g\u00eaneros: *"Para o artista independente, atingir o target do g\u00eanero importa menos que entregar o som limpo e coerente. O Spotify normaliza tudo \u2014 prefira clareza a competir loudness."*
+## 8. Reorganização de /music-dna em abas
+Refatorar `MusicDNA.tsx` para usar `Tabs` do shadcn (já em uso no projeto):
+- **Resumo** — cards atuais (LUFS, BPM, key, gênero) + diagnostico_resumo + botão Export PDF
+- **Técnico** — radar perceptual atual + curva espectral vs alvo + timeline de seções + acordes
+- **Comparação** — vizinhos próximos (já existe) + TimbralMap + PlaylistMatch
+- **Recomendações** — DIY determinísticas + LLM `proximos_passos`
 
-### 7. Sem mudan\u00e7as em
+Mantém empty states e i18n PT/EN existentes.
 
-- Pipeline de extra\u00e7\u00e3o (`src/lib/audioAnalysis.ts`)
-- Banco / RPC `find_nearest_reference_tracks` / migrations
-- Componentes de UI da p\u00e1gina `/music-dna`
-- Persist\u00eancia em `music_dna_analyses`
+---
 
-## Arquivos a editar
+## Banco
 
-- `src/hooks/useMusicDNA.ts` \u2014 deriva\u00e7\u00e3o do `production_tier`, reescrita das instru\u00e7\u00f5es por campo, novos pilares dos pr\u00f3ximos passos, nota indie no contexto de g\u00eanero, fechamento do `diagnostico_resumo`.
-- `supabase/functions/music-dna-analyze/index.ts` \u2014 enriquecer vizinhos com `tier_hint` no bloco injetado no prompt.
+```text
+playlist_profiles
+  id uuid pk
+  slug text unique
+  name text
+  vector jsonb            -- centroide normalizado das 8 features
+  feature_ranges jsonb    -- desvio padrão por eixo para tolerância
+  sample_tracks jsonb     -- 3-5 (band, filename) representativos
+  created_at timestamptz
+GRANT SELECT TO authenticated; admin manage; RLS habilitada.
+```
 
-## Valida\u00e7\u00e3o
+Nova RPC `get_genre_section_stats(p_genre text)` retornando `p50_segments_count`, `p50_duration_sec`, `p50_seconds_to_first_chorus_estimate` (estimativa: `duration / segments_count * 1`).
 
-1. Disparar uma an\u00e1lise real via UI em `/music-dna` com uma faixa de bedroom (LUFS baixo, DR alto).
-2. Conferir no console que o payload tem `production_tier: "bedroom"`.
-3. Verificar que `proximos_passos[*].acao` n\u00e3o cont\u00e9m "LUFS"/"dBTP"/"mastering profissional" e cobre 3+ pilares com tag entre colchetes.
-4. `referencias_proximas[*].motivo` deve mencionar patamar (indie/mainstream).
+## Arquivos novos / editados
+- `supabase/functions/music-dna-spectral-target/index.ts` (novo)
+- `supabase/migrations/<ts>_playlist_profiles_and_genre_stats.sql` (nova tabela + RPC + seed via script offline)
+- `src/lib/audioAnalysis.ts` (adiciona `extractChordSequence`)
+- `src/lib/mixRecommendations.ts` (novo)
+- `src/lib/playlistMatch.ts` (novo)
+- `src/components/music-dna/SpectralTargetCurve.tsx` (novo)
+- `src/components/music-dna/SectionsTimeline.tsx` (novo)
+- `src/components/music-dna/ChordSequenceCard.tsx` (novo)
+- `src/components/music-dna/PlaylistMatchCard.tsx` (novo)
+- `src/components/music-dna/TimbralMap.tsx` (novo)
+- `src/components/music-dna/MixRecommendationsDIY.tsx` (novo)
+- `src/components/music-dna/ExportPdfButton.tsx` (novo)
+- `public/data/reference_projection.json` (novo, gerado offline)
+- `src/pages/MusicDNA.tsx` (refatora para abas)
+- `mem://funcionalidades/dna-musical/fluxo-de-analise` (atualiza)
+
+## Validação
+1. Subir migration → confirmar `playlist_profiles` populada com 8 clusters e RPC respondendo.
+2. Executar análise real e conferir:
+   - Curva espectral renderiza com 7 bandas e EQ tags coerentes.
+   - Top-5 playlists com `compat_pct` ordenado e deltas plausíveis.
+   - Timeline mostra ≥3 seções; comparação com mediana do gênero aparece.
+   - Acordes: 16 itens com Roman numerals.
+   - Mapa 2D: ponto do artista cai perto dos pontos de vizinhos retornados pela RPC `find_nearest_reference_tracks` (sanidade).
+   - PDF gerado abre, todas 4 abas legíveis.
+3. Sem regressão no fluxo atual de `useMusicDNA` (sessão cache, [DNA] tasks, feedback de classificador).
+
+## Fora de escopo (declarado)
+A/B player, evolução temporal entre uploads, t-SNE/UMAP real, qualquer reescrita do backend para Python/FastAPI, qualquer reuso das URLs originais das refs (não existem publicamente).
