@@ -410,14 +410,16 @@ function ExecutiveSummary({ diagnosis, onAddAllSteps, allStepsAdded, analysisId,
   // (Cards "Força/Gargalo/Próxima ação" foram removidos do resumo:
   // o 1º item dessas listas já aparece na seção "Diagnóstico" logo abaixo.)
 
-  // Status só vira "Pronta" se TODAS as métricas críticas existem e estão dentro do alvo
+  // Thresholds alinhados aos targets dos MetricCards (Técnico) para evitar veredito conflitante.
+  // LUFS verde ∈ [−15, −13]; TP ≤ −1; DR ≥ 7. Faixa mais larga é considerada "boa base".
   const status = !hasCoreMetrics
     ? { label: "Análise incompleta", tone: "warning" as const }
-    : (truePeak as number) <= 0 && (lufs as number) >= -16 && (lufs as number) <= -10 && (dynamicRange as number) >= 7
+    : (truePeak as number) <= -1 && (lufs as number) >= -15 && (lufs as number) <= -13 && (dynamicRange as number) >= 7
     ? { label: "Pronta para streaming", tone: "success" as const }
     : (truePeak as number) > 0 || (dynamicRange as number) < 5
     ? { label: "Precisa revisão técnica", tone: "destructive" as const }
     : { label: "Boa base, precisa ajustes", tone: "primary" as const };
+
 
   const toneClass = {
     success: "bg-primary/10 text-primary border-primary/30",
