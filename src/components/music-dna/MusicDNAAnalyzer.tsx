@@ -48,6 +48,8 @@ import { spotifyFeaturesFromDiagnosis, FEATURE_DESCRIPTIONS, type MusicDnaBenchm
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { NeighborDetailDialog } from "@/components/music-dna/NeighborDetailDialog";
 import { GenreMismatchHint } from "@/components/music-dna/GenreMismatchHint";
+import { PlaylistMatchCard } from "@/components/music-dna/PlaylistMatchCard";
+import { TimbralMap } from "@/components/music-dna/TimbralMap";
 // AcousticMatchPanel deixou de ser usado no resultado público (mantido no codebase para uso futuro/admin).
 import {
   Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList,
@@ -1663,6 +1665,35 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
       )}
 
       {/* AcousticMatchPanel removido do resultado: as referências unificadas (catálogo + IA) já cobrem o caso de uso. */}
+
+      {realAnalysis && (
+        <div className="grid gap-4 md:grid-cols-2">
+          <PlaylistMatchCard
+            user={{
+              lufs_integrated: realAnalysis.lufs_integrated ?? undefined,
+              dynamic_range_db: realAnalysis.dynamic_range_lu ?? undefined,
+              spectral_centroid: realAnalysis.spectral_centroid_hz ?? undefined,
+              tempo_bpm: typeof realAnalysis.bpm === "number" ? realAnalysis.bpm : undefined,
+              energy: realAnalysis.energy ?? undefined,
+              danceability: realAnalysis.danceability ?? undefined,
+              valence: realAnalysis.valence ?? undefined,
+              acousticness: realAnalysis.acousticness ?? undefined,
+            }}
+          />
+          <TimbralMap
+            user={{
+              lufs_integrated: realAnalysis.lufs_integrated,
+              dynamic_range_db: realAnalysis.dynamic_range_lu,
+              spectral_centroid: realAnalysis.spectral_centroid_hz,
+              tempo_bpm: typeof realAnalysis.bpm === "number" ? realAnalysis.bpm : undefined,
+              energy: realAnalysis.energy,
+              danceability: realAnalysis.danceability,
+              valence: realAnalysis.valence,
+              acousticness: realAnalysis.acousticness,
+            }}
+          />
+        </div>
+      )}
 
       {/* Footer */}
       <div className="flex items-center justify-between gap-3 p-4 rounded-lg bg-muted/20 border border-border flex-wrap">
