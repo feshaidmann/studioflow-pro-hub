@@ -152,14 +152,20 @@ export function initReloadGuard() {
 
 
   // Janela deslizante de timestamps de page-load.
+  // Só conta como "loop" quando vários reloads acontecem em rajada (gap < MIN_GAP_MS).
   const recent = state.ts.filter((t) => now - t < WINDOW_MS);
+  const lastTs = recent[recent.length - 1];
+  const gap = lastTs ? now - lastTs : Infinity;
   recent.push(now);
 
-  if (recent.length > MAX_LOADS) {
+  // Conta apenas reloads consecutivos rápidos como sinal de loop real.
+  const rapidStreak = recent.filter((t, i, arr) => i > 0 && t - arr[i - 1] < MIN_GAP_MS).length;
+
+  if (rapidStreak > MAX_LOADS && gap < MIN_GAP_MS) {
     writeState({ ts: recent.slice(-MAX_LOADS), trippedAt: now });
-    tripBreaker(`${recent.length} reloads em ${Math.round(WINDOW_MS / 1000)}s`);
+    tripBreaker(`${rapidStreak} reloads em rajada (<${MIN_GAP_MS}ms)`);
     return;
   }
 
-  writeState({ ts: recent, trippedAt: undefined });
+  writeState({ ts: recent.slice(-MAX_LOADS), trippedAt: undefined });
 }
