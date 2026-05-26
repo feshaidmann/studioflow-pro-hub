@@ -14,6 +14,24 @@ export type Database = {
   }
   public: {
     Tables: {
+      _genre_import_2026: {
+        Row: {
+          band: string
+          filename: string
+          genre: string
+        }
+        Insert: {
+          band: string
+          filename: string
+          genre?: string
+        }
+        Update: {
+          band?: string
+          filename?: string
+          genre?: string
+        }
+        Relationships: []
+      }
       ai_conversations: {
         Row: {
           created_at: string
@@ -2912,6 +2930,10 @@ export type Database = {
     Functions: {
       accept_service_proposal: {
         Args: { p_proposal_id: string }
+        Returns: Json
+      }
+      apply_genre_import_2026: {
+        Args: { p_drop_staging?: boolean }
         Returns: Json
       }
       cosine_similarity_f8: {
