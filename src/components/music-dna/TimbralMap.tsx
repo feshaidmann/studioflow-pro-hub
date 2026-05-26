@@ -55,7 +55,7 @@ async function loadProjection(): Promise<ProjectionDataV2 | null> {
  */
 const MIN_PRESENT = 6; // de 13 features
 function buildUserVector(
-  user: Record<string, number | undefined | null>,
+  user: Record<string, number | number[] | undefined | null>,
   features: string[],
   mean: number[],
 ): { x: number[]; present: number; missing: string[] } | null {
