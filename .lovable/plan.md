@@ -1,46 +1,63 @@
-# Enxugar redundâncias da análise de áudio
+# Validar saúde da RPC `find_nearest_reference_tracks` com faixas-controle
 
-Escopo aprovado: **A, B, C, E, G, H**. (Mantidos: D — Perfil acústico permanece; F — botão "Nova análise" do footer permanece.)
+## Por que esta abordagem
 
-Arquivo único afetado: `src/components/music-dna/MusicDNAAnalyzer.tsx`.
+- A UI "Testar similaridade" em `/admin/reference-tracks` **não existe** — só há listagem/importação.
+- Subir um arquivo no preview testa toda a stack (decode → extração de features → edge function → RPC), o que dificulta isolar problemas. Chamar a RPC com as features **já gravadas** no banco para a própria faixa é o teste mais limpo: se o lado DB está saudável, o #1 do resultado precisa ser a própria faixa com `similarity_score` ≈ 1.0.
+- Como `find_nearest_reference_tracks` é `STABLE`, posso invocá-la via `supabase--read_query` (sem migração).
 
-## Mudanças
+## Passos
 
-### A — Resumo executivo: remover os 3 cards "Força/Gargalo/Próxima ação"
-- Apagar o bloco `<div className="grid grid-cols-1 md:grid-cols-3 gap-2">…</div>` (linhas ~478–489) e as constantes `primaryStrength`, `mainBottleneck`, `nextAction` que só servem a ele.
-- Mantém: texto `diagnostico_resumo`, badges de status/confiança, feedback A/B e CTA "Adicionar N ações". Esse 1º item já aparece nas listas completas da seção "Diagnóstico" logo abaixo.
+1. **Escolher 3 faixas-controle** com cobertura ampla de features (LUFS, DR, centroid, MFCC, chroma). Usar `read_query`:
+   ```sql
+   SELECT band, filename, genre, tempo_bpm, lufs_integrated,
+          mfcc IS NOT NULL AS has_mfcc, chroma_cens IS NOT NULL AS has_chroma
+     FROM public.music_reference_tracks
+    WHERE quarantined = false
+      AND mfcc IS NOT NULL AND chroma_cens IS NOT NULL
+      AND lufs_integrated IS NOT NULL AND spectral_centroid IS NOT NULL
+    ORDER BY random() LIMIT 3;
+   ```
 
-### B — Remover `PlatformCompatibilityCard` do topo
-- Apagar `<PlatformCompatibilityCard lufs={lufsValue} />` (linha 1360). LUFS continua no MetricCard da seção "Técnico" + nas badges do resumo.
-- Remover o import se não restar outro uso.
+2. **Para cada faixa-controle**, executar a RPC com todas as features dela:
+   ```sql
+   SELECT t.band, t.filename, t.similarity_score
+     FROM public.find_nearest_reference_tracks(
+       p_tempo_bpm        => <t.tempo_bpm>,
+       p_lufs_integrated  => <t.lufs_integrated>,
+       p_dynamic_range_db => <t.dynamic_range_db>,
+       p_spectral_centroid => <t.spectral_centroid>,
+       p_spectral_flatness => <t.spectral_flatness>,
+       p_spectral_rolloff  => <t.spectral_rolloff>,
+       p_spectral_bandwidth => <t.spectral_bandwidth>,
+       p_zero_crossing_rate => <t.zero_crossing_rate>,
+       p_mfcc        => <t.mfcc>,
+       p_chroma_cens => <t.chroma_cens>,
+       p_energy => <t.energy>, p_danceability => <t.danceability>,
+       p_valence => <t.valence>, p_acousticness => <t.acousticness>,
+       p_instrumentalness => <t.instrumentalness>,
+       p_speechiness => <t.speechiness>, p_liveness => <t.liveness>,
+       p_key_name => <t.key_name>, p_mode => <t.mode>,
+       p_genre => <t.genre>, p_limit => 5
+     ) t;
+   ```
+   Para evitar 3 queries hardcoded, vou usar **uma única query lateral** que faz isso para 3 faixas aleatórias em uma chamada (LATERAL + ROW_NUMBER).
 
-### C — Fundir "Análise de seções" + "Timeline de seções"
-- Criar uma única seção `dna-secoes` "Seções da faixa" contendo:
-  - **Timeline visual** (a barra colorida atual) primeiro.
-  - Abaixo, em layout compacto, as 3 linhas textuais: *Contraste verso→refrão*, *Seção mais forte*, *Seção mais fraca* (só quando `analise_seccoes` existir).
-- Eliminar o `DetailSection id="dna-timeline"` separado; passar seu conteúdo para dentro do `dna-secoes`.
+3. **Critérios de aceite:**
+   - **#1 = a própria faixa** (band+filename batem).
+   - `similarity_score` do #1 **≥ 0.95** (idealmente ≈ 1.0; pequeno desvio aceitável se houver bônus de gênero/key).
+   - #2 com score sensivelmente menor (≥ 0.10 de gap) — sinaliza que o ranking discrimina.
 
-### E — Enxugar "Diagnóstico Técnico"
-- O `MetricCard` já mostra valor + alvo + range. Filtrar `technicalItems` para exibir **apenas** itens cujo `text` traga interpretação qualitativa que não esteja implícita no card (ex.: descrição de causa/efeito, recomendação contextual).
-- Heurística simples: ocultar item se `text` for curto (< 40 chars) ou for só repetição numérica do valor já exibido. Caso o filtro elimine todos, esconder o card "Diagnóstico Técnico" inteiro.
+4. **Se falhar:** investigar `total_distance` componente a componente (loggar as parcelas mfcc/lufs/etc.) para localizar feature problemática.
 
-### G — Remover chip "Catálogo: N faixas" do resumo
-- Apagar o `<span>` que renderiza `Catálogo: {totalCompared}` (≈ linha 531). A informação já aparece no `BenchmarkPanel` (seção Referências).
-
-### H — Sincronizar sticky nav
-- Lista atual: Resumo / Diagnóstico / Identidade / Técnico.
-- Atualizar para refletir as seções reais pós-refactor:
-  `Resumo · Diagnóstico · Identidade · Referências · Técnico · Seções · Perfil`.
-- Continuar usando `jumpTo(id)` com os ids existentes (`dna-resumo`, `dna-acoes`, `dna-identidade`, `dna-referencias`, `dna-tecnico`, `dna-secoes`, `dna-perfil`).
-- Renderizar cada item condicionalmente: só mostra "Seções" se houver `analise_seccoes` **ou** `realAnalysis.sections`; só mostra "Perfil" se houver `trackFeatures`/`refFeatures`.
+5. **Se passar:** opcionalmente, repetir o teste **alterando** apenas LUFS em ±5 dB para confirmar que o score cai de forma monotônica — saneamento de comportamento.
 
 ## Fora de escopo
 
-- D (Perfil acústico) — preservado.
-- F (botão duplicado no footer) — preservado.
-- Mudança de ordem das seções, conteúdo do `BenchmarkPanel`, `TimbralMap`, `PlaylistMatchCard`.
+- Subir áudio no preview (depende da extração client-side; foi tratada em iteração anterior).
+- Construir UI "Testar similaridade" no `/admin/reference-tracks` (pode virar plano separado se quiser uma ferramenta permanente).
+- Reverificar logs da edge function `music-dna-analyze` — só faz sentido depois que o lado DB estiver verde.
 
-## Validação
+## Saída esperada
 
-- Conferir visualmente no preview com uma análise ativa.
-- Garantir que a página não quebra quando `analise_seccoes` ou `realAnalysis.sections` estão ausentes (cobertura H).
+Tabela curta no chat com: `band | filename | rank | similarity_score | self_match?` para as 3 faixas, mais um veredicto **OK/FALHA**.
