@@ -595,10 +595,16 @@ function MetricCard({ label, value, unit, help, target, range, digits = 1 }: {
           />
         </div>
       )}
+      {target && (
+        <p className="text-[10px] font-mono text-muted-foreground leading-tight">
+          alvo: {target.min} a {target.max}{unit ? ` ${unit}` : ""}
+        </p>
+      )}
       <p className="text-[11px] leading-tight text-foreground/70">{help}</p>
     </Card>
   );
 }
+
 function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
