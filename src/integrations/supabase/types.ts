@@ -3093,6 +3093,7 @@ export type Database = {
           updated_count: number
         }[]
       }
+      verify_cron_token: { Args: { p_token: string }; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "user"
