@@ -43,7 +43,8 @@ Todas as tabelas têm **RLS ativada**. As políticas estão detalhadas em [05-se
 |--------|-----------|
 | `music_dna_analyses` | Análises persistidas do usuário |
 | `music_dna_feedback` | Feedback livre do usuário |
-| `music_reference_tracks` | Catálogo curado para benchmarks (admin-only) |
+| `music_reference_tracks` | Catálogo curado para benchmarks (admin-only). Fonte única de verdade. |
+| `music_dna_benchmarks` *(view)* | View agregada sobre `music_reference_tracks` (gênero canônico, `total_faixas >= 5`). Consultada via RPC `get_benchmark_for_genre(genero)` com fallback para gênero pai (`genre_parent`). |
 | `genre_mismatch_feedback` | Calibração de classificador por usuário (Falso/Correto) |
 | `music_external_metadata` | Cache 30 dias de Deezer/MusicBrainz/ListenBrainz |
 
