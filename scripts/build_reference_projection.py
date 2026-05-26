@@ -12,10 +12,10 @@ Pipeline:
   5. Persiste scaler + matriz Z padronizada + pontos UMAP no JSON v2.
 
 Como executar:
-    python -m pip install --no-cache-dir umap-learn scikit-learn psycopg2-binary numpy
+    python -m pip install --no-cache-dir umap-learn scikit-learn numpy
     python scripts/build_reference_projection.py
 
-Conexão: usa $SUPABASE_DB_URL ou os PG* envs padrão.
+Conexão: usa `psql` em modo CSV (envs PG* / SUPABASE_DB_URL já configurados).
 """
 from __future__ import annotations
 
@@ -26,8 +26,6 @@ import sys
 from pathlib import Path
 
 import numpy as np
-import psycopg2
-import psycopg2.extras
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
 import umap
