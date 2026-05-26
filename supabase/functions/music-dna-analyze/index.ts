@@ -351,6 +351,17 @@ serve(async (req: Request) => {
       ? [...neighbors]
           .filter((n: any) => typeof n?.similarity_score === "number")
           .sort((a: any, b: any) => Number(b.similarity_score) - Number(a.similarity_score))
+          .map((n: any) => {
+            // tier_hint orienta o LLM a sinalizar ao artista independente
+            // se o vizinho é um par no mesmo patamar (indie/medio) ou
+            // referência aspiracional (mainstream / master comercial).
+            const lufs = typeof n.lufs_integrated === "number" ? n.lufs_integrated : null;
+            const dr = typeof n.dynamic_range_db === "number" ? n.dynamic_range_db : null;
+            const tier_hint = lufs !== null && dr !== null && lufs >= -10 && dr < 7
+              ? "mainstream"
+              : "indie/medio";
+            return { ...n, tier_hint };
+          })
       : [];
     nearestNeighbors = sortedNeighbors;
     const catalogTotalCompared = useStrictGenre ? catalogGenreCount : catalogTotal;
