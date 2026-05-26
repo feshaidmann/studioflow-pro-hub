@@ -83,6 +83,12 @@ export default function Onboarding() {
     if (step === 1) setTimeout(() => fullNameRef.current?.focus(), 200);
   }, [step]);
 
+  const headerCount = useMemo(() => {
+    const n = matches?.editais.length ?? 0;
+    const m = matches?.pros.length ?? 0;
+    return { n, m };
+  }, [matches]);
+
   if (authLoading || profileLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -92,6 +98,7 @@ export default function Onboarding() {
   }
   if (!user) return <Navigate to="/auth" replace />;
   if (profile?.onboarding_completed) return <Navigate to="/dashboard" replace />;
+
 
   const whatsappDigits = whatsapp.replace(/\D/g, "");
   const canStep1 =
