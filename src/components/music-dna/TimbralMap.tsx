@@ -48,13 +48,22 @@ async function loadProjection(): Promise<ProjectionDataV2 | null> {
   }
 }
 
-/** Aplica clip/log iguais ao gerador Python para gerar o vetor cru x. */
+/** Aplica clip/log iguais ao gerador Python para gerar o vetor cru x.
+ *  Features ausentes são imputadas com a média do scaler (z=0 após padronização),
+ *  evitando que o ponto deixe de aparecer só por faltar 1-2 dimensões.
+ *  Retorna null apenas se a cobertura for muito baixa (< MIN_PRESENT).
+ */
+const MIN_PRESENT = 6; // de 13 features
 function buildUserVector(
   user: Record<string, number | undefined | null>,
   features: string[],
-): number[] | null {
+  mean: number[],
+): { x: number[]; present: number; missing: string[] } | null {
   const out: number[] = [];
-  for (const name of features) {
+  const missing: string[] = [];
+  let present = 0;
+  for (let i = 0; i < features.length; i++) {
+    const name = features[i];
     let v: number | null | undefined;
     if (name.startsWith("mfcc_")) {
       const idx = Number(name.slice(5));
@@ -63,7 +72,12 @@ function buildUserVector(
     } else {
       v = user[name] as number | undefined;
     }
-    if (typeof v !== "number" || !Number.isFinite(v)) return null;
+
+    if (typeof v !== "number" || !Number.isFinite(v)) {
+      out.push(mean[i]); // imputação → contribuição neutra após padronização
+      missing.push(name);
+      continue;
+    }
 
     switch (name) {
       case "lufs_integrated":
@@ -82,8 +96,10 @@ function buildUserVector(
         break;
     }
     out.push(v);
+    present++;
   }
-  return out;
+  if (present < MIN_PRESENT) return null;
+  return { x: out, present, missing };
 }
 
 /** Padroniza com o mesmo scaler salvo no JSON. */
