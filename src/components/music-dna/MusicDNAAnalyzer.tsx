@@ -328,9 +328,11 @@ function PriorityBadge({ priority }: { priority: "Alta" | "Média" | "Baixa" }) 
   );
 }
 
-function DiagCard({ icon, title, variant = "default", children }: {
+function DiagCard({ icon, title, variant = "default", aiBadge = false, children }: {
   icon: string; title: string;
   variant?: "primary" | "success" | "destructive" | "default";
+  /** Marca explicitamente que o conteúdo é interpretação da IA, não medição direta. */
+  aiBadge?: boolean;
   children: React.ReactNode;
 }) {
   const border = {
@@ -349,16 +351,27 @@ function DiagCard({ icon, title, variant = "default", children }: {
   return (
     <Card className={cn("border-l-4 animate-fade-in", border)}>
       <CardHeader className="pb-2 px-4 pt-3">
-        <CardTitle className={cn(
-          "flex items-center gap-2 text-[11px] font-mono uppercase tracking-wider", color
-        )}>
-          <span>{icon}</span>{title}
-        </CardTitle>
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <CardTitle className={cn(
+            "flex items-center gap-2 text-[11px] font-mono uppercase tracking-wider", color
+          )}>
+            <span>{icon}</span>{title}
+          </CardTitle>
+          {aiBadge && (
+            <span
+              className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground border border-border rounded-full px-2 py-0.5"
+              title="Texto gerado pela IA a partir das métricas — interpretação, não medição"
+            >
+              IA · interpretação
+            </span>
+          )}
+        </div>
       </CardHeader>
       <CardContent className="px-4 pb-4">{children}</CardContent>
     </Card>
   );
 }
+
 
 function DetailSection({ id, title, icon, children }: {
   id: string;
