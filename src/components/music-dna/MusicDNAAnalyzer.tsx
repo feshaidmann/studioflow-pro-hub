@@ -1471,7 +1471,7 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
 
       {/* IDENTIDADE — agora secundária, depois do diagnóstico acionável */}
       <section id="dna-identidade" className="scroll-mt-16">
-        <DiagCard icon="🎭" title="Identidade da Faixa" variant="primary">
+        <DiagCard icon="🎭" title="Identidade da Faixa" variant="primary" aiBadge>
           <div className="space-y-3">
             <div>
               <p className="text-base font-bold">{identidade?.mood_principal}</p>
