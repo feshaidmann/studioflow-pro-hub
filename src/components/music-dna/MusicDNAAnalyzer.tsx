@@ -222,9 +222,15 @@ function PlatformCompatibilityCard({ lufs }: { lufs: number | null | undefined }
 
 function BenchmarkPanel({ diagnosis, benchmark }: { diagnosis: DiagnosisResult; benchmark?: MusicDnaBenchmark }) {
   const features = spotifyFeaturesFromDiagnosis(diagnosis);
-  const benchmarkSource = benchmark ? "Banco público" : "Preset local";
+  const benchmarkSource = benchmark ? "Catálogo de referência" : "Fallback acústico";
   const benchmarkLabel = benchmark ? benchmark.genero : diagnosis.genero_classificado || "Média geral";
-  const benchmarkCount = benchmark?.total_faixas ? `${benchmark.total_faixas} faixas` : "Fallback acústico";
+  const tracks = benchmark?.total_faixas ?? 0;
+  const artists = benchmark?.total_artistas ?? 0;
+  const benchmarkCount = benchmark
+    ? artists > 0
+      ? `${tracks} faixas · ${artists} artistas`
+      : `${tracks} faixas`
+    : "Heurística local";
   const benchmarkMap: Partial<Record<keyof SpotifyFeatures, number | null>> = benchmark ? {
     danceability: benchmark.avg_danceability,
     energy: benchmark.avg_energy,
@@ -257,11 +263,12 @@ function BenchmarkPanel({ diagnosis, benchmark }: { diagnosis: DiagnosisResult; 
             </div>
             <div className="rounded-lg bg-muted/30 border border-border p-3">
               <p className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground">Benchmark</p>
-              <p className="text-sm font-semibold">{benchmarkLabel} · {benchmarkCount}</p>
+              <p className="text-sm font-semibold">{benchmarkLabel}</p>
+              <p className="text-[11px] font-mono text-muted-foreground mt-0.5">{benchmarkCount}</p>
             </div>
           </div>
           <p className="text-[11px] text-muted-foreground leading-relaxed">
-            As referências artísticas completas ficam ocultas; a IA recebe apenas um recorte técnico relevante e exibe aqui no relatório os 3–5 artistas mais próximos.
+            Médias agregadas em tempo real do catálogo curado (faixas reais processadas com librosa/pyloudnorm). Quando não há cobertura suficiente do gênero, cai automaticamente para o gênero pai (ex: Trap BR → Hip-Hop).
           </p>
         </div>
       </div>
