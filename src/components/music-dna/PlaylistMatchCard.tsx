@@ -156,8 +156,9 @@ export function PlaylistMatchCard({ user }: Props) {
                 Nenhum cluster com afinidade forte (≥60%). Sua faixa tem um perfil próprio — use os deltas abaixo como direção, não como obrigação.
               </p>
             )}
-
+            {best.gaps.length > 0 && (
               <div className="text-[11px] space-y-1.5 pt-1">
+
                 <span className="block font-medium text-foreground/80">Pontos para se aproximar:</span>
                 <ul className="space-y-1">
                   {best.gaps.map((g) => {
