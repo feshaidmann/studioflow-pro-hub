@@ -12,10 +12,11 @@
  * a partir de main.tsx, antes do React montar.
  */
 
-const STORAGE_KEY = "sf_reload_guard_v2";
-const WINDOW_MS = 10_000;       // janela deslizante
-const MAX_LOADS = 10;           // mais que isso em 10s = loop (tolerante a HMR)
-const COOLDOWN_MS = 15_000;     // tempo que o breaker fica ativo
+const STORAGE_KEY = "sf_reload_guard_v3";
+const WINDOW_MS = 6_000;        // janela deslizante curta
+const MAX_LOADS = 25;           // só dispara em loop muito agressivo (HMR tolerante)
+const MIN_GAP_MS = 400;         // só conta reloads consecutivos muito próximos
+const COOLDOWN_MS = 8_000;      // cooldown curto para não travar trabalho legítimo
 
 
 type State = { ts: number[]; trippedAt?: number };
