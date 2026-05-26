@@ -61,7 +61,7 @@ export default function ReferenceTracks() {
   const [batches, setBatches] = useState<BatchSummary[]>([]);
   const [coverage, setCoverage] = useState<CoverageRow[]>([]);
   const [loadingMeta, setLoadingMeta] = useState(false);
-  const [recalcAll, setRecalcAll] = useState(false);
+  
   const [snapshotting, setSnapshotting] = useState(false);
   const [snapshot, setSnapshot] = useState<{ count: number; generated_at: string; size_bytes: number; public_url: string } | null>(null);
 
