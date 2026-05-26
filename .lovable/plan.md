@@ -1,74 +1,46 @@
-# Corrigir "Faltam features para posicionar a faixa no mapa"
+# Enxugar redundâncias da análise de áudio
 
-## Causa raiz
+Escopo aprovado: **A, B, C, E, G, H**. (Mantidos: D — Perfil acústico permanece; F — botão "Nova análise" do footer permanece.)
 
-O `TimbralMap` consome um modelo UMAP de **13 dimensões** (definidas no `reference_projection.json`):
-`lufs_integrated, dynamic_range_db, spectral_centroid, spectral_rolloff, spectral_bandwidth, zero_crossing_rate, tempo_bpm, mfcc_1..6`.
-
-`buildUserVector` retorna `null` se **qualquer** dessas features estiver faltando — e duas coisas conspiram para isso acontecer sempre:
-
-1. **`MusicDNAAnalyzer.tsx` (linhas 1691–1699)** só envia 4 das 13 features ao `<TimbralMap user={…}>`, mesmo quando o `realAnalysis` já contém `mfcc` e `spectral_rolloff_hz`.
-2. **Cliente Web Audio não extrai** `spectral_bandwidth` nem `zero_crossing_rate`.
-
-Resultado: 100% das análises caem no fallback "Faltam features".
+Arquivo único afetado: `src/components/music-dna/MusicDNAAnalyzer.tsx`.
 
 ## Mudanças
 
-### 1. Repassar todas as features disponíveis (`MusicDNAAnalyzer.tsx`)
+### A — Resumo executivo: remover os 3 cards "Força/Gargalo/Próxima ação"
+- Apagar o bloco `<div className="grid grid-cols-1 md:grid-cols-3 gap-2">…</div>` (linhas ~478–489) e as constantes `primaryStrength`, `mainBottleneck`, `nextAction` que só servem a ele.
+- Mantém: texto `diagnostico_resumo`, badges de status/confiança, feedback A/B e CTA "Adicionar N ações". Esse 1º item já aparece nas listas completas da seção "Diagnóstico" logo abaixo.
 
-No `<TimbralMap user={…}>`, adicionar `mfcc`, `spectral_rolloff` e (quando o servidor retornar) `spectral_bandwidth` e `zero_crossing_rate`:
+### B — Remover `PlatformCompatibilityCard` do topo
+- Apagar `<PlatformCompatibilityCard lufs={lufsValue} />` (linha 1360). LUFS continua no MetricCard da seção "Técnico" + nas badges do resumo.
+- Remover o import se não restar outro uso.
 
-```ts
-<TimbralMap
-  user={{
-    lufs_integrated: realAnalysis.lufs_integrated,
-    dynamic_range_db: realAnalysis.dynamic_range_lu,
-    spectral_centroid: realAnalysis.spectral_centroid_hz,
-    spectral_rolloff: realAnalysis.spectral_rolloff_hz,
-    spectral_bandwidth: realAnalysis.spectral_bandwidth_hz, // se existir
-    zero_crossing_rate: realAnalysis.zero_crossing_rate,    // se existir
-    tempo_bpm: typeof realAnalysis.bpm === "number" ? realAnalysis.bpm : undefined,
-    mfcc: realAnalysis.mfcc, // array de 13 coeficientes
-  }}
-/>
-```
+### C — Fundir "Análise de seções" + "Timeline de seções"
+- Criar uma única seção `dna-secoes` "Seções da faixa" contendo:
+  - **Timeline visual** (a barra colorida atual) primeiro.
+  - Abaixo, em layout compacto, as 3 linhas textuais: *Contraste verso→refrão*, *Seção mais forte*, *Seção mais fraca* (só quando `analise_seccoes` existir).
+- Eliminar o `DetailSection id="dna-timeline"` separado; passar seu conteúdo para dentro do `dna-secoes`.
 
-### 2. Imputação por média no `buildUserVector` (`TimbralMap.tsx`)
+### E — Enxugar "Diagnóstico Técnico"
+- O `MetricCard` já mostra valor + alvo + range. Filtrar `technicalItems` para exibir **apenas** itens cujo `text` traga interpretação qualitativa que não esteja implícita no card (ex.: descrição de causa/efeito, recomendação contextual).
+- Heurística simples: ocultar item se `text` for curto (< 40 chars) ou for só repetição numérica do valor já exibido. Caso o filtro elimine todos, esconder o card "Diagnóstico Técnico" inteiro.
 
-Em vez de retornar `null` na primeira feature ausente, imputar com a **média do scaler** (`data.scaler.mean[i]`) — assim o valor padronizado vira `0` (centro do dataset) e não distorce a projeção. Definir um **mínimo de cobertura** (ex.: ≥ 8 das 13 features presentes) para evitar projetar faixas sem nenhuma informação:
+### G — Remover chip "Catálogo: N faixas" do resumo
+- Apagar o `<span>` que renderiza `Catálogo: {totalCompared}` (≈ linha 531). A informação já aparece no `BenchmarkPanel` (seção Referências).
 
-```ts
-function buildUserVector(user, features, mean) {
-  const out = []; let present = 0;
-  for (let i = 0; i < features.length; i++) {
-    const name = features[i];
-    let v = /* extração + clip/log atual */;
-    if (typeof v !== "number" || !Number.isFinite(v)) {
-      v = mean[i]; // imputação → z = 0
-    } else {
-      present++;
-    }
-    out.push(v);
-  }
-  return present >= 8 ? out : null;
-}
-```
-
-Atualizar `userPoint` para passar `data.scaler.mean` e ajustar o fallback de UI para diferenciar:
-- **0 features** → "Faltam features para posicionar a faixa no mapa." (mantém)
-- **Parcial mas imputado** → ponto exibido com um aviso discreto: *"Projeção aproximada — algumas features não foram extraídas."*
-
-### 3. (Opcional, fora deste plano) Cobertura completa
-
-Para extrair `spectral_bandwidth` e `zero_crossing_rate` no cliente seria necessário ampliar `src/lib/audioAnalysis.ts`. Como `bandwidth` é trivial (segundo momento do espectro) e `ZCR` é trivial (cruzamentos por zero do sinal no tempo), pode virar uma issue separada — não bloqueia o fix acima.
-
-## Arquivos
-
-- `src/components/music-dna/MusicDNAAnalyzer.tsx` — completar `user` do `TimbralMap`
-- `src/components/music-dna/TimbralMap.tsx` — imputação por média + ajuste do fallback de UI
+### H — Sincronizar sticky nav
+- Lista atual: Resumo / Diagnóstico / Identidade / Técnico.
+- Atualizar para refletir as seções reais pós-refactor:
+  `Resumo · Diagnóstico · Identidade · Referências · Técnico · Seções · Perfil`.
+- Continuar usando `jumpTo(id)` com os ids existentes (`dna-resumo`, `dna-acoes`, `dna-identidade`, `dna-referencias`, `dna-tecnico`, `dna-secoes`, `dna-perfil`).
+- Renderizar cada item condicionalmente: só mostra "Seções" se houver `analise_seccoes` **ou** `realAnalysis.sections`; só mostra "Perfil" se houver `trackFeatures`/`refFeatures`.
 
 ## Fora de escopo
 
-- Re-treinar/regerar `reference_projection.json`
-- Adicionar bandwidth/ZCR ao extractor cliente
-- Mexer em outras seções da análise
+- D (Perfil acústico) — preservado.
+- F (botão duplicado no footer) — preservado.
+- Mudança de ordem das seções, conteúdo do `BenchmarkPanel`, `TimbralMap`, `PlaylistMatchCard`.
+
+## Validação
+
+- Conferir visualmente no preview com uma análise ativa.
+- Garantir que a página não quebra quando `analise_seccoes` ou `realAnalysis.sections` estão ausentes (cobertura H).
