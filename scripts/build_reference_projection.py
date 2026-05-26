@@ -49,13 +49,23 @@ N_CLUSTERS = 8
 UMAP_PARAMS = dict(n_neighbors=25, min_dist=0.15, metric="euclidean", random_state=42)
 
 
-def get_conn():
-    # client_encoding explicito porque o pooler do Supabase (modo transaction)
-    # não retorna o parâmetro no startup e o psycopg2 rejeita a conexão.
-    url = os.environ.get("SUPABASE_DB_URL")
-    if url:
-        return psycopg2.connect(url, client_encoding="UTF8")
-    return psycopg2.connect(client_encoding="UTF8")
+SQL = """
+    SELECT band, genre,
+           lufs_integrated, dynamic_range_db,
+           spectral_centroid, spectral_rolloff, spectral_bandwidth,
+           zero_crossing_rate, tempo_bpm, mfcc
+      FROM public.music_reference_tracks
+     WHERE quarantined = false
+       AND lufs_integrated   IS NOT NULL
+       AND dynamic_range_db  IS NOT NULL
+       AND spectral_centroid IS NOT NULL
+       AND spectral_rolloff  IS NOT NULL
+       AND spectral_bandwidth IS NOT NULL
+       AND zero_crossing_rate IS NOT NULL
+       AND tempo_bpm         IS NOT NULL
+       AND mfcc              IS NOT NULL
+       AND array_length(mfcc, 1) >= 7
+"""
 
 
 def fetch_rows():
@@ -64,12 +74,11 @@ def fetch_rows():
     import csv
     import io
     import subprocess
-    cmd = ["psql", "-X", "-A", "-F", "\t", "--csv", "-c", sql]
-    out = subprocess.check_output(cmd, text=True)
+    copy_sql = f"COPY ({SQL.strip().rstrip(';')}) TO STDOUT WITH CSV HEADER"
+    out = subprocess.check_output(["psql", "-X", "-A", "-t", "-c", copy_sql], text=True)
     reader = csv.DictReader(io.StringIO(out))
     rows = []
     for r in reader:
-        # mfcc vem como string "{v1,v2,...}" do array Postgres
         raw_mfcc = (r.get("mfcc") or "").strip()
         if raw_mfcc.startswith("{") and raw_mfcc.endswith("}"):
             mfcc = [float(x) for x in raw_mfcc[1:-1].split(",") if x]
@@ -88,25 +97,6 @@ def fetch_rows():
             "mfcc": mfcc,
         })
     return rows
-        SELECT band, genre,
-               lufs_integrated, dynamic_range_db,
-               spectral_centroid, spectral_rolloff, spectral_bandwidth,
-               zero_crossing_rate, tempo_bpm, mfcc
-          FROM public.music_reference_tracks
-         WHERE quarantined = false
-           AND lufs_integrated   IS NOT NULL
-           AND dynamic_range_db  IS NOT NULL
-           AND spectral_centroid IS NOT NULL
-           AND spectral_rolloff  IS NOT NULL
-           AND spectral_bandwidth IS NOT NULL
-           AND zero_crossing_rate IS NOT NULL
-           AND tempo_bpm         IS NOT NULL
-           AND mfcc              IS NOT NULL
-           AND array_length(mfcc, 1) >= 7
-    """
-    with get_conn() as conn, conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
-        cur.execute(sql)
-        return cur.fetchall()
 
 
 def build_feature_matrix(rows):
