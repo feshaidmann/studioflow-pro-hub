@@ -643,13 +643,21 @@ function buildAnalysisMarkdown(input: { name: string; references: string[]; note
   lines.push(diagnosis.diagnostico_resumo || "—");
   lines.push("");
   lines.push("## Métricas técnicas");
-  lines.push(`- LUFS integrado: ${r?.lufs_integrated ?? a?.lufs ?? "—"}`);
-  lines.push(`- True Peak: ${r?.true_peak_dbtp ?? a?.truePeak ?? "—"} dBTP`);
-  lines.push(`- Dynamic Range: ${r?.dynamic_range_lu ?? a?.dynamicRange ?? "—"} LU`);
-  lines.push(`- BPM: ${r?.bpm ?? "—"}`);
-  lines.push(`- Tom: ${r?.key ?? "—"}`);
-  if (r?.duration_sec) lines.push(`- Duração: ${Math.floor(r.duration_sec / 60)}:${String(Math.round(r.duration_sec % 60)).padStart(2, "0")}`);
+  lines.push("| Métrica | Valor | Alvo de streaming |");
+  lines.push("|---|---|---|");
+  lines.push(`| LUFS integrado | ${r?.lufs_integrated ?? a?.lufs ?? "—"} | −15 a −13 LUFS |`);
+  lines.push(`| True Peak | ${r?.true_peak_dbtp ?? a?.truePeak ?? "—"} dBTP | ≤ −1 dBTP |`);
+  lines.push(`| Dynamic Range | ${r?.dynamic_range_lu ?? a?.dynamicRange ?? "—"} LU | ≥ 7 LU |`);
+  lines.push(`| BPM | ${r?.bpm ?? "—"} | — |`);
+  lines.push(`| Tom | ${r?.key ?? "—"} | — |`);
+  if (r?.duration_sec) lines.push(`| Duração | ${Math.floor(r.duration_sec / 60)}:${String(Math.round(r.duration_sec % 60)).padStart(2, "0")} | — |`);
   lines.push("");
+  lines.push("### Como ler");
+  lines.push("- **LUFS** é o volume percebido nas plataformas. Acima do alvo, o streaming reduz; abaixo, sua faixa soa mais baixa que as concorrentes.");
+  lines.push("- **True Peak** indica risco de distorção depois da compressão de áudio do streaming. Mantenha com folga abaixo de −1 dBTP.");
+  lines.push("- **Dynamic Range** mede quanto a faixa respira. Valores muito baixos indicam compressão excessiva; muito altos, mix pouco coeso.");
+  lines.push("");
+
   if (diagnosis.diagnostico_tecnico) {
     lines.push("## Avaliação técnica");
     lines.push(`- **LUFS:** ${diagnosis.diagnostico_tecnico.lufs_avaliacao}`);
