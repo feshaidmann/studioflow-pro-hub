@@ -1,63 +1,63 @@
 ## Objetivo
 
-Tornar a detecção de estilo e as sugestões da análise de áudio coerentes com a obra real, substituindo o matching baseado em features "estilo Spotify" (energy, danceability, valence, etc.) — que são heurísticas frágeis no browser — por um fingerprint acústico real (MFCC + chroma CENS) comparado via cosine similarity, alinhado com o que já existe nas faixas de referência (`music_reference_tracks.mfcc` / `chroma_cens`).
+A engine de extra\u00e7\u00e3o ac\u00fastica (MFCC, chroma, LUFS, vizinhos por cosine) j\u00e1 est\u00e1 calibrada. O que est\u00e1 fora de contexto para o artista independente \u00e9 a **camada de interpreta\u00e7\u00e3o**: tom t\u00e9cnico demais, sugest\u00f5es de est\u00fadio profissional e refer\u00eancias mainstream. A mudan\u00e7a \u00e9 100% de prompt / persona / p\u00f3s-processamento \u2014 sem mexer no pipeline ac\u00fastico nem no schema do banco.
 
-## Causa raiz
+## Mudan\u00e7as
 
-1. `audioAnalysis.ts` gera MFCC a partir de **um único espectro médio** → vetor incompatível com o MFCC per-frame + CMS do Python/Librosa que populou as referências. Cosine similarity fica em 0,6–0,8 mesmo para a mesma faixa.
-2. `useMusicDNA.ts` não envia `mfcc` nem `chroma_cens` no `track_features` → edge function não tem como passar o fingerprint para o SQL.
-3. `find_nearest_reference_tracks` pondera fortemente energy/danceability/valence/acousticness — valores que no browser são heurísticas e não batem com os do CSV de referência, gerando vizinhos errados → prompt do LLM recebe ground-truth ruim → diagnóstico e estilo fora do esperado.
-4. `music-dna-analyze/index.ts` não repassa MFCC/chroma para o RPC.
+### 1. Auto-detec\u00e7\u00e3o do n\u00edvel de produ\u00e7\u00e3o (`src/hooks/useMusicDNA.ts`)
 
-## Mudanças
+Antes do `buildPrompt`, derivar uma heur\u00edstica `production_tier`:
+- **bedroom**: `lufs_integrated < -16` E (`dynamic_range_lu > 11` OU `liveness > 0.30` OU `true_peak_dbtp < -3`) \u2014 grava\u00e7\u00e3o caseira, sem master agressivo.
+- **mid**: faixa entre `-16` e `-10` LUFS, true peak razo\u00e1vel, sem sinais de hyper-limit.
+- **pro-leaning**: `lufs >= -10` E `dynamic_range_lu < 7` \u2014 master comercial.
 
-### 1. `src/lib/audioAnalysis.ts`
-- Adicionar `computeMfccChromaMultiframe(mono, sampleRate)` e helper `computeMfccChromaFromOffset(...)` conforme patch anexo:
-  - até 60 frames espaçados uniformemente, pulando 2s no início/fim
-  - Hann + DFT (fftSize=2048) + filterbank mel 40 bandas + DCT-II → MFCC[13]
-  - **Cepstral Mean Subtraction (CMS)** por coeficiente
-  - Chroma 12 classes acumulado, L2-normalizado
-- Em `analyzeAudioFull()`, trocar `computeMfccChroma(spectral.magnitudes, ...)` por `computeMfccChromaMultiframe(mono, sampleRate)`.
-- Manter `computeMfccChroma` legada (não chamada) para evitar regressões.
+Injetar no prompt: `NIVEL_DE_PRODUCAO_DETECTADO: bedroom|mid|pro-leaning` e instruir o modelo a adaptar sugest\u00f5es proporcionalmente (bedroom \u2192 nunca recomendar est\u00fadio, mastering pago, monitores caros; sempre oferecer alternativa free/freemium).
 
-### 2. `src/hooks/useMusicDNA.ts`
-- No bloco `track_features` dentro de `callMusicDNAAnalyze()`, incluir:
-  - `mfcc: realAnalysis.mfcc`
-  - `chroma_cens: realAnalysis.chroma_cens`
-  - `zero_crossing_rate: realAnalysis.zcr` (se disponível)
-  - Manter os demais campos (tempo_bpm, lufs_integrated, dynamic_range_db, espectrais, e os Spotify-style com peso baixo no SQL).
+### 2. Reescrita da persona e do "FORMATO DE RESPOSTA" (`useMusicDNA.ts`, fun\u00e7\u00e3o `buildPrompt`)
 
-### 3. `supabase/functions/music-dna-analyze/index.ts`
-- Adicionar coerção `toFloat8Array(v, len)` validando arrays MFCC (13) e chroma (12).
-- Chamar `find_nearest_reference_tracks` com a nova assinatura: `p_mfcc`, `p_chroma_cens`, mais os escalares confiáveis (tempo_bpm, lufs, dynamic_range_db, centroid, flatness, rolloff, bandwidth, zcr) e os Spotify-style (peso baixo no SQL), além de key_name/mode/genre.
-- Atualizar a frase do prompt sobre similarity_score para refletir o novo critério (fingerprint timbral/harmônico + escalares).
-- Restante (auth, save_features, AI gateway, logInvocation) permanece inalterado.
+Substituir a se\u00e7\u00e3o de instru\u00e7\u00f5es por campo (linhas 418\u2013431) por um bloco "Persona: parceiro de carreira do artista independente brasileiro" com regras duras:
 
-### 4. Migração SQL
-- Criar helper `public.cosine_similarity_f8(a float8[], b float8[])` (IMMUTABLE, PARALLEL SAFE, retorna [-1,1] ou NULL/0 em casos degenerados).
-- **DROP** da assinatura atual de `find_nearest_reference_tracks` (a versão hoje tem outra ordem e parâmetros — ver `<db-functions>`).
-- **CREATE** nova `find_nearest_reference_tracks(...)` conforme migration anexa, com pesos:
-  - MFCC cosine 2,5 / Chroma cosine 1,5
-  - tempo_bpm 1,5 / LUFS 1,5 / centroid 1,0 / DR 0,8 / flatness 0,5 / ZCR 0,3 / rolloff 0,3 / bandwidth 0,2
-  - Spotify-style (energy/dance/val/acous/instr/speech/live) entre 0,1 e 0,2
-  - Bônus de key/mode (-0,15 a -0,30) e gênero (-0,50)
-  - Score = `1 / (1 + total_distance)`
-- Garantir grant de execução para `authenticated` (a função atual já é `SECURITY DEFINER`; replicar permissões existentes).
+- Toda recomenda\u00e7\u00e3o em `diagnostico_tecnico.*`, `sugestoes_arranjo` e `proximos_passos` precisa terminar com **"como fazer"** acion\u00e1vel em uma frase, citando **um plugin gratuito** (TDR Nova, Youlean Loudness Meter 2 free, ReaPlugs, Voxengo SPAN, Vital, LoudMax, MeldaProduction free bundle) ou **um recurso nativo da DAW** (Reaper, Cakewalk, GarageBand, Audacity, BandLab).
+- Proibido sugerir: "mande para mastering profissional", "use Pro Tools", "alugue est\u00fadio", "contrate engenheiro" \u2014 a menos que `production_tier = pro-leaning` E o problema seja efetivamente fora do alcance DIY.
+- Proibido jarg\u00e3o em `proximos_passos` e `gargalos_criativos`: sem siglas (LUFS, dBTP, kHz) no `acao` \u2014 traduzir para "deixar o som mais alto sem distor\u00e7\u00e3o", "abrir espa\u00e7o entre o grave do bumbo e do baixo", etc. Manter siglas s\u00f3 em `diagnostico_tecnico.*` (que \u00e9 o campo expl\u00edcito de leitura t\u00e9cnica).
 
-> Observação: a coluna `music_reference_tracks.mfcc` / `chroma_cens` já existe (vide `upsert_reference_tracks`), portanto não é preciso ALTER TABLE.
+### 3. Refor\u00e7ar 4 pilares dos `proximos_passos`
 
-## Considerações
+A LLM deve garantir cobertura de pelo menos 3 dos 4 pilares quando relevante, etiquetando o `impacto` com tag entre colchetes:
+- `[Mix/Master DIY]` \u2014 ajuste sonoro execut\u00e1vel em casa
+- `[Distribui\u00e7\u00e3o]` \u2014 timing/pitch/Release Radar/canvas, considerando que o artista usa distribuidor self-service (DistroKid, Tratore, Onerpm, Amuse)
+- `[Identidade e posicionamento]` \u2014 como esse som conversa com nichos espec\u00edficos de playlist e p\u00fablico inicial
+- `[Ao vivo]` \u2014 como traduzir essa faixa para palco com setup enxuto (trio, voz+viol\u00e3o, base + ableton)
 
-- **Compatibilidade**: o front continua enviando os campos antigos; o novo SQL apenas reduz seus pesos. Faixas de referência sem MFCC simplesmente ficam com peso 0 no termo cosine — não quebram o ranking.
-- **Performance**: o multi-frame DFT manual roda ~200–400 ms por análise (uma vez por upload) — aceitável.
-- **Cache de análises antigas**: análises já salvas em `music_dna_analyses` permanecem inalteradas; o ganho aparece nas próximas análises. Não é necessário invalidar cache.
-- **Pós-migração**: rodar `supabase--linter` e revisar warnings; o lint não deve apontar nada novo já que `cosine_similarity_f8` é IMMUTABLE com `SET search_path` herdado (ajustarei se o linter pedir).
-- **Sem mudanças de UI** — somente pipeline de cálculo, payload e SQL.
+`prioridade` reordenada para favorecer o que d\u00e1 retorno mais r\u00e1pido ao indie (n\u00e3o o que um label faria).
 
-## Sequência de execução (após aprovação)
+### 4. Refer\u00eancias do cat\u00e1logo \u2014 etiqueta de patamar
 
-1. `supabase--migration` com o SQL da nova RPC + helper.
-2. Editar `src/lib/audioAnalysis.ts` (novas funções + troca de chamada).
-3. Editar `src/hooks/useMusicDNA.ts` (incluir mfcc/chroma_cens/zcr).
-4. Editar `supabase/functions/music-dna-analyze/index.ts` (validação + nova chamada RPC + frase do prompt).
-5. Deploy da edge function e teste rápido via `supabase--curl_edge_functions` para confirmar que `neighbors` retornam similarity coerente.
+Manter o ranking atual por similaridade t\u00e9cnica (vem do RPC `find_nearest_reference_tracks`). No `buildStructuredPrompt` (edge function `music-dna-analyze/index.ts`), enriquecer cada vizinho injetado no prompt com `tier_hint` derivado de regras simples sobre `lufs_integrated` e nome da banda quando o cat\u00e1logo tiver indica\u00e7\u00e3o de gravadora (`mainstream` se LUFS \u2265 \u201210 e dynamic_range < 7, sen\u00e3o `indie/medio`). Pedir ao modelo, em `referencias_proximas[].motivo`, mencionar se \u00e9 par "no mesmo patamar" ou "refer\u00eancia aspiracional".
+
+### 5. `diagnostico_resumo` \u2014 fechar com encoraja a\u00e7\u00e3o
+
+\u00daltima frase obrigat\u00f3ria: um \u00fanico passo de maior impacto que o artista consegue executar sozinho nos pr\u00f3ximos 7 dias, sem comprar nada. Manter as variantes A/B existentes; alterar apenas o fechamento.
+
+### 6. Targets de loudness por gen\u00e9ro \u2014 nota de contexto indie
+
+No bloco `GENRE_STREAMING_CONTEXT` (linhas 315+), adicionar prefixo padr\u00e3o para todos os g\u00eaneros: *"Para o artista independente, atingir o target do g\u00eanero importa menos que entregar o som limpo e coerente. O Spotify normaliza tudo \u2014 prefira clareza a competir loudness."*
+
+### 7. Sem mudan\u00e7as em
+
+- Pipeline de extra\u00e7\u00e3o (`src/lib/audioAnalysis.ts`)
+- Banco / RPC `find_nearest_reference_tracks` / migrations
+- Componentes de UI da p\u00e1gina `/music-dna`
+- Persist\u00eancia em `music_dna_analyses`
+
+## Arquivos a editar
+
+- `src/hooks/useMusicDNA.ts` \u2014 deriva\u00e7\u00e3o do `production_tier`, reescrita das instru\u00e7\u00f5es por campo, novos pilares dos pr\u00f3ximos passos, nota indie no contexto de g\u00eanero, fechamento do `diagnostico_resumo`.
+- `supabase/functions/music-dna-analyze/index.ts` \u2014 enriquecer vizinhos com `tier_hint` no bloco injetado no prompt.
+
+## Valida\u00e7\u00e3o
+
+1. Disparar uma an\u00e1lise real via UI em `/music-dna` com uma faixa de bedroom (LUFS baixo, DR alto).
+2. Conferir no console que o payload tem `production_tier: "bedroom"`.
+3. Verificar que `proximos_passos[*].acao` n\u00e3o cont\u00e9m "LUFS"/"dBTP"/"mastering profissional" e cobre 3+ pilares com tag entre colchetes.
+4. `referencias_proximas[*].motivo` deve mencionar patamar (indie/mainstream).

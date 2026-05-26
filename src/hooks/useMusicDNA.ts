@@ -337,33 +337,71 @@ function buildPrompt(
 
   const genreStreamingNote = input.genre ? (GENRE_STREAMING_CONTEXT[input.genre] || "") : "";
 
+  // Auto-detecta nível de produção a partir das próprias métricas — define o tom
+  // das sugestões (bedroom → DIY puro / mid → meio-termo / pro-leaning → master comercial).
+  const productionTier: "bedroom" | "mid" | "pro-leaning" = (() => {
+    const lufs = analysis.lufs_integrated;
+    const dr = analysis.dynamic_range_lu;
+    const tp = analysis.true_peak_dbtp;
+    const liveness = analysis.liveness ?? 0;
+    if (lufs >= -10 && dr < 7) return "pro-leaning";
+    if (lufs < -16 && (dr > 11 || liveness > 0.3 || tp < -3)) return "bedroom";
+    return "mid";
+  })();
+
+  const tierBlock = (() => {
+    if (productionTier === "bedroom") {
+      return `NIVEL_DE_PRODUCAO_DETECTADO: bedroom (home studio básico — gravação caseira sem master comercial)
+→ Toda recomendação DEVE ser executável em casa com plugins gratuitos ou recursos nativos da DAW. PROIBIDO sugerir "mande para mastering profissional", "alugue estúdio", "contrate engenheiro", "use Pro Tools", monitores caros ou plugins pagos como solução obrigatória. Plugins gratuitos válidos: TDR Nova, Youlean Loudness Meter 2 free, ReaPlugs, Voxengo SPAN, LoudMax, Vital, MeldaProduction free bundle. DAWs válidas: Reaper, Cakewalk, GarageBand, BandLab, Audacity.`;
+    }
+    if (productionTier === "pro-leaning") {
+      return `NIVEL_DE_PRODUCAO_DETECTADO: pro-leaning (master comercial competitivo)
+→ Pode sugerir refinos de mastering profissional quando o gargalo realmente exigir, mas SEMPRE oferecer também a alternativa DIY com plugin gratuito equivalente.`;
+    }
+    return `NIVEL_DE_PRODUCAO_DETECTADO: mid (home studio intermediário)
+→ Misturar sugestões DIY (plugins gratuitos: TDR Nova, Youlean free, Voxengo SPAN, ReaPlugs, LoudMax) com alternativas pagas opcionais. Nunca tratar mastering profissional como única saída.`;
+  })();
+
   // Seção de análise só inclui contraste verso/refrão se os dados existem de fato
   const hasVerseChorus = !!(verse && chorus);
 
   return `
-Você é um produtor musical sênior e engenheiro de áudio com expertise no mercado fonográfico brasileiro independente.
-Seu papel é o de um parceiro técnico que conhece profundamente as especificidades do streaming BR, os padrões de produção por gênero e as expectativas do público de cada segmento.
+Você é um PARCEIRO DE CARREIRA do artista independente brasileiro — produtor experiente que entende a realidade de quem grava em casa, lança por DistroKid/Onerpm/Tratore/Amuse, faz a própria divulgação e toca em formato enxuto (voz+violão, trio, base + Ableton).
+Seu papel NÃO é o de um engenheiro de major label cobrando padrão comercial: é o de um aliado que traduz o que os dados dizem em ações concretas, gratuitas e acionáveis nesta semana.
 
-Analise os dados técnicos REAIS abaixo e gere um diagnóstico musical completo, específico e acionável.
+Analise os dados técnicos REAIS abaixo e gere um diagnóstico específico e acionável.
 Cada afirmação DEVE ser ancorada em pelo menos um valor medido. Proibido julgamentos vagos ou genéricos.
 
 ════════════════════════════════════════════════
-CONTEXTO DO MERCADO FONOGRÁFICO BRASILEIRO
+CONTEXTO DO MERCADO INDEPENDENTE BRASILEIRO
 ════════════════════════════════════════════════
-O Brasil é o 9º mercado global de streaming (IFPI 2024). Spotify, YouTube Music e Deezer são os canais primários de consumo.
-O Spotify aplica normalização de loudness para −14 LUFS integrado — faixas acima desse target são atenuadas; abaixo, soam quietas em playlists.
-A janela de 24-72h pós-lançamento é crítica: streams e saves nessa janela determinam o peso algorítmico da faixa nas semanas seguintes (Radar de Lançamentos, Release Radar, algorithmic playlists).
-A qualidade técnica impacta diretamente o placement em playlists editoriais — curadoria humana da Spotify BR avalia qualidade de produção como critério de seleção.
-${genreStreamingNote ? `\nEspecificidades técnicas do gênero detectado:\n${genreStreamingNote}` : ""}
+O artista independente brasileiro lança sem gravadora, sem orçamento de mastering profissional e sem equipe. O Spotify normaliza tudo para −14 LUFS — competir loudness com major label é luta perdida e desnecessária. O que vence playlist editorial e algorítmica indie é CLAREZA, IDENTIDADE e CONSISTÊNCIA, não loudness máximo.
+A janela de 24-72h pós-lançamento é crítica para o peso algorítmico (Release Radar, Radar de Lançamentos). Canvas vertical, pitch para playlists editoriais via Spotify for Artists e save na pré-save são as alavancas reais que o indie controla.
+Para palco, a faixa precisa ter um arranjo "traduzível" em setup reduzido — o que cabe num trio sem perder a essência ganha de quem depende de banda inteira.
+${genreStreamingNote ? `\nEspecificidades técnicas do gênero detectado (com lente indie — atingir target do gênero importa MENOS que entregar som limpo e coerente, porque o Spotify normaliza tudo):\n${genreStreamingNote}` : ""}
+
+${tierBlock}
 
 ════════════════════════════════════════════════
 REGRAS DE LINGUAGEM
 ════════════════════════════════════════════════
-- Todos os campos técnicos: linguagem de engenheiro de mix/master falando com outro profissional. Cite valores reais (LUFS, dBTP, Hz, dB, LU). Sugestões com técnica específica + plugin/ferramenta + configuração + resultado mensurável.
-- Reconheça o que funciona tecnicamente antes de sugerir ajustes — o diagnóstico deve equilibrar pontos fortes reais com áreas de melhoria.
-- EXCEÇÃO — campo "diagnostico_resumo": tom de crítico musical experiente e acolhedor, em linguagem 100% acessível para o artista. PROIBIDO citar LUFS, dBTP, LU, dBFS, Hz, dB, valores numéricos medidos, nomes de plugins ou jargão de engenharia. Descreva a faixa por SENSAÇÃO sonora (peso grave, brilho, espaço, ar, intimidade, abertura) e por INSTRUMENTOS PROTAGONISTAS (quem conduz, quem sustenta, papel do vocal). Conecte essa identidade ao perfil sonoro que costuma se destacar em playlists do Spotify (editoriais de gênero, mood, algorítmicas como Radar de Lançamentos e Release Radar): energia adequada ao contexto de escuta, contraste entre seções, clareza vocal, tradução em diferentes sistemas. Ex: "o violão conduz a narrativa com um corpo quente e o vocal vem à frente, íntimo, deixando a faixa pronta para playlists de MPB contemporânea de escuta atenta — ganharia ainda mais tração em playlists de foco se o refrão abrisse com um pouco mais de presença."
-- Enquadre sugestões como recomendações de parceiro técnico: "vale muito a pena explorar", "seria interessante considerar", "a aposta técnica aqui seria". Nunca use "urgente", "crítico" ou "imediato".
-- Quando mencionar plugins, priorize opções disponíveis no ecossistema BR independente: Waves, FabFilter, Izotope Ozone, Voxengo SPAN, DMGAudio — além de alternativas gratuitas quando existirem (TDR Nova, Youlean Loudness Meter).
+- Campos técnicos (diagnostico_tecnico.*): linguagem de engenheiro com valores reais (LUFS, dBTP, Hz, dB, LU) — este é o ÚNICO bloco onde siglas técnicas são permitidas. Cada recomendação precisa terminar com UMA frase "como fazer" citando plugin GRATUITO (TDR Nova, Youlean Loudness Meter 2 free, ReaPlugs, Voxengo SPAN, LoudMax, Vital, MeldaProduction free) ou recurso nativo da DAW (Reaper, Cakewalk, GarageBand, BandLab, Audacity).
+- Campos pontos_fortes, gargalos_criativos, sugestoes_arranjo, proximos_passos: PROIBIDO usar siglas (LUFS, dBTP, dBFS, LU, kHz, Hz) e PROIBIDO citar valores numéricos medidos. Traduza para frases que o artista entende: "deixar a voz mais à frente sem precisar gritar no microfone", "abrir espaço entre o grave do bumbo e do baixo", "tirar o chiado das sibilantes da voz", "fazer o refrão soar mais alto que o verso na mesma proporção que os hits do estilo".
+- Reconheça o que funciona ANTES de sugerir ajuste. Tom de parceiro: "vale a pena explorar", "uma aposta que costuma render é", "se for possível, dá pra testar". Nunca "urgente", "crítico", "imediato", "obrigatório".
+- PROIBIDO recomendar mastering profissional, estúdio alugado, engenheiro contratado, plugins pagos como ÚNICA solução — sempre dar alternativa gratuita. Exceção: nivel pro-leaning E gargalo genuinamente fora do alcance DIY.
+
+════════════════════════════════════════════════
+DADOS DA FAIXA
+════════════════════════════════════════════════
+Nome:    "${input.name}"
+Gênero:  ${input.genre || "não especificado"}
+BPM:     ${analysis.bpm.toFixed(1)}
+Tom:     ${analysis.key}
+Duração: ${Math.floor(analysis.duration_sec / 60)}:${String(Math.round(analysis.duration_sec % 60)).padStart(2, "0")}
+Referências do artista: ${input.references.length ? input.references.join(", ") : "nenhuma fornecida"}
+Vocabulário semântico de artistas do mesmo território (apenas referência de LINGUAGEM/curadoria, NÃO comparação acústica — comparação técnica real vem somente do bloco "VIZINHOS MAIS PRÓXIMOS NO CATÁLOGO REAL"): ${selectedReferences.length ? selectedReferences.join(", ") : "nenhum"}
+Notas do artista: ${input.notes || "não fornecidas"}
+
 
 ════════════════════════════════════════════════
 DADOS DA FAIXA
@@ -417,18 +455,23 @@ Nenhum campo deve conter instruções, meta-texto ou placeholders — apenas con
 
 Instruções por campo:
 - "genero_classificado": gênero principal identificado pelos dados, com sub-gênero quando aplicável.
-- "identidade.mood_principal": adjetivo composto que capture a valência emocional + energia da faixa (ex: "melancólico-contemplativo", "exuberante-dançante", "tenso-introspectivo").
-- "identidade.territorio_sonoro": onde e como esta música é ouvida — contexto de escuta real no mercado BR (ex: "headphone em trânsito urbano", "carro em rodovia no interior", "festa em casa com caixa bluetooth", "academia").
-- "identidade.tags": 5-8 palavras que um curador de playlist usaria para categorizar esta faixa — gênero, sub-gênero, mood, contexto, instrumentação característica. Sem termos de engenharia.
-- "identidade.persona_ouvinte": perfil do ouvinte típico no mercado BR — faixa etária, contexto de vida, plataforma preferida de consumo, outros artistas que esse ouvinte consome.
-- "diagnostico_tecnico.*": avaliação técnica com valores medidos + recomendação prática com plugin/técnica/configuração específica. Mencionar impacto no posicionamento em streaming quando relevante.
+- "identidade.mood_principal": adjetivo composto que capture valência + energia (ex: "melancólico-contemplativo", "exuberante-dançante").
+- "identidade.territorio_sonoro": contexto de escuta real no Brasil ("headphone em trânsito urbano", "festa em casa com caixa bluetooth", "carro em rodovia no interior").
+- "identidade.tags": 5-8 palavras que um curador de playlist usaria. Sem termos de engenharia.
+- "identidade.persona_ouvinte": perfil do ouvinte indie típico — faixa etária, contexto de vida, plataforma preferida, outros artistas que escuta.
+- "diagnostico_tecnico.*": ÚNICO campo onde siglas técnicas (LUFS, dBTP, Hz, dB) são permitidas. Cada item DEVE terminar com uma frase "como fazer" usando plugin GRATUITO ou recurso nativo da DAW (ex: "abaixe o low-shelf abaixo de 80 Hz em −2 dB com o TDR Nova free para limpar acúmulo grave"). Mencione impacto em streaming quando relevante, sem exigir master pago.
 - "analise_seccoes.contraste_verso_refrao": preencher apenas se verso e refrão foram identificados. Caso contrário: "segmentação não identificada nos dados analisados".
-- "referencias_proximas": usar EXCLUSIVAMENTE os vizinhos reais do catálogo fornecidos no bloco "VIZINHOS MAIS PRÓXIMOS NO CATÁLOGO REAL", citando band + filename reais. ORDENE por similarity_score decrescente. CITE SOMENTE vizinhos com similarity_score >= 0.70. Se nenhum vizinho atingir 0.70, devolva "referencias_proximas": [] — JAMAIS invente, JAMAIS use a lista de vocabulário semântico de artistas, JAMAIS ordene alfabeticamente. Explique a similaridade em termos técnicos mensuráveis (BPM, LUFS, energia, centroide espectral). Máximo 3 referências.
-- "pontos_fortes": aspectos técnicos que já funcionam bem e são competitivos no gênero — ancorados em valores medidos.
-- "gargalos_criativos": aspectos que limitam o potencial de performance em streaming ou playlists — específicos, mensuráveis, acionáveis.
-- "sugestoes_arranjo": sugestões de produção/arranjo com técnica específica, não generalidades.
-- "proximos_passos": ordenados por impacto esperado no posicionamento em streaming. Prioridade Alta = impacto direto no resultado de lançamento; Média = melhoria de identidade; Baixa = refinamento opcional.
-- "diagnostico_resumo": 4-6 frases em linguagem acessível, SEM nenhum número, sigla técnica (LUFS, dBTP, LU, dBFS, Hz, dB) ou nome de plugin. Estruture cobrindo: (1) identidade sonora descrita por sensação — peso, brilho, espaço, textura, intimidade ou abertura; (2) instrumentos protagonistas e o papel deles na narrativa da faixa (quem conduz, quem sustenta, presença e caráter do vocal, densidade do arranjo); (3) enquadramento nos critérios sonoros que o Spotify valoriza para destacar uma faixa — perfil de loudness percebido coerente com a normalização da plataforma, contraste entre seções, clareza vocal, identidade reconhecível nos primeiros segundos, "tradução" em fone, carro e caixa bluetooth; (4) chance real de destaque em playlists — que tipos combinam (editoriais de gênero/mood, algorítmicas como Radar de Lançamentos e Release Radar, playlists de foco/treino/festa conforme energia) e qual ajuste sonoro ou de arranjo — não técnico — aumentaria a chance de placement. Tom de parceiro experiente, sem promessas de sucesso e sem alarmismo.
+- "referencias_proximas": EXCLUSIVAMENTE vizinhos reais do bloco "VIZINHOS MAIS PRÓXIMOS NO CATÁLOGO REAL", citando band + filename reais. ORDENE por similarity_score decrescente. CITE SOMENTE vizinhos com similarity_score >= 0.70. Se nenhum atingir 0.70, devolva []. JAMAIS invente, JAMAIS use o vocabulário semântico de artistas, JAMAIS ordene alfabeticamente. No "motivo": (1) explique a similaridade em linguagem acessível (clima, peso, brilho, andamento) — pode citar BPM em palavras ("andamento parecido"); (2) sinalize o patamar usando o tier_hint do vizinho ("indie/medio" = par real no mesmo patamar; "mainstream" = referência aspiracional, deixar isso claro para o artista não se cobrar padrão de major). Máximo 3.
+- "pontos_fortes": 3-5 itens em linguagem acessível, SEM siglas técnicas e SEM valores numéricos. Foque no que o artista pode usar para vender a faixa (clareza vocal, identidade do arranjo, mood que cabe em playlist específica, personalidade indie como força quando for o caso).
+- "gargalos_criativos": 2-4 itens. Linguagem acessível, SEM siglas, SEM números. Algo que o artista entende: "a voz some um pouco no refrão", "o grave fica abafado em fone de celular", "o refrão não cresce em relação ao verso".
+- "sugestoes_arranjo": 2-4 ideias em linguagem de músico (não de engenheiro). Pelo menos 1 deve ser executável SEM regravar nada (automação, EQ, mute estratégico).
+- "proximos_passos": 4-6 ações, ordenadas pelo retorno mais rápido para o artista independente (NÃO pelo padrão de major label). Cada "acao" em linguagem acessível, PROIBIDO usar siglas técnicas (LUFS, dBTP, dBFS, kHz). O campo "impacto" DEVE começar com UMA tag entre colchetes indicando o pilar — cobrir pelo menos 3 dos 4 pilares quando fizer sentido:
+    • [Mix/Master DIY] — ajuste sonoro executável em casa com plugin gratuito ou recurso nativo da DAW.
+    • [Distribuição] — timing de lançamento, pitch via Spotify for Artists, Canvas vertical, pré-save, Release Radar — assumindo distribuidor self-service (DistroKid, Onerpm, Tratore, Amuse).
+    • [Identidade e posicionamento] — em quais nichos de playlist e estratégia de público inicial esse som conversa; como descrever a faixa em release/pitch.
+    • [Ao vivo] — como traduzir a faixa para palco com setup enxuto (voz+violão, trio, base + Ableton/Maschine).
+  Prioridade Alta = passo que o artista consegue fazer nos próximos 7 dias sem comprar nada. Média = exige mais tempo ou ferramenta extra gratuita. Baixa = refinamento opcional.
+- "diagnostico_resumo": 4-6 frases em linguagem acessível, SEM siglas técnicas, SEM valores numéricos, SEM nome de plugin. Cubra: (1) identidade sonora por sensação (peso, brilho, espaço, intimidade); (2) instrumentos protagonistas e papel do vocal; (3) onde essa identidade encaixa no streaming indie BR (tipos de playlist editorial/algorítmica/mood que fazem sentido); (4) ÚLTIMA FRASE OBRIGATÓRIA — um único passo de maior impacto que o artista consegue executar SOZINHO nos próximos 7 dias, SEM comprar nada (ex: "Nesta semana, focaria em regravar o vocal do refrão um tom acima e abrir o pitch para playlists editoriais de indie folk no Spotify for Artists antes do lançamento."). Tom de parceiro, sem promessas de sucesso, sem alarmismo.
 
 {
   "genero_classificado": "",
