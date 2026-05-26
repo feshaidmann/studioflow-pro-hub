@@ -94,10 +94,13 @@ function showOverlay(reason: string) {
 
 const nativeReload = window.location.reload.bind(window.location);
 
-function tripBreaker(reason: string) {
-  const state = readState();
-  state.trippedAt = Date.now();
-  writeState(state);
+function tripBreaker(reason: string, opts: { persist?: boolean } = { persist: true }) {
+  if (opts.persist !== false) {
+    const state = readState();
+    state.trippedAt = Date.now();
+    writeState(state);
+  }
+
 
   // 1. Bloqueia reload programático.
   try {
