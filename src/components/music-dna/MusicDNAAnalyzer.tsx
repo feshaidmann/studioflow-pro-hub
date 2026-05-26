@@ -1331,9 +1331,8 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
                 {input.references.slice(0, 2).join(", ")}
               </span>
             )}
-            <Badge variant="outline" className="text-xs font-mono bg-muted/30 border-border text-foreground/75">
-              Fonte: {externalLookup?.fonte ?? "web_audio"}
-            </Badge>
+            {/* Badge "Fonte" removido — informação já vive no badge de confiança do Resumo Executivo */}
+
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
