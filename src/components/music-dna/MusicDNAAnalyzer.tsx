@@ -1532,7 +1532,7 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
             </Card>
           </div>
 
-          {diagnostico_tecnico && (
+          {diagnostico_tecnico && technicalItems.length > 0 && (
             <DiagCard icon="🔬" title="Diagnóstico Técnico" variant="primary">
               <div className="space-y-3">
                 {technicalItems.map((item) => (
