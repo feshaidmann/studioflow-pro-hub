@@ -1,63 +1,48 @@
-# Validar saúde da RPC `find_nearest_reference_tracks` com faixas-controle
+## Refinos na seção "Compatibilidade com playlists"
 
-## Por que esta abordagem
+Apenas UI/apresentação em `src/components/music-dna/PlaylistMatchCard.tsx`. Sem mudar lógica de matching nem dados.
 
-- A UI "Testar similaridade" em `/admin/reference-tracks` **não existe** — só há listagem/importação.
-- Subir um arquivo no preview testa toda a stack (decode → extração de features → edge function → RPC), o que dificulta isolar problemas. Chamar a RPC com as features **já gravadas** no banco para a própria faixa é o teste mais limpo: se o lado DB está saudável, o #1 do resultado precisa ser a própria faixa com `similarity_score` ≈ 1.0.
-- Como `find_nearest_reference_tracks` é `STABLE`, posso invocá-la via `supabase--read_query` (sem migração).
+### Problemas identificados na screenshot
 
-## Passos
+1. **Nomes duplicados sem distinção** — "Indie BR Soft" aparece em 1º (39%) e 2º (37%) com descrição idêntica. No banco são clusters diferentes (slugs `indie-br-soft` e `indie-br-soft-2`), mas o usuário não vê diferença.
+2. **Hierarquia fraca** — best match tem o mesmo peso visual dos outros dois; só um badge pequeno o diferencia.
+3. **Gaps pouco acionáveis** — `0.81 → 0.48` mostra origem/destino mas não a direção da mudança (reduzir/aumentar) nem ordem de grandeza relativa.
+4. **Texto de header confuso** — "294 faixas no mais próximo" mistura contexto do best match no parágrafo geral.
+5. **Sample tracks** — só nome da banda, sem indicação de que são exemplos reais do cluster.
+6. **Score sem qualificação** — 39% parece "ruim" sem contexto; faltam faixas qualitativas (Forte/Médio/Fraco).
 
-1. **Escolher 3 faixas-controle** com cobertura ampla de features (LUFS, DR, centroid, MFCC, chroma). Usar `read_query`:
-   ```sql
-   SELECT band, filename, genre, tempo_bpm, lufs_integrated,
-          mfcc IS NOT NULL AS has_mfcc, chroma_cens IS NOT NULL AS has_chroma
-     FROM public.music_reference_tracks
-    WHERE quarantined = false
-      AND mfcc IS NOT NULL AND chroma_cens IS NOT NULL
-      AND lufs_integrated IS NOT NULL AND spectral_centroid IS NOT NULL
-    ORDER BY random() LIMIT 3;
-   ```
+### Mudanças propostas
 
-2. **Para cada faixa-controle**, executar a RPC com todas as features dela:
-   ```sql
-   SELECT t.band, t.filename, t.similarity_score
-     FROM public.find_nearest_reference_tracks(
-       p_tempo_bpm        => <t.tempo_bpm>,
-       p_lufs_integrated  => <t.lufs_integrated>,
-       p_dynamic_range_db => <t.dynamic_range_db>,
-       p_spectral_centroid => <t.spectral_centroid>,
-       p_spectral_flatness => <t.spectral_flatness>,
-       p_spectral_rolloff  => <t.spectral_rolloff>,
-       p_spectral_bandwidth => <t.spectral_bandwidth>,
-       p_zero_crossing_rate => <t.zero_crossing_rate>,
-       p_mfcc        => <t.mfcc>,
-       p_chroma_cens => <t.chroma_cens>,
-       p_energy => <t.energy>, p_danceability => <t.danceability>,
-       p_valence => <t.valence>, p_acousticness => <t.acousticness>,
-       p_instrumentalness => <t.instrumentalness>,
-       p_speechiness => <t.speechiness>, p_liveness => <t.liveness>,
-       p_key_name => <t.key_name>, p_mode => <t.mode>,
-       p_genre => <t.genre>, p_limit => 5
-     ) t;
-   ```
-   Para evitar 3 queries hardcoded, vou usar **uma única query lateral** que faz isso para 3 faixas aleatórias em uma chamada (LATERAL + ROW_NUMBER).
+**Header**
+- Manter título + ícone.
+- Substituir parágrafo por descrição mais curta e neutra: "Comparamos sua faixa contra clusters do banco de referência. Score = quão próxima ela está do perfil sonoro de cada cluster."
+- Mover a contagem "X faixas" para dentro de cada card (mais preciso).
 
-3. **Critérios de aceite:**
-   - **#1 = a própria faixa** (band+filename batem).
-   - `similarity_score` do #1 **≥ 0.95** (idealmente ≈ 1.0; pequeno desvio aceitável se houver bônus de gênero/key).
-   - #2 com score sensivelmente menor (≥ 0.10 de gap) — sinaliza que o ranking discrimina.
+**Card do best match (destacado)**
+- Fundo sutil `bg-primary/5` + borda `border-primary/30` para separar do resto.
+- Título maior (`text-base`), badge "Melhor match" mantida.
+- Score grande à direita (`text-2xl font-mono`) com qualificador abaixo ("Forte" ≥60%, "Médio" 30-59%, "Fraco" <30%).
+- Linha de metadata: `294 faixas · cluster #1`.
+- Bloco "Pontos para se aproximar" com ícones direcionais: ↓ vermelho-tênue se precisa reduzir, ↑ verde-tênue se precisa aumentar. Valor formatado com delta relativo: `Energia · reduzir −0.33 (0.81 → 0.48)`.
+- Sample tracks: prefixo "Faixas típicas desse perfil:" e exibir até 4 com `band` em itálico.
 
-4. **Se falhar:** investigar `total_distance` componente a componente (loggar as parcelas mfcc/lufs/etc.) para localizar feature problemática.
+**Cards 2 e 3 (compactos)**
+- Layout mais denso: nome + score na mesma linha, barra fina, sem gaps nem samples (clicáveis no futuro para expandir, fora do escopo).
+- Quando o `name` do perfil já apareceu acima, anexar sufixo discreto: `Indie BR Soft · variante B` (derivado do slug `-2`, `-3`…).
 
-5. **Se passar:** opcionalmente, repetir o teste **alterando** apenas LUFS em ±5 dB para confirmar que o score cai de forma monotônica — saneamento de comportamento.
+**Disambiguação de nomes duplicados**
+- Helper local: ao renderizar, se um `profile.name` já apareceu, gera label "{name} · variante B/C/…" baseado na ordem de aparição. Não muda o dado.
 
-## Fora de escopo
+**Estado de carregamento**
+- Trocar "Calculando…" por 3 skeletons (`Skeleton` do shadcn) imitando a altura dos cards.
 
-- Subir áudio no preview (depende da extração client-side; foi tratada em iteração anterior).
-- Construir UI "Testar similaridade" no `/admin/reference-tracks` (pode virar plano separado se quiser uma ferramenta permanente).
-- Reverificar logs da edge function `music-dna-analyze` — só faz sentido depois que o lado DB estiver verde.
+**Acessibilidade & responsivo**
+- `Progress` ganha `aria-label` com nome do cluster e score.
+- Gaps usam `flex-wrap` para não quebrar em telas estreitas.
 
-## Saída esperada
+### Fora do escopo
+- Não tocar em `playlistMatch.ts`, banco, ou cálculo de score.
+- Não consolidar clusters duplicados no banco (decisão separada — se quiser, faço numa segunda etapa).
 
-Tabela curta no chat com: `band | filename | rank | similarity_score | self_match?` para as 3 faixas, mais um veredicto **OK/FALHA**.
+### Arquivo afetado
+- `src/components/music-dna/PlaylistMatchCard.tsx` (única edição)
