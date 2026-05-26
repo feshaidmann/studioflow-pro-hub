@@ -22,9 +22,22 @@ Deno.serve(async (req) => {
       { auth: { persistSession: false } }
     );
 
+    // Only return PII (email/phone) to authenticated callers; anonymous browsers get a safe subset.
+    let isAuthenticated = false;
+    const authHeader = req.headers.get("Authorization");
+    if (authHeader?.startsWith("Bearer ")) {
+      const token = authHeader.slice("Bearer ".length);
+      const { data, error } = await supabaseAdmin.auth.getUser(token);
+      if (!error && data?.user) isAuthenticated = true;
+    }
+
+    const columns = isAuthenticated
+      ? "id, name, specialty, bio, email, phone"
+      : "id, name, specialty, bio";
+
     let dbQuery = supabaseAdmin
       .from("professionals")
-      .select("id, name, specialty, bio, email, phone")
+      .select(columns)
       .eq("active", true)
       .eq("allow_global_listing", true);
 

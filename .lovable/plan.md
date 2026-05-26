@@ -1,56 +1,60 @@
-## Dismiss/Snooze de sugestões de profissionais (MissingRoleHint)
+## Correções de segurança (sem novo secret)
 
-Adicionar dois botões em cada `MissingRoleHint` na aba **Equipe** do projeto:
-- **Lembrar depois** → oculta a sugestão por 3 dias.
-- **Desconsiderar** → oculta permanentemente aquele papel naquele projeto (sem opção de desfazer).
+Como não vamos adicionar `CRON_SECRET`, os 3 cron functions vão validar `Authorization: Bearer <SUPABASE_SERVICE_ROLE_KEY>` (variável já disponível). Os jobs em `cron.job` serão reescritos para passar esse header — usando o valor já hardcoded no comando do `pg_cron` (mesma sensibilidade do anon que está lá hoje, mas agora exigindo service role).
 
-### 1. Banco (migration)
+### 1. Edge functions — autenticação
 
-Nova tabela `marketplace_hint_dismissals`:
-- `id uuid pk`
-- `user_id uuid not null`
-- `project_id uuid not null`
-- `specialty text not null` (papel ocultado, ex: "Mix Engineer")
-- `snooze_until timestamptz null` — quando `null`, é permanente
-- `created_at timestamptz default now()`
-- UNIQUE `(user_id, project_id, specialty)` — upsert na ação
-- RLS: usuário gerencia somente os próprios registros (`user_id = auth.uid()`).
+- `edital-monitor`, `notify-edital-deadlines`, `check-opportunity-links`:
+  - Rejeitar (401) se `Authorization` ≠ `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`.
+- `send-push-notification`:
+  - Exigir JWT do usuário; forçar `user_id === caller.sub` (somente self-notification).
+- `search-platform-professionals`:
+  - Remover `email` e `phone` do SELECT (mantém função pública para o marketplace).
 
-Sem trigger de limpeza — registros snooze expirados ficam no banco mas são ignorados pela query (custo zero).
+### 2. Migration — RLS e RPCs
 
-### 2. Frontend
+- **`project_invitations`**: dropar policy `Public can read invitation by token`. Criar RPC `public.get_invitation_by_token(p_token text) RETURNS TABLE(...)` `SECURITY DEFINER`, retornando apenas campos necessários para a tela (`id, status, professional_name, professional_email, professional_role, fee, deadline, schedule_notes, expires_at, project_name, project_artist`). `GRANT EXECUTE ... TO anon, authenticated`.
+- **`platform_invitations`**: dropar policy `Public read platform_invitation by token`. Criar RPC análoga `get_platform_invitation_by_token(p_token text)` (mesma estratégia).
+- **`profiles`**: alterar `Public can view listed profiles` para `TO authenticated` (drop anon). Atualizar RPC `get_public_profile` para incluir `work_links` (assim `PublicProfile.tsx` deixa de precisar do `from('profiles')` direto para anônimos).
 
-**`MissingRoleHint.tsx`** — adicionar dois botões secundários ao lado do CTA "Buscar no marketplace":
-```text
-[ Buscar no marketplace ]  [Lembrar depois]  [Desconsiderar]
+### 3. Atualizações no cliente
+
+- `src/pages/InviteResponse.tsx`: substituir `supabase.from('project_invitations').select(...).eq('token', token)` por `supabase.rpc('get_invitation_by_token', { p_token: token })`.
+- `src/pages/PublicProfile.tsx`: usar `work_links` retornado pela RPC; remover o fetch direto em `profiles`.
+
+### 4. pg_cron — reagendar com service role
+
+Via `supabase--insert`, executar:
+```sql
+SELECT cron.unschedule('edital-monitor-6h');
+SELECT cron.unschedule('notify-edital-deadlines-daily');
+SELECT cron.unschedule('check-opportunity-links-daily');
+SELECT cron.schedule('edital-monitor-6h', '0 */6 * * *', $$
+  SELECT net.http_post(
+    url := 'https://icdedfqsiorzzuhzvfgl.supabase.co/functions/v1/edital-monitor',
+    headers := jsonb_build_object('Content-Type','application/json','Authorization','Bearer <SERVICE_ROLE_JWT>'),
+    body := '{}'::jsonb
+  );
+$$);
+-- idem para os outros dois
 ```
-- "Lembrar depois" → grava `snooze_until = now() + 3 days`, toast "Lembraremos em 3 dias" e remove o hint da tela.
-- "Desconsiderar" → confirm inline ("Tem certeza? Não vamos mais sugerir este papel neste projeto.") → grava `snooze_until = null`, toast "Sugestão removida" e remove o hint.
+O JWT do service role precisa ser fornecido pelo usuário (não tenho acesso ao valor). Vou deixar o comando pronto e pedir para o usuário rodar via SQL editor caso prefira não compartilhar — ou substituir o placeholder no insert tool.
 
-**`ProjectTeamTab.tsx`** — antes de calcular os papéis faltantes:
-1. Carregar dismissals do usuário para o `project_id` atual via `useDismissedHints(projectId)`.
-2. Filtrar a lista de papéis faltantes removendo specialties cujo registro tenha `snooze_until IS NULL` (permanente) ou `snooze_until > now()` (snooze ativo).
+### 5. Findings que serão **ignorados** com explicação no security memory
 
-**Novo hook `useDismissedHints.ts`**:
-- `dismissed: Set<string>` (specialties efetivamente ocultas agora)
-- `dismiss(specialty, mode: "snooze" | "permanent")` — upsert na tabela.
-- `refresh()` chamado após cada ação.
+- **`realtime_messages_no_policies`** — o chat usa `postgres_changes`, então RLS de `public.project_messages` já filtra payloads; `realtime` é schema reservado.
+- **`marketplace_curated_providers_contact_data`** — exposição intencional para autenticados navegando no marketplace.
+- **`SUPA_anon_security_definer_function_executable` / `authenticated_…`** — RPCs públicos (`get_public_profile`, `get_marketplace_providers`, etc.) são intencionalmente chamáveis sem privilégios elevados; elas mesmas filtram dados.
+- **`SUPA_extension_in_public`** — extensões padrão do Supabase, não trocaremos schema.
 
-### 3. Comportamento de borda
+### Arquivos afetados
 
-- Sem botão "ver ocultas" — decisão explícita do usuário (resposta: "Não precisa reverter").
-- Snoozes expirados reaparecem automaticamente na próxima visita à aba.
-- Dismissals são por par `(project_id, specialty)`; mesmo papel em outro projeto continua sendo sugerido normalmente.
-- A entrada manual no marketplace (botão "Marketplace" no topo da aba) continua sempre disponível — o dismiss só afeta o hint contextual.
-
-### Arquivos tocados
-
-- `supabase/migrations/<ts>_marketplace_hint_dismissals.sql` (nova)
-- `src/hooks/useDismissedHints.ts` (novo)
-- `src/components/marketplace/MissingRoleHint.tsx` (botões)
-- `src/components/project-hub/ProjectTeamTab.tsx` (filtro + integração do hook)
-
-### Fora de escopo
-- UI para reverter dismissals (usuário escolheu "Não precisa").
-- Dismiss global por papel (escopo escolhido: papel + projeto).
-- Notificações/lembrete push quando o snooze expira.
+- `supabase/functions/edital-monitor/index.ts`
+- `supabase/functions/notify-edital-deadlines/index.ts`
+- `supabase/functions/check-opportunity-links/index.ts`
+- `supabase/functions/send-push-notification/index.ts`
+- `supabase/functions/search-platform-professionals/index.ts`
+- `src/pages/InviteResponse.tsx`
+- `src/pages/PublicProfile.tsx`
+- Nova migration (RLS + RPCs)
+- Reschedule pg_cron + atualização de security memory

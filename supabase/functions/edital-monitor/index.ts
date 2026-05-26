@@ -146,8 +146,29 @@ Deno.serve(async (req) => {
     return new Response("ok", { headers: corsHeaders });
   }
 
+  // Auth: accept either the cron vault token (cron) or a signed-in user (manual "Test now").
+  const authHeader = req.headers.get("Authorization") ?? "";
+  const token = authHeader.startsWith("Bearer ") ? authHeader.slice("Bearer ".length) : "";
+  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+  let authorized = false;
+  if (token) {
+    const { data: cronOk } = await supabase.rpc("verify_cron_token", { p_token: token });
+    if (cronOk === true) {
+      authorized = true;
+    } else {
+      const { data, error } = await supabase.auth.getUser(token);
+      if (!error && data?.user) authorized = true;
+    }
+  }
+  if (!authorized) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
   try {
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     // Optional: filter by specific fonte_id (for "Test now" button)
     let fonteId: string | null = null;

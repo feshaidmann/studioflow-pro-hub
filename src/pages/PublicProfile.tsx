@@ -70,19 +70,12 @@ export default function PublicProfile() {
         setLoading(false);
         return;
       }
-      const p = (data as any[])[0] as PublicProfileData;
+      const p = (data as any[])[0] as PublicProfileData & { work_links?: any };
       setProfile(p);
 
-      // Fetch work_links from profile
-      const { data: profRow } = await supabase
-        .from("profiles")
-        .select("work_links")
-        .eq("id", p.id)
-        .single();
-      if (profRow && Array.isArray((profRow as any).work_links)) {
-        setWorkLinks((profRow as any).work_links as Array<{ title: string; url: string }>);
+      if (Array.isArray((p as any).work_links)) {
+        setWorkLinks((p as any).work_links as Array<{ title: string; url: string }>);
       }
-      setProfile(p);
 
       // Fetch ratings
       const { data: rData } = await supabase.rpc("get_public_profile_ratings", {

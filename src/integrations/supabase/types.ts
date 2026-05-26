@@ -2986,6 +2986,7 @@ export type Database = {
           specialties: string[]
           username: string
           whatsapp: string
+          work_links: Json
         }[]
       }
       get_public_profile_history: {
@@ -3092,6 +3093,7 @@ export type Database = {
           updated_count: number
         }[]
       }
+      verify_cron_token: { Args: { p_token: string }; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "user"
