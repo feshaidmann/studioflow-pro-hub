@@ -106,7 +106,7 @@ export function PlaylistMatchCard({ user }: Props) {
           Compatibilidade com playlists
         </CardTitle>
         <p className="text-xs text-muted-foreground">
-          Comparamos sua faixa contra clusters do banco de referência. O score indica quão próxima ela está do perfil sonoro de cada cluster.
+          Para onde fazer pitch: score de afinidade da sua faixa com cada cluster/playlist alvo do banco de referência.
         </p>
       </CardHeader>
       <CardContent className="space-y-4">

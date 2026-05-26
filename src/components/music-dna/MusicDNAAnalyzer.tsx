@@ -58,7 +58,6 @@ import {
 
 import {
   useMusicDNA,
-  FEATURE_KEYS, FEATURE_LABELS,
   GENRE_PRESETS, calcDistance,
   toRadarData,
   type TrackInput, type Genre,
@@ -643,13 +642,21 @@ function buildAnalysisMarkdown(input: { name: string; references: string[]; note
   lines.push(diagnosis.diagnostico_resumo || "—");
   lines.push("");
   lines.push("## Métricas técnicas");
-  lines.push(`- LUFS integrado: ${r?.lufs_integrated ?? a?.lufs ?? "—"}`);
-  lines.push(`- True Peak: ${r?.true_peak_dbtp ?? a?.truePeak ?? "—"} dBTP`);
-  lines.push(`- Dynamic Range: ${r?.dynamic_range_lu ?? a?.dynamicRange ?? "—"} LU`);
-  lines.push(`- BPM: ${r?.bpm ?? "—"}`);
-  lines.push(`- Tom: ${r?.key ?? "—"}`);
-  if (r?.duration_sec) lines.push(`- Duração: ${Math.floor(r.duration_sec / 60)}:${String(Math.round(r.duration_sec % 60)).padStart(2, "0")}`);
+  lines.push("| Métrica | Valor | Alvo de streaming |");
+  lines.push("|---|---|---|");
+  lines.push(`| LUFS integrado | ${r?.lufs_integrated ?? a?.lufs ?? "—"} | −15 a −13 LUFS |`);
+  lines.push(`| True Peak | ${r?.true_peak_dbtp ?? a?.truePeak ?? "—"} dBTP | ≤ −1 dBTP |`);
+  lines.push(`| Dynamic Range | ${r?.dynamic_range_lu ?? a?.dynamicRange ?? "—"} LU | ≥ 7 LU |`);
+  lines.push(`| BPM | ${r?.bpm ?? "—"} | — |`);
+  lines.push(`| Tom | ${r?.key ?? "—"} | — |`);
+  if (r?.duration_sec) lines.push(`| Duração | ${Math.floor(r.duration_sec / 60)}:${String(Math.round(r.duration_sec % 60)).padStart(2, "0")} | — |`);
   lines.push("");
+  lines.push("### Como ler");
+  lines.push("- **LUFS** é o volume percebido nas plataformas. Acima do alvo, o streaming reduz; abaixo, sua faixa soa mais baixa que as concorrentes.");
+  lines.push("- **True Peak** indica risco de distorção depois da compressão de áudio do streaming. Mantenha com folga abaixo de −1 dBTP.");
+  lines.push("- **Dynamic Range** mede quanto a faixa respira. Valores muito baixos indicam compressão excessiva; muito altos, mix pouco coeso.");
+  lines.push("");
+
   if (diagnosis.diagnostico_tecnico) {
     lines.push("## Avaliação técnica");
     lines.push(`- **LUFS:** ${diagnosis.diagnostico_tecnico.lufs_avaliacao}`);
@@ -1276,13 +1283,18 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
   const keyValue = realAnalysis?.key ?? null;
   const durationValue = realAnalysis ? formatDuration(realAnalysis.duration_sec) : null;
 
-  // Só exibe itens com texto qualitativo real — os MetricCards já mostram valores/alvos.
+  // Só exibe itens com avaliação qualitativa real e acionável — MetricCards já mostram valores/alvos.
+  // Heurística: rejeita textos curtos, genéricos ("ok", "dentro do alvo") ou sem verbo de ação/recomendação.
+  const ACTIONABLE_RX = /\b(ajust|reduz|aument|considere|recomend|evite|use|adicion|comprim|equaliz|cort|atenu|reforc|suaviz|alvo|abaixo|acima|sugiro|sugere|precisa|deveria|pode|risco|atenção|cuidado|melhor)/i;
   const technicalItems = (diagnostico_tecnico ? [
     { label: "LUFS", help: "volume percebido em plataformas", text: diagnostico_tecnico.lufs_avaliacao },
     { label: "True Peak", help: "risco de distorção após compressão/streaming", text: diagnostico_tecnico.true_peak_avaliacao },
     { label: "Dynamic Range", help: "variação entre trechos suaves e fortes", text: diagnostico_tecnico.dynamic_range_avaliacao },
     { label: "Espectro", help: "brilho, presença e distribuição de frequências", text: diagnostico_tecnico.espectro_avaliacao },
-  ] : []).filter((it) => typeof it.text === "string" && it.text.trim().length >= 40);
+  ] : []).filter((it) => {
+    const t = typeof it.text === "string" ? it.text.trim() : "";
+    return t.length >= 60 && ACTIONABLE_RX.test(t);
+  });
 
   // Breadcrumb data
   const projectId = (input as { projectId?: string }).projectId;
@@ -1434,7 +1446,7 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
           </div>
         </DiagCard>
 
-        <DiagCard icon="🎛️" title="Sugestões de arranjo, timbragem e mix" variant="primary">
+        <DiagCard icon="🎛️" title="Sugestões de arranjo, timbragem e mix" variant="primary" aiBadge>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
             {(sugestoes_arranjo ?? []).map((s, i) => {
               const key = `arranjo-${i}`;
@@ -1466,7 +1478,7 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
 
       {/* IDENTIDADE — agora secundária, depois do diagnóstico acionável */}
       <section id="dna-identidade" className="scroll-mt-16">
-        <DiagCard icon="🎭" title="Identidade da Faixa" variant="primary">
+        <DiagCard icon="🎭" title="Identidade da Faixa" variant="primary" aiBadge>
           <div className="space-y-3">
             <div>
               <p className="text-base font-bold">{identidade?.mood_principal}</p>
@@ -1647,26 +1659,12 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
         </DetailSection>
       )}
 
-      <DetailSection id="dna-perfil" icon="📡" title="Perfil acústico">
-        <Card className="animate-scale-in">
-          <CardHeader className="pb-2 px-4 pt-3">
-            <CardTitle className="flex items-center gap-2 text-[11px] font-mono uppercase tracking-wider text-primary">
-              <span>📡</span> Perfil Acústico
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="px-4 pb-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
-              <AcousticRadar trackFeatures={trackFeatures} refFeatures={refFeatures} />
-              <div className="space-y-2.5">
-                {FEATURE_KEYS.map(k => (
-                  <FeatureBar key={k} label={FEATURE_LABELS[k]}
-                    value={trackFeatures[k]} refValue={refFeatures[k]} />
-                ))}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </DetailSection>
+      {/* Perfil acústico (Radar + Bars vs GENRE_PRESETS) removido:
+          os atributos estilo Spotify já são comparados em "Referências" via BenchmarkPanel
+          contra o banco real (music_dna_benchmarks). refFeatures permanece no diagnosis
+          para uso interno (acceptance signal, distância de catálogo). */}
+
+
 
 
       {/* AcousticMatchPanel removido do resultado: as referências unificadas (catálogo + IA) já cobrem o caso de uso. */}

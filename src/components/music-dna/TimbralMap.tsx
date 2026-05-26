@@ -228,7 +228,7 @@ export function TimbralMap({ user }: Props) {
           Mapa timbral (UMAP do banco de referência)
         </CardTitle>
         <p className="text-xs text-muted-foreground">
-          {data.points.length} faixas projetadas em 2D. Sua faixa em vermelho. Vizinhos = sonoridade parecida.
+          Onde sua faixa cai dentro do banco: {data.points.length} referências projetadas em 2D (UMAP). Sua faixa em vermelho — os pontos mais próximos têm timbre parecido.
         </p>
       </CardHeader>
       <CardContent>
