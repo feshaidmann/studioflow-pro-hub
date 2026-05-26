@@ -260,7 +260,11 @@ function BenchmarkPanel({ diagnosis, benchmark }: { diagnosis: DiagnosisResult; 
             <div className="rounded-lg bg-muted/30 border border-border p-3">
               <p className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground">Fonte</p>
               <p className="text-sm font-semibold">{benchmarkSource}</p>
+              {benchmark && (
+                <p className="text-[10px] font-mono text-muted-foreground mt-0.5">Recalculado a cada nova faixa importada</p>
+              )}
             </div>
+
             <div className="rounded-lg bg-muted/30 border border-border p-3">
               <p className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground">Benchmark</p>
               <p className="text-sm font-semibold">{benchmarkLabel}</p>
