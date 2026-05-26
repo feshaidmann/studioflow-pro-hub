@@ -1,83 +1,75 @@
-# Unificar banco de comparação do DNA Musical
+## Objetivo
 
-Hoje existem **duas fontes paralelas** alimentando a comparação por gênero:
+Preencher e corrigir a coluna `genre` da tabela `music_reference_tracks` a partir do CSV `music_analysis_full_genre.csv` (846 bandas × 1 gênero cada), aplicando as decisões aprovadas:
 
-1. `music_reference_tracks` — catálogo real (~17k faixas) com features calculadas via librosa/pyloudnorm.
-2. `music_dna_benchmarks` — tabela materializada com mistura de seeds manuais antigos (round numbers, 2026-04) e agregações parciais (2026-05). Causa números desatualizados como "Hip-Hop · 115 faixas".
+1. **Sobrescrever tudo** — CSV vira fonte única de verdade.
+2. **Ignorar gêneros lixo** — não regravar quando o CSV traz valor inválido.
+3. **Canonizar** via `public.genre_canonical()` antes de gravar.
+4. **Match case-insensitive + trim** entre CSV.band e DB.band.
 
-A solução é eliminar a segunda fonte e derivar tudo em tempo real do catálogo, com normalização canônica de gênero.
+## Como vai funcionar
 
-## O que muda
+### 1. Staging em tabela temporária
 
-### 1. Backend (uma migration)
+Em vez de fazer 846 UPDATEs separados, vou:
 
-- **`genre_canonical(text)`** — função `IMMUTABLE` que normaliza casing/acentos e mapeia sinônimos (`Hip Hop` / `Hip hop` / `Rap` → `Hip-Hop`; `Funk Carioca` / `Brazilian Funk` → `Funk Carioca`; etc.).
-- **DROP** da tabela `music_dna_benchmarks` (com backup automático em `music_dna_benchmarks_legacy_backup` por segurança).
-- **CREATE VIEW `music_dna_benchmarks`** com as mesmas colunas que o front consome hoje, agregando direto de `music_reference_tracks` onde `quarantined = false`, agrupando por `genre_canonical(genre)`, e filtrando `total_faixas >= 5`. Inclui também `total_artistas` (count distinct de `band`) para sinalizar representatividade.
-- **`get_benchmark_for_genre(p_genero text)`** — RPC `SECURITY INVOKER` que (a) tenta match exato pelo gênero canônico, (b) cai pra família/gênero pai (Trap→Hip-Hop, Piseiro→Forró, etc.) usando o mapeamento existente em `src/lib/genreFamilies.ts` espelhado em SQL, (c) retorna `NULL` quando não há amostra suficiente.
-- Remover/aposentar `recalcular_benchmark_genero` (não tem mais sentido com a VIEW).
+a. Criar migration que monta uma tabela de staging `_genre_import_staging(band_norm text, genre_raw text)`.
+b. Popular via `INSERT` (uso a ferramenta de inserção do Supabase) com as 846 linhas extraídas do CSV. Apenas duas colunas — payload pequeno (~30 KB).
+c. Rodar um único `UPDATE ... FROM staging` que faz todo o trabalho.
+d. `DROP TABLE _genre_import_staging` ao final.
 
-### 2. Front-end
+### 2. Filtro de "lixo"
 
-- **`src/hooks/useMusicDnaBenchmarks.ts`** — simplificar: ler só a VIEW, remover o fallback que recalculava a partir de `music_dna_analyses` (essa fonte misturava dados subjetivos do usuário com benchmarks). Manter a função `findBenchmarkForGenre`, mas usar a RPC quando o gênero não está direto na VIEW.
-- **`src/hooks/useGenreProfiles.ts`** — continuar lendo da VIEW (já compatível), mas usar `total_faixas >= 5` em vez de `>= 20`, já que a VIEW garante qualidade mínima.
-- **`src/hooks/useMusicDNA.ts`** e **`supabase/functions/music-dna-analyze/index.ts`** — trocar `SELECT * FROM music_dna_benchmarks WHERE genero = ...` por `rpc('get_benchmark_for_genre', { p_genero })`, ganhando o fallback automático.
-- **`src/components/music-dna/MusicDNAAnalyzer.tsx`** — atualizar o rótulo da fonte: em vez de "Banco público" mostrar "Catálogo de referência · N faixas · M artistas" para deixar claro o que está por trás.
-- **`src/pages/admin/ReferenceTracks.tsx`** — remover qualquer UI residual de "recalcular benchmark" (agora é automático).
+Lista bloqueada (case-insensitive, comparada ao valor cru do CSV antes de canonizar):
 
-### 3. Limpeza
-
-- Remover seeds antigos junto com o DROP da tabela.
-- Atualizar `docs/04-banco-de-dados.md`: trocar a linha de `music_dna_benchmarks` para indicar que é uma VIEW derivada.
-
-## Detalhes técnicos
-
-### Estrutura da VIEW
-
-```sql
-CREATE OR REPLACE VIEW public.music_dna_benchmarks AS
-SELECT
-  genre_canonical(genre)         AS genero,
-  COUNT(*)::int                  AS total_faixas,
-  COUNT(DISTINCT band)::int      AS total_artistas,
-  AVG(danceability)              AS avg_danceability,
-  AVG(energy)                    AS avg_energy,
-  AVG(loudness_rms_db)           AS avg_loudness_db,
-  AVG(speechiness)               AS avg_speechiness,
-  AVG(acousticness)              AS avg_acousticness,
-  AVG(instrumentalness)          AS avg_instrumentalness,
-  AVG(liveness)                  AS avg_liveness,
-  AVG(valence)                   AS avg_valence,
-  AVG(tempo_bpm)                 AS avg_tempo_bpm,
-  AVG(lufs_integrated)           AS avg_lufs,
-  AVG(dynamic_range_db)          AS avg_dynamic_range_db,
-  AVG(spectral_centroid)         AS avg_spectral_centroid,
-  AVG(spectral_flatness)         AS avg_spectral_flatness,
-  AVG(zero_crossing_rate)        AS avg_zero_crossing_rate,
-  NULL::jsonb                    AS top_keys,  -- calculado on-demand se preciso
-  NOW()                          AS atualizado_em
-FROM public.music_reference_tracks
-WHERE quarantined = false AND genre <> ''
-GROUP BY genre_canonical(genre)
-HAVING COUNT(*) >= 5;
-
-GRANT SELECT ON public.music_dna_benchmarks TO authenticated, anon;
+```
+'', 'unknown', 'n/a', 'audiobook', 'non-music', 'soundtrack',
+'special purpose artist', 'composer', 'fictional band',
+'male vocalist', 'british', 'english', 'brazilian',
+'to clean up', 'eric alexander', 'joelho de porco',
+'joe meek 60s telstar'
 ```
 
-### Performance
+Linhas com gênero nesta lista são removidas do staging antes do UPDATE → as faixas correspondentes ficam intocadas no banco.
 
-- Índice funcional `CREATE INDEX ON music_reference_tracks (genre_canonical(genre)) WHERE quarantined=false` torna o GROUP BY barato (~30–50 ms para 17k linhas).
-- React Query mantém `staleTime` de 30 min, então o front quase nunca re-consulta.
-- Caso fique lento no futuro, basta trocar `VIEW` por `MATERIALIZED VIEW` + trigger de refresh — interface fica intacta.
+### 3. UPDATE final
 
-### Arquivos afetados
+```sql
+UPDATE public.music_reference_tracks t
+   SET genre = COALESCE(public.genre_canonical(s.genre_raw), s.genre_raw),
+       updated_at = now()
+  FROM _genre_import_staging s
+ WHERE lower(btrim(t.band)) = s.band_norm
+   AND COALESCE(public.genre_canonical(s.genre_raw), s.genre_raw) IS DISTINCT FROM t.genre;
+```
 
-- **Novo:** uma migration (drop + função + view + índice + RPC).
-- **Editados:** `useMusicDnaBenchmarks.ts`, `useGenreProfiles.ts`, `useMusicDNA.ts`, `music-dna-analyze/index.ts`, `MusicDNAAnalyzer.tsx`, `ReferenceTracks.tsx`, `docs/04-banco-de-dados.md`.
+- `genre_canonical` devolve `NULL` para gêneros considerados ruído pela função (já cobre alguns casos extras como `'(sem)'`).
+- O `COALESCE` garante que, se `genre_canonical` retornar `NULL` para algo que escapou da blocklist, gravamos o valor literal do CSV em vez de apagar o gênero existente.
+- Cláusula `IS DISTINCT FROM` evita gravações desnecessárias.
 
-## Resultado esperado
+### 4. Relatório pós-execução
 
-- Uma única fonte de verdade — qualquer ajuste de catálogo se reflete imediatamente.
-- Fim dos números fantasmas tipo "Hip-Hop · 115 faixas".
-- O painel passa a expor "M artistas" junto do "N faixas", deixando explícita a representatividade.
-- Compatibilidade preservada: como a VIEW mantém o nome `music_dna_benchmarks`, código não migrado ainda funciona durante a transição.
+Após o UPDATE rodo um `SELECT` de auditoria (via read_query) e devolvo no chat:
+
+- Linhas atualizadas vs. inalteradas.
+- Bandas do CSV que não bateram com nenhum registro no banco (após normalização).
+- Bandas no banco que continuam sem gênero (não estavam no CSV).
+- Top-20 gêneros após a operação, para conferência visual.
+
+## Etapas
+
+1. **Migration** — cria `_genre_import_staging` (temp permanente até o próximo passo) + função auxiliar opcional. Aprovação do usuário no popup do Supabase.
+2. **Insert** — popular staging com as 846 tuplas `(band_norm, genre_raw)`. Geração local do SQL a partir do CSV já copiado em `/tmp/genres.csv`.
+3. **Migration final** — roda o UPDATE em massa e dropa a tabela de staging.
+4. **Auditoria** — `read_query` com as 4 consultas acima; resumo no chat.
+
+## Riscos e mitigações
+
+- **Bandas com nome diferente entre CSV e banco** (ex.: "Beatles" vs "The Beatles"): não tento fuzzy-match para evitar falsos positivos; entram no relatório de não-batidas para você decidir caso a caso.
+- **Rollback**: como vamos sobrescrever, preparo o `INSERT` da staging guardando também o `genre` antigo numa coluna `genre_prev text` — assim, se você quiser reverter, basta um único `UPDATE` de espelho. A tabela de staging é dropada ao final, mas posso opcionalmente persistir um snapshot em `public.music_reference_tracks_genre_backup` antes de dropar (recomendo manter por 30 dias).
+- **Tamanho do payload**: 846 linhas × 2 colunas curtas = ~30 KB, bem abaixo do limite da ferramenta de insert.
+
+## Fora de escopo nesta tarefa
+
+- Ajustes no algoritmo de similaridade do prompt `prompt_lovable_music_dna_fix.md` — abro plano separado após esta tarefa, conforme você confirmar.
+- Limpeza dos 23 registros com `band` parecendo nome de arquivo (problema antigo de importação) — relato no fim, mas não toco.

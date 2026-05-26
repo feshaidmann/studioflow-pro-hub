@@ -1340,6 +1340,30 @@ export type Database = {
         }
         Relationships: []
       }
+      music_reference_tracks_genre_backup: {
+        Row: {
+          backed_up_at: string
+          band: string
+          filename: string
+          genre_prev: string | null
+          track_id: string
+        }
+        Insert: {
+          backed_up_at?: string
+          band: string
+          filename: string
+          genre_prev?: string | null
+          track_id: string
+        }
+        Update: {
+          backed_up_at?: string
+          band?: string
+          filename?: string
+          genre_prev?: string | null
+          track_id?: string
+        }
+        Relationships: []
+      }
       music_track_versions: {
         Row: {
           created_at: string
