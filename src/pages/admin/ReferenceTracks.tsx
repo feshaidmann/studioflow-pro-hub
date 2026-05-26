@@ -346,15 +346,13 @@ export default function ReferenceTracks() {
       </Card>
 
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
+        <CardHeader>
           <div>
             <CardTitle>Cobertura de Benchmarks</CardTitle>
-            <CardDescription>Faixas de referência reais vs. seed editorial por gênero</CardDescription>
+            <CardDescription>
+              Benchmarks são derivados em tempo real do catálogo de faixas de referência (view unificada). Atualizam automaticamente a cada novo import.
+            </CardDescription>
           </div>
-          <Button variant="outline" size="sm" onClick={handleRecalcAll} disabled={recalcAll || !coverage.length}>
-            {recalcAll ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}
-            Recalcular tudo
-          </Button>
         </CardHeader>
         <CardContent>
           {loadingMeta ? <div className="text-sm text-muted-foreground">Carregando…</div> : (
