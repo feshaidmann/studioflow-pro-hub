@@ -1654,6 +1654,45 @@ export type Database = {
         }
         Relationships: []
       }
+      playlist_profiles: {
+        Row: {
+          created_at: string
+          description: string
+          feature_ranges: Json
+          id: string
+          name: string
+          sample_tracks: Json
+          size: number
+          slug: string
+          updated_at: string
+          vector: Json
+        }
+        Insert: {
+          created_at?: string
+          description?: string
+          feature_ranges?: Json
+          id?: string
+          name: string
+          sample_tracks?: Json
+          size?: number
+          slug: string
+          updated_at?: string
+          vector?: Json
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          feature_ranges?: Json
+          id?: string
+          name?: string
+          sample_tracks?: Json
+          size?: number
+          slug?: string
+          updated_at?: string
+          vector?: Json
+        }
+        Relationships: []
+      }
       professional_ratings: {
         Row: {
           created_at: string
@@ -2909,6 +2948,15 @@ export type Database = {
           mode: string
           tempo_bpm: number
           valence: number
+        }[]
+      }
+      get_genre_section_stats: {
+        Args: { p_genre: string }
+        Returns: {
+          p50_duration_sec: number
+          p50_seconds_to_first_chorus_estimate: number
+          p50_segments_count: number
+          sample_size: number
         }[]
       }
       get_marketplace_providers: {
