@@ -1684,18 +1684,20 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
               acousticness: realAnalysis.acousticness ?? undefined,
             }}
           />
-          <TimbralMap
-            user={{
-              lufs_integrated: realAnalysis.lufs_integrated,
-              dynamic_range_db: realAnalysis.dynamic_range_lu,
+          <CatalogNeighborsPanel
+            neighbors={catalogNeighbors}
+            totalCompared={diagnosis.catalogTotalCompared ?? diagnosis.catalogTotal}
+            userTrack={{
+              bpm: typeof realAnalysis.bpm === "number" ? realAnalysis.bpm : undefined,
+              lufs: realAnalysis.lufs_integrated,
+              energy: realAnalysis.energy,
+              danceability: realAnalysis.danceability,
+              dynamic_range: realAnalysis.dynamic_range_lu,
               spectral_centroid: realAnalysis.spectral_centroid_hz,
-              spectral_rolloff: (realAnalysis as { spectral_rolloff_hz?: number }).spectral_rolloff_hz,
-              spectral_bandwidth: (realAnalysis as { spectral_bandwidth_hz?: number }).spectral_bandwidth_hz,
-              zero_crossing_rate: (realAnalysis as { zero_crossing_rate?: number }).zero_crossing_rate,
-              tempo_bpm: typeof realAnalysis.bpm === "number" ? realAnalysis.bpm : undefined,
-              mfcc: (realAnalysis as { mfcc?: number[] }).mfcc,
+              key: (realAnalysis as { key_name?: string }).key_name,
             }}
           />
+
         </div>
       )}
 
