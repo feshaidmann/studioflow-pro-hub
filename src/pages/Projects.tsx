@@ -663,6 +663,9 @@ export default function Projects() {
 
       <ImportSpotifyCatalogDialog open={spotifyImportOpen} onOpenChange={setSpotifyImportOpen} />
 
+      {/* ── Catálogo Publicado (importado do Spotify) ── */}
+      <SpotifyCatalogSection />
+
       {/* ── Guest projects: projects where the user is an invited member ── */}
       {guestProjects.length > 0 && (
         <div className="space-y-3">
