@@ -49,6 +49,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { NeighborDetailDialog } from "@/components/music-dna/NeighborDetailDialog";
 import { GenreMismatchHint } from "@/components/music-dna/GenreMismatchHint";
 import { PlaylistMatchCard } from "@/components/music-dna/PlaylistMatchCard";
+import { CompatiblePlaylistsCard } from "@/components/music-dna/CompatiblePlaylistsCard";
 import { StageSelector } from "@/components/music-dna/StageSelector";
 import {
   STAGE_LABEL,
@@ -1889,7 +1890,7 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
         genre={diagnosis.genero_classificado}
         mood={diagnosis.identidade?.mood_principal ? [diagnosis.identidade.mood_principal] : []}
         styleTags={diagnosis.identidade?.tags ?? []}
-        references={(diagnosis.referencias_proximas ?? []).map((r) => r.band).filter(Boolean)}
+        references={(diagnosis.referencias_proximas ?? []).map((r) => r.artista).filter(Boolean)}
       />
 
       {/* Footer */}
