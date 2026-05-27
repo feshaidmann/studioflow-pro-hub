@@ -25,6 +25,13 @@ export interface SavedAnalysis {
   version_number?: number | null;
   version_label?: string | null;
   summary_variant?: string | null;
+  spotify_track_id?: string | null;
+  spotify_tracks?: {
+    id: string;
+    name: string;
+    track_number: number | null;
+    spotify_releases?: { id: string; name: string; image_url: string | null } | null;
+  } | null;
 }
 
 const SESSION_KEY = "music-dna-last-analysis";
