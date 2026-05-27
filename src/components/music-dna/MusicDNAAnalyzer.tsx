@@ -2037,8 +2037,9 @@ export function MusicDNAAnalyzer() {
   }, [savedAnalysisId, viewingDiagnosis, result, lastInput, saveAnalysisAsync]);
 
   const handleLoadSaved = (saved: SavedAnalysis) => {
-    const meta = saved.input_metadata as { name: string; notes?: string; references: string[]; projectId?: string };
-    const input = { ...meta, projectId: meta.projectId ?? saved.project_id ?? undefined };
+    const meta = saved.input_metadata as { name: string; notes?: string; references: string[]; projectId?: string; stage?: AudioStage };
+    const stageFromSaved: AudioStage = (meta.stage ?? (saved.stage as AudioStage | undefined) ?? "master");
+    const input = { ...meta, projectId: meta.projectId ?? saved.project_id ?? undefined, stage: stageFromSaved };
     setLastInput(input);
     setViewingDiagnosis(saved.diagnosis);
     setIsSaved(true);
