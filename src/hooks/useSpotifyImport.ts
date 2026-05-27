@@ -125,3 +125,58 @@ export function useImportSpotifySelection() {
     },
   });
 }
+
+export interface SpotifyReleaseRow {
+  id: string;
+  spotify_album_id: string;
+  spotify_album_uri: string | null;
+  name: string;
+  release_type: string;
+  release_date: string | null;
+  image_url: string | null;
+  total_tracks: number | null;
+  imported_at: string;
+  tracks?: {
+    id: string;
+    name: string;
+    spotify_track_uri: string;
+    track_number: number | null;
+    duration_ms: number | null;
+    isrc: string | null;
+  }[];
+}
+
+export function useSpotifyCatalog() {
+  return useQuery({
+    queryKey: ["spotify-releases"],
+    queryFn: async (): Promise<SpotifyReleaseRow[]> => {
+      const { data, error } = await supabase
+        .from("spotify_releases")
+        .select(`
+          id, spotify_album_id, spotify_album_uri, name, release_type,
+          release_date, image_url, total_tracks, imported_at,
+          spotify_tracks (id, name, spotify_track_uri, track_number, duration_ms, isrc)
+        `)
+        .order("release_date", { ascending: false, nullsFirst: false });
+      if (error) throw error;
+      return (data ?? []).map((r: any) => ({
+        ...r,
+        tracks: r.spotify_tracks ?? [],
+      })) as SpotifyReleaseRow[];
+    },
+  });
+}
+
+export function useDeleteSpotifyRelease() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("spotify_releases").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["spotify-releases"] });
+      qc.invalidateQueries({ queryKey: ["spotify-tracks-with-uri"] });
+    },
+  });
+}
