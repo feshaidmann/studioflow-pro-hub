@@ -29,7 +29,7 @@ interface Props {
   onOpenChange: (open: boolean) => void;
 }
 
-const URL_REGEX = /^https?:\/\/open\.spotify\.com\/artist\/[a-zA-Z0-9]+(\?.*)?$/;
+const URL_REGEX = /^https?:\/\/open\.spotify\.com\/(intl-[a-z]{2}\/)?artist\/[a-zA-Z0-9]+(\?.*)?$/;
 
 type Step = "url" | "select" | "done";
 
