@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronDown, ChevronRight, Disc3, Music, Trash2, ExternalLink } from "lucide-react";
+import { ChevronDown, ChevronRight, Disc3, Music, Trash2, ExternalLink, Link2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { useSpotifyCatalog, useDeleteSpotifyRelease } from "@/hooks/useSpotifyImport";
+import { LinkAnalysisTrackDialog } from "@/components/spotify-import/LinkAnalysisTrackDialog";
 
 const TYPE_LABEL: Record<string, string> = {
   album: "Álbum",
@@ -33,6 +34,7 @@ export function SpotifyCatalogSection() {
   const deleteRelease = useDeleteSpotifyRelease();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [confirmId, setConfirmId] = useState<string | null>(null);
+  const [linkTarget, setLinkTarget] = useState<{ trackId: string; trackLabel: string; currentAnalysisId: string | null } | null>(null);
 
   if (isLoading || releases.length === 0) return null;
 
