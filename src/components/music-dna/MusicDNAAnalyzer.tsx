@@ -50,6 +50,7 @@ import { NeighborDetailDialog } from "@/components/music-dna/NeighborDetailDialo
 import { GenreMismatchHint } from "@/components/music-dna/GenreMismatchHint";
 import { PlaylistMatchCard } from "@/components/music-dna/PlaylistMatchCard";
 import { CompatiblePlaylistsCard } from "@/components/music-dna/CompatiblePlaylistsCard";
+import { ActiveMonitorsCard } from "@/components/music-dna/ActiveMonitorsCard";
 import { StageSelector } from "@/components/music-dna/StageSelector";
 import {
   STAGE_LABEL,
