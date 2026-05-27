@@ -124,7 +124,14 @@ enquadrando no que o Spotify valoriza para destacar uma faixa.`;
 
   const confidenceBlock = buildConfidenceBlock(payload.features as Record<string, unknown> | null | undefined);
 
-  return `${prompt}${variantBlock}
+  const stage = String(payload.stage ?? "master").toLowerCase();
+  const stageBlock = stage === "demo"
+    ? `\n\n════════════════════════════════════════════════\nESTÁGIO: DEMO — o artista declarou que esta gravação é uma DEMO (ideia/arranjo).\n════════════════════════════════════════════════\n- NÃO cobre LUFS, True Peak ou competitividade de streaming. Mencione isso apenas como referência futura, nunca como problema atual.\n- Foque em: identidade artística, contraste verso/refrão, escolhas de arranjo, intenção do vocal, presença de elementos que vão sustentar a faixa quando for mixada/masterizada.\n- Em "proximos_passos", priorize ações de COMPOSIÇÃO/ARRANJO/CAPTAÇÃO. Evite passos de mix/master final.\n- diagnostico_resumo termina com o próximo passo CRIATIVO mais valioso antes de levar pra mix.`
+    : stage === "mix"
+    ? `\n\n════════════════════════════════════════════════\nESTÁGIO: MIX — o artista declarou que esta versão está em MIXAGEM (arranjo fechado, ainda sem master final).\n════════════════════════════════════════════════\n- NÃO cobre LUFS de streaming (será decidido no master). Pode mencionar como referência ("seu mix está em X LUFS; o master vai chegar perto de −14").\n- COBRE True Peak (proteger o sinal antes do master) e Dynamic Range mínimo (não destruir a dinâmica antes da hora).\n- Foque em: balanço entre elementos, espaço estéreo, headroom, dinâmica preservada, contraste verso/refrão.\n- Em "proximos_passos", priorize ajustes de MIX DIY. Master fica para a etapa seguinte.`
+    : `\n\n════════════════════════════════════════════════\nESTÁGIO: MASTER — o artista declarou que esta é a versão final pronta para distribuição.\n════════════════════════════════════════════════\n- COBRE integralmente LUFS (alvo −14 para streaming), True Peak (≤ −1 dBTP) e Dynamic Range.\n- Pode falar de pitch para playlists editoriais e algorítmicas; competitividade de streaming é tema válido aqui.`;
+
+  return `${prompt}${variantBlock}${stageBlock}
 
 ════════════════════════════════════════════════
 ATRIBUTOS ESTILO SPOTIFY — FONTE CONSOLIDADA

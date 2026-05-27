@@ -659,6 +659,7 @@ export function useMusicDNA(): UseMusicDNAReturn {
         features: externalLookup?.features,
         genero: input.genre,
         track_name: input.name,
+        stage: input.stage ?? "master",
         classifier_hint: classifierHint,
         track_features: {
           // ── Acoustic fingerprint — primary similarity signal ──────────────

@@ -49,6 +49,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { NeighborDetailDialog } from "@/components/music-dna/NeighborDetailDialog";
 import { GenreMismatchHint } from "@/components/music-dna/GenreMismatchHint";
 import { PlaylistMatchCard } from "@/components/music-dna/PlaylistMatchCard";
+import { StageSelector } from "@/components/music-dna/StageSelector";
+import {
+  STAGE_LABEL,
+  STAGE_PROFILES,
+  resolveStage,
+  type AudioStage,
+} from "@/lib/musicDnaStages";
 import { CatalogNeighborsPanel } from "@/components/music-dna/CatalogNeighborsPanel";
 // AcousticMatchPanel deixou de ser usado no resultado público (mantido no codebase para uso futuro/admin).
 
@@ -410,17 +417,19 @@ function DetailSection({ id, title, icon, children }: {
   );
 }
 
-function ExecutiveSummary({ diagnosis, onAddAllSteps, allStepsAdded, analysisId, onSendSignal }: {
+function ExecutiveSummary({ diagnosis, onAddAllSteps, allStepsAdded, analysisId, onSendSignal, stage = "master" }: {
   diagnosis: DiagnosisResult;
   onAddAllSteps: () => void;
   allStepsAdded: boolean;
   analysisId?: string;
   onSendSignal?: (signal: "thumbs_up" | "thumbs_down" | "copied") => void;
+  stage?: AudioStage;
 }) {
   const [voted, setVoted] = useState<"thumbs_up" | "thumbs_down" | null>(null);
   const truePeak = diagnosis.realAnalysis?.true_peak_dbtp;
   const lufs = diagnosis.realAnalysis?.lufs_integrated;
   const dynamicRange = diagnosis.realAnalysis?.dynamic_range_lu;
+  const profile = STAGE_PROFILES[stage];
   // (duration/formatDuration removidos: a Duração já aparece no MetricCard "Duração")
   const hasCoreMetrics = [truePeak, lufs, dynamicRange].every(
     (v) => typeof v === "number" && Number.isFinite(v),
@@ -429,15 +438,32 @@ function ExecutiveSummary({ diagnosis, onAddAllSteps, allStepsAdded, analysisId,
   // (Cards "Força/Gargalo/Próxima ação" foram removidos do resumo:
   // o 1º item dessas listas já aparece na seção "Diagnóstico" logo abaixo.)
 
-  // Thresholds alinhados aos targets dos MetricCards (Técnico) para evitar veredito conflitante.
-  // LUFS verde ∈ [−15, −13]; TP ≤ −1; DR ≥ 7. Faixa mais larga é considerada "boa base".
-  const status = !hasCoreMetrics
-    ? { label: "Análise incompleta", tone: "warning" as const }
-    : (truePeak as number) <= -1 && (lufs as number) >= -15 && (lufs as number) <= -13 && (dynamicRange as number) >= 7
-    ? { label: "Pronta para streaming", tone: "success" as const }
-    : (truePeak as number) > 0 || (dynamicRange as number) < 5
-    ? { label: "Precisa revisão técnica", tone: "destructive" as const }
-    : { label: "Boa base, precisa ajustes", tone: "primary" as const };
+  // Veredito por estágio:
+  //  - master: alvo cheio de streaming (LUFS −15..−13, TP ≤−1, DR ≥7)
+  //  - mix: só cobra True Peak e DR mínimo (LUFS folgado, vai ser decidido no master)
+  //  - demo: nunca acende "pronta" — esconde badge ou mostra status neutro
+  const status = (() => {
+    if (profile.readyBadge === "hidden") {
+      return { label: "Análise de demo", tone: "primary" as const };
+    }
+    if (!hasCoreMetrics) {
+      return { label: "Análise incompleta", tone: "warning" as const };
+    }
+    const tp = truePeak as number;
+    const lf = lufs as number;
+    const dr = dynamicRange as number;
+    if (profile.readyBadge === "mix") {
+      if (tp > 0 || dr < 5) return { label: "Precisa revisão técnica", tone: "destructive" as const };
+      if (tp <= -1 && dr >= 6) return { label: "Pronta pra mandar pro master", tone: "success" as const };
+      return { label: "Boa base, ajustes de mix", tone: "primary" as const };
+    }
+    // master
+    if (tp <= -1 && lf >= -15 && lf <= -13 && dr >= 7) {
+      return { label: "Pronta para streaming", tone: "success" as const };
+    }
+    if (tp > 0 || dr < 5) return { label: "Precisa revisão técnica", tone: "destructive" as const };
+    return { label: "Boa base, precisa ajustes", tone: "primary" as const };
+  })();
 
 
   const toneClass = {
@@ -954,11 +980,12 @@ async function downloadAnalysisReport(input: { name: string; references: string[
 function FormView({ onSubmit, isPending, projects }: {
   onSubmit: (v: FormValues, file: File) => void;
   isPending: boolean;
-  projects: Array<{ id: string; name: string; artist: string }>;
+  projects: Array<{ id: string; name: string; artist: string; stage?: string }>;
 }) {
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [stageTouched, setStageTouched] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<FormValues>({
@@ -1091,32 +1118,67 @@ function FormView({ onSubmit, isPending, projects }: {
               </FormItem>
             )} />
 
-            <FormField control={form.control} name="projectId" render={({ field }) => (
-              <FormItem>
-                <FormLabel className="text-[11px] uppercase tracking-widest font-mono text-muted-foreground">
-                  Vincular a um projeto (opcional)
-                </FormLabel>
-                <Select
-                  value={field.value || "__none__"}
-                  onValueChange={(v) => field.onChange(v === "__none__" ? "" : v)}
-                >
+            <FormField control={form.control} name="projectId" render={({ field }) => {
+              const derivedStage = (() => {
+                const proj = projects.find((p) => p.id === field.value);
+                if (!proj?.stage) return null;
+                return resolveStage(undefined, proj.stage);
+              })();
+              return (
+                <FormItem>
+                  <FormLabel className="text-[11px] uppercase tracking-widest font-mono text-muted-foreground">
+                    Vincular a um projeto (opcional)
+                  </FormLabel>
+                  <Select
+                    value={field.value || "__none__"}
+                    onValueChange={(v) => {
+                      const newId = v === "__none__" ? "" : v;
+                      field.onChange(newId);
+                      // Se usuário ainda não tocou no seletor de estágio, deriva do projeto
+                      if (!stageTouched) {
+                        const proj = projects.find((p) => p.id === newId);
+                        const derived = resolveStage(undefined, proj?.stage);
+                        form.setValue("stage", derived);
+                      }
+                    }}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Sem projeto vinculado" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="__none__">Sem projeto vinculado</SelectItem>
+                      {projects.map((p) => (
+                        <SelectItem key={p.id} value={p.id}>
+                          {p.name}{p.artist ? ` — ${p.artist}` : ""}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                  <input type="hidden" data-derived-stage={derivedStage ?? ""} />
+                </FormItem>
+              );
+            }} />
+
+            <FormField control={form.control} name="stage" render={({ field }) => {
+              const projectId = form.watch("projectId");
+              const proj = projects.find((p) => p.id === projectId);
+              const derived = proj?.stage ? resolveStage(undefined, proj.stage) : null;
+              return (
+                <FormItem>
                   <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Sem projeto vinculado" />
-                    </SelectTrigger>
+                    <StageSelector
+                      value={field.value as AudioStage}
+                      onChange={(s) => { setStageTouched(true); field.onChange(s); }}
+                      derivedFromProject={derived}
+                    />
                   </FormControl>
-                  <SelectContent>
-                    <SelectItem value="__none__">Sem projeto vinculado</SelectItem>
-                    {projects.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>
-                        {p.name}{p.artist ? ` — ${p.artist}` : ""}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )} />
+                  <FormMessage />
+                </FormItem>
+              );
+            }} />
 
             <Collapsible>
               <CollapsibleTrigger className="text-[11px] uppercase tracking-widest font-mono text-muted-foreground hover:text-foreground transition-colors">
@@ -1138,6 +1200,7 @@ function FormView({ onSubmit, isPending, projects }: {
             </Collapsible>
           </CardContent>
         </Card>
+
 
         <div className="flex gap-3 p-3 rounded-lg bg-muted/30 border border-border text-xs text-muted-foreground leading-relaxed animate-fade-in">
           <span className="text-primary shrink-0 mt-0.5">ℹ</span>
@@ -1195,7 +1258,7 @@ function LoadingView({ trackName, logs, progress }: {
 // ── RESULT VIEW ──────────────────────────────────────────────────────────────
 
 function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isSaving, savedAnalysisId, onEnsureSaved, projects }: {
-  input: TrackInput | { name: string; notes?: string; references: string[]; projectId?: string };
+  input: TrackInput | { name: string; notes?: string; references: string[]; projectId?: string; stage?: AudioStage };
   diagnosis: DiagnosisResult;
   benchmark?: MusicDnaBenchmark;
   savedAnalysisId?: string;
@@ -1211,6 +1274,8 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
   const [allStepsAdded, setAllStepsAdded] = useState(false);
   const [openNeighbor, setOpenNeighbor] = useState<CatalogNeighbor | null>(null);
   const { addTask } = useTasks();
+  const stage: AudioStage = ((input as { stage?: AudioStage }).stage ?? "master");
+  const stageProfile = STAGE_PROFILES[stage];
   const {
     identidade, diagnostico_tecnico, analise_seccoes,
     referencias_proximas, pontos_fortes, gargalos_criativos,
@@ -1364,7 +1429,16 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
         allStepsAdded={allStepsAdded}
         analysisId={savedAnalysisId}
         onSendSignal={(signal) => ensureSignal(signal)}
+        stage={stage}
       />
+
+      <div className="rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-[11px] leading-relaxed text-foreground/80 animate-fade-in">
+        <span className="font-mono uppercase tracking-widest text-primary mr-1.5">
+          Estágio: {STAGE_LABEL[stage]}
+        </span>
+        <span className="text-muted-foreground">{stageProfile.contextNote}</span>
+      </div>
+
 
       {savedAnalysisId && (
         <TrackVersionsPanel trackName={input.name} currentAnalysisId={savedAnalysisId} />
@@ -1526,24 +1600,33 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
       <DetailSection id="dna-tecnico" icon="🔬" title="Métricas e diagnóstico técnico">
         <div className="space-y-4">
           <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 animate-fade-in">
-            <MetricCard
-              label="LUFS" value={lufsValue} unit="LUFS"
-              help="volume percebido em plataformas"
-              target={{ min: -15, max: -13, ideal: -14 }}
-              range={{ min: -30, max: -6 }}
-            />
-            <MetricCard
-              label="True Peak" value={tpValue} unit="dBTP"
-              help="risco de distorção após streaming"
-              target={{ min: -2, max: -1, ideal: -1 }}
-              range={{ min: -6, max: 0 }}
-            />
+            {stageProfile.enforceLufs && (
+              <MetricCard
+                label="LUFS" value={lufsValue} unit="LUFS"
+                help="volume percebido em plataformas"
+                target={{ min: -15, max: -13, ideal: -14 }}
+                range={{ min: -30, max: -6 }}
+              />
+            )}
+            {stageProfile.enforceTruePeak && (
+              <MetricCard
+                label="True Peak" value={tpValue} unit="dBTP"
+                help="risco de distorção após streaming"
+                target={{ min: -2, max: -1, ideal: -1 }}
+                range={{ min: -6, max: 0 }}
+              />
+            )}
             <MetricCard
               label="DR" value={drValue} unit="LU"
-              help="variação suave/forte"
-              target={{ min: 7, max: 12, ideal: 9 }}
+              help={stageProfile.drMode === "strict" ? "variação suave/forte" : "variação dinâmica (referência)"}
+              target={stageProfile.drMode === "strict"
+                ? { min: 7, max: 12, ideal: 9 }
+                : stageProfile.drMode === "soft"
+                ? { min: 6, max: 14, ideal: 9 }
+                : undefined}
               range={{ min: 2, max: 18 }}
             />
+
             <MetricCard
               label="BPM" value={bpmValue} unit=""
               help="pulso médio detectado"
@@ -1674,35 +1757,39 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
       {/* AcousticMatchPanel removido do resultado: as referências unificadas (catálogo + IA) já cobrem o caso de uso. */}
 
       {realAnalysis && (
-        <div className="grid gap-4 md:grid-cols-2">
-          <PlaylistMatchCard
-            user={{
-              lufs_integrated: realAnalysis.lufs_integrated ?? undefined,
-              dynamic_range_db: realAnalysis.dynamic_range_lu ?? undefined,
-              spectral_centroid: realAnalysis.spectral_centroid_hz ?? undefined,
-              tempo_bpm: typeof realAnalysis.bpm === "number" ? realAnalysis.bpm : undefined,
-              energy: realAnalysis.energy ?? undefined,
-              danceability: realAnalysis.danceability ?? undefined,
-              valence: realAnalysis.valence ?? undefined,
-              acousticness: realAnalysis.acousticness ?? undefined,
-            }}
-          />
-          <CatalogNeighborsPanel
-            neighbors={catalogNeighbors}
-            totalCompared={diagnosis.catalogTotalCompared ?? diagnosis.catalogTotal}
-            userTrack={{
-              bpm: typeof realAnalysis.bpm === "number" ? realAnalysis.bpm : undefined,
-              lufs: realAnalysis.lufs_integrated,
-              energy: realAnalysis.energy,
-              danceability: realAnalysis.danceability,
-              dynamic_range: realAnalysis.dynamic_range_lu,
-              spectral_centroid: realAnalysis.spectral_centroid_hz,
-              key: (realAnalysis as { key_name?: string }).key_name,
-            }}
-          />
-
+        <div className={cn("grid gap-4", stageProfile.showPlaylistMatch ? "md:grid-cols-2" : "md:grid-cols-1")}>
+          {stageProfile.showPlaylistMatch && (
+            <PlaylistMatchCard
+              user={{
+                lufs_integrated: realAnalysis.lufs_integrated ?? undefined,
+                dynamic_range_db: realAnalysis.dynamic_range_lu ?? undefined,
+                spectral_centroid: realAnalysis.spectral_centroid_hz ?? undefined,
+                tempo_bpm: typeof realAnalysis.bpm === "number" ? realAnalysis.bpm : undefined,
+                energy: realAnalysis.energy ?? undefined,
+                danceability: realAnalysis.danceability ?? undefined,
+                valence: realAnalysis.valence ?? undefined,
+                acousticness: realAnalysis.acousticness ?? undefined,
+              }}
+            />
+          )}
+          {stageProfile.showCatalogNeighbors && (
+            <CatalogNeighborsPanel
+              neighbors={catalogNeighbors}
+              totalCompared={diagnosis.catalogTotalCompared ?? diagnosis.catalogTotal}
+              userTrack={{
+                bpm: typeof realAnalysis.bpm === "number" ? realAnalysis.bpm : undefined,
+                lufs: realAnalysis.lufs_integrated,
+                energy: realAnalysis.energy,
+                danceability: realAnalysis.danceability,
+                dynamic_range: realAnalysis.dynamic_range_lu,
+                spectral_centroid: realAnalysis.spectral_centroid_hz,
+                key: (realAnalysis as { key_name?: string }).key_name,
+              }}
+            />
+          )}
         </div>
       )}
+
 
       {/* Footer */}
       <div className="flex items-center justify-between gap-3 p-4 rounded-lg bg-muted/20 border border-border flex-wrap">
@@ -1772,7 +1859,7 @@ function NextStepsBar({
   savedAnalysisId,
 }: {
   diagnosis: DiagnosisResult;
-  input: TrackInput | { name: string; notes?: string; references: string[]; projectId?: string };
+  input: TrackInput | { name: string; notes?: string; references: string[]; projectId?: string; stage?: AudioStage };
   isSaved: boolean;
   savedAnalysisId?: string;
 }) {
@@ -1854,7 +1941,7 @@ function SavedAnalysesList({ onLoad }: {
 
 export function MusicDNAAnalyzer() {
   const { progress, logs, result, isPending, error, analyze, reset } = useMusicDNA();
-  const [lastInput, setLastInput] = useState<{ name: string; notes?: string; references: string[]; projectId?: string } | null>(null);
+  const [lastInput, setLastInput] = useState<{ name: string; notes?: string; references: string[]; projectId?: string; stage?: AudioStage } | null>(null);
   const [viewingDiagnosis, setViewingDiagnosis] = useState<DiagnosisResult | null>(null);
   const [isSaved, setIsSaved] = useState(false);
   const { saveAnalysis, saveAnalysisAsync, isSaving } = useSavedAnalyses();
@@ -1891,8 +1978,15 @@ export function MusicDNAAnalyzer() {
       file,
       notes: values.notes,
       references: values.references,
+      stage: values.stage,
     };
-    setLastInput({ ...input, projectId: values.projectId || undefined });
+    setLastInput({
+      name: input.name,
+      notes: input.notes,
+      references: input.references,
+      projectId: values.projectId || undefined,
+      stage: values.stage,
+    });
     setViewingDiagnosis(null);
     setRestoredFromCache(false);
     analyze(input);
@@ -1943,8 +2037,9 @@ export function MusicDNAAnalyzer() {
   }, [savedAnalysisId, viewingDiagnosis, result, lastInput, saveAnalysisAsync]);
 
   const handleLoadSaved = (saved: SavedAnalysis) => {
-    const meta = saved.input_metadata as { name: string; notes?: string; references: string[]; projectId?: string };
-    const input = { ...meta, projectId: meta.projectId ?? saved.project_id ?? undefined };
+    const meta = saved.input_metadata as { name: string; notes?: string; references: string[]; projectId?: string; stage?: AudioStage };
+    const stageFromSaved: AudioStage = (meta.stage ?? (saved.stage as AudioStage | undefined) ?? "master");
+    const input = { ...meta, projectId: meta.projectId ?? saved.project_id ?? undefined, stage: stageFromSaved };
     setLastInput(input);
     setViewingDiagnosis(saved.diagnosis);
     setIsSaved(true);

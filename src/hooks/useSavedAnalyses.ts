@@ -16,9 +16,11 @@ export interface SavedAnalysis {
     notes?: string;
     references: string[];
     projectId?: string;
+    stage?: "demo" | "mix" | "master";
   };
   diagnosis: DiagnosisResult;
   created_at: string;
+  stage?: string | null;
   track_version_id?: string | null;
   version_number?: number | null;
   version_label?: string | null;
@@ -27,13 +29,13 @@ export interface SavedAnalysis {
 
 const SESSION_KEY = "music-dna-last-analysis";
 
-export function cacheLastAnalysis(input: { name: string; notes?: string; references: string[]; projectId?: string }, diagnosis: DiagnosisResult) {
+export function cacheLastAnalysis(input: { name: string; notes?: string; references: string[]; projectId?: string; stage?: "demo" | "mix" | "master" }, diagnosis: DiagnosisResult) {
   try {
     sessionStorage.setItem(SESSION_KEY, JSON.stringify({ input, diagnosis, timestamp: Date.now() }));
   } catch { /* quota exceeded */ }
 }
 
-export function getCachedAnalysis(): { input: { name: string; notes?: string; references: string[]; projectId?: string }; diagnosis: DiagnosisResult } | null {
+export function getCachedAnalysis(): { input: { name: string; notes?: string; references: string[]; projectId?: string; stage?: "demo" | "mix" | "master" }; diagnosis: DiagnosisResult } | null {
   try {
     const raw = sessionStorage.getItem(SESSION_KEY);
     if (!raw) return null;
@@ -69,7 +71,7 @@ export function useSavedAnalyses() {
       input,
       diagnosis,
     }: {
-      input: { name: string; notes?: string; references: string[]; projectId?: string };
+      input: { name: string; notes?: string; references: string[]; projectId?: string; stage?: "demo" | "mix" | "master" };
       diagnosis: DiagnosisResult;
       silent?: boolean;
     }): Promise<{ id: string; trackVersionId: string; versionNumber: number; summaryVariant: "A" | "B" }> => {
@@ -89,6 +91,7 @@ export function useSavedAnalyses() {
           track_name: input.name,
           genre: diagnosis.genero_classificado || "",
           project_id: input.projectId || null,
+          stage: input.stage ?? null,
           input_metadata: input as any,
           diagnosis: diagnosis as any,
           track_version_id: trackVersionId,
