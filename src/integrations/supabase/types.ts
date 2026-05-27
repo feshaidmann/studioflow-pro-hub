@@ -2531,6 +2531,95 @@ export type Database = {
         }
         Relationships: []
       }
+      spotify_releases: {
+        Row: {
+          created_at: string
+          id: string
+          image_url: string | null
+          imported_at: string
+          name: string
+          release_date: string | null
+          release_type: string
+          spotify_album_id: string
+          spotify_album_uri: string | null
+          total_tracks: number | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          imported_at?: string
+          name: string
+          release_date?: string | null
+          release_type?: string
+          spotify_album_id: string
+          spotify_album_uri?: string | null
+          total_tracks?: number | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          imported_at?: string
+          name?: string
+          release_date?: string | null
+          release_type?: string
+          spotify_album_id?: string
+          spotify_album_uri?: string | null
+          total_tracks?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      spotify_tracks: {
+        Row: {
+          created_at: string
+          duration_ms: number | null
+          id: string
+          isrc: string | null
+          name: string
+          release_id: string
+          spotify_track_id: string
+          spotify_track_uri: string
+          track_number: number | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          duration_ms?: number | null
+          id?: string
+          isrc?: string | null
+          name: string
+          release_id: string
+          spotify_track_id: string
+          spotify_track_uri: string
+          track_number?: number | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          duration_ms?: number | null
+          id?: string
+          isrc?: string | null
+          name?: string
+          release_id?: string
+          spotify_track_id?: string
+          spotify_track_uri?: string
+          track_number?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "spotify_tracks_release_id_fkey"
+            columns: ["release_id"]
+            isOneToOne: false
+            referencedRelation: "spotify_releases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       task_rules: {
         Row: {
           created_at: string
