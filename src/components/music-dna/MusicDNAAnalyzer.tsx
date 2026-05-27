@@ -417,17 +417,19 @@ function DetailSection({ id, title, icon, children }: {
   );
 }
 
-function ExecutiveSummary({ diagnosis, onAddAllSteps, allStepsAdded, analysisId, onSendSignal }: {
+function ExecutiveSummary({ diagnosis, onAddAllSteps, allStepsAdded, analysisId, onSendSignal, stage = "master" }: {
   diagnosis: DiagnosisResult;
   onAddAllSteps: () => void;
   allStepsAdded: boolean;
   analysisId?: string;
   onSendSignal?: (signal: "thumbs_up" | "thumbs_down" | "copied") => void;
+  stage?: AudioStage;
 }) {
   const [voted, setVoted] = useState<"thumbs_up" | "thumbs_down" | null>(null);
   const truePeak = diagnosis.realAnalysis?.true_peak_dbtp;
   const lufs = diagnosis.realAnalysis?.lufs_integrated;
   const dynamicRange = diagnosis.realAnalysis?.dynamic_range_lu;
+  const profile = STAGE_PROFILES[stage];
   // (duration/formatDuration removidos: a Duração já aparece no MetricCard "Duração")
   const hasCoreMetrics = [truePeak, lufs, dynamicRange].every(
     (v) => typeof v === "number" && Number.isFinite(v),
@@ -436,15 +438,32 @@ function ExecutiveSummary({ diagnosis, onAddAllSteps, allStepsAdded, analysisId,
   // (Cards "Força/Gargalo/Próxima ação" foram removidos do resumo:
   // o 1º item dessas listas já aparece na seção "Diagnóstico" logo abaixo.)
 
-  // Thresholds alinhados aos targets dos MetricCards (Técnico) para evitar veredito conflitante.
-  // LUFS verde ∈ [−15, −13]; TP ≤ −1; DR ≥ 7. Faixa mais larga é considerada "boa base".
-  const status = !hasCoreMetrics
-    ? { label: "Análise incompleta", tone: "warning" as const }
-    : (truePeak as number) <= -1 && (lufs as number) >= -15 && (lufs as number) <= -13 && (dynamicRange as number) >= 7
-    ? { label: "Pronta para streaming", tone: "success" as const }
-    : (truePeak as number) > 0 || (dynamicRange as number) < 5
-    ? { label: "Precisa revisão técnica", tone: "destructive" as const }
-    : { label: "Boa base, precisa ajustes", tone: "primary" as const };
+  // Veredito por estágio:
+  //  - master: alvo cheio de streaming (LUFS −15..−13, TP ≤−1, DR ≥7)
+  //  - mix: só cobra True Peak e DR mínimo (LUFS folgado, vai ser decidido no master)
+  //  - demo: nunca acende "pronta" — esconde badge ou mostra status neutro
+  const status = (() => {
+    if (profile.readyBadge === "hidden") {
+      return { label: "Análise de demo", tone: "primary" as const };
+    }
+    if (!hasCoreMetrics) {
+      return { label: "Análise incompleta", tone: "warning" as const };
+    }
+    const tp = truePeak as number;
+    const lf = lufs as number;
+    const dr = dynamicRange as number;
+    if (profile.readyBadge === "mix") {
+      if (tp > 0 || dr < 5) return { label: "Precisa revisão técnica", tone: "destructive" as const };
+      if (tp <= -1 && dr >= 6) return { label: "Pronta pra mandar pro master", tone: "success" as const };
+      return { label: "Boa base, ajustes de mix", tone: "primary" as const };
+    }
+    // master
+    if (tp <= -1 && lf >= -15 && lf <= -13 && dr >= 7) {
+      return { label: "Pronta para streaming", tone: "success" as const };
+    }
+    if (tp > 0 || dr < 5) return { label: "Precisa revisão técnica", tone: "destructive" as const };
+    return { label: "Boa base, precisa ajustes", tone: "primary" as const };
+  })();
 
 
   const toneClass = {
