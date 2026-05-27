@@ -1410,7 +1410,16 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
         allStepsAdded={allStepsAdded}
         analysisId={savedAnalysisId}
         onSendSignal={(signal) => ensureSignal(signal)}
+        stage={stage}
       />
+
+      <div className="rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-[11px] leading-relaxed text-foreground/80 animate-fade-in">
+        <span className="font-mono uppercase tracking-widest text-primary mr-1.5">
+          Estágio: {STAGE_LABEL[stage]}
+        </span>
+        <span className="text-muted-foreground">{stageProfile.contextNote}</span>
+      </div>
+
 
       {savedAnalysisId && (
         <TrackVersionsPanel trackName={input.name} currentAnalysisId={savedAnalysisId} />
