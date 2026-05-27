@@ -1681,6 +1681,54 @@ export type Database = {
         }
         Relationships: []
       }
+      playlist_monitors: {
+        Row: {
+          created_at: string
+          found_at: string | null
+          id: string
+          last_checked_at: string | null
+          playlist_external_url: string | null
+          playlist_id: string
+          playlist_image_url: string | null
+          playlist_name: string
+          playlist_owner_name: string | null
+          status: string
+          track_name: string
+          track_spotify_uri: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          found_at?: string | null
+          id?: string
+          last_checked_at?: string | null
+          playlist_external_url?: string | null
+          playlist_id: string
+          playlist_image_url?: string | null
+          playlist_name: string
+          playlist_owner_name?: string | null
+          status?: string
+          track_name: string
+          track_spotify_uri: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          found_at?: string | null
+          id?: string
+          last_checked_at?: string | null
+          playlist_external_url?: string | null
+          playlist_id?: string
+          playlist_image_url?: string | null
+          playlist_name?: string
+          playlist_owner_name?: string | null
+          status?: string
+          track_name?: string
+          track_spotify_uri?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       playlist_profiles: {
         Row: {
           created_at: string
