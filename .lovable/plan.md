@@ -1,84 +1,98 @@
-## Monitoramento de Entradas em Playlists
 
-Fecha o loop do pipeline de pitch: o artista marca playlists compatíveis para monitorar e é notificado quando sua faixa entra.
+# Admin — Import de Gêneros (CSV → staging → apply)
 
-### 1. Banco de dados
+Materializa, em UI admin, o pipeline que já existe no banco: popular `public._genre_import_2026` com `(band, filename, genre)` e disparar `public.apply_genre_import_2026(p_drop_staging)` para aplicar nas faixas de referência, com relatório completo.
 
-Migration nova `playlist_monitors`:
+## Rota e acesso
 
-- Colunas: `id`, `user_id`, `playlist_id`, `playlist_name`, `playlist_image_url`, `playlist_external_url`, `playlist_owner_name`, `track_spotify_uri`, `track_name`, `status` ('monitoring' | 'found'), `found_at`, `last_checked_at`, `created_at`.
-- `UNIQUE (user_id, playlist_id, track_spotify_uri)` para evitar duplicatas.
-- `GRANT SELECT, INSERT, UPDATE, DELETE` para `authenticated`; `ALL` para `service_role`.
-- RLS habilitado: política única `auth.uid() = user_id` (FOR ALL).
-- Índice extra `(user_id, status)` para listagem rápida.
+- Nova rota: `/admin/genre-import` (lazy em `src/App.tsx`).
+- Card de entrada em `src/pages/Admin.tsx` ao lado dos cards existentes.
+- Guarda via `useAdminRole` + `<Navigate to="/dashboard">` se não-admin (padrão idêntico ao `ReferenceTracks.tsx`).
 
-Sem alterações em `notifications`, `music_dna_analyses`, `projects`, `spotify_tracks`.
+## Formato do CSV
 
-### 2. Edge Function `check-playlist-tracks`
+Colunas obrigatórias (header exato): `band`, `filename`, `genre`.
+Linhas com qualquer campo vazio são descartadas no client e contabilizadas como "ignoradas".
 
-`POST /functions/v1/check-playlist-tracks` — autenticada via `getClaims` (JWT do usuário). Validação Zod do body `{ monitor_id, playlist_id, track_spotify_uri }`.
+## Edge Function `apply-genre-import` (nova)
 
-Fluxo:
-1. Carrega o monitor com client autenticado e confere `user_id = sub`. 404 se não pertencer.
-2. Autentica no Spotify via Client Credentials (`SPOTIFY_CLIENT_ID` / `SPOTIFY_CLIENT_SECRET` já existentes).
-3. Pagina `GET /v1/playlists/{id}/tracks?fields=items(track(uri)),next&limit=100` enquanto `next !== null`. Limite defensivo: máx. 30 páginas (3.000 faixas).
-4. Atualiza `last_checked_at = now()`. Se a URI for encontrada e status era `monitoring`, atualiza para `found` + `found_at = now()` e insere em `notifications` (`type='playlist_found'`, título "Sua faixa entrou em uma playlist! 🎉", mensagem "Sua faixa [track_name] foi adicionada à playlist [playlist_name]!", link para `/music-dna`).
-5. Inserção da notificação é idempotente — só dispara na transição `monitoring → found`.
-6. Resposta: `{ found: boolean, checked_at: ISO, status: 'monitoring'|'found' }`.
+`POST` multipart com `file` (ou JSON `{ csv, dropStaging? }`).
 
-CORS padrão do Supabase SDK. Tratamento de 401/429 do Spotify com mensagem amigável.
+Fluxo server-side:
+1. Validação de auth: `Authorization: Bearer`, `getClaims`, `has_role(uid,'admin')` via service-role client; sem admin → 403.
+2. Parse CSV com `papaparse`; valida headers; rejeita 400 se colunas faltam ou nenhuma linha válida.
+3. Garante existência da staging (caso a RPC anterior tenha sido chamada com `p_drop_staging=true`):
+   ```sql
+   CREATE TABLE IF NOT EXISTS public._genre_import_2026 (
+     band text NOT NULL,
+     filename text NOT NULL,
+     genre text NOT NULL
+   );
+   TRUNCATE public._genre_import_2026;
+   ```
+   (executado via uma RPC nova `reset_genre_import_staging()` SECURITY DEFINER, para não precisar de SQL arbitrário).
+4. Insere linhas em chunks de 500 usando `admin.from('_genre_import_2026').insert(...)`.
+5. Chama `admin.rpc('apply_genre_import_2026', { p_drop_staging: body.dropStaging ?? true })`.
+6. Loga `function_logs` (`function_name: 'apply-genre-import'`) com contagens.
+7. Retorna o JSON tal qual a RPC devolve, acrescentando `staging_inserted` (linhas inseridas no client→staging) e `csv_skipped` (linhas vazias do CSV):
+   ```
+   {
+     staging_inserted, csv_skipped,
+     staging_rows, staging_unique,
+     updated, unchanged, unmatched,
+     top_genres_after: [{ genre, n }, ...]
+   }
+   ```
 
-### 3. Frontend — integração no Music DNA
+`verify_jwt = false` (padrão Lovable; validação em código).
 
-**3a. `CompatiblePlaylistsCard.tsx` (edit):**
-- Adiciona botão secundário "Monitorar" no rodapé de cada card (ao lado de "Abrir").
-- Carrega via hook `usePlaylistMonitors` os pares `(playlist_id, track_spotify_uri)` já monitorados pelo usuário.
-- Se a playlist já tem qualquer monitor ativo do usuário → botão exibe "Monitorando ✓" (disabled, verde sutil) e abre `MonitorPlaylistDialog` em modo "adicionar outra faixa" somente se clicado em modo edit (no MVP: simplesmente disabled quando há ≥1 par).
+## Migração — `reset_genre_import_staging()`
 
-**3b. `MonitorPlaylistDialog.tsx` (novo):**
-- Dialog do shadcn com header: capa + nome da playlist + owner.
-- Select "Qual faixa você quer monitorar?" alimentado por **`music_dna_analyses` do usuário** onde `spotify_id IS NOT NULL`. Cada opção exibe `track_name` e constrói `spotify_track_uri = 'spotify:track:' + spotify_id`. Ordenado por `created_at desc`, distinct por `spotify_id`, limite 50.
-- Estado vazio: mensagem "Nenhuma análise Music DNA com link do Spotify. Rode uma análise associada a uma faixa do Spotify para monitorar." com CTA para `/music-dna`.
-- Campo fallback colapsável: input de Spotify URI manual (regex `^spotify:track:[A-Za-z0-9]{22}$`) + input de nome legível obrigatório.
-- Botão "Começar a monitorar":
-  - INSERT em `playlist_monitors` (via supabase client; RLS garante `user_id`).
-  - Em caso de conflito UNIQUE → toast "Você já monitora esta combinação".
-  - Após insert, dispara imediatamente `supabase.functions.invoke('check-playlist-tracks', ...)` para verificação inicial.
-  - Fecha o dialog e toast: "Monitoramento ativo para [nome da playlist]".
-  - Invalida queries de `playlist_monitors`.
+Função SECURITY DEFINER, sem args, executável por `service_role`:
+- `CREATE TABLE IF NOT EXISTS public._genre_import_2026 (band text NOT NULL, filename text NOT NULL, genre text NOT NULL)`.
+- `TRUNCATE public._genre_import_2026`.
+- Concede `INSERT, SELECT, TRUNCATE` na tabela para `service_role` (idempotente).
+- `GRANT EXECUTE` da função somente para `service_role`.
 
-**3c. `ActiveMonitorsCard.tsx` (novo):**
-- Renderizado em `MusicDNAAnalyzer.tsx` logo abaixo de `CompatiblePlaylistsCard`.
-- Só aparece se `usePlaylistMonitors()` retornar ≥1 registro.
-- Lista cards com layout macOS (capa 48px, nome + owner, faixa monitorada, "Última verificação: há X" via date-fns pt-BR).
-- Status `monitoring`: badge cinza "● Monitorando" + botão "Verificar agora" (spinner durante invoke, sem limite no MVP).
-- Status `found`: badge verde "🎉 Faixa adicionada!" + data formatada pt-BR + link "Abrir no Spotify" (usa `playlist_external_url`).
-- Ícone lixeira no canto sup. direito → `AlertDialog` "Parar de monitorar esta playlist?" → DELETE.
-- Após "Verificar agora" ou delete: invalida queries (sem reload).
+Não altera `apply_genre_import_2026` (já existente e usada como está).
 
-**3d. `usePlaylistMonitors.ts` (novo):**
-- React Query hook: `useActiveMonitors()` (SELECT `*` ordenado por `created_at desc`), `useCreateMonitor()`, `useDeleteMonitor()`, `useCheckMonitor()` (invoke da edge function).
+## Frontend — `src/pages/admin/GenreImport.tsx`
 
-### 4. Integração com sistema de notificações existente
+Mesmo visual e estrutura de `src/pages/admin/ReferenceTracks.tsx`:
 
-Reutiliza a tabela `notifications` (já existente). A notificação aparece automaticamente no sino do app sem necessidade de mudanças na UI de notificações.
+- Dropzone CSV (`.csv` apenas) com `papaparse` client-side para preview:
+  - linhas válidas, gêneros distintos, bandas distintas, linhas ignoradas (campos vazios), colunas faltando.
+- Badges de preview (linhas / gêneros / bandas / faltando).
+- Checkbox **"Apagar staging após aplicar"** (default: marcado → mantém o comportamento da RPC).
+- Botão **"Aplicar import"** com `<AlertDialog>` de confirmação avisando:
+  - "Faz backup automático em `music_reference_tracks_genre_backup` antes de qualquer update."
+  - "Benchmarks são atualizados automaticamente (view derivada)."
+- Estado de loading com `Loader2`; chamada via `supabase.functions.invoke('apply-genre-import', { body: formData })`.
 
-### Fora de escopo
+Relatório pós-execução em `<Alert>` + cards/tabelas:
+- 4 KPIs em grid: **Atualizadas** (`updated`), **Sem mudança** (`unchanged`), **Sem correspondência** (`unmatched`), **Únicas em staging** (`staging_unique`).
+- Linha secundária: `staging_rows` (linhas brutas enviadas) e `staging_inserted` (após dedupe da RPC).
+- Tabela "Top 30 gêneros após aplicação" com `genre` e `n` (vindo de `top_genres_after`), ordenada desc.
+- Botão **"Limpar cache do catálogo acústico"** que faz `sessionStorage.removeItem("acoustic-catalog:v1")` (consistente com `ReferenceTracks.tsx`).
+- Toast de sucesso com resumo: `${updated} atualizadas · ${unmatched} sem correspondência`.
 
-- Cron de verificação automática (apenas verificação sob demanda no MVP).
-- Push notifications (apenas in-app via `notifications`).
-- Alterações em `search-compatible-playlists`, `PlaylistMatchCard`, RLS de outras tabelas, navegação, dark mode.
-- Limite de chamadas manuais (decisão explícita do MVP).
+## Garantias
 
-### Detalhes técnicos
+- **Segurança**: edge function exige role `admin` server-side; RPCs SECURITY DEFINER já fazem o mesmo check; UI tem guarda `useAdminRole`.
+- **Idempotência**: re-rodar o mesmo CSV → `updated=0`, todas como `unchanged`.
+- **Reversibilidade**: a RPC já grava `music_reference_tracks_genre_backup` antes do update (via `ON CONFLICT (track_id) DO UPDATE` no backup).
+- **Light mode**, tokens semânticos, sem alteração em outros módulos.
 
-**Arquivos:**
-- `supabase/migrations/<ts>_playlist_monitors.sql` (novo)
-- `supabase/functions/check-playlist-tracks/index.ts` (novo)
-- `src/hooks/usePlaylistMonitors.ts` (novo)
-- `src/components/music-dna/MonitorPlaylistDialog.tsx` (novo)
-- `src/components/music-dna/ActiveMonitorsCard.tsx` (novo)
-- `src/components/music-dna/CompatiblePlaylistsCard.tsx` (edit — botão Monitorar + estado disabled)
-- `src/components/music-dna/MusicDNAAnalyzer.tsx` (edit — render do `ActiveMonitorsCard`)
+## Fora de escopo
 
-**Reuso:** `SPOTIFY_CLIENT_ID`/`SPOTIFY_CLIENT_SECRET` já configurados, tabela `notifications` existente, design tokens semânticos do projeto.
+- Não cria a tabela de backup nem altera `apply_genre_import_2026` (ambos já existem).
+- Não expõe UI de rollback (manual via SQL se necessário).
+- Não toca em `import-reference-tracks` (catálogo completo) nem em `/admin/reference-tracks`.
+
+## Arquivos
+
+- `supabase/migrations/<ts>_reset_genre_import_staging.sql` (nova RPC + GRANTs)
+- `supabase/functions/apply-genre-import/index.ts` (nova edge function)
+- `src/pages/admin/GenreImport.tsx` (nova tela)
+- `src/App.tsx` (1 import + 1 rota)
+- `src/pages/Admin.tsx` (1 card de entrada)
