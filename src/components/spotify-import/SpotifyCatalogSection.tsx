@@ -207,6 +207,17 @@ export function SpotifyCatalogSection() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <LinkAnalysisTrackDialog
+        open={linkTarget !== null}
+        onOpenChange={(o) => !o && setLinkTarget(null)}
+        mode={linkTarget ? {
+          kind: "pick-analysis",
+          trackId: linkTarget.trackId,
+          trackLabel: linkTarget.trackLabel,
+          currentAnalysisId: linkTarget.currentAnalysisId,
+        } : null}
+      />
     </section>
   );
 }
