@@ -2203,6 +2203,7 @@ export function MusicDNAAnalyzer() {
           trackName={lastInput?.name ?? ""}
           logs={logs}
           progress={progress}
+          stage={lastInput?.stage as AudioStage | undefined}
         />
       ) : (
         <>
