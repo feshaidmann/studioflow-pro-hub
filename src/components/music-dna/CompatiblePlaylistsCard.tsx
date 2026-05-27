@@ -1,11 +1,14 @@
-import { useEffect, useState } from "react";
-import { ExternalLink, Users, Music2 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { ExternalLink, Users, Music2, Radio, Check } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { useActiveMonitors } from "@/hooks/usePlaylistMonitors";
+import { MonitorPlaylistDialog, type MonitorPlaylistTarget } from "@/components/music-dna/MonitorPlaylistDialog";
 
 interface SpotifyPlaylist {
   id: string;
