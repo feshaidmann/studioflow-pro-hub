@@ -29,13 +29,13 @@ export interface SavedAnalysis {
 
 const SESSION_KEY = "music-dna-last-analysis";
 
-export function cacheLastAnalysis(input: { name: string; notes?: string; references: string[]; projectId?: string }, diagnosis: DiagnosisResult) {
+export function cacheLastAnalysis(input: { name: string; notes?: string; references: string[]; projectId?: string; stage?: "demo" | "mix" | "master" }, diagnosis: DiagnosisResult) {
   try {
     sessionStorage.setItem(SESSION_KEY, JSON.stringify({ input, diagnosis, timestamp: Date.now() }));
   } catch { /* quota exceeded */ }
 }
 
-export function getCachedAnalysis(): { input: { name: string; notes?: string; references: string[]; projectId?: string }; diagnosis: DiagnosisResult } | null {
+export function getCachedAnalysis(): { input: { name: string; notes?: string; references: string[]; projectId?: string; stage?: "demo" | "mix" | "master" }; diagnosis: DiagnosisResult } | null {
   try {
     const raw = sessionStorage.getItem(SESSION_KEY);
     if (!raw) return null;
