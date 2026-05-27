@@ -961,11 +961,12 @@ async function downloadAnalysisReport(input: { name: string; references: string[
 function FormView({ onSubmit, isPending, projects }: {
   onSubmit: (v: FormValues, file: File) => void;
   isPending: boolean;
-  projects: Array<{ id: string; name: string; artist: string }>;
+  projects: Array<{ id: string; name: string; artist: string; stage?: string }>;
 }) {
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [stageTouched, setStageTouched] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<FormValues>({
