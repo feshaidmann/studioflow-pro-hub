@@ -546,9 +546,17 @@ export default function Projects() {
             return <p className="text-xs text-muted-foreground mt-1">{parts.join(" · ")}</p>;
           })()}
         </div>
+        <div className="flex items-center gap-2 shrink-0">
+        <Button
+          variant="outline"
+          className="active:scale-95 transition-transform"
+          onClick={() => setSpotifyImportOpen(true)}
+        >
+          <Disc3 className="h-4 w-4 mr-1" /> Importar do Spotify
+        </Button>
         <Dialog open={dialogOpen} onOpenChange={(open) => { if (open) setForm((prev) => ({ ...prev, artist: prev.artist || displayName })); setDialogOpen(open); }}>
           <DialogTrigger asChild>
-            <Button className="active:scale-95 transition-transform shrink-0"><Plus className="h-4 w-4 mr-1" /> {t("projects.addProject")}</Button>
+            <Button className="active:scale-95 transition-transform"><Plus className="h-4 w-4 mr-1" /> {t("projects.addProject")}</Button>
           </DialogTrigger>
           <DialogContent className="glass-card border-border">
             <DialogHeader>
