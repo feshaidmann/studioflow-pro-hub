@@ -22,20 +22,21 @@ interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   playlist: MonitorPlaylistTarget | null;
+  onImportRequest?: () => void;
 }
 
 interface TrackOption {
-  spotify_id: string;
-  track_name: string;
-  created_at: string;
+  spotify_track_uri: string;
+  name: string;
+  source: "catalog" | "dna";
 }
 
 const URI_RE = /^spotify:track:[A-Za-z0-9]{22}$/;
 
-export function MonitorPlaylistDialog({ open, onOpenChange, playlist }: Props) {
+export function MonitorPlaylistDialog({ open, onOpenChange, playlist, onImportRequest }: Props) {
   const [tracks, setTracks] = useState<TrackOption[]>([]);
   const [loadingTracks, setLoadingTracks] = useState(false);
-  const [selectedSpotifyId, setSelectedSpotifyId] = useState<string>("");
+  const [selectedTrackUri, setSelectedTrackUri] = useState<string>("");
   const [manualOpen, setManualOpen] = useState(false);
   const [manualUri, setManualUri] = useState("");
   const [manualName, setManualName] = useState("");
@@ -47,28 +48,47 @@ export function MonitorPlaylistDialog({ open, onOpenChange, playlist }: Props) {
     if (!open) return;
     let cancelled = false;
     setLoadingTracks(true);
-    supabase
-      .from("music_dna_analyses")
-      .select("spotify_id, track_name, created_at")
-      .not("spotify_id", "is", null)
-      .order("created_at", { ascending: false })
-      .limit(50)
-      .then(({ data }) => {
-        if (cancelled) return;
-        const seen = new Set<string>();
-        const unique: TrackOption[] = [];
-        for (const r of data ?? []) {
-          if (!r.spotify_id || seen.has(r.spotify_id)) continue;
-          seen.add(r.spotify_id);
-          unique.push({
-            spotify_id: r.spotify_id,
-            track_name: r.track_name || "Faixa sem nome",
-            created_at: r.created_at,
-          });
-        }
-        setTracks(unique);
-      })
-      .then(() => !cancelled && setLoadingTracks(false));
+
+    Promise.all([
+      supabase
+        .from("spotify_tracks")
+        .select("spotify_track_uri, name")
+        .order("name", { ascending: true })
+        .limit(100),
+      supabase
+        .from("music_dna_analyses")
+        .select("spotify_id, track_name, created_at")
+        .not("spotify_id", "is", null)
+        .order("created_at", { ascending: false })
+        .limit(50),
+    ]).then(([catalogRes, dnaRes]) => {
+      if (cancelled) return;
+
+      const seen = new Set<string>();
+      const merged: TrackOption[] = [];
+
+      for (const t of catalogRes.data ?? []) {
+        if (!t.spotify_track_uri || seen.has(t.spotify_track_uri)) continue;
+        seen.add(t.spotify_track_uri);
+        merged.push({ spotify_track_uri: t.spotify_track_uri, name: t.name, source: "catalog" });
+      }
+
+      for (const t of dnaRes.data ?? []) {
+        if (!t.spotify_id) continue;
+        const uri = `spotify:track:${t.spotify_id}`;
+        if (seen.has(uri)) continue;
+        seen.add(uri);
+        merged.push({
+          spotify_track_uri: uri,
+          name: t.track_name || "Faixa sem nome",
+          source: "dna",
+        });
+      }
+
+      setTracks(merged);
+      setLoadingTracks(false);
+    });
+
     return () => {
       cancelled = true;
     };
@@ -76,7 +96,7 @@ export function MonitorPlaylistDialog({ open, onOpenChange, playlist }: Props) {
 
   useEffect(() => {
     if (!open) {
-      setSelectedSpotifyId("");
+      setSelectedTrackUri("");
       setManualOpen(false);
       setManualUri("");
       setManualName("");
@@ -84,8 +104,8 @@ export function MonitorPlaylistDialog({ open, onOpenChange, playlist }: Props) {
   }, [open]);
 
   const selectedTrack = useMemo(
-    () => tracks.find((t) => t.spotify_id === selectedSpotifyId) ?? null,
-    [tracks, selectedSpotifyId],
+    () => tracks.find((t) => t.spotify_track_uri === selectedTrackUri) ?? null,
+    [tracks, selectedTrackUri],
   );
 
   const submitting = createMonitor.isPending || checkMonitor.isPending;
@@ -94,9 +114,9 @@ export function MonitorPlaylistDialog({ open, onOpenChange, playlist }: Props) {
     if (!playlist) return;
     let uri = "";
     let name = "";
-    if (selectedTrack) {
-      uri = `spotify:track:${selectedTrack.spotify_id}`;
-      name = selectedTrack.track_name;
+    if (selectedTrackUri) {
+      uri = selectedTrackUri;
+      name = selectedTrack?.name ?? "Faixa";
     } else if (manualOpen) {
       if (!URI_RE.test(manualUri.trim())) {
         toast.error("URI inválida. Use o formato spotify:track:XXXXXXXXXXXXXXXXXXXXXX");
@@ -124,7 +144,6 @@ export function MonitorPlaylistDialog({ open, onOpenChange, playlist }: Props) {
         track_name: name,
       });
 
-      // Disparo de verificação inicial — silencioso, não bloqueia o fluxo
       checkMonitor
         .mutateAsync({
           monitor_id: monitor.id,
@@ -132,7 +151,7 @@ export function MonitorPlaylistDialog({ open, onOpenChange, playlist }: Props) {
           track_spotify_uri: uri,
         })
         .catch(() => {
-          /* já existe toast genérico se falhar; manter dialog responsivo */
+          /* silencioso */
         });
 
       toast.success(`Monitoramento ativo para ${playlist.playlist_name}`);
@@ -146,6 +165,9 @@ export function MonitorPlaylistDialog({ open, onOpenChange, playlist }: Props) {
       }
     }
   }
+
+  const hasCatalog = tracks.some((t) => t.source === "catalog");
+  const hasDna = tracks.some((t) => t.source === "dna");
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -186,19 +208,57 @@ export function MonitorPlaylistDialog({ open, onOpenChange, playlist }: Props) {
             <p className="text-xs text-muted-foreground italic">Carregando faixas…</p>
           ) : tracks.length === 0 ? (
             <p className="text-xs text-muted-foreground italic leading-relaxed">
-              Nenhuma análise Music DNA com link do Spotify. Rode uma análise associada a uma faixa do Spotify para monitorar — ou informe a URI manualmente abaixo.
+              Nenhuma faixa com link do Spotify encontrada.{" "}
+              {onImportRequest ? (
+                <button
+                  type="button"
+                  className="underline underline-offset-2 hover:text-foreground"
+                  onClick={() => {
+                    onOpenChange(false);
+                    onImportRequest();
+                  }}
+                >
+                  Importe seu catálogo
+                </button>
+              ) : (
+                <span>Importe seu catálogo do Spotify</span>
+              )}{" "}
+              ou informe a URI manualmente abaixo.
             </p>
           ) : (
-            <Select value={selectedSpotifyId} onValueChange={setSelectedSpotifyId}>
+            <Select value={selectedTrackUri} onValueChange={setSelectedTrackUri}>
               <SelectTrigger>
-                <SelectValue placeholder="Selecione uma faixa analisada" />
+                <SelectValue placeholder="Selecione uma faixa" />
               </SelectTrigger>
               <SelectContent>
-                {tracks.map((t) => (
-                  <SelectItem key={t.spotify_id} value={t.spotify_id}>
-                    {t.track_name}
-                  </SelectItem>
-                ))}
+                {hasCatalog && (
+                  <div className="px-2 py-1 text-[10px] text-muted-foreground uppercase tracking-wide">
+                    Catálogo importado
+                  </div>
+                )}
+                {tracks
+                  .filter((t) => t.source === "catalog")
+                  .map((t) => (
+                    <SelectItem key={t.spotify_track_uri} value={t.spotify_track_uri}>
+                      {t.name}
+                    </SelectItem>
+                  ))}
+                {hasDna && (
+                  <div
+                    className={`px-2 py-1 text-[10px] text-muted-foreground uppercase tracking-wide ${
+                      hasCatalog ? "border-t mt-1 pt-2" : ""
+                    }`}
+                  >
+                    Análises Music DNA
+                  </div>
+                )}
+                {tracks
+                  .filter((t) => t.source === "dna")
+                  .map((t) => (
+                    <SelectItem key={t.spotify_track_uri} value={t.spotify_track_uri}>
+                      {t.name}
+                    </SelectItem>
+                  ))}
               </SelectContent>
             </Select>
           )}
