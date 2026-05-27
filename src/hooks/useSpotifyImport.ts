@@ -194,3 +194,33 @@ export function useDeleteSpotifyRelease() {
     },
   });
 }
+
+export interface CatalogPopularityResult {
+  popularity: Record<string, number | null>;
+}
+
+export function useCatalogPopularity(trackIds: string[]) {
+  const sortedKey = [...trackIds].sort().join(",");
+  return useQuery({
+    queryKey: ["catalog-popularity", sortedKey],
+    enabled: trackIds.length > 0,
+    staleTime: 60 * 60 * 1000,
+    queryFn: async (): Promise<Record<string, number | null>> => {
+      const chunks: string[][] = [];
+      for (let i = 0; i < trackIds.length; i += 50) {
+        chunks.push(trackIds.slice(i, i + 50));
+      }
+      const results: Record<string, number | null> = {};
+      for (const chunk of chunks) {
+        const { data, error } = await supabase.functions.invoke<CatalogPopularityResult>(
+          "get-catalog-popularity",
+          { body: { track_ids: chunk } },
+        );
+        if (!error && data?.popularity) {
+          Object.assign(results, data.popularity);
+        }
+      }
+      return results;
+    },
+  });
+}
