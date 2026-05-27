@@ -1099,32 +1099,67 @@ function FormView({ onSubmit, isPending, projects }: {
               </FormItem>
             )} />
 
-            <FormField control={form.control} name="projectId" render={({ field }) => (
-              <FormItem>
-                <FormLabel className="text-[11px] uppercase tracking-widest font-mono text-muted-foreground">
-                  Vincular a um projeto (opcional)
-                </FormLabel>
-                <Select
-                  value={field.value || "__none__"}
-                  onValueChange={(v) => field.onChange(v === "__none__" ? "" : v)}
-                >
+            <FormField control={form.control} name="projectId" render={({ field }) => {
+              const derivedStage = (() => {
+                const proj = projects.find((p) => p.id === field.value);
+                if (!proj?.stage) return null;
+                return resolveStage(undefined, proj.stage);
+              })();
+              return (
+                <FormItem>
+                  <FormLabel className="text-[11px] uppercase tracking-widest font-mono text-muted-foreground">
+                    Vincular a um projeto (opcional)
+                  </FormLabel>
+                  <Select
+                    value={field.value || "__none__"}
+                    onValueChange={(v) => {
+                      const newId = v === "__none__" ? "" : v;
+                      field.onChange(newId);
+                      // Se usuário ainda não tocou no seletor de estágio, deriva do projeto
+                      if (!stageTouched) {
+                        const proj = projects.find((p) => p.id === newId);
+                        const derived = resolveStage(undefined, proj?.stage);
+                        form.setValue("stage", derived);
+                      }
+                    }}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Sem projeto vinculado" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="__none__">Sem projeto vinculado</SelectItem>
+                      {projects.map((p) => (
+                        <SelectItem key={p.id} value={p.id}>
+                          {p.name}{p.artist ? ` — ${p.artist}` : ""}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                  <input type="hidden" data-derived-stage={derivedStage ?? ""} />
+                </FormItem>
+              );
+            }} />
+
+            <FormField control={form.control} name="stage" render={({ field }) => {
+              const projectId = form.watch("projectId");
+              const proj = projects.find((p) => p.id === projectId);
+              const derived = proj?.stage ? resolveStage(undefined, proj.stage) : null;
+              return (
+                <FormItem>
                   <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Sem projeto vinculado" />
-                    </SelectTrigger>
+                    <StageSelector
+                      value={field.value as AudioStage}
+                      onChange={(s) => { setStageTouched(true); field.onChange(s); }}
+                      derivedFromProject={derived}
+                    />
                   </FormControl>
-                  <SelectContent>
-                    <SelectItem value="__none__">Sem projeto vinculado</SelectItem>
-                    {projects.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>
-                        {p.name}{p.artist ? ` — ${p.artist}` : ""}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )} />
+                  <FormMessage />
+                </FormItem>
+              );
+            }} />
 
             <Collapsible>
               <CollapsibleTrigger className="text-[11px] uppercase tracking-widest font-mono text-muted-foreground hover:text-foreground transition-colors">
@@ -1146,6 +1181,7 @@ function FormView({ onSubmit, isPending, projects }: {
             </Collapsible>
           </CardContent>
         </Card>
+
 
         <div className="flex gap-3 p-3 rounded-lg bg-muted/30 border border-border text-xs text-muted-foreground leading-relaxed animate-fade-in">
           <span className="text-primary shrink-0 mt-0.5">ℹ</span>
