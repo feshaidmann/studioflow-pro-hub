@@ -139,6 +139,7 @@ export interface SpotifyReleaseRow {
   tracks?: {
     id: string;
     name: string;
+    spotify_track_id: string;
     spotify_track_uri: string;
     track_number: number | null;
     duration_ms: number | null;
@@ -162,7 +163,7 @@ export function useSpotifyCatalog() {
           id, spotify_album_id, spotify_album_uri, name, release_type,
           release_date, image_url, total_tracks, imported_at,
           spotify_tracks (
-            id, name, spotify_track_uri, track_number, duration_ms, isrc,
+            id, name, spotify_track_id, spotify_track_uri, track_number, duration_ms, isrc,
             music_dna_analyses (id, version_label, version_number, created_at)
           )
         `)
@@ -191,6 +192,36 @@ export function useDeleteSpotifyRelease() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["spotify-releases"] });
       qc.invalidateQueries({ queryKey: ["spotify-tracks-with-uri"] });
+    },
+  });
+}
+
+export interface CatalogPopularityResult {
+  popularity: Record<string, number | null>;
+}
+
+export function useCatalogPopularity(trackIds: string[]) {
+  const sortedKey = [...trackIds].sort().join(",");
+  return useQuery({
+    queryKey: ["catalog-popularity", sortedKey],
+    enabled: trackIds.length > 0,
+    staleTime: 60 * 60 * 1000,
+    queryFn: async (): Promise<Record<string, number | null>> => {
+      const chunks: string[][] = [];
+      for (let i = 0; i < trackIds.length; i += 50) {
+        chunks.push(trackIds.slice(i, i + 50));
+      }
+      const results: Record<string, number | null> = {};
+      for (const chunk of chunks) {
+        const { data, error } = await supabase.functions.invoke<CatalogPopularityResult>(
+          "get-catalog-popularity",
+          { body: { track_ids: chunk } },
+        );
+        if (!error && data?.popularity) {
+          Object.assign(results, data.popularity);
+        }
+      }
+      return results;
     },
   });
 }
