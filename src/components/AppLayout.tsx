@@ -99,6 +99,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   const adminNavItem = { labelKey: "nav.admin", path: "/admin", icon: Shield, proOnly: false, mobileLabel: "" };
   const adminReferenceTracksItem = { labelKey: "Faixas de Referência", path: "/admin/reference-tracks", icon: Database, proOnly: false, mobileLabel: "" };
+  const adminGenreImportItem = { labelKey: "Import de Gêneros", path: "/admin/genre-import", icon: Database, proOnly: false, mobileLabel: "" };
   const settingsNavItem = { labelKey: "nav.settings", path: "/settings", icon: Settings, proOnly: false, mobileLabel: "nav.settings.short" };
   const tutorialNavItem = { labelKey: "nav.tutorial", path: "/tutorial", icon: HelpCircle, proOnly: false, mobileLabel: "" };
 
@@ -413,6 +414,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             {renderNavItem(tutorialNavItem)}
             {isAdmin && renderNavItem(adminNavItem)}
             {isAdmin && renderNavItem(adminReferenceTracksItem)}
+            {isAdmin && renderNavItem(adminGenreImportItem)}
           </TooltipProvider>
         </nav>
 
