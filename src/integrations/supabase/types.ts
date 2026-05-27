@@ -973,6 +973,7 @@ export type Database = {
           project_id: string | null
           speechiness: number | null
           spotify_id: string | null
+          spotify_track_id: string | null
           stage: string | null
           summary_variant: string
           summary_variant_assigned_at: string | null
@@ -1015,6 +1016,7 @@ export type Database = {
           project_id?: string | null
           speechiness?: number | null
           spotify_id?: string | null
+          spotify_track_id?: string | null
           stage?: string | null
           summary_variant?: string
           summary_variant_assigned_at?: string | null
@@ -1057,6 +1059,7 @@ export type Database = {
           project_id?: string | null
           speechiness?: number | null
           spotify_id?: string | null
+          spotify_track_id?: string | null
           stage?: string | null
           summary_variant?: string
           summary_variant_assigned_at?: string | null
@@ -1070,6 +1073,13 @@ export type Database = {
           version_number?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "music_dna_analyses_spotify_track_id_fkey"
+            columns: ["spotify_track_id"]
+            isOneToOne: false
+            referencedRelation: "spotify_tracks"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "music_dna_analyses_track_version_id_fkey"
             columns: ["track_version_id"]

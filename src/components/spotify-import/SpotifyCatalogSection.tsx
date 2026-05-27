@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronDown, ChevronRight, Disc3, Music, Trash2, ExternalLink } from "lucide-react";
+import { ChevronDown, ChevronRight, Disc3, Music, Trash2, ExternalLink, Link2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { useSpotifyCatalog, useDeleteSpotifyRelease } from "@/hooks/useSpotifyImport";
+import { LinkAnalysisTrackDialog } from "@/components/spotify-import/LinkAnalysisTrackDialog";
 
 const TYPE_LABEL: Record<string, string> = {
   album: "Álbum",
@@ -33,6 +34,7 @@ export function SpotifyCatalogSection() {
   const deleteRelease = useDeleteSpotifyRelease();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [confirmId, setConfirmId] = useState<string | null>(null);
+  const [linkTarget, setLinkTarget] = useState<{ trackId: string; trackLabel: string; currentAnalysisId: string | null } | null>(null);
 
   if (isLoading || releases.length === 0) return null;
 
@@ -149,6 +151,12 @@ export function SpotifyCatalogSection() {
                           {t.track_number ?? "—"}
                         </span>
                         <span className="flex-1 truncate text-foreground">{t.name}</span>
+                        {t.linked_analysis && (
+                          <Badge variant="secondary" className="text-[10px] gap-1">
+                            <Link2 className="h-2.5 w-2.5" />
+                            DNA {t.linked_analysis.version_label ?? `v${t.linked_analysis.version_number ?? 1}`}
+                          </Badge>
+                        )}
                         {t.isrc && (
                           <span className="text-[10px] text-muted-foreground font-mono">
                             {t.isrc}
@@ -157,6 +165,19 @@ export function SpotifyCatalogSection() {
                         <span className="text-muted-foreground tabular-nums w-10 text-right">
                           {formatDuration(t.duration_ms)}
                         </span>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          title={t.linked_analysis ? "Editar vínculo de análise" : "Vincular análise"}
+                          onClick={() => setLinkTarget({
+                            trackId: t.id,
+                            trackLabel: t.name,
+                            currentAnalysisId: t.linked_analysis?.id ?? null,
+                          })}
+                        >
+                          <Link2 className="h-3 w-3" />
+                        </Button>
                       </div>
                     ))}
                 </div>
@@ -186,6 +207,17 @@ export function SpotifyCatalogSection() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <LinkAnalysisTrackDialog
+        open={linkTarget !== null}
+        onOpenChange={(o) => !o && setLinkTarget(null)}
+        mode={linkTarget ? {
+          kind: "pick-analysis",
+          trackId: linkTarget.trackId,
+          trackLabel: linkTarget.trackLabel,
+          currentAnalysisId: linkTarget.currentAnalysisId,
+        } : null}
+      />
     </section>
   );
 }

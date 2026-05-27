@@ -25,6 +25,13 @@ export interface SavedAnalysis {
   version_number?: number | null;
   version_label?: string | null;
   summary_variant?: string | null;
+  spotify_track_id?: string | null;
+  spotify_tracks?: {
+    id: string;
+    name: string;
+    track_number: number | null;
+    spotify_releases?: { id: string; name: string; image_url: string | null } | null;
+  } | null;
 }
 
 const SESSION_KEY = "music-dna-last-analysis";
@@ -58,7 +65,7 @@ export function useSavedAnalyses() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("music_dna_analyses")
-        .select("*")
+        .select("*, spotify_tracks (id, name, track_number, spotify_releases (id, name, image_url))")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as unknown as SavedAnalysis[];

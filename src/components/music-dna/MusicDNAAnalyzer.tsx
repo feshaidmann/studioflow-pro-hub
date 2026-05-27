@@ -7,7 +7,8 @@ import {
   Radar, RadarChart, PolarAngleAxis, PolarGrid, PolarRadiusAxis,
   ResponsiveContainer, Legend,
 } from "recharts";
-import { Upload, X, FileAudio, Music, MessageSquare, ListPlus, Check, Save, Trash2, History, Palette, ArrowRight, FolderKanban, Download, CheckCircle2, AlertTriangle, XCircle, ChevronRight, Info, User, ThumbsUp, ThumbsDown, Copy, GitCompare } from "lucide-react";
+import { Upload, X, FileAudio, Music, MessageSquare, ListPlus, Check, Save, Trash2, History, Palette, ArrowRight, FolderKanban, Download, CheckCircle2, AlertTriangle, XCircle, ChevronRight, Info, User, ThumbsUp, ThumbsDown, Copy, GitCompare, Link2 } from "lucide-react";
+import { LinkAnalysisTrackDialog } from "@/components/spotify-import/LinkAnalysisTrackDialog";
 import { useAcceptanceSignal } from "@/hooks/useAcceptanceSignal";
 import { TrackVersionsPanel } from "@/components/music-dna/TrackVersionsPanel";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -2005,6 +2006,7 @@ function SavedAnalysesList({ onLoad }: {
   onLoad: (analysis: SavedAnalysis) => void;
 }) {
   const { savedAnalyses, isLoading, deleteAnalysis } = useSavedAnalyses();
+  const [linkTarget, setLinkTarget] = useState<{ analysisId: string; analysisLabel: string; currentTrackId: string | null } | null>(null);
 
   if (isLoading || savedAnalyses.length === 0) return null;
 
@@ -2016,7 +2018,7 @@ function SavedAnalysesList({ onLoad }: {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-1.5">
-        {savedAnalyses.map((a) => (
+        {savedAnalyses.map((a: any) => (
           <div
             key={a.id}
             className="flex items-center gap-3 p-2.5 rounded-lg bg-muted/30 border border-border hover:border-primary/30 transition-colors cursor-pointer group"
@@ -2027,8 +2029,25 @@ function SavedAnalysesList({ onLoad }: {
               <p className="text-sm font-medium truncate">{a.track_name}</p>
               <p className="text-[11px] text-muted-foreground font-mono">
                 {a.genre} · {new Date(a.created_at).toLocaleDateString("pt-BR")}
+                {a.spotify_tracks && (
+                  <span className="ml-2 text-primary">
+                    · 🔗 {a.spotify_tracks.spotify_releases?.name ?? "Catálogo"} / {a.spotify_tracks.name}
+                  </span>
+                )}
               </p>
             </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 text-muted-foreground hover:text-primary"
+              title={a.spotify_track_id ? "Editar vínculo de catálogo" : "Vincular faixa do catálogo"}
+              onClick={(e) => {
+                e.stopPropagation();
+                setLinkTarget({ analysisId: a.id, analysisLabel: a.track_name, currentTrackId: a.spotify_track_id ?? null });
+              }}
+            >
+              <Link2 className="h-3 w-3" />
+            </Button>
             <Button
               variant="ghost"
               size="icon"
@@ -2040,6 +2059,16 @@ function SavedAnalysesList({ onLoad }: {
           </div>
         ))}
       </CardContent>
+      <LinkAnalysisTrackDialog
+        open={linkTarget !== null}
+        onOpenChange={(o) => !o && setLinkTarget(null)}
+        mode={linkTarget ? {
+          kind: "pick-track",
+          analysisId: linkTarget.analysisId,
+          analysisLabel: linkTarget.analysisLabel,
+          currentTrackId: linkTarget.currentTrackId,
+        } : null}
+      />
     </Card>
   );
 }
