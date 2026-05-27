@@ -49,6 +49,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { NeighborDetailDialog } from "@/components/music-dna/NeighborDetailDialog";
 import { GenreMismatchHint } from "@/components/music-dna/GenreMismatchHint";
 import { PlaylistMatchCard } from "@/components/music-dna/PlaylistMatchCard";
+import { StageSelector } from "@/components/music-dna/StageSelector";
+import {
+  STAGE_LABEL,
+  STAGE_PROFILES,
+  resolveStage,
+  type AudioStage,
+} from "@/lib/musicDnaStages";
 import { CatalogNeighborsPanel } from "@/components/music-dna/CatalogNeighborsPanel";
 // AcousticMatchPanel deixou de ser usado no resultado público (mantido no codebase para uso futuro/admin).
 
