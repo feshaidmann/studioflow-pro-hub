@@ -1600,24 +1600,33 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
       <DetailSection id="dna-tecnico" icon="🔬" title="Métricas e diagnóstico técnico">
         <div className="space-y-4">
           <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 animate-fade-in">
-            <MetricCard
-              label="LUFS" value={lufsValue} unit="LUFS"
-              help="volume percebido em plataformas"
-              target={{ min: -15, max: -13, ideal: -14 }}
-              range={{ min: -30, max: -6 }}
-            />
-            <MetricCard
-              label="True Peak" value={tpValue} unit="dBTP"
-              help="risco de distorção após streaming"
-              target={{ min: -2, max: -1, ideal: -1 }}
-              range={{ min: -6, max: 0 }}
-            />
+            {stageProfile.enforceLufs && (
+              <MetricCard
+                label="LUFS" value={lufsValue} unit="LUFS"
+                help="volume percebido em plataformas"
+                target={{ min: -15, max: -13, ideal: -14 }}
+                range={{ min: -30, max: -6 }}
+              />
+            )}
+            {stageProfile.enforceTruePeak && (
+              <MetricCard
+                label="True Peak" value={tpValue} unit="dBTP"
+                help="risco de distorção após streaming"
+                target={{ min: -2, max: -1, ideal: -1 }}
+                range={{ min: -6, max: 0 }}
+              />
+            )}
             <MetricCard
               label="DR" value={drValue} unit="LU"
-              help="variação suave/forte"
-              target={{ min: 7, max: 12, ideal: 9 }}
+              help={stageProfile.drMode === "strict" ? "variação suave/forte" : "variação dinâmica (referência)"}
+              target={stageProfile.drMode === "strict"
+                ? { min: 7, max: 12, ideal: 9 }
+                : stageProfile.drMode === "soft"
+                ? { min: 6, max: 14, ideal: 9 }
+                : undefined}
               range={{ min: 2, max: 18 }}
             />
+
             <MetricCard
               label="BPM" value={bpmValue} unit=""
               help="pulso médio detectado"
