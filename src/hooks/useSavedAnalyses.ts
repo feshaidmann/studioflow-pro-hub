@@ -71,7 +71,7 @@ export function useSavedAnalyses() {
       input,
       diagnosis,
     }: {
-      input: { name: string; notes?: string; references: string[]; projectId?: string };
+      input: { name: string; notes?: string; references: string[]; projectId?: string; stage?: "demo" | "mix" | "master" };
       diagnosis: DiagnosisResult;
       silent?: boolean;
     }): Promise<{ id: string; trackVersionId: string; versionNumber: number; summaryVariant: "A" | "B" }> => {
