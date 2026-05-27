@@ -1239,7 +1239,7 @@ function LoadingView({ trackName, logs, progress }: {
 // ── RESULT VIEW ──────────────────────────────────────────────────────────────
 
 function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isSaving, savedAnalysisId, onEnsureSaved, projects }: {
-  input: TrackInput | { name: string; notes?: string; references: string[]; projectId?: string };
+  input: TrackInput | { name: string; notes?: string; references: string[]; projectId?: string; stage?: AudioStage };
   diagnosis: DiagnosisResult;
   benchmark?: MusicDnaBenchmark;
   savedAnalysisId?: string;
