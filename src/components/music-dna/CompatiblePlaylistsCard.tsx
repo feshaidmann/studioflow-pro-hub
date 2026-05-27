@@ -1,11 +1,14 @@
-import { useEffect, useState } from "react";
-import { ExternalLink, Users, Music2 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { ExternalLink, Users, Music2, Radio, Check } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { useActiveMonitors } from "@/hooks/usePlaylistMonitors";
+import { MonitorPlaylistDialog, type MonitorPlaylistTarget } from "@/components/music-dna/MonitorPlaylistDialog";
 
 interface SpotifyPlaylist {
   id: string;
@@ -38,7 +41,17 @@ function formatFollowers(n: number): string {
   return `${n} seg.`;
 }
 
-function PlaylistCard({ playlist, editorial }: { playlist: SpotifyPlaylist; editorial: boolean }) {
+function PlaylistCard({
+  playlist,
+  editorial,
+  isMonitored,
+  onMonitor,
+}: {
+  playlist: SpotifyPlaylist;
+  editorial: boolean;
+  isMonitored: boolean;
+  onMonitor: (p: SpotifyPlaylist) => void;
+}) {
   return (
     <div className="flex flex-col gap-2 p-3 border border-border rounded-xl bg-card hover:shadow-sm transition-shadow">
       <div className="relative">
@@ -76,6 +89,26 @@ function PlaylistCard({ playlist, editorial }: { playlist: SpotifyPlaylist; edit
           Abrir <ExternalLink className="h-3 w-3" />
         </a>
       </div>
+      <Button
+        size="sm"
+        variant={isMonitored ? "ghost" : "outline"}
+        disabled={isMonitored}
+        onClick={() => onMonitor(playlist)}
+        className={cn(
+          "h-7 text-xs gap-1.5 mt-1",
+          isMonitored && "text-green-700 hover:text-green-700 cursor-default",
+        )}
+      >
+        {isMonitored ? (
+          <>
+            <Check className="h-3 w-3" /> Monitorando
+          </>
+        ) : (
+          <>
+            <Radio className="h-3 w-3" /> Monitorar
+          </>
+        )}
+      </Button>
     </div>
   );
 }
@@ -98,6 +131,13 @@ export function CompatiblePlaylistsCard({ genre, subgenre, mood, styleTags, refe
   const [data, setData] = useState<ApiResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [monitorTarget, setMonitorTarget] = useState<MonitorPlaylistTarget | null>(null);
+
+  const { data: activeMonitors } = useActiveMonitors();
+  const monitoredPlaylistIds = useMemo(
+    () => new Set((activeMonitors ?? []).map((m) => m.playlist_id)),
+    [activeMonitors],
+  );
 
   const hasInput = Boolean(
     (genre && genre.trim()) ||
@@ -150,6 +190,16 @@ export function CompatiblePlaylistsCard({ genre, subgenre, mood, styleTags, refe
   const ugc = data?.ugc ?? [];
   const isEmpty = !loading && !error && editorial.length === 0 && ugc.length === 0;
 
+  const handleMonitor = (p: SpotifyPlaylist) => {
+    setMonitorTarget({
+      playlist_id: p.id,
+      playlist_name: p.name,
+      playlist_image_url: p.image_url,
+      playlist_external_url: p.external_url,
+      playlist_owner_name: p.owner_name,
+    });
+  };
+
   return (
     <Card>
       <CardHeader className="pb-3">
@@ -196,7 +246,13 @@ export function CompatiblePlaylistsCard({ genre, subgenre, mood, styleTags, refe
             <TabsContent value="editorial">
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                 {editorial.map((p) => (
-                  <PlaylistCard key={p.id} playlist={p} editorial />
+                  <PlaylistCard
+                    key={p.id}
+                    playlist={p}
+                    editorial
+                    isMonitored={monitoredPlaylistIds.has(p.id)}
+                    onMonitor={handleMonitor}
+                  />
                 ))}
               </div>
             </TabsContent>
@@ -204,13 +260,25 @@ export function CompatiblePlaylistsCard({ genre, subgenre, mood, styleTags, refe
             <TabsContent value="ugc">
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                 {ugc.map((p) => (
-                  <PlaylistCard key={p.id} playlist={p} editorial={false} />
+                  <PlaylistCard
+                    key={p.id}
+                    playlist={p}
+                    editorial={false}
+                    isMonitored={monitoredPlaylistIds.has(p.id)}
+                    onMonitor={handleMonitor}
+                  />
                 ))}
               </div>
             </TabsContent>
           </Tabs>
         )}
       </CardContent>
+
+      <MonitorPlaylistDialog
+        open={monitorTarget !== null}
+        onOpenChange={(o) => !o && setMonitorTarget(null)}
+        playlist={monitorTarget}
+      />
     </Card>
   );
 }
