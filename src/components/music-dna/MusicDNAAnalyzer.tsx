@@ -78,8 +78,10 @@ const formSchema = z.object({
   references: z.array(z.string()).max(5),
   notes: z.string().optional(),
   projectId: z.string().optional(),
+  stage: z.enum(["demo", "mix", "master"]),
 });
 type FormValues = z.infer<typeof formSchema>;
+
 
 // ── SUB-COMPONENTS ───────────────────────────────────────────────────────────
 
