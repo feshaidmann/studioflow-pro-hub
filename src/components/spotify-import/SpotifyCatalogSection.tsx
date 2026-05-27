@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { ChevronDown, ChevronRight, Disc3, Music, Trash2, ExternalLink, Link2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,7 +13,11 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { useSpotifyCatalog, useDeleteSpotifyRelease } from "@/hooks/useSpotifyImport";
+import {
+  useSpotifyCatalog,
+  useDeleteSpotifyRelease,
+  useCatalogPopularity,
+} from "@/hooks/useSpotifyImport";
 import { LinkAnalysisTrackDialog } from "@/components/spotify-import/LinkAnalysisTrackDialog";
 
 const TYPE_LABEL: Record<string, string> = {
@@ -29,12 +33,48 @@ function formatDuration(ms: number | null): string {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 }
 
+function popularityBadgeColor(p: number): string {
+  if (p >= 61) return "bg-emerald-50 text-emerald-700";
+  if (p >= 41) return "bg-blue-50 text-blue-700";
+  if (p >= 21) return "bg-amber-50 text-amber-700";
+  return "bg-muted text-muted-foreground";
+}
+
+function maxPopColor(p: number): string {
+  if (p >= 61) return "text-emerald-600";
+  if (p >= 41) return "text-blue-600";
+  if (p >= 21) return "text-amber-600";
+  return "text-muted-foreground";
+}
+
 export function SpotifyCatalogSection() {
   const { data: releases = [], isLoading } = useSpotifyCatalog();
   const deleteRelease = useDeleteSpotifyRelease();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [confirmId, setConfirmId] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState<"date" | "popularity">("date");
   const [linkTarget, setLinkTarget] = useState<{ trackId: string; trackLabel: string; currentAnalysisId: string | null } | null>(null);
+
+  const allTrackIds = useMemo(
+    () => releases.flatMap((r) => (r.tracks ?? []).map((t) => t.spotify_track_id)),
+    [releases],
+  );
+  const { data: popularityMap = {} } = useCatalogPopularity(allTrackIds);
+
+  const sortedReleases = useMemo(() => {
+    if (sortBy === "date") return releases;
+    return [...releases].sort((a, b) => {
+      const maxA = (a.tracks ?? []).reduce(
+        (m, t) => Math.max(m, popularityMap[t.spotify_track_id] ?? 0),
+        0,
+      );
+      const maxB = (b.tracks ?? []).reduce(
+        (m, t) => Math.max(m, popularityMap[t.spotify_track_id] ?? 0),
+        0,
+      );
+      return maxB - maxA;
+    });
+  }, [releases, sortBy, popularityMap]);
 
   if (isLoading || releases.length === 0) return null;
 
@@ -49,21 +89,50 @@ export function SpotifyCatalogSection() {
     }
   }
 
+  const hasPopularityData = Object.keys(popularityMap).length > 0;
+
   return (
     <section className="space-y-4">
-      <div className="flex items-center gap-2">
-        <Disc3 className="h-4 w-4 text-primary" />
-        <h2 className="text-base font-semibold">Catálogo Publicado</h2>
-        <Badge variant="secondary" className="text-[10px]">
-          {releases.length} {releases.length === 1 ? "lançamento" : "lançamentos"}
-        </Badge>
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <div className="flex items-center gap-2">
+          <Disc3 className="h-4 w-4 text-primary" />
+          <h2 className="text-base font-semibold">Catálogo Publicado</h2>
+          <Badge variant="secondary" className="text-[10px]">
+            {releases.length} {releases.length === 1 ? "lançamento" : "lançamentos"}
+          </Badge>
+        </div>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => setSortBy("date")}
+            className={`text-xs px-2 py-1 rounded transition-colors ${
+              sortBy === "date" ? "bg-accent text-foreground" : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Recentes
+          </button>
+          <button
+            type="button"
+            onClick={() => setSortBy("popularity")}
+            className={`text-xs px-2 py-1 rounded transition-colors ${
+              sortBy === "popularity" ? "bg-accent text-foreground" : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Popularidade
+          </button>
+        </div>
       </div>
 
       <div className="space-y-2">
-        {releases.map((r) => {
+        {sortedReleases.map((r) => {
           const isExpanded = expandedId === r.id;
           const year = r.release_date?.slice(0, 4) ?? "—";
           const tracks = r.tracks ?? [];
+          const maxPop = tracks.reduce<number | null>((max, t) => {
+            const p = popularityMap[t.spotify_track_id];
+            if (typeof p !== "number") return max;
+            return max === null ? p : Math.max(max, p);
+          }, null);
 
           return (
             <div
@@ -97,6 +166,14 @@ export function SpotifyCatalogSection() {
                       {(r.total_tracks ?? 0) === 1 ? "faixa" : "faixas"}
                     </p>
                   </div>
+                  {maxPop !== null && (
+                    <span
+                      className={`text-xs font-medium tabular-nums flex-shrink-0 ${maxPopColor(maxPop)}`}
+                      title="Popularidade máxima das faixas"
+                    >
+                      ↑{maxPop}
+                    </span>
+                  )}
                   <Badge variant="outline" className="text-[10px] flex-shrink-0">
                     {TYPE_LABEL[r.release_type] ?? r.release_type}
                   </Badge>
@@ -142,50 +219,71 @@ export function SpotifyCatalogSection() {
                   {tracks
                     .slice()
                     .sort((a, b) => (a.track_number ?? 0) - (b.track_number ?? 0))
-                    .map((t) => (
-                      <div
-                        key={t.id}
-                        className="flex items-center gap-3 text-xs py-1.5"
-                      >
-                        <span className="w-6 text-muted-foreground text-right tabular-nums">
-                          {t.track_number ?? "—"}
-                        </span>
-                        <span className="flex-1 truncate text-foreground">{t.name}</span>
-                        {t.linked_analysis && (
-                          <Badge variant="secondary" className="text-[10px] gap-1">
-                            <Link2 className="h-2.5 w-2.5" />
-                            DNA {t.linked_analysis.version_label ?? `v${t.linked_analysis.version_number ?? 1}`}
-                          </Badge>
-                        )}
-                        {t.isrc && (
-                          <span className="text-[10px] text-muted-foreground font-mono">
-                            {t.isrc}
-                          </span>
-                        )}
-                        <span className="text-muted-foreground tabular-nums w-10 text-right">
-                          {formatDuration(t.duration_ms)}
-                        </span>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6"
-                          title={t.linked_analysis ? "Editar vínculo de análise" : "Vincular análise"}
-                          onClick={() => setLinkTarget({
-                            trackId: t.id,
-                            trackLabel: t.name,
-                            currentAnalysisId: t.linked_analysis?.id ?? null,
-                          })}
+                    .map((t) => {
+                      const pop = popularityMap[t.spotify_track_id];
+                      return (
+                        <div
+                          key={t.id}
+                          className="flex items-center gap-3 text-xs py-1.5"
                         >
-                          <Link2 className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    ))}
+                          <span className="w-6 text-muted-foreground text-right tabular-nums">
+                            {t.track_number ?? "—"}
+                          </span>
+                          <span className="flex-1 truncate text-foreground">{t.name}</span>
+                          {pop === undefined ? null : pop === null ? (
+                            <span className="text-[10px] text-muted-foreground/50 shrink-0">—</span>
+                          ) : (
+                            <span
+                              className={`text-[10px] rounded-full px-1.5 py-0.5 font-medium tabular-nums shrink-0 ${popularityBadgeColor(pop)}`}
+                              title="Popularidade Spotify"
+                            >
+                              {pop}
+                            </span>
+                          )}
+                          {t.linked_analysis && (
+                            <Badge variant="secondary" className="text-[10px] gap-1">
+                              <Link2 className="h-2.5 w-2.5" />
+                              DNA {t.linked_analysis.version_label ?? `v${t.linked_analysis.version_number ?? 1}`}
+                            </Badge>
+                          )}
+                          {t.isrc && (
+                            <span className="text-[10px] text-muted-foreground font-mono">
+                              {t.isrc}
+                            </span>
+                          )}
+                          <span className="text-muted-foreground tabular-nums w-10 text-right">
+                            {formatDuration(t.duration_ms)}
+                          </span>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            title={t.linked_analysis ? "Editar vínculo de análise" : "Vincular análise"}
+                            onClick={() => setLinkTarget({
+                              trackId: t.id,
+                              trackLabel: t.name,
+                              currentAnalysisId: t.linked_analysis?.id ?? null,
+                            })}
+                          >
+                            <Link2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      );
+                    })}
                 </div>
               )}
             </div>
           );
         })}
       </div>
+
+      {hasPopularityData && (
+        <p className="text-[10px] text-muted-foreground text-right">
+          Popularidade Spotify: <span className="text-emerald-700">61–100 alta</span> ·{" "}
+          <span className="text-blue-700">41–60 moderada</span> ·{" "}
+          <span className="text-amber-700">21–40 crescimento</span> · 0–20 inicial
+        </p>
+      )}
 
       <AlertDialog open={confirmId !== null} onOpenChange={(o) => !o && setConfirmId(null)}>
         <AlertDialogContent>
