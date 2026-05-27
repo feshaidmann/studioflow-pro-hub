@@ -44,6 +44,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Progress } from "@/components/ui/progress";
 import { Plus, Check, X as XIcon, Users, UserPlus, Mail, Phone, DollarSign, Music, Activity, Pencil, Trash2, CheckCircle2, AlertTriangle, Clock, ChevronLeft, Loader2, Guitar, Mic, Sliders, Layers, ChevronDown, Trophy, Upload, MessageSquare, ArrowRight, FileText, Video, Camera, MoreVertical, Calendar, Sparkles, Rocket, Disc3 } from "lucide-react";
 import { ImportSpotifyCatalogDialog } from "@/components/spotify-import/ImportSpotifyCatalogDialog";
+import { SpotifyCatalogSection } from "@/components/spotify-import/SpotifyCatalogSection";
 import { Label } from "@/components/ui/label";
 import { type Project, type Professional, type ProjectType } from "@/data/mockData";
 import { useLanguage } from "@/contexts/LanguageContext";
