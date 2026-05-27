@@ -144,7 +144,7 @@ Deno.serve(async (req) => {
     for (const a of uniqueAlbums) {
       const tracks: TrackOut[] = [];
       let tNext: string | null =
-        `https://api.spotify.com/v1/albums/${a.id}/tracks?market=BR&limit=50`;
+        `https://api.spotify.com/v1/albums/${a.id}/tracks?market=BR&limit=20`;
       while (tNext) {
         const tp = await spotifyGet(tNext, token);
         for (const it of tp.items as Array<{
