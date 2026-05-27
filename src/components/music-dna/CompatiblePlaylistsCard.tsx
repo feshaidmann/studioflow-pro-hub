@@ -41,7 +41,17 @@ function formatFollowers(n: number): string {
   return `${n} seg.`;
 }
 
-function PlaylistCard({ playlist, editorial }: { playlist: SpotifyPlaylist; editorial: boolean }) {
+function PlaylistCard({
+  playlist,
+  editorial,
+  isMonitored,
+  onMonitor,
+}: {
+  playlist: SpotifyPlaylist;
+  editorial: boolean;
+  isMonitored: boolean;
+  onMonitor: (p: SpotifyPlaylist) => void;
+}) {
   return (
     <div className="flex flex-col gap-2 p-3 border border-border rounded-xl bg-card hover:shadow-sm transition-shadow">
       <div className="relative">
@@ -79,6 +89,26 @@ function PlaylistCard({ playlist, editorial }: { playlist: SpotifyPlaylist; edit
           Abrir <ExternalLink className="h-3 w-3" />
         </a>
       </div>
+      <Button
+        size="sm"
+        variant={isMonitored ? "ghost" : "outline"}
+        disabled={isMonitored}
+        onClick={() => onMonitor(playlist)}
+        className={cn(
+          "h-7 text-xs gap-1.5 mt-1",
+          isMonitored && "text-green-700 hover:text-green-700 cursor-default",
+        )}
+      >
+        {isMonitored ? (
+          <>
+            <Check className="h-3 w-3" /> Monitorando
+          </>
+        ) : (
+          <>
+            <Radio className="h-3 w-3" /> Monitorar
+          </>
+        )}
+      </Button>
     </div>
   );
 }
