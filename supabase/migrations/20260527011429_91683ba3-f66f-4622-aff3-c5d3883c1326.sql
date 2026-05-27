@@ -1,0 +1,1 @@
+ALTER TABLE public._genre_import_2026 ENABLE ROW LEVEL SECURITY;

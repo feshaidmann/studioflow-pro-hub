@@ -14,6 +14,24 @@ export type Database = {
   }
   public: {
     Tables: {
+      _genre_import_2026: {
+        Row: {
+          band: string
+          filename: string
+          genre: string
+        }
+        Insert: {
+          band: string
+          filename: string
+          genre: string
+        }
+        Update: {
+          band?: string
+          filename?: string
+          genre?: string
+        }
+        Relationships: []
+      }
       ai_conversations: {
         Row: {
           created_at: string
@@ -3359,6 +3377,7 @@ export type Database = {
           tracks_per_band_max: number
         }[]
       }
+      reset_genre_import_staging: { Args: never; Returns: undefined }
       revoke_project_invitation: {
         Args: { p_invitation_id: string }
         Returns: Json
