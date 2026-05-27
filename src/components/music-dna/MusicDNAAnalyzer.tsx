@@ -1255,6 +1255,8 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
   const [allStepsAdded, setAllStepsAdded] = useState(false);
   const [openNeighbor, setOpenNeighbor] = useState<CatalogNeighbor | null>(null);
   const { addTask } = useTasks();
+  const stage: AudioStage = ((input as { stage?: AudioStage }).stage ?? "master");
+  const stageProfile = STAGE_PROFILES[stage];
   const {
     identidade, diagnostico_tecnico, analise_seccoes,
     referencias_proximas, pontos_fortes, gargalos_criativos,
