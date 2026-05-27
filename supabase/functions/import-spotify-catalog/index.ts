@@ -50,7 +50,11 @@ async function spotifyGet(url: string, token: string): Promise<any> {
     await new Promise((r) => setTimeout(r, Math.min(retryAfter, 5) * 1000));
     return spotifyGet(url, token);
   }
-  if (!resp.ok) throw new Error(`Spotify ${resp.status}: ${await resp.text()}`);
+  if (!resp.ok) {
+    const body = await resp.text();
+    console.error(`Spotify ${resp.status} for URL ${url}: ${body}`);
+    throw new Error(`Spotify ${resp.status} for ${url}: ${body}`);
+  }
   return resp.json();
 }
 
