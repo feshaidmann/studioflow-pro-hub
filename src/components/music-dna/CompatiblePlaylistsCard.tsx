@@ -131,6 +131,13 @@ export function CompatiblePlaylistsCard({ genre, subgenre, mood, styleTags, refe
   const [data, setData] = useState<ApiResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [monitorTarget, setMonitorTarget] = useState<MonitorPlaylistTarget | null>(null);
+
+  const { data: activeMonitors } = useActiveMonitors();
+  const monitoredPlaylistIds = useMemo(
+    () => new Set((activeMonitors ?? []).map((m) => m.playlist_id)),
+    [activeMonitors],
+  );
 
   const hasInput = Boolean(
     (genre && genre.trim()) ||
@@ -183,6 +190,16 @@ export function CompatiblePlaylistsCard({ genre, subgenre, mood, styleTags, refe
   const ugc = data?.ugc ?? [];
   const isEmpty = !loading && !error && editorial.length === 0 && ugc.length === 0;
 
+  const handleMonitor = (p: SpotifyPlaylist) => {
+    setMonitorTarget({
+      playlist_id: p.id,
+      playlist_name: p.name,
+      playlist_image_url: p.image_url,
+      playlist_external_url: p.external_url,
+      playlist_owner_name: p.owner_name,
+    });
+  };
+
   return (
     <Card>
       <CardHeader className="pb-3">
@@ -229,7 +246,13 @@ export function CompatiblePlaylistsCard({ genre, subgenre, mood, styleTags, refe
             <TabsContent value="editorial">
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                 {editorial.map((p) => (
-                  <PlaylistCard key={p.id} playlist={p} editorial />
+                  <PlaylistCard
+                    key={p.id}
+                    playlist={p}
+                    editorial
+                    isMonitored={monitoredPlaylistIds.has(p.id)}
+                    onMonitor={handleMonitor}
+                  />
                 ))}
               </div>
             </TabsContent>
@@ -237,13 +260,25 @@ export function CompatiblePlaylistsCard({ genre, subgenre, mood, styleTags, refe
             <TabsContent value="ugc">
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                 {ugc.map((p) => (
-                  <PlaylistCard key={p.id} playlist={p} editorial={false} />
+                  <PlaylistCard
+                    key={p.id}
+                    playlist={p}
+                    editorial={false}
+                    isMonitored={monitoredPlaylistIds.has(p.id)}
+                    onMonitor={handleMonitor}
+                  />
                 ))}
               </div>
             </TabsContent>
           </Tabs>
         )}
       </CardContent>
+
+      <MonitorPlaylistDialog
+        open={monitorTarget !== null}
+        onOpenChange={(o) => !o && setMonitorTarget(null)}
+        playlist={monitorTarget}
+      />
     </Card>
   );
 }
