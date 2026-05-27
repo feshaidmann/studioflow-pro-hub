@@ -1816,7 +1816,7 @@ function NextStepsBar({
   savedAnalysisId,
 }: {
   diagnosis: DiagnosisResult;
-  input: TrackInput | { name: string; notes?: string; references: string[]; projectId?: string };
+  input: TrackInput | { name: string; notes?: string; references: string[]; projectId?: string; stage?: AudioStage };
   isSaved: boolean;
   savedAnalysisId?: string;
 }) {
