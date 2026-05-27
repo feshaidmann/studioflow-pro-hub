@@ -51,6 +51,7 @@ import { NeighborDetailDialog } from "@/components/music-dna/NeighborDetailDialo
 import { GenreMismatchHint } from "@/components/music-dna/GenreMismatchHint";
 import { PlaylistMatchCard } from "@/components/music-dna/PlaylistMatchCard";
 import { CompatiblePlaylistsCard } from "@/components/music-dna/CompatiblePlaylistsCard";
+import { SpotifyPopularityCard } from "@/components/music-dna/SpotifyPopularityCard";
 import { ActiveMonitorsCard } from "@/components/music-dna/ActiveMonitorsCard";
 import { StageSelector } from "@/components/music-dna/StageSelector";
 import {
@@ -1887,6 +1888,12 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
         </div>
       )}
 
+      {/* Popularidade no Spotify */}
+      <SpotifyPopularityCard
+        spotifyTrackId={diagnosis.externalLookup?.spotify_id ?? null}
+        genre={diagnosis.genero_classificado ?? null}
+      />
+
       {/* Playlists Compatíveis (Spotify) */}
       <CompatiblePlaylistsCard
         genre={diagnosis.genero_classificado}
@@ -1894,6 +1901,7 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
         styleTags={diagnosis.identidade?.tags ?? []}
         references={(diagnosis.referencias_proximas ?? []).map((r) => r.artista).filter(Boolean)}
       />
+
 
       {/* Monitoramentos Ativos */}
       <ActiveMonitorsCard />

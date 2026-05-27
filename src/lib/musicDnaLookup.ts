@@ -8,6 +8,7 @@ export interface MusicDnaLookupResult {
   mbid?: string;
   deezerId?: number;
   previewUrl?: string;
+  spotify_id?: string | null;
 }
 
 export function parseArtistTitle(trackName: string) {
