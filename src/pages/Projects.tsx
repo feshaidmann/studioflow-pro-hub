@@ -42,7 +42,8 @@ import {
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Progress } from "@/components/ui/progress";
-import { Plus, Check, X as XIcon, Users, UserPlus, Mail, Phone, DollarSign, Music, Activity, Pencil, Trash2, CheckCircle2, AlertTriangle, Clock, ChevronLeft, Loader2, Guitar, Mic, Sliders, Layers, ChevronDown, Trophy, Upload, MessageSquare, ArrowRight, FileText, Video, Camera, MoreVertical, Calendar, Sparkles, Rocket } from "lucide-react";
+import { Plus, Check, X as XIcon, Users, UserPlus, Mail, Phone, DollarSign, Music, Activity, Pencil, Trash2, CheckCircle2, AlertTriangle, Clock, ChevronLeft, Loader2, Guitar, Mic, Sliders, Layers, ChevronDown, Trophy, Upload, MessageSquare, ArrowRight, FileText, Video, Camera, MoreVertical, Calendar, Sparkles, Rocket, Disc3 } from "lucide-react";
+import { ImportSpotifyCatalogDialog } from "@/components/spotify-import/ImportSpotifyCatalogDialog";
 import { Label } from "@/components/ui/label";
 import { type Project, type Professional, type ProjectType } from "@/data/mockData";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -147,6 +148,7 @@ export default function Projects() {
   const [showTeam, setShowTeam] = useState(false);
   const [teamDialogOpen, setTeamDialogOpen] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [spotifyImportOpen, setSpotifyImportOpen] = useState(false);
   const [form, setForm] = useState({ name: "", artist: "", bpm: "120", key: "C", stage: "inicio" as Project["stage"], projectType: "single" as ProjectType, trackCount: "", uploadDate: "", template: "none" as ProjectTemplate, genre: "", audienceSize: "" });
 
   /* ── Wizard state (single-step) ── */
@@ -655,7 +657,10 @@ export default function Projects() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
+
+      <ImportSpotifyCatalogDialog open={spotifyImportOpen} onOpenChange={setSpotifyImportOpen} />
 
       {/* ── Guest projects: projects where the user is an invited member ── */}
       {guestProjects.length > 0 && (
