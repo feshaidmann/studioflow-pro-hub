@@ -119,8 +119,7 @@ Deno.serve(async (req) => {
       total_tracks: number;
     };
     const albums: AlbumRaw[] = [];
-    let next: string | null =
-      `https://api.spotify.com/v1/artists/${artistId}/albums?include_groups=album,single,compilation&market=BR&limit=20`;
+      `https://api.spotify.com/v1/artists/${artistId}/albums?include_groups=album,single,compilation&market=BR`;
     let truncated = false;
     while (next) {
       const page = await spotifyGet(next, token);
