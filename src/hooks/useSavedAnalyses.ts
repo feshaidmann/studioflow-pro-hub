@@ -65,7 +65,7 @@ export function useSavedAnalyses() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("music_dna_analyses")
-        .select("*")
+        .select("*, spotify_tracks (id, name, track_number, spotify_releases (id, name, image_url))")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as unknown as SavedAnalysis[];
