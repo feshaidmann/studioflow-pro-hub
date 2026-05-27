@@ -1935,8 +1935,15 @@ export function MusicDNAAnalyzer() {
       file,
       notes: values.notes,
       references: values.references,
+      stage: values.stage,
     };
-    setLastInput({ ...input, projectId: values.projectId || undefined });
+    setLastInput({
+      name: input.name,
+      notes: input.notes,
+      references: input.references,
+      projectId: values.projectId || undefined,
+      stage: values.stage,
+    });
     setViewingDiagnosis(null);
     setRestoredFromCache(false);
     analyze(input);
