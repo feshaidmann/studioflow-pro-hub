@@ -1,0 +1,2 @@
+ALTER TABLE public.music_dna_analyses ADD COLUMN IF NOT EXISTS stage text;
+COMMENT ON COLUMN public.music_dna_analyses.stage IS 'Estágio de produção declarado pelo artista: demo | mix | master. NULL = legado (tratar como master).';
