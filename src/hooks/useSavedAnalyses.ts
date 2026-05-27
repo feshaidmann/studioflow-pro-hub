@@ -91,6 +91,7 @@ export function useSavedAnalyses() {
           track_name: input.name,
           genre: diagnosis.genero_classificado || "",
           project_id: input.projectId || null,
+          stage: input.stage ?? null,
           input_metadata: input as any,
           diagnosis: diagnosis as any,
           track_version_id: trackVersionId,
