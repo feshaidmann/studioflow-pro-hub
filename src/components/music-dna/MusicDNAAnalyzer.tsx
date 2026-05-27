@@ -1884,6 +1884,13 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
         </div>
       )}
 
+      {/* Playlists Compatíveis (Spotify) */}
+      <CompatiblePlaylistsCard
+        genre={diagnosis.genero_classificado}
+        mood={diagnosis.identidade?.mood_principal ? [diagnosis.identidade.mood_principal] : []}
+        styleTags={diagnosis.identidade?.tags ?? []}
+        references={(diagnosis.referencias_proximas ?? []).map((r) => r.band).filter(Boolean)}
+      />
 
       {/* Footer */}
       <div className="flex items-center justify-between gap-3 p-4 rounded-lg bg-muted/20 border border-border flex-wrap">
