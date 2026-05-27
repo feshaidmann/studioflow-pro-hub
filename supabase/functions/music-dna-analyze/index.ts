@@ -250,7 +250,7 @@ serve(async (req: Request) => {
       return jsonResponse({ success: true, analysis });
     }
 
-    void p; // (preserva referência)
+
 
 
     if (!prompt?.trim()) {
