@@ -1757,35 +1757,39 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
       {/* AcousticMatchPanel removido do resultado: as referências unificadas (catálogo + IA) já cobrem o caso de uso. */}
 
       {realAnalysis && (
-        <div className="grid gap-4 md:grid-cols-2">
-          <PlaylistMatchCard
-            user={{
-              lufs_integrated: realAnalysis.lufs_integrated ?? undefined,
-              dynamic_range_db: realAnalysis.dynamic_range_lu ?? undefined,
-              spectral_centroid: realAnalysis.spectral_centroid_hz ?? undefined,
-              tempo_bpm: typeof realAnalysis.bpm === "number" ? realAnalysis.bpm : undefined,
-              energy: realAnalysis.energy ?? undefined,
-              danceability: realAnalysis.danceability ?? undefined,
-              valence: realAnalysis.valence ?? undefined,
-              acousticness: realAnalysis.acousticness ?? undefined,
-            }}
-          />
-          <CatalogNeighborsPanel
-            neighbors={catalogNeighbors}
-            totalCompared={diagnosis.catalogTotalCompared ?? diagnosis.catalogTotal}
-            userTrack={{
-              bpm: typeof realAnalysis.bpm === "number" ? realAnalysis.bpm : undefined,
-              lufs: realAnalysis.lufs_integrated,
-              energy: realAnalysis.energy,
-              danceability: realAnalysis.danceability,
-              dynamic_range: realAnalysis.dynamic_range_lu,
-              spectral_centroid: realAnalysis.spectral_centroid_hz,
-              key: (realAnalysis as { key_name?: string }).key_name,
-            }}
-          />
-
+        <div className={cn("grid gap-4", stageProfile.showPlaylistMatch ? "md:grid-cols-2" : "md:grid-cols-1")}>
+          {stageProfile.showPlaylistMatch && (
+            <PlaylistMatchCard
+              user={{
+                lufs_integrated: realAnalysis.lufs_integrated ?? undefined,
+                dynamic_range_db: realAnalysis.dynamic_range_lu ?? undefined,
+                spectral_centroid: realAnalysis.spectral_centroid_hz ?? undefined,
+                tempo_bpm: typeof realAnalysis.bpm === "number" ? realAnalysis.bpm : undefined,
+                energy: realAnalysis.energy ?? undefined,
+                danceability: realAnalysis.danceability ?? undefined,
+                valence: realAnalysis.valence ?? undefined,
+                acousticness: realAnalysis.acousticness ?? undefined,
+              }}
+            />
+          )}
+          {stageProfile.showCatalogNeighbors && (
+            <CatalogNeighborsPanel
+              neighbors={catalogNeighbors}
+              totalCompared={diagnosis.catalogTotalCompared ?? diagnosis.catalogTotal}
+              userTrack={{
+                bpm: typeof realAnalysis.bpm === "number" ? realAnalysis.bpm : undefined,
+                lufs: realAnalysis.lufs_integrated,
+                energy: realAnalysis.energy,
+                danceability: realAnalysis.danceability,
+                dynamic_range: realAnalysis.dynamic_range_lu,
+                spectral_centroid: realAnalysis.spectral_centroid_hz,
+                key: (realAnalysis as { key_name?: string }).key_name,
+              }}
+            />
+          )}
         </div>
       )}
+
 
       {/* Footer */}
       <div className="flex items-center justify-between gap-3 p-4 rounded-lg bg-muted/20 border border-border flex-wrap">
