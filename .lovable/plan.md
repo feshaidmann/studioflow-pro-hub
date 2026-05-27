@@ -1,97 +1,98 @@
-# Estágio da produção no Music DNA
+## Objetivo
 
-Hoje o relatório trata toda faixa como master finalizado: cobra LUFS [−15,−13], True Peak ≤ −1, DR ≥ 7 e abre uma seção de pitch pra playlist. Pra quem subiu um demo de violão e voz, isso vira um relatório injusto e cheio de alarme falso. A solução é deixar o artista declarar o estágio e o relatório se reconfigurar — alvos, seções visíveis e tom das sugestões.
+Importar o catálogo de lançamentos do artista (álbuns, EPs, singles) a partir da URL de perfil do Spotify, em tabelas novas dedicadas, sem mexer em `projects`. Habilita o dropdown do monitoramento de playlists com faixas que já têm `spotify_track_uri`.
 
-## 1. Modelo: 3 estágios fixos
+## 1. Banco — migration
 
-| Estágio | Significado pro artista | O que muda no relatório |
-|---|---|---|
-| **Demo** | Ideia gravada, rascunho de arranjo | Foco em identidade + contraste das seções; ignora alvos de loudness |
-| **Mix** | Arranjo fechado, buscando balanço | Foco em dinâmica, espectro, balanço entre seções; LUFS folgado |
-| **Master** | Pronta pra streaming | Comportamento atual completo: LUFS/TP/DR rígidos + pitch playlist |
+Duas tabelas novas e dedicadas (não tocam em `projects`).
 
-Default = **Master** (compatibilidade com análises salvas e link público sem projeto).
+### `public.spotify_releases`
+- `id uuid pk`, `user_id uuid not null`, `spotify_album_id text not null`, `spotify_album_uri text`, `name text not null`, `release_type text` (`album|single|ep|compilation`), `release_date date`, `image_url text`, `total_tracks int`, `imported_at timestamptz default now()`, `created_at timestamptz default now()`.
+- UNIQUE `(user_id, spotify_album_id)`.
+- GRANT `SELECT, INSERT, UPDATE, DELETE` a `authenticated`; `ALL` a `service_role`.
+- RLS ON + 4 policies escopadas a `auth.uid() = user_id`.
 
-## 2. Como o estágio chega no analisador
+### `public.spotify_tracks`
+- `id uuid pk`, `user_id uuid not null`, `release_id uuid references spotify_releases(id) on delete cascade not null`, `spotify_track_id text not null`, `spotify_track_uri text not null`, `name text not null`, `track_number int`, `duration_ms int`, `isrc text`, `created_at timestamptz default now()`.
+- UNIQUE `(user_id, spotify_track_id)`.
+- Índice `(user_id, spotify_track_uri)` para o dropdown do monitoramento.
+- Mesmo padrão de GRANT/RLS por `user_id`.
 
-Lógica em cascata, na ordem:
+Sem alterações em `projects`.
 
-1. **Se houver `projectId` vinculado** → mapeia `project.stage` (workflow) → estágio de áudio:
-   - `inicio`, `rough`, `gravacao` → **Demo**
-   - `mix` → **Mix**
-   - `master`, `upload`, `lancado` → **Master**
-2. **Se não houver projeto** → mostra seletor inline obrigatório no card de upload (3 chips Demo/Mix/Master), default visualmente em Master.
-3. **Override manual**: mesmo com projeto vinculado, o artista pode trocar o chip — útil quando o projeto está em "Lançado" mas ele subiu o demo antigo pra comparar. Override é session-only, não atualiza o stage do projeto.
+## 2. Edge Function `import-spotify-catalog`
 
-## 3. Regra por estágio (perfil de alvos e visibilidade)
+`supabase/functions/import-spotify-catalog/index.ts` — POST autenticado.
 
-```text
-                        Demo            Mix             Master
-─────────────────────────────────────────────────────────────────
-MetricCard LUFS         oculto          alvo livre      [-15,-13]
-MetricCard True Peak    oculto          aviso ≥ 0       alvo ≤ -1
-MetricCard DR           informativo     alvo ≥ 8        alvo 7-12
-MetricCard BPM          ativo           ativo           ativo
-MetricCard Tom          ativo           ativo           ativo
-MetricCard Duração      ativo           ativo           ativo
-─────────────────────────────────────────────────────────────────
-Badge "Pronta p/        oculto          "Pronta p/      ativo
-streaming"                              mixagem final"
-─────────────────────────────────────────────────────────────────
-Identidade da faixa     ativo           ativo           ativo
-Diagnóstico técnico     enxuto*         completo        completo
-Seções da faixa         ativo           ativo           ativo
-Sugestões de arranjo    ativo           ativo           ativo
-Vizinhos no catálogo    ativo           ativo           ativo
-PlaylistMatch (pitch)   oculto          oculto          ativo
-BenchmarkPanel          ativo           ativo           ativo
-Export PDF/MD           sem alvos       alvos de mix    alvos completos
-```
+1. CORS + valida JWT, pega `user_id`.
+2. Body `{ spotify_artist_url }` validado por zod.
+3. Regex `/artist\/([a-zA-Z0-9]+)/`. Falha → 400 "URL inválida. Use um link de artista do Spotify."
+4. Token Spotify via Client Credentials (mesma helper das functions existentes `search-compatible-playlists` / `check-playlist-tracks`).
+5. `GET /v1/artists/{id}` → nome do artista.
+6. `GET /v1/artists/{id}/albums?include_groups=album,single,compilation&market=BR&limit=50`, paginando enquanto `next`. **Limite de 200 releases** por chamada (trunca com aviso no payload).
+7. Para cada álbum: `GET /v1/albums/{id}/tracks?market=BR&limit=50` paginando.
+8. **Buscar ISRC**: agrupa IDs em chunks de 50 → `GET /v1/tracks?ids=...&market=BR` → extrai `external_ids.isrc` (o endpoint de tracks do álbum não retorna ISRC).
+9. Retorna payload conforme spec (`artist_id`, `artist_name`, `releases[]`). Não grava no banco.
 
-*Diagnóstico enxuto no Demo = só comenta espectro/dinâmica em linhas gerais, sem cobrar loudness/TP.
+Sem alterações em `supabase/config.toml`.
 
-## 4. Impacto na IA (edge function `music-dna-analyze`)
+## 3. Frontend — fluxo de importação
 
-O prompt da IA passa a receber `stage: 'demo' | 'mix' | 'master'` e ganha instruções específicas:
+### 3a. Pontos de entrada
+- **Página de Projetos:** botão `Importar do Spotify` (variant outline) ao lado de `+ Novo Projeto`.
+- **Music DNA `MonitorPlaylistDialog`:** quando a query retorna zero faixas com `spotify_track_uri`, empty state com botão `Importar do Spotify` que abre o mesmo dialog.
 
-- **Demo**: foco em identidade artística, contraste verso/refrão, ideias de arranjo. Não comentar loudness, True Peak ou competitividade de streaming.
-- **Mix**: foco em balanço, dinâmica, equalização, contraste, decisões de arranjo. Mencionar loudness só como referência aproximada.
-- **Master**: comportamento atual — cobra LUFS/TP/DR, fala de streaming, pitch.
+### 3b. `ImportSpotifyCatalogDialog.tsx` (novo)
 
-A lista `proximos_passos` ganha um filtro pós-IA: itens que mencionam ação fora do escopo do estágio (ex.: "ajuste o limiter" no demo) são descartados antes de virar checklist.
+Wizard de 3 etapas, estado local `step: 'url' | 'select' | 'done'`.
 
-## 5. Persistência
+**Etapa 1 — URL**
+- Input com validação em tempo real do regex `open.spotify.com/artist/...`.
+- Helper text com "como encontrar".
+- Botão `Buscar catálogo →` invoca a edge function (loading state).
 
-- `TrackInput.stage` já existe no tipo mas não é usado — passa a ser obrigatório (com default).
-- `saved_analyses` ganha coluna `stage text` (nullable, default null = legado tratado como master na leitura).
-- Migration única: `ALTER TABLE public.saved_analyses ADD COLUMN stage text;`
+**Etapa 2 — Selecionar**
+- Releases agrupados por `release_type` na ordem **Álbuns → EPs → Singles → Compilações**, cada grupo ordenado por `release_date` decrescente.
+- `select spotify_album_id from spotify_releases where user_id = me` marca "Já importado" (checkbox disabled, badge cinza). Por padrão, novos vêm marcados.
+- Checkbox "Selecionar todos" + contador.
+- Cada card: capa 48px, nome, ano, total de faixas.
+- Botão `Importar selecionados`.
 
-## 6. Compatibilidade (não quebrar nada)
+**Etapa 3 — Sucesso**
+- `✓ Importação concluída — X lançamentos e Y faixas`.
+- Botões `Ver catálogo` (navega `/projects`) e `Fechar`.
 
-- Análises antigas sem `stage` → renderizam como Master (comportamento atual).
-- Endpoint público de análise (`/api/audio-analyze`) não muda — aceita `stage` opcional via query/body, default Master.
-- Export Markdown/PDF detecta o estágio e remove a seção "Como ler" de targets que não se aplicam.
-- Memory `mem://funcionalidades/dna-musical/fluxo-de-analise` atualizada com a regra dos 3 estágios.
+### 3c. Persistência
+Hook `useSpotifyImport.ts`:
+- `fetchCatalog(url)` → invoke edge function.
+- `importSelection(releases[])` → para cada release: `upsert spotify_releases on conflict(user_id, spotify_album_id) do nothing returning id` (re-fetch quando "do nothing" não retorna); depois `upsert spotify_tracks` em batch com `on conflict(user_id, spotify_track_id) do nothing`.
+- Tudo via supabase client (RLS garante `user_id`). Toast com resultado.
+- Invalida queries: `spotify-releases`, `spotify-tracks-with-uri`.
 
-## É útil?
+## 4. Integração com monitoramento de playlists
 
-Sim, alto valor com baixo risco:
+Atualizar o `MonitorPlaylistDialog` para que o Select "Qual faixa você quer monitorar?" tenha duas seções:
+1. **Catálogo Spotify** — `spotify_tracks where user_id=me and spotify_track_uri is not null` (ordenado por release_date desc, depois `name`). URI já preenchida automaticamente ao selecionar.
+2. **Análises Music DNA com URI** — `music_dna_analyses where user_id=me and spotify_id is not null` (campos confirmados no schema), exibindo `track_name`; URI montada como `spotify:track:{spotify_id}`.
 
-- **Reduz frustração**: principal queixa de artista independente é "o analisador disse que minha música tá com problema mas eu sei que ainda não masterizei". Estágio explícito resolve.
-- **Melhora qualidade das sugestões**: IA deixa de dar conselho de master pra demo e vice-versa.
-- **Sinal de dado**: passa a saber qual fração das análises é demo/mix/master — alimenta a métrica de "quão maduro está o catálogo do artista" no dashboard futuro.
-- **Custo de implementação baixo**: ~3 arquivos de código + 1 migration trivial.
+Mantém input manual de URI como fallback. Empty state (nenhuma das duas fontes tem nada) oferece o atalho "Importar do Spotify".
 
-## Arquivos afetados
+## 5. Memória
 
-```text
-src/lib/musicDnaStages.ts          (NOVO) perfis de alvo + mapping workflow→stage
-src/components/music-dna/StageSelector.tsx  (NOVO) chips Demo/Mix/Master
-src/components/music-dna/MusicDNAAnalyzer.tsx  ler stage, condicionar seções/MetricCards
-src/hooks/useMusicDNA.ts           propagar stage no fluxo
-supabase/functions/music-dna-analyze/index.ts  injetar stage no prompt + filtrar passos
-supabase/migrations/...            ALTER TABLE saved_analyses ADD stage
-mem://funcionalidades/dna-musical/fluxo-de-analise  documentar regra
-```
+Adicionar `mem://funcionalidades/dna-musical/importacao-catalogo-spotify` documentando tabelas, edge function, fluxo e integração com monitoramento. Atualizar `mem://index.md`.
 
-Sem mudanças em RLS, sem nova tabela, sem schema breaking.
+## Arquivos
+
+- `supabase/migrations/<ts>_spotify_catalog.sql` (novo)
+- `supabase/functions/import-spotify-catalog/index.ts` (novo)
+- `src/components/spotify-import/ImportSpotifyCatalogDialog.tsx` (novo)
+- `src/hooks/useSpotifyImport.ts` (novo)
+- Header da página de Projetos (edit) — botão de importação
+- `src/components/music-dna/MonitorPlaylistDialog.tsx` (edit) — novas fontes + atalho de importação
+
+## Fora de escopo
+
+- Alterações em `projects`, `music_dna_analyses` ou outras tabelas existentes.
+- Cron de re-sincronização automática (re-import manual; `on conflict do nothing` torna idempotente).
+- Conversão de releases importados em "projetos" do workflow de produção.
+- Dark mode, navegação global, RLS de outras tabelas.
