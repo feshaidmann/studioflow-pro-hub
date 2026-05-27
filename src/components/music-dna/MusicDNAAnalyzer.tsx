@@ -1888,6 +1888,12 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
         </div>
       )}
 
+      {/* Popularidade no Spotify */}
+      <SpotifyPopularityCard
+        spotifyTrackId={diagnosis.externalLookup?.spotify_id ?? null}
+        genre={diagnosis.genero_classificado ?? null}
+      />
+
       {/* Playlists Compatíveis (Spotify) */}
       <CompatiblePlaylistsCard
         genre={diagnosis.genero_classificado}
@@ -1895,6 +1901,7 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
         styleTags={diagnosis.identidade?.tags ?? []}
         references={(diagnosis.referencias_proximas ?? []).map((r) => r.artista).filter(Boolean)}
       />
+
 
       {/* Monitoramentos Ativos */}
       <ActiveMonitorsCard />
