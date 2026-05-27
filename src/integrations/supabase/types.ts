@@ -14,24 +14,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      _genre_import_2026: {
-        Row: {
-          band: string
-          filename: string
-          genre: string
-        }
-        Insert: {
-          band: string
-          filename: string
-          genre: string
-        }
-        Update: {
-          band?: string
-          filename?: string
-          genre?: string
-        }
-        Relationships: []
-      }
       ai_conversations: {
         Row: {
           created_at: string
