@@ -186,20 +186,25 @@ Deno.serve(async (req) => {
       for (const t of tracks) trackToRelease.set(t.spotify_track_id, { release, track: t });
     }
 
-    // 4) ISRC em chunks de 50 via /v1/tracks?ids=
+    // 4) ISRC em chunks de 50 via /v1/tracks?ids= (opcional — alguns apps não têm acesso)
     for (let i = 0; i < allTrackIds.length; i += 50) {
       const chunk = allTrackIds.slice(i, i + 50);
-      const data = await spotifyGet(
-        `https://api.spotify.com/v1/tracks?market=BR&ids=${chunk.join(",")}`,
-        token,
-      );
-      for (const t of (data.tracks ?? []) as Array<{
-        id: string;
-        external_ids?: { isrc?: string };
-      }>) {
-        if (!t?.id) continue;
-        const entry = trackToRelease.get(t.id);
-        if (entry) entry.track.isrc = t.external_ids?.isrc ?? null;
+      try {
+        const data = await spotifyGet(
+          `https://api.spotify.com/v1/tracks?market=BR&ids=${chunk.join(",")}`,
+          token,
+        );
+        for (const t of (data.tracks ?? []) as Array<{
+          id: string;
+          external_ids?: { isrc?: string };
+        }>) {
+          if (!t?.id) continue;
+          const entry = trackToRelease.get(t.id);
+          if (entry) entry.track.isrc = t.external_ids?.isrc ?? null;
+        }
+      } catch (e) {
+        console.warn("ISRC fetch failed (continuing without ISRCs):", (e as Error).message);
+        break;
       }
     }
 
