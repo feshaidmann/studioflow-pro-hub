@@ -16,9 +16,11 @@ export interface SavedAnalysis {
     notes?: string;
     references: string[];
     projectId?: string;
+    stage?: "demo" | "mix" | "master";
   };
   diagnosis: DiagnosisResult;
   created_at: string;
+  stage?: string | null;
   track_version_id?: string | null;
   version_number?: number | null;
   version_label?: string | null;
