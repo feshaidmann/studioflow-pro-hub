@@ -1894,6 +1894,10 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
         references={(diagnosis.referencias_proximas ?? []).map((r) => r.artista).filter(Boolean)}
       />
 
+      {/* Monitoramentos Ativos */}
+      <ActiveMonitorsCard />
+
+
       {/* Footer */}
       <div className="flex items-center justify-between gap-3 p-4 rounded-lg bg-muted/20 border border-border flex-wrap">
         <p className="text-xs text-muted-foreground">
