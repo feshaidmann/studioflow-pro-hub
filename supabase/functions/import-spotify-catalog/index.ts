@@ -50,7 +50,11 @@ async function spotifyGet(url: string, token: string): Promise<any> {
     await new Promise((r) => setTimeout(r, Math.min(retryAfter, 5) * 1000));
     return spotifyGet(url, token);
   }
-  if (!resp.ok) throw new Error(`Spotify ${resp.status}: ${await resp.text()}`);
+  if (!resp.ok) {
+    const body = await resp.text();
+    console.error(`Spotify ${resp.status} for URL ${url}: ${body}`);
+    throw new Error(`Spotify ${resp.status} for ${url}: ${body}`);
+  }
   return resp.json();
 }
 
@@ -116,7 +120,7 @@ Deno.serve(async (req) => {
     };
     const albums: AlbumRaw[] = [];
     let next: string | null =
-      `https://api.spotify.com/v1/artists/${artistId}/albums?include_groups=album,single,compilation&market=BR&limit=20`;
+      `https://api.spotify.com/v1/artists/${artistId}/albums?include_groups=album,single,compilation&market=BR`;
     let truncated = false;
     while (next) {
       const page = await spotifyGet(next, token);
@@ -182,20 +186,25 @@ Deno.serve(async (req) => {
       for (const t of tracks) trackToRelease.set(t.spotify_track_id, { release, track: t });
     }
 
-    // 4) ISRC em chunks de 50 via /v1/tracks?ids=
+    // 4) ISRC em chunks de 50 via /v1/tracks?ids= (opcional — alguns apps não têm acesso)
     for (let i = 0; i < allTrackIds.length; i += 50) {
       const chunk = allTrackIds.slice(i, i + 50);
-      const data = await spotifyGet(
-        `https://api.spotify.com/v1/tracks?market=BR&ids=${chunk.join(",")}`,
-        token,
-      );
-      for (const t of (data.tracks ?? []) as Array<{
-        id: string;
-        external_ids?: { isrc?: string };
-      }>) {
-        if (!t?.id) continue;
-        const entry = trackToRelease.get(t.id);
-        if (entry) entry.track.isrc = t.external_ids?.isrc ?? null;
+      try {
+        const data = await spotifyGet(
+          `https://api.spotify.com/v1/tracks?market=BR&ids=${chunk.join(",")}`,
+          token,
+        );
+        for (const t of (data.tracks ?? []) as Array<{
+          id: string;
+          external_ids?: { isrc?: string };
+        }>) {
+          if (!t?.id) continue;
+          const entry = trackToRelease.get(t.id);
+          if (entry) entry.track.isrc = t.external_ids?.isrc ?? null;
+        }
+      } catch (e) {
+        console.warn("ISRC fetch failed (continuing without ISRCs):", (e as Error).message);
+        break;
       }
     }
 
