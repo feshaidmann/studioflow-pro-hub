@@ -143,6 +143,12 @@ export interface SpotifyReleaseRow {
     track_number: number | null;
     duration_ms: number | null;
     isrc: string | null;
+    linked_analysis: {
+      id: string;
+      version_label: string | null;
+      version_number: number | null;
+      created_at: string;
+    } | null;
   }[];
 }
 
@@ -155,13 +161,21 @@ export function useSpotifyCatalog() {
         .select(`
           id, spotify_album_id, spotify_album_uri, name, release_type,
           release_date, image_url, total_tracks, imported_at,
-          spotify_tracks (id, name, spotify_track_uri, track_number, duration_ms, isrc)
+          spotify_tracks (
+            id, name, spotify_track_uri, track_number, duration_ms, isrc,
+            music_dna_analyses (id, version_label, version_number, created_at)
+          )
         `)
         .order("release_date", { ascending: false, nullsFirst: false });
       if (error) throw error;
       return (data ?? []).map((r: any) => ({
         ...r,
-        tracks: r.spotify_tracks ?? [],
+        tracks: (r.spotify_tracks ?? []).map((t: any) => ({
+          ...t,
+          linked_analysis: Array.isArray(t.music_dna_analyses)
+            ? (t.music_dna_analyses[0] ?? null)
+            : (t.music_dna_analyses ?? null),
+        })),
       })) as SpotifyReleaseRow[];
     },
   });
