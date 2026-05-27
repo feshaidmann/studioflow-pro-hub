@@ -139,6 +139,7 @@ export interface SpotifyReleaseRow {
   tracks?: {
     id: string;
     name: string;
+    spotify_track_id: string;
     spotify_track_uri: string;
     track_number: number | null;
     duration_ms: number | null;
