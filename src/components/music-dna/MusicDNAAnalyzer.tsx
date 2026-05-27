@@ -965,9 +965,10 @@ function FormView({ onSubmit, isPending, projects }: {
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
-      references: [], notes: "", projectId: "",
+      references: [], notes: "", projectId: "", stage: "master",
     },
   });
+
 
 
   const handleFile = useCallback((file: File) => {
