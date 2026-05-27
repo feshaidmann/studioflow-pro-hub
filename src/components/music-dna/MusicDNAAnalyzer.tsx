@@ -1898,7 +1898,7 @@ function SavedAnalysesList({ onLoad }: {
 
 export function MusicDNAAnalyzer() {
   const { progress, logs, result, isPending, error, analyze, reset } = useMusicDNA();
-  const [lastInput, setLastInput] = useState<{ name: string; notes?: string; references: string[]; projectId?: string } | null>(null);
+  const [lastInput, setLastInput] = useState<{ name: string; notes?: string; references: string[]; projectId?: string; stage?: AudioStage } | null>(null);
   const [viewingDiagnosis, setViewingDiagnosis] = useState<DiagnosisResult | null>(null);
   const [isSaved, setIsSaved] = useState(false);
   const { saveAnalysis, saveAnalysisAsync, isSaving } = useSavedAnalyses();
