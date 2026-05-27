@@ -7,7 +7,8 @@ import {
   Radar, RadarChart, PolarAngleAxis, PolarGrid, PolarRadiusAxis,
   ResponsiveContainer, Legend,
 } from "recharts";
-import { Upload, X, FileAudio, Music, MessageSquare, ListPlus, Check, Save, Trash2, History, Palette, ArrowRight, FolderKanban, Download, CheckCircle2, AlertTriangle, XCircle, ChevronRight, Info, User, ThumbsUp, ThumbsDown, Copy, GitCompare } from "lucide-react";
+import { Upload, X, FileAudio, Music, MessageSquare, ListPlus, Check, Save, Trash2, History, Palette, ArrowRight, FolderKanban, Download, CheckCircle2, AlertTriangle, XCircle, ChevronRight, Info, User, ThumbsUp, ThumbsDown, Copy, GitCompare, Link2 } from "lucide-react";
+import { LinkAnalysisTrackDialog } from "@/components/spotify-import/LinkAnalysisTrackDialog";
 import { useAcceptanceSignal } from "@/hooks/useAcceptanceSignal";
 import { TrackVersionsPanel } from "@/components/music-dna/TrackVersionsPanel";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
