@@ -162,7 +162,7 @@ export function useSpotifyCatalog() {
           id, spotify_album_id, spotify_album_uri, name, release_type,
           release_date, image_url, total_tracks, imported_at,
           spotify_tracks (
-            id, name, spotify_track_uri, track_number, duration_ms, isrc,
+            id, name, spotify_track_id, spotify_track_uri, track_number, duration_ms, isrc,
             music_dna_analyses (id, version_label, version_number, created_at)
           )
         `)
