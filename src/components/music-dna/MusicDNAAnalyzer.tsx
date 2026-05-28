@@ -399,33 +399,15 @@ function DiagCard({ icon, title, variant = "default", aiBadge = false, children 
 }
 
 
-function DetailSection({ id, title, icon, children }: {
+function DetailSection({ id, children }: {
   id: string;
   title: string;
   icon: string;
   children: React.ReactNode;
 }) {
-  const [open, setOpen] = useState(false);
-  useEffect(() => {
-    const handler = (e: Event) => {
-      const detail = (e as CustomEvent<{ id: string }>).detail;
-      if (detail?.id === id) setOpen(true);
-    };
-    window.addEventListener("dna:jump", handler);
-    return () => window.removeEventListener("dna:jump", handler);
-  }, [id]);
   return (
     <section id={id} className="scroll-mt-16">
-      <Collapsible open={open} onOpenChange={setOpen} className="md:hidden rounded-lg border border-border bg-card">
-        <CollapsibleTrigger className="flex w-full items-center justify-between px-4 py-3 text-left text-[11px] font-mono uppercase tracking-wider text-muted-foreground">
-          <span className="flex items-center gap-2"><span>{icon}</span>{title}</span>
-          <span className="text-primary">{open ? "−" : "+"}</span>
-        </CollapsibleTrigger>
-        <CollapsibleContent className="px-4 pb-4">
-          {children}
-        </CollapsibleContent>
-      </Collapsible>
-      <div className="hidden md:block">{children}</div>
+      {children}
     </section>
   );
 }
@@ -512,8 +494,8 @@ function ExecutiveSummary({ diagnosis, proximosPassos, addedItems, onAddStep, an
   const extractionConfidence = (diagnosis.realAnalysis as { extraction_confidence?: "preview" | "full" | "external" } | undefined)?.extraction_confidence ?? "preview";
   const confidenceBadge = {
     preview: { label: "Análise rápida", tone: "bg-amber-100 text-amber-800 border-amber-300", title: "Métricas físicas confiáveis; perceptuais (energia/valência/dançabilidade) são estimativas heurísticas." },
-    full: { label: "Análise completa", tone: "bg-primary/10 text-primary border-primary/30", title: "Faixa inteira processada no servidor com modelos treinados." },
-    external: { label: "Catálogo verificado", tone: "bg-primary/10 text-primary border-primary/30", title: "Features vindas de catálogo externo (AcousticBrainz)." },
+    full: { label: "Análise completa", tone: "bg-primary/10 text-primary border-primary/30", title: "Faixa inteira analisada no browser. LUFS, True Peak e DR são medições reais; energia/valência/dançabilidade são estimativas heurísticas espectrais." },
+    external: { label: "Catálogo verificado", tone: "bg-primary/10 text-primary border-primary/30", title: "Features consolidadas com dados externos." },
   }[extractionConfidence];
 
   return (
@@ -599,46 +581,26 @@ function ExecutiveSummary({ diagnosis, proximosPassos, addedItems, onAddStep, an
             </div>
           )}
 
-          {/* A5 — Individual step selection */}
+          {/* A5 — Quick-jump to próximos passos */}
           {stepsCount > 0 && (
-            <div className="space-y-1.5 pt-1.5 border-t border-border/60">
-              <p className="text-[10px] uppercase tracking-wider font-mono text-muted-foreground flex items-center gap-1.5">
-                <ListPlus className="h-3 w-3" /> Próximos passos — toque para adicionar ao checklist
-              </p>
-              <div className="space-y-1">
-                {proximosPassos.map((p, i) => {
-                  const key = `passo-${i}`;
-                  const added = addedItems.has(key);
-                  return (
-                    <button
-                      key={i}
-                      type="button"
-                      disabled={added}
-                      onClick={() => !added && onAddStep(p.acao, key)}
-                      className={cn(
-                        "flex w-full items-start gap-2 rounded-md px-2.5 py-1.5 text-left text-xs transition-colors",
-                        added
-                          ? "bg-primary/10 text-primary cursor-default"
-                          : "bg-muted/30 hover:bg-muted/60 text-foreground"
-                      )}
-                    >
-                      <span className={cn(
-                        "mt-0.5 h-3.5 w-3.5 shrink-0 rounded-full border flex items-center justify-center",
-                        added ? "border-primary bg-primary" : "border-muted-foreground/40"
-                      )}>
-                        {added && <Check className="h-2 w-2 text-background" />}
-                      </span>
-                      <span className="flex-1 leading-snug">{p.acao}</span>
-                      <span className={cn(
-                        "shrink-0 text-[10px] font-mono uppercase",
-                        p.prioridade === "Alta" ? "text-destructive" : p.prioridade === "Média" ? "text-amber-600" : "text-muted-foreground"
-                      )}>
-                        {p.prioridade}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
+            <div className="pt-1.5 border-t border-border/60">
+              <button
+                type="button"
+                className="flex w-full items-center justify-between text-left text-[11px] font-mono text-muted-foreground hover:text-foreground transition-colors py-0.5"
+                onClick={() => {
+                  window.dispatchEvent(new CustomEvent("dna:jump", { detail: { id: "dna-acoes" } }));
+                  requestAnimationFrame(() => {
+                    const el = document.getElementById("dna-acoes");
+                    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+                  });
+                }}
+              >
+                <span className="flex items-center gap-1.5">
+                  <ListPlus className="h-3 w-3" />
+                  {stepsCount} próximo{stepsCount !== 1 ? "s passos" : " passo"} de produção
+                </span>
+                <ChevronRight className="h-3 w-3" />
+              </button>
             </div>
           )}
 
@@ -1268,6 +1230,9 @@ function FormView({ onSubmit, isPending, projects }: {
                     ))}
                   </SelectContent>
                 </Select>
+                <p className="text-[10px] text-muted-foreground leading-relaxed mt-1">
+                  Ajusta o benchmark de comparação e o contexto de streaming nas sugestões da IA.
+                </p>
                 <FormMessage />
               </FormItem>
             )} />
@@ -1315,7 +1280,7 @@ function FormView({ onSubmit, isPending, projects }: {
 const ANALYSIS_PHASES: Array<{ key: string; label: string; match: RegExp }> = [
   { key: "read",      label: "Lendo áudio",            match: /Lendo o áudio/i },
   { key: "webaudio",  label: "Analisando waveform",    match: /Web Audio API/i },
-  { key: "external",  label: "Buscando referências",   match: /AcousticBrainz|Fonte complementar|Sem referência/i },
+  { key: "external",  label: "Buscando referências",   match: /Deezer|Fonte complementar|Sem referência/i },
   { key: "spotify",   label: "Consolidando atributos", match: /atributos estilo Spotify/i },
   { key: "sections",  label: "Mapeando seções",        match: /seções e o perfil/i },
   { key: "proximity", label: "Calculando proximidade", match: /proximidade estética/i },
@@ -1610,19 +1575,22 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
         <span className="text-muted-foreground">{stageProfile.contextNote}</span>
       </div>
 
-
-      {savedAnalysisId && (
-        <TrackVersionsPanel trackName={input.name} currentAnalysisId={savedAnalysisId} />
+      {diagnosis.classifierHint && (
+        <GenreMismatchHint
+          hint={diagnosis.classifierHint}
+          declared={(input as { genre?: string }).genre ?? diagnosis.genero_classificado}
+          analysisId={savedAnalysisId}
+        />
       )}
 
       <div className="sticky top-2 z-20 -mx-1 flex gap-1.5 overflow-x-auto rounded-lg border border-border bg-background/95 p-1 backdrop-blur animate-fade-in">
         {[
           { label: "Resumo", id: "dna-resumo", show: true },
-          { label: "Diagnóstico", id: "dna-acoes", show: true },
           { label: "Técnico", id: "dna-tecnico", show: true },
           { label: "Seções", id: "dna-secoes", show: !!analise_seccoes || (realAnalysis?.sections?.length ?? 0) > 0 },
+          { label: "Diagnóstico", id: "dna-acoes", show: true },
           { label: "Identidade", id: "dna-identidade", show: true },
-          { label: "Referências", id: "dna-referencias", show: true },
+          { label: "Benchmark", id: "dna-referencias", show: true },
         ].filter((i) => i.show).map((item) => (
           <Button
             key={item.id}
@@ -1640,133 +1608,6 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
           </Button>
         ))}
       </div>
-
-      {/* DIAGNÓSTICO — fortes + gargalos primeiro, depois ações priorizadas */}
-      <section id="dna-acoes" className="scroll-mt-16 space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <DiagCard icon="✅" title="Pontos fortes" variant="success">
-            <ul className="space-y-1.5">
-              {(pontos_fortes ?? []).map((p, i) => (
-                <li key={i} className="flex gap-2 text-xs leading-relaxed">
-                  <span className="text-primary shrink-0 font-bold">+</span> {p}
-                </li>
-              ))}
-            </ul>
-          </DiagCard>
-
-          <DiagCard icon="⚠️" title="Gargalos criativos" variant="destructive">
-            <ul className="space-y-1.5">
-              {(gargalos_criativos ?? []).map((g, i) => (
-                <li key={i} className="flex gap-2 text-xs leading-relaxed">
-                  <span className="text-destructive shrink-0 font-bold">!</span> {g}
-                </li>
-              ))}
-            </ul>
-          </DiagCard>
-        </div>
-
-        <DiagCard icon="🚀" title="Próximos passos de produção" variant="success">
-          <div className="space-y-2">
-            {(proximos_passos ?? []).map((p, i) => {
-              const key = `passo-${i}`;
-              const added = addedItems.has(key);
-              return (
-                <div key={i} className="flex gap-3 items-start bg-muted/20 rounded-lg p-3">
-                  <PriorityBadge priority={p.prioridade} />
-                  <div className="flex-1">
-                    <p className="text-xs leading-relaxed">{p.acao}</p>
-                    <p className="text-xs text-foreground/70 mt-1">
-                      Impacto: {p.impacto}
-                    </p>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className={cn("h-6 w-6 shrink-0", added ? "text-primary" : "text-muted-foreground hover:text-primary")}
-                    onClick={() => !added && handleAddToTasks(p.acao, key)}
-                    disabled={added}
-                    title={added ? "Já adicionado" : "Adicionar à lista de tarefas"}
-                  >
-                    {added ? <Check className="h-3.5 w-3.5" /> : <ListPlus className="h-3.5 w-3.5" />}
-                  </Button>
-                </div>
-              );
-            })}
-          </div>
-        </DiagCard>
-
-        <DiagCard icon="🎛️" title="Sugestões de arranjo, timbragem e mix" variant="primary" aiBadge>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-            {(sugestoes_arranjo ?? []).map((s, i) => {
-              const key = `arranjo-${i}`;
-              const added = addedItems.has(key);
-              // Heurística visual: 0-1 Alta, 2-3 Média, resto Baixa
-              const inferredPriority: "Alta" | "Média" | "Baixa" =
-                i < 2 ? "Alta" : i < 4 ? "Média" : "Baixa";
-              return (
-                <div key={i}
-                  className="bg-muted/30 rounded-lg p-3 text-xs leading-relaxed border-l-2 border-primary/40 flex items-start gap-2">
-                  <PriorityBadge priority={inferredPriority} />
-                  <span className="flex-1">{s}</span>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className={cn("h-6 w-6 shrink-0", added ? "text-primary" : "text-muted-foreground hover:text-primary")}
-                    onClick={() => !added && handleAddToTasks(s, key)}
-                    disabled={added}
-                    title={added ? "Já adicionado" : "Adicionar à lista de tarefas"}
-                  >
-                    {added ? <Check className="h-3.5 w-3.5" /> : <ListPlus className="h-3.5 w-3.5" />}
-                  </Button>
-                </div>
-              );
-            })}
-          </div>
-        </DiagCard>
-      </section>
-
-      {/* IDENTIDADE — agora secundária, depois do diagnóstico acionável */}
-      <section id="dna-identidade" className="scroll-mt-16">
-        <DiagCard icon="🎭" title="Identidade da Faixa" variant="primary" aiBadge>
-          <div className="space-y-3">
-            <div>
-              <p className="text-base font-bold">{identidade?.mood_principal}</p>
-              <p className="text-xs text-foreground/75 mt-1 leading-relaxed">
-                {identidade?.territorio_sonoro}
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-1.5 items-center">
-              {(identidade?.tags ?? []).map(tag => (
-                <Badge key={tag} variant="outline"
-                  className="text-xs font-mono bg-primary/10 border-primary/30 text-primary">
-                  {tag}
-                </Badge>
-              ))}
-              {identidade?.persona_ouvinte && (
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" size="sm" className="h-6 px-2 text-[11px] gap-1 ml-1">
-                      <User className="h-3 w-3" /> Ver perfil do ouvinte
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-72 text-xs space-y-2">
-                    <p className="font-semibold text-primary text-[11px] uppercase tracking-wider">Persona do ouvinte</p>
-                    <p className="leading-relaxed">{identidade.persona_ouvinte}</p>
-                    <p className="text-[11px] text-muted-foreground border-t border-border pt-2 leading-relaxed">
-                      Use isso ao escolher hashtags, pitch de playlist e direção visual da capa.
-                    </p>
-                  </PopoverContent>
-                </Popover>
-              )}
-            </div>
-          </div>
-        </DiagCard>
-      </section>
-
-      {/* REFERÊNCIAS — bloco removido temporariamente até o banco de referências estar devidamente populado. */}
-      <section id="dna-referencias" className="scroll-mt-16 space-y-4">
-        <BenchmarkPanel diagnosis={diagnosis} benchmark={benchmark} />
-      </section>
 
       <DetailSection id="dna-tecnico" icon="🔬" title="Métricas e diagnóstico técnico">
         <div className="space-y-4">
@@ -1917,6 +1758,129 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
         </DetailSection>
       )}
 
+      {/* DIAGNÓSTICO — após as métricas, o contexto para interpretar os dados já está estabelecido */}
+      <section id="dna-acoes" className="scroll-mt-16 space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <DiagCard icon="✅" title="Pontos fortes" variant="success">
+            <ul className="space-y-1.5">
+              {(pontos_fortes ?? []).map((p, i) => (
+                <li key={i} className="flex gap-2 text-xs leading-relaxed">
+                  <span className="text-primary shrink-0 font-bold">+</span> {p}
+                </li>
+              ))}
+            </ul>
+          </DiagCard>
+
+          <DiagCard icon="⚠️" title="Gargalos criativos" variant="destructive">
+            <ul className="space-y-1.5">
+              {(gargalos_criativos ?? []).map((g, i) => (
+                <li key={i} className="flex gap-2 text-xs leading-relaxed">
+                  <span className="text-destructive shrink-0 font-bold">!</span> {g}
+                </li>
+              ))}
+            </ul>
+          </DiagCard>
+        </div>
+
+        <DiagCard icon="🚀" title="Próximos passos de produção" variant="success">
+          <div className="space-y-2">
+            {(proximos_passos ?? []).map((p, i) => {
+              const key = `passo-${i}`;
+              const added = addedItems.has(key);
+              return (
+                <div key={i} className="flex gap-3 items-start bg-muted/20 rounded-lg p-3">
+                  <PriorityBadge priority={p.prioridade} />
+                  <div className="flex-1">
+                    <p className="text-xs leading-relaxed">{p.acao}</p>
+                    <p className="text-xs text-foreground/70 mt-1">
+                      Impacto: {p.impacto}
+                    </p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className={cn("h-6 w-6 shrink-0", added ? "text-primary" : "text-muted-foreground hover:text-primary")}
+                    onClick={() => !added && handleAddToTasks(p.acao, key)}
+                    disabled={added}
+                    title={added ? "Já adicionado" : "Adicionar à lista de tarefas"}
+                  >
+                    {added ? <Check className="h-3.5 w-3.5" /> : <ListPlus className="h-3.5 w-3.5" />}
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
+        </DiagCard>
+
+        <DiagCard icon="🎛️" title="Sugestões de arranjo, timbragem e mix" variant="primary" aiBadge>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+            {(sugestoes_arranjo ?? []).map((s, i) => {
+              const key = `arranjo-${i}`;
+              const added = addedItems.has(key);
+              return (
+                <div key={i}
+                  className="bg-muted/30 rounded-lg p-3 text-xs leading-relaxed border-l-2 border-primary/40 flex items-start gap-2">
+                  <span className="flex-1">{s}</span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className={cn("h-6 w-6 shrink-0", added ? "text-primary" : "text-muted-foreground hover:text-primary")}
+                    onClick={() => !added && handleAddToTasks(s, key)}
+                    disabled={added}
+                    title={added ? "Já adicionado" : "Adicionar à lista de tarefas"}
+                  >
+                    {added ? <Check className="h-3.5 w-3.5" /> : <ListPlus className="h-3.5 w-3.5" />}
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
+        </DiagCard>
+      </section>
+
+      {/* IDENTIDADE */}
+      <section id="dna-identidade" className="scroll-mt-16">
+        <DiagCard icon="🎭" title="Identidade da Faixa" variant="primary" aiBadge>
+          <div className="space-y-3">
+            <div>
+              <p className="text-base font-bold">{identidade?.mood_principal}</p>
+              <p className="text-xs text-foreground/75 mt-1 leading-relaxed">
+                {identidade?.territorio_sonoro}
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-1.5 items-center">
+              {(identidade?.tags ?? []).map(tag => (
+                <Badge key={tag} variant="outline"
+                  className="text-xs font-mono bg-primary/10 border-primary/30 text-primary">
+                  {tag}
+                </Badge>
+              ))}
+              {identidade?.persona_ouvinte && (
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="sm" className="h-6 px-2 text-[11px] gap-1 ml-1">
+                      <User className="h-3 w-3" /> Ver perfil do ouvinte
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-72 text-xs space-y-2">
+                    <p className="font-semibold text-primary text-[11px] uppercase tracking-wider">Persona do ouvinte</p>
+                    <p className="leading-relaxed">{identidade.persona_ouvinte}</p>
+                    <p className="text-[11px] text-muted-foreground border-t border-border pt-2 leading-relaxed">
+                      Use isso ao escolher hashtags, pitch de playlist e direção visual da capa.
+                    </p>
+                  </PopoverContent>
+                </Popover>
+              )}
+            </div>
+          </div>
+        </DiagCard>
+      </section>
+
+      {/* BENCHMARK */}
+      <section id="dna-referencias" className="scroll-mt-16 space-y-4">
+        <BenchmarkPanel diagnosis={diagnosis} benchmark={benchmark} />
+      </section>
+
       {/* Perfil acústico (Radar + Bars vs GENRE_PRESETS) removido:
           os atributos estilo Spotify já são comparados em "Referências" via BenchmarkPanel
           contra o banco real (music_dna_benchmarks). refFeatures permanece no diagnosis
@@ -1975,6 +1939,9 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
         references={(diagnosis.referencias_proximas ?? []).map((r) => r.artista).filter(Boolean)}
       />
 
+      {savedAnalysisId && (
+        <TrackVersionsPanel trackName={input.name} currentAnalysisId={savedAnalysisId} />
+      )}
 
       {/* Monitoramentos Ativos */}
       <ActiveMonitorsCard />
@@ -2332,10 +2299,10 @@ export function MusicDNAAnalyzer() {
         />
       ) : (
         <>
-          <FormView onSubmit={handleSubmit} isPending={isPending} projects={projects} />
-          <div className="mt-6">
+          <div className="mb-6">
             <SavedAnalysesList onLoad={handleLoadSaved} />
           </div>
+          <FormView onSubmit={handleSubmit} isPending={isPending} projects={projects} />
         </>
       )}
     </div>
