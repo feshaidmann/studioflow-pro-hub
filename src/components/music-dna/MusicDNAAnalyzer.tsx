@@ -502,19 +502,17 @@ function ExecutiveSummary({ diagnosis, proximosPassos, addedItems, onAddStep, an
     <section id="dna-resumo" className="scroll-mt-16">
       <Card className="border-l-4 border-l-primary animate-fade-in">
         <CardContent className="p-4 space-y-4">
-          <div className="flex items-start justify-between gap-3 flex-wrap">
-            <div>
-              <p className="text-[11px] font-mono uppercase tracking-widest text-primary mb-1">Resumo executivo</p>
-              <p className="text-sm leading-relaxed">{diagnosis.diagnostico_resumo}</p>
-            </div>
-            <div className="flex flex-col items-end gap-1">
-              <Badge variant="outline" className={cn("text-[11px] font-mono uppercase tracking-wider", toneClass)}>
-                {status.label}
-              </Badge>
-              <Badge variant="outline" className={cn("text-[10px] font-mono uppercase tracking-wider", confidenceBadge.tone)} title={confidenceBadge.title}>
-                {confidenceBadge.label}
-              </Badge>
-            </div>
+          <div>
+            <p className="text-[11px] font-mono uppercase tracking-widest text-primary mb-1">Resumo executivo</p>
+            <p className="text-sm leading-relaxed">{diagnosis.diagnostico_resumo}</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant="outline" className={cn("text-[11px] font-mono uppercase tracking-wider", toneClass)}>
+              {status.label}
+            </Badge>
+            <Badge variant="outline" className={cn("text-[11px] font-mono uppercase tracking-wider", confidenceBadge.tone)} title={confidenceBadge.title}>
+              {confidenceBadge.label}
+            </Badge>
           </div>
 
           {/* A2 — Granular readiness checklist */}
