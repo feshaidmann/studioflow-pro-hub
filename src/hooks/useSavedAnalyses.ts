@@ -63,12 +63,17 @@ export function useSavedAnalyses() {
   const { data: savedAnalyses = [], isLoading } = useQuery({
     queryKey: ["music-dna-analyses", user?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("music_dna_analyses")
-        .select("*, spotify_tracks (id, name, track_number, spotify_releases (id, name, image_url))")
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return (data ?? []) as unknown as SavedAnalysis[];
+      try {
+        const { data, error } = await supabase
+          .from("music_dna_analyses")
+          .select("*, spotify_tracks (id, name, track_number, spotify_releases (id, name, image_url))")
+          .order("created_at", { ascending: false });
+        if (error) throw error;
+        return (data ?? []) as unknown as SavedAnalysis[];
+      } catch (err) {
+        console.error("useSavedAnalyses: erro ao buscar análises", err);
+        throw err;
+      }
     },
     enabled: !!user,
   });
@@ -82,59 +87,77 @@ export function useSavedAnalyses() {
       diagnosis: DiagnosisResult;
       silent?: boolean;
     }): Promise<{ id: string; trackVersionId: string; versionNumber: number; summaryVariant: "A" | "B" }> => {
-      // Agrupa por slug do nome → versão Nx automática.
-      const { id: trackVersionId, nextVersionNumber } = await ensureTrackVersion({
-        userId: user!.id,
-        trackName: input.name,
-        projectId: input.projectId ?? null,
-      });
-
-      const summaryVariant = (diagnosis.summaryVariant === "B" ? "B" : "A") as "A" | "B";
-
-      const { data, error } = await supabase
-        .from("music_dna_analyses")
-        .insert({
-          user_id: user!.id,
-          track_name: input.name,
-          genre: diagnosis.genero_classificado || "",
-          project_id: input.projectId || null,
-          stage: input.stage ?? null,
-          input_metadata: input as any,
-          diagnosis: diagnosis as any,
-          track_version_id: trackVersionId,
-          version_number: nextVersionNumber,
-          version_label: `v${nextVersionNumber}`,
-          summary_variant: summaryVariant,
-          summary_variant_assigned_at: new Date().toISOString(),
-          legacy: false,
-          ...musicDnaColumnsFromDiagnosis(diagnosis),
-        } as any)
-        .select("id")
-        .single();
-      if (error) throw error;
-
-      // Sinal implícito de aceitação: "saved" (idempotente via UNIQUE)
       try {
-        await supabase
-          .from("diagnosis_acceptance_signals")
+        // Agrupa por slug do nome → versão Nx automática.
+        const { id: trackVersionId, nextVersionNumber } = await ensureTrackVersion({
+          userId: user!.id,
+          trackName: input.name,
+          projectId: input.projectId ?? null,
+        });
+
+        const summaryVariant = (diagnosis.summaryVariant === "B" ? "B" : "A") as "A" | "B";
+
+        let derivedColumns: Record<string, unknown> = {};
+        try {
+          derivedColumns = musicDnaColumnsFromDiagnosis(diagnosis) as Record<string, unknown>;
+        } catch (colErr) {
+          console.error("useSavedAnalyses: falha ao derivar colunas do diagnóstico", colErr);
+        }
+
+        const { data, error } = await supabase
+          .from("music_dna_analyses")
           .insert({
             user_id: user!.id,
-            analysis_id: (data as any).id,
+            track_name: input.name,
+            genre: diagnosis.genero_classificado || "",
+            project_id: input.projectId || null,
+            stage: input.stage ?? null,
+            input_metadata: input as any,
+            diagnosis: diagnosis as any,
+            track_version_id: trackVersionId,
+            version_number: nextVersionNumber,
+            version_label: `v${nextVersionNumber}`,
             summary_variant: summaryVariant,
-            signal_type: "saved",
-          });
-      } catch { /* silencioso: telemetria não pode quebrar o save */ }
+            summary_variant_assigned_at: new Date().toISOString(),
+            legacy: false,
+            ...derivedColumns,
+          } as any)
+          .select("id")
+          .single();
+        if (error) throw error;
 
-      // Benchmarks agora vêm de uma VIEW agregada em tempo real — nada para recalcular.
-      if (diagnosis.genero_classificado) {
-        queryClient.invalidateQueries({ queryKey: ["music-dna-benchmarks"] });
+        // Sinal implícito de aceitação: "saved" (idempotente via UNIQUE)
+        try {
+          await supabase
+            .from("diagnosis_acceptance_signals")
+            .insert({
+              user_id: user!.id,
+              analysis_id: (data as any).id,
+              summary_variant: summaryVariant,
+              signal_type: "saved",
+            });
+        } catch (sigErr) {
+          console.warn("useSavedAnalyses: falha ao registrar sinal de aceitação (silencioso)", sigErr);
+        }
+
+        // Benchmarks agora vêm de uma VIEW agregada em tempo real — nada para recalcular.
+        if (diagnosis.genero_classificado) {
+          try {
+            queryClient.invalidateQueries({ queryKey: ["music-dna-benchmarks"] });
+          } catch (invErr) {
+            console.warn("useSavedAnalyses: falha ao invalidar benchmarks", invErr);
+          }
+        }
+        return {
+          id: (data as any).id as string,
+          trackVersionId,
+          versionNumber: nextVersionNumber,
+          summaryVariant,
+        };
+      } catch (err) {
+        console.error("useSavedAnalyses: erro ao salvar análise", err);
+        throw err;
       }
-      return {
-        id: (data as any).id as string,
-        trackVersionId,
-        versionNumber: nextVersionNumber,
-        summaryVariant,
-      };
     },
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["music-dna-analyses"] });
