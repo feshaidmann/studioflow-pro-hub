@@ -165,7 +165,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 <ChevronLeft className="h-5 w-5" />
               </Button>
             )}
-            <NavLink to="/" className="text-base font-semibold hover:opacity-80 transition-opacity">MusicOS.ai</NavLink>
+            <NavLink to="/" className="hover:opacity-80 transition-opacity">
+              <img src="/logo.png" alt="Jam Session" className="h-7 w-auto rounded-sm" />
+            </NavLink>
           </div>
           <div className="flex items-center gap-0.5">
             {/* P3: Configurações promovida ao header mobile */}
@@ -355,8 +357,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         {/* Header */}
         <div className="flex h-12 items-center justify-between px-3 border-b border-border/40">
           {sidebarOpen && (
-            <NavLink to="/" className="text-[13px] font-semibold truncate hover:opacity-80 transition-opacity">
-              MusicOS.ai
+            <NavLink to="/" className="hover:opacity-80 transition-opacity shrink-0">
+              <img src="/logo.png" alt="Jam Session" className="h-6 w-auto rounded-sm" />
             </NavLink>
           )}
           <Button
