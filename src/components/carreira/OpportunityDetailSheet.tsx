@@ -33,7 +33,12 @@ interface Props {
 }
 
 export default function OpportunityDetailSheet({ opportunity: op, open, onOpenChange, onApply, onSave, alreadyApplied, pending }: Props) {
+  // Hooks devem ser chamados antes de qualquer early return (Rules of Hooks).
+  const { toast } = useToast();
+  const [reporting, setReporting] = useState(false);
+
   if (!op) return null;
+
   const isEdital = op.tipo === "edital";
   const TypeIcon = isEdital ? Trophy : Mic2;
   const palco = !isEdital ? (op.raw as PalcoCurado) : null;
@@ -42,8 +47,6 @@ export default function OpportunityDetailSheet({ opportunity: op, open, onOpenCh
     ? "Edital de fomento"
     : (op.porteOuTipo ? TIPO_PALCO_LABELS[op.porteOuTipo as TipoPalco] || "Palco" : "Palco");
 
-  const { toast } = useToast();
-  const [reporting, setReporting] = useState(false);
   const linkBroken = op.linkStatus === "broken";
   const linkCheckedLabel = formatLinkChecked(op);
 
