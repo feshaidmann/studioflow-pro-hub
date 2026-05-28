@@ -152,7 +152,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const isRootRoute = ROOT_ROUTES.includes(location.pathname);
 
   // ── Mobile ─────────────────────────────────────────────────────────────────
-  const isMoreActive = [...toolDrawerItems, ...accountDrawerItems, settingsNavItem].some((item) => isItemActive(item));
+  // Settings vive no header mobile, não no drawer → não deve acender o indicador do botão "Mais"
+  const isMoreActive = [...toolDrawerItems, ...accountDrawerItems].some((item) => isItemActive(item));
 
   if (isMobile) {
     return (
@@ -228,9 +229,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               <SheetTitle className="text-base">{t("nav.more")}</SheetTitle>
             </SheetHeader>
 
-            {/* Seção 1 — Ferramentas (grid com sub-labels) */}
+            {/* Seção 1 — Ferramentas (grid 2×2 com sub-labels, ordem JOURNEY_ORDER) */}
             <div className="mb-1 px-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground/70">
-              {t("nav.section.tools") !== "nav.section.tools" ? t("nav.section.tools") : "Ferramentas"}
+              {t("nav.section.tools")}
             </div>
             <div className="grid grid-cols-2 gap-2.5">
               {toolDrawerItems.map((item) => {
@@ -260,7 +261,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
             {/* Seção 2 — Conta (lista compacta) */}
             <div className="mt-5 mb-1 px-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground/70">
-              {t("nav.section.account") !== "nav.section.account" ? t("nav.section.account") : "Conta"}
+              {t("nav.section.account")}
             </div>
             <div className="flex flex-col gap-0.5">
               {accountDrawerItems.map((item) => {
@@ -392,24 +393,23 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             {renderNavItem(gestaoItems[0])}
             {renderNavItem(gestaoItems[1])}
 
-            {/* Ferramentas: DNA → Carreira → Profissionais */}
+            {/* Ferramentas — ordem espelhada do JOURNEY_ORDER: Carreira → DNA → Profissionais → Captadores */}
             <div className="my-2 border-t border-border/30" />
             {sidebarOpen && (
               <div className="px-2.5 pt-1 pb-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground/60">
-                {t("nav.section.tools") !== "nav.section.tools" ? t("nav.section.tools") : "Ferramentas"}
+                {t("nav.section.tools")}
               </div>
             )}
-            {renderNavItem(gestaoItems[2])}
             {renderNavItem(gestaoItems[3])}
+            {renderNavItem(gestaoItems[2])}
             {renderNavItem(gestaoItems[4])}
             {renderNavItem(gestaoItems[5])}
-            
 
             {/* Conta */}
             <div className="my-2 border-t border-border/30" />
             {sidebarOpen && (
               <div className="px-2.5 pt-1 pb-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground/60">
-                {t("nav.section.account") !== "nav.section.account" ? t("nav.section.account") : "Conta"}
+                {t("nav.section.account")}
               </div>
             )}
             {renderNavItem(settingsNavItem)}

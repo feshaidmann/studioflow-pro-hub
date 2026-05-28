@@ -28,6 +28,8 @@ const translations: Record<string, string> = {
   "nav.more": "Mais",
   "nav.user": "Usuário",
   "nav.artist": "Artista",
+  "nav.section.tools": "Ferramentas",
+  "nav.section.account": "Conta",
 
   // ── Dashboard ────────────────────────────────────────────────────────────────
   "dashboard.title": "Dashboard",
