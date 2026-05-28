@@ -256,11 +256,18 @@ export const AITaskAssistant = forwardRef<AITaskAssistantHandle, AITaskAssistant
       );
       const accessToken = session.data.session?.access_token;
 
+      if (!accessToken) {
+        toast.error("Faça login para usar o assistente");
+        setMessages((prev) => prev.slice(0, -2));
+        setIsLoading(false);
+        return;
+      }
+
       const resp = await fetch(CHAT_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken ?? import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          Authorization: `Bearer ${accessToken}`,
         },
         body: JSON.stringify({
           messages: historyMessages,
