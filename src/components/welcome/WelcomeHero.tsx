@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { ChevronRight, Music2 } from "lucide-react";
 import { GoogleIcon } from "./GoogleIcon";
+import logoMusicosAi from "@/assets/logo-musicos-ai.svg";
 
 type Props = {
   onGoogle: () => void;
@@ -12,6 +13,11 @@ export function WelcomeHero({ onGoogle, onSignupEmail, onLogin }: Props) {
   return (
     <>
       <section className="welcome-fade w-full text-center" style={{ "--delay": "60ms" } as React.CSSProperties}>
+        <img
+          src={logoMusicosAi}
+          alt="MusicOS.ai"
+          className="mx-auto mb-5 h-16 w-16 md:h-20 md:w-20"
+        />
         <h1 className="text-[2rem] font-semibold leading-[1.15] tracking-tight text-foreground md:text-5xl">
           Sua música merece mais que{" "}
           <span className="text-primary">WhatsApp e planilha</span>
@@ -20,6 +26,7 @@ export function WelcomeHero({ onGoogle, onSignupEmail, onLogin }: Props) {
           Projetos, financeiro, agenda, equipe e carreira — num só app, feito para o artista independente brasileiro.
         </p>
       </section>
+
 
       <div
         className="welcome-fade mt-7 flex w-full max-w-sm flex-col gap-2.5"
