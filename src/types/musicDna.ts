@@ -140,7 +140,7 @@ export function musicDnaColumnsFromDiagnosis(diagnosis: DiagnosisResult) {
     lufs_integrated: diagnosis.realAnalysis.lufs_integrated,
     dynamic_range_db: diagnosis.realAnalysis.dynamic_range_lu,
     fonte_analise: external?.fonte ?? "web_audio",
-    mbid: external?.mbid,
+    
     deezer_id: external?.deezerId,
   };
 }
