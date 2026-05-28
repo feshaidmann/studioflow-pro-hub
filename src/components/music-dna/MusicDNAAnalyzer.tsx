@@ -2055,16 +2055,33 @@ function SavedAnalysesList({ onLoad }: {
 }) {
   const { savedAnalyses, isLoading, deleteAnalysis } = useSavedAnalyses();
   const [linkTarget, setLinkTarget] = useState<{ analysisId: string; analysisLabel: string; currentTrackId: string | null } | null>(null);
+  const [collapsed, setCollapsed] = useState(false);
 
   if (isLoading || savedAnalyses.length === 0) return null;
 
   return (
     <Card className="animate-fade-in">
       <CardHeader className="pb-2">
-        <CardTitle className="text-xs font-mono uppercase tracking-wider text-primary flex items-center gap-2">
-          <History className="h-3.5 w-3.5" /> Análises salvas
-        </CardTitle>
+        <button
+          type="button"
+          className="flex w-full items-center justify-between gap-2"
+          onClick={() => setCollapsed((v) => !v)}
+        >
+          <CardTitle className="text-xs font-mono uppercase tracking-wider text-primary flex items-center gap-2">
+            <History className="h-3.5 w-3.5" /> Análises salvas
+            <span className="text-muted-foreground font-normal normal-case tracking-normal">
+              ({savedAnalyses.length})
+            </span>
+          </CardTitle>
+          <ChevronRight
+            className={cn(
+              "h-3.5 w-3.5 text-muted-foreground transition-transform duration-200",
+              collapsed ? "" : "rotate-90"
+            )}
+          />
+        </button>
       </CardHeader>
+      {!collapsed && (
       <CardContent className="space-y-1.5">
         {savedAnalyses.map((a: any) => (
           <div
@@ -2107,6 +2124,7 @@ function SavedAnalysesList({ onLoad }: {
           </div>
         ))}
       </CardContent>
+      )}
       <LinkAnalysisTrackDialog
         open={linkTarget !== null}
         onOpenChange={(o) => !o && setLinkTarget(null)}
