@@ -674,7 +674,7 @@ export function useMusicDNA(): UseMusicDNAReturn {
         },
       });
       const clean = rawText.replace(/```json\n?|```/g, "").trim();
-      let parsed: { referencias_proximas?: ReferenceMatch[]; [k: string]: unknown };
+      let parsed: any;
       try {
         parsed = JSON.parse(clean);
       } catch {
