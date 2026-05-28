@@ -3068,6 +3068,10 @@ export type Database = {
         Args: { p_drop_staging?: boolean }
         Returns: Json
       }
+      can_access_project_realtime: {
+        Args: { p_project_id: string }
+        Returns: boolean
+      }
       cosine_similarity_f8: {
         Args: { a: number[]; b: number[] }
         Returns: number
