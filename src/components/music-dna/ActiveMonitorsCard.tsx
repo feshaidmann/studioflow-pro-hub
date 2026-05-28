@@ -3,18 +3,22 @@ import { formatDistanceToNow, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Loader2, Radio, RefreshCw, Trash2, ExternalLink, Music2 } from "lucide-react";
+import { BookmarkCheck, Loader2, Radio, RefreshCw, Trash2, ExternalLink, Music2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   useActiveMonitors,
   useCheckMonitor,
   useDeleteMonitor,
+  useUpdateMonitorUri,
   type PlaylistMonitor,
 } from "@/hooks/usePlaylistMonitors";
+
+const URI_RE = /^spotify:track:[A-Za-z0-9]{22}$/;
 
 function relativeLabel(iso: string | null): string {
   if (!iso) return "Ainda não verificada";
@@ -34,16 +38,72 @@ function foundLabel(iso: string | null): string {
   }
 }
 
+function AddUriForm({ monitor, onDone }: { monitor: PlaylistMonitor; onDone: () => void }) {
+  const [uri, setUri] = useState("");
+  const [name, setName] = useState(monitor.track_name === "Faixa sem nome" ? "" : monitor.track_name);
+  const updateUri = useUpdateMonitorUri();
+
+  async function handleSave() {
+    if (!URI_RE.test(uri.trim())) {
+      toast.error("URI inválida. Use o formato spotify:track:XXXXXXXXXXXXXXXXXXXXXX");
+      return;
+    }
+    try {
+      await updateUri.mutateAsync({
+        id: monitor.id,
+        track_spotify_uri: uri.trim(),
+        track_name: name.trim() || monitor.track_name,
+      });
+      toast.success("Monitoramento ativado!");
+      onDone();
+    } catch {
+      toast.error("Não foi possível salvar a URI");
+    }
+  }
+
+  return (
+    <div className="mt-2 space-y-2 border-t border-border/60 pt-3">
+      <p className="text-[11px] text-muted-foreground leading-relaxed">
+        Adicione a URI do Spotify para ativar o alerta. Encontre em: Spotify for Artists → Catálogo → "•••" → Copiar URI.
+      </p>
+      <Input
+        className="h-7 text-xs"
+        placeholder="spotify:track:4iV5W9uYEdYUVa79Axb7Rh"
+        value={uri}
+        onChange={(e) => setUri(e.target.value)}
+      />
+      <Input
+        className="h-7 text-xs"
+        placeholder="Nome da faixa"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+      />
+      <div className="flex gap-2">
+        <Button size="sm" className="h-7 text-xs" onClick={handleSave} disabled={updateUri.isPending}>
+          {updateUri.isPending && <Loader2 className="h-3 w-3 animate-spin mr-1" />}
+          Ativar monitoramento
+        </Button>
+        <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={onDone}>
+          Cancelar
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 function MonitorRow({ monitor }: { monitor: PlaylistMonitor }) {
   const check = useCheckMonitor();
   const del = useDeleteMonitor();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [checkingId, setCheckingId] = useState<string | null>(null);
+  const [addingUri, setAddingUri] = useState(false);
 
   const isFound = monitor.status === "found";
+  const isBookmarked = monitor.status === "bookmarked";
   const isChecking = check.isPending && checkingId === monitor.id;
 
   async function handleCheck() {
+    if (!monitor.track_spotify_uri) return;
     setCheckingId(monitor.id);
     try {
       const res = await check.mutateAsync({
@@ -97,18 +157,28 @@ function MonitorRow({ monitor }: { monitor: PlaylistMonitor }) {
           </p>
         </div>
         <p className="text-xs text-muted-foreground truncate">
-          Monitorando: <span className="text-foreground">"{monitor.track_name}"</span>
+          {isBookmarked ? (
+            <span className="italic">Aguardando publicação no Spotify</span>
+          ) : (
+            <>Monitorando: <span className="text-foreground">"{monitor.track_name}"</span></>
+          )}
         </p>
-        <p className="text-[11px] text-muted-foreground">
-          {isFound
-            ? `Encontrada em ${foundLabel(monitor.found_at)}`
-            : `Última verificação: ${relativeLabel(monitor.last_checked_at)}`}
-        </p>
+        {!isBookmarked && (
+          <p className="text-[11px] text-muted-foreground">
+            {isFound
+              ? `Encontrada em ${foundLabel(monitor.found_at)}`
+              : `Última verificação: ${relativeLabel(monitor.last_checked_at)}`}
+          </p>
+        )}
 
         <div className="flex items-center justify-between gap-2 pt-1 flex-wrap">
           {isFound ? (
             <span className="text-xs text-green-700 bg-green-50 border border-green-100 rounded-full px-2 py-0.5">
               🎉 Faixa adicionada!
+            </span>
+          ) : isBookmarked ? (
+            <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
+              <BookmarkCheck className="h-3 w-3" /> Referência salva
             </span>
           ) : (
             <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
@@ -125,6 +195,15 @@ function MonitorRow({ monitor }: { monitor: PlaylistMonitor }) {
             >
               Abrir no Spotify <ExternalLink className="h-3 w-3" />
             </a>
+          ) : isBookmarked ? (
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-xs h-7"
+              onClick={() => setAddingUri((v) => !v)}
+            >
+              {addingUri ? "Cancelar" : "Adicionar URI do Spotify"}
+            </Button>
           ) : (
             <Button
               variant="outline"
@@ -142,6 +221,10 @@ function MonitorRow({ monitor }: { monitor: PlaylistMonitor }) {
             </Button>
           )}
         </div>
+
+        {addingUri && (
+          <AddUriForm monitor={monitor} onDone={() => setAddingUri(false)} />
+        )}
       </div>
 
       <button
@@ -156,14 +239,20 @@ function MonitorRow({ monitor }: { monitor: PlaylistMonitor }) {
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Parar de monitorar esta playlist?</AlertDialogTitle>
+            <AlertDialogTitle>
+              {isBookmarked ? "Remover referência?" : "Parar de monitorar esta playlist?"}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              Você não receberá mais notificações sobre "{monitor.track_name}" em "{monitor.playlist_name}".
+              {isBookmarked
+                ? `A referência à playlist "${monitor.playlist_name}" será removida.`
+                : `Você não receberá mais notificações sobre "${monitor.track_name}" em "${monitor.playlist_name}".`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete}>Parar de monitorar</AlertDialogAction>
+            <AlertDialogAction onClick={handleDelete}>
+              {isBookmarked ? "Remover" : "Parar de monitorar"}
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -177,6 +266,9 @@ export function ActiveMonitorsCard() {
   if (isLoading) return null;
   if (!monitors || monitors.length === 0) return null;
 
+  const active = monitors.filter((m) => m.status !== "found");
+  const found = monitors.filter((m) => m.status === "found");
+
   return (
     <Card>
       <CardHeader className="pb-3">
@@ -189,7 +281,15 @@ export function ActiveMonitorsCard() {
         </p>
       </CardHeader>
       <CardContent className="space-y-3">
-        {monitors.map((m) => (
+        {active.map((m) => (
+          <MonitorRow key={m.id} monitor={m} />
+        ))}
+        {found.length > 0 && active.length > 0 && (
+          <p className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium pt-1">
+            Encontradas
+          </p>
+        )}
+        {found.map((m) => (
           <MonitorRow key={m.id} monitor={m} />
         ))}
       </CardContent>

@@ -154,7 +154,7 @@ Deno.serve(async (req: Request) => {
         seen.add(item.id);
         editorial.push(item);
       } else {
-        if (item.followers < 1000) continue;
+        if (item.followers < 100) continue;
         if (ugc.length >= 8) continue;
         seen.add(item.id);
         ugc.push(item);

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ExternalLink, Users, Music2, Radio, Check } from "lucide-react";
+import { ExternalLink, Users, Music2, Radio, Check, Info } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -279,6 +279,32 @@ export function CompatiblePlaylistsCard({ genre, subgenre, mood, styleTags, refe
         onOpenChange={(o) => !o && setMonitorTarget(null)}
         playlist={monitorTarget}
       />
+
+      {!loading && !error && !isEmpty && (
+        <div className="border-t border-border/60 px-6 py-4">
+          <div className="flex gap-2 text-[11px] text-muted-foreground leading-relaxed">
+            <Info className="h-3.5 w-3.5 shrink-0 mt-0.5 text-primary/60" />
+            <div className="space-y-1">
+              <span className="font-medium text-foreground/80 block">Como fazer pitch para estas playlists</span>
+              <p>
+                Editoriais do Spotify: submeta em{" "}
+                <a
+                  href="https://artists.spotify.com/home"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline underline-offset-2 hover:text-foreground"
+                >
+                  Spotify for Artists
+                </a>{" "}
+                pelo menos 7 dias antes do lançamento. Só faixas agendadas são elegíveis.
+              </p>
+              <p>
+                Playlists de comunidade: entre em contato com o curador diretamente via bio ou redes. Use o botão "Monitorar" para acompanhar quando sua faixa entrar.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </Card>
   );
 }

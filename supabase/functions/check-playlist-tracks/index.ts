@@ -4,7 +4,7 @@ import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 interface RequestBody {
   monitor_id: string;
   playlist_id: string;
-  track_spotify_uri: string;
+  track_spotify_uri?: string | null;
 }
 
 const UUID_RE = /^[0-9a-f-]{36}$/i;
@@ -49,15 +49,14 @@ Deno.serve(async (req) => {
       { global: { headers: { Authorization: authHeader } } },
     );
 
-    const token = authHeader.replace("Bearer ", "");
-    const { data: claimsData, error: claimsErr } = await supabase.auth.getClaims(token);
-    if (claimsErr || !claimsData?.claims) {
+    const { data: { user }, error: userErr } = await supabase.auth.getUser();
+    if (userErr || !user) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    const userId = claimsData.claims.sub as string;
+    const userId = user.id;
 
     let body: RequestBody;
     try {
@@ -71,8 +70,7 @@ Deno.serve(async (req) => {
 
     if (
       !body?.monitor_id || !UUID_RE.test(body.monitor_id) ||
-      !body?.playlist_id || !ID_RE.test(body.playlist_id) ||
-      !body?.track_spotify_uri || !URI_RE.test(body.track_spotify_uri)
+      !body?.playlist_id || !ID_RE.test(body.playlist_id)
     ) {
       return new Response(JSON.stringify({ error: "invalid_input" }), {
         status: 400,
@@ -80,10 +78,9 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Carrega o monitor — RLS garante que pertence ao usuário
     const { data: monitor, error: monitorErr } = await supabase
       .from("playlist_monitors")
-      .select("id, user_id, status, playlist_name, track_name")
+      .select("id, user_id, status, playlist_name, track_name, track_spotify_uri")
       .eq("id", body.monitor_id)
       .maybeSingle();
 
@@ -100,7 +97,15 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Autentica no Spotify
+    // Bookmarked monitors have no URI — skip Spotify check
+    const trackUri = body.track_spotify_uri ?? monitor.track_spotify_uri;
+    if (!trackUri || !URI_RE.test(trackUri)) {
+      return new Response(
+        JSON.stringify({ found: false, checked_at: new Date().toISOString(), status: "bookmarked" }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
     let spotifyToken: string;
     try {
       spotifyToken = await getSpotifyToken();
@@ -111,7 +116,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Pagina /v1/playlists/{id}/tracks
     let found = false;
     let nextUrl: string | null =
       `https://api.spotify.com/v1/playlists/${body.playlist_id}/tracks?fields=items(track(uri)),next&limit=100`;
@@ -138,7 +142,7 @@ Deno.serve(async (req) => {
       }
       const page = await res.json() as { items?: Array<{ track?: { uri?: string } | null }>; next?: string | null };
       const items = page.items ?? [];
-      if (items.some((it) => it?.track?.uri === body.track_spotify_uri)) {
+      if (items.some((it) => it?.track?.uri === trackUri)) {
         found = true;
         break;
       }

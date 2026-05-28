@@ -4,11 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ChevronDown, Loader2, Music2 } from "lucide-react";
+import { BookmarkPlus, Loader2, Music2, Radio } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { useCreateMonitor, useCheckMonitor } from "@/hooks/usePlaylistMonitors";
+import { useCreateMonitor } from "@/hooks/usePlaylistMonitors";
 
 export interface MonitorPlaylistTarget {
   playlist_id: string;
@@ -33,16 +32,18 @@ interface TrackOption {
 
 const URI_RE = /^spotify:track:[A-Za-z0-9]{22}$/;
 
+type Mode = "live" | "bookmark";
+
 export function MonitorPlaylistDialog({ open, onOpenChange, playlist, onImportRequest }: Props) {
+  const [mode, setMode] = useState<Mode>("live");
   const [tracks, setTracks] = useState<TrackOption[]>([]);
   const [loadingTracks, setLoadingTracks] = useState(false);
   const [selectedTrackUri, setSelectedTrackUri] = useState<string>("");
-  const [manualOpen, setManualOpen] = useState(false);
   const [manualUri, setManualUri] = useState("");
   const [manualName, setManualName] = useState("");
+  const [bookmarkName, setBookmarkName] = useState("");
 
   const createMonitor = useCreateMonitor();
-  const checkMonitor = useCheckMonitor();
 
   useEffect(() => {
     if (!open) return;
@@ -89,17 +90,16 @@ export function MonitorPlaylistDialog({ open, onOpenChange, playlist, onImportRe
       setLoadingTracks(false);
     });
 
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [open]);
 
   useEffect(() => {
     if (!open) {
+      setMode("live");
       setSelectedTrackUri("");
-      setManualOpen(false);
       setManualUri("");
       setManualName("");
+      setBookmarkName("");
     }
   }, [open]);
 
@@ -108,16 +108,44 @@ export function MonitorPlaylistDialog({ open, onOpenChange, playlist, onImportRe
     [tracks, selectedTrackUri],
   );
 
-  const submitting = createMonitor.isPending || checkMonitor.isPending;
+  const hasCatalog = tracks.some((t) => t.source === "catalog");
+  const hasDna = tracks.some((t) => t.source === "dna");
 
   async function handleSubmit() {
     if (!playlist) return;
+
+    if (mode === "bookmark") {
+      try {
+        await createMonitor.mutateAsync({
+          playlist_id: playlist.playlist_id,
+          playlist_name: playlist.playlist_name,
+          playlist_image_url: playlist.playlist_image_url ?? null,
+          playlist_external_url: playlist.playlist_external_url ?? null,
+          playlist_owner_name: playlist.playlist_owner_name ?? null,
+          track_spotify_uri: null,
+          track_name: bookmarkName.trim() || "Faixa sem nome",
+          status: "bookmarked",
+        });
+        toast.success(`Playlist salva como referência`);
+        onOpenChange(false);
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : "";
+        if (msg === "duplicate_monitor") {
+          toast.error("Você já salvou esta playlist");
+        } else {
+          toast.error("Não foi possível salvar");
+        }
+      }
+      return;
+    }
+
+    // mode === "live"
     let uri = "";
     let name = "";
     if (selectedTrackUri) {
       uri = selectedTrackUri;
       name = selectedTrack?.name ?? "Faixa";
-    } else if (manualOpen) {
+    } else if (manualUri.trim()) {
       if (!URI_RE.test(manualUri.trim())) {
         toast.error("URI inválida. Use o formato spotify:track:XXXXXXXXXXXXXXXXXXXXXX");
         return;
@@ -134,7 +162,7 @@ export function MonitorPlaylistDialog({ open, onOpenChange, playlist, onImportRe
     }
 
     try {
-      const monitor = await createMonitor.mutateAsync({
+      await createMonitor.mutateAsync({
         playlist_id: playlist.playlist_id,
         playlist_name: playlist.playlist_name,
         playlist_image_url: playlist.playlist_image_url ?? null,
@@ -142,18 +170,8 @@ export function MonitorPlaylistDialog({ open, onOpenChange, playlist, onImportRe
         playlist_owner_name: playlist.playlist_owner_name ?? null,
         track_spotify_uri: uri,
         track_name: name,
+        status: "monitoring",
       });
-
-      checkMonitor
-        .mutateAsync({
-          monitor_id: monitor.id,
-          playlist_id: playlist.playlist_id,
-          track_spotify_uri: uri,
-        })
-        .catch(() => {
-          /* silencioso */
-        });
-
       toast.success(`Monitoramento ativo para ${playlist.playlist_name}`);
       onOpenChange(false);
     } catch (e) {
@@ -166,8 +184,7 @@ export function MonitorPlaylistDialog({ open, onOpenChange, playlist, onImportRe
     }
   }
 
-  const hasCatalog = tracks.some((t) => t.source === "catalog");
-  const hasDna = tracks.some((t) => t.source === "dna");
+  const submitting = createMonitor.isPending;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -175,7 +192,7 @@ export function MonitorPlaylistDialog({ open, onOpenChange, playlist, onImportRe
         <DialogHeader>
           <DialogTitle>Monitorar esta playlist</DialogTitle>
           <DialogDescription>
-            Você será notificado quando a faixa entrar nesta playlist.
+            Acompanhe se sua faixa entrou, ou salve como referência para quando lançar.
           </DialogDescription>
         </DialogHeader>
 
@@ -201,92 +218,129 @@ export function MonitorPlaylistDialog({ open, onOpenChange, playlist, onImportRe
           </div>
         )}
 
-        <div className="space-y-3">
-          <Label className="text-sm">Qual faixa você quer monitorar?</Label>
+        {/* Mode selector */}
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => setMode("live")}
+            className={`flex flex-col items-center gap-1.5 rounded-lg border p-3 text-left transition-colors ${
+              mode === "live"
+                ? "border-primary bg-primary/5 text-primary"
+                : "border-border text-muted-foreground hover:border-primary/40"
+            }`}
+          >
+            <Radio className="h-4 w-4" />
+            <span className="text-xs font-medium leading-tight text-center">
+              Faixa já está no Spotify
+            </span>
+            <span className="text-[10px] text-center leading-tight opacity-70">
+              Receba alerta quando entrar
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode("bookmark")}
+            className={`flex flex-col items-center gap-1.5 rounded-lg border p-3 text-left transition-colors ${
+              mode === "bookmark"
+                ? "border-primary bg-primary/5 text-primary"
+                : "border-border text-muted-foreground hover:border-primary/40"
+            }`}
+          >
+            <BookmarkPlus className="h-4 w-4" />
+            <span className="text-xs font-medium leading-tight text-center">
+              Ainda não publiquei
+            </span>
+            <span className="text-[10px] text-center leading-tight opacity-70">
+              Salvar como referência
+            </span>
+          </button>
+        </div>
 
-          {loadingTracks ? (
-            <p className="text-xs text-muted-foreground italic">Carregando faixas…</p>
-          ) : tracks.length === 0 ? (
-            <p className="text-xs text-muted-foreground italic leading-relaxed">
-              Nenhuma faixa com link do Spotify encontrada.{" "}
-              {onImportRequest ? (
-                <button
-                  type="button"
-                  className="underline underline-offset-2 hover:text-foreground"
-                  onClick={() => {
-                    onOpenChange(false);
-                    onImportRequest();
-                  }}
-                >
-                  Importe seu catálogo
-                </button>
-              ) : (
-                <span>Importe seu catálogo do Spotify</span>
-              )}{" "}
-              ou informe a URI manualmente abaixo.
-            </p>
-          ) : (
-            <Select value={selectedTrackUri} onValueChange={setSelectedTrackUri}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione uma faixa" />
-              </SelectTrigger>
-              <SelectContent>
-                {hasCatalog && (
-                  <div className="px-2 py-1 text-[10px] text-muted-foreground uppercase tracking-wide">
-                    Catálogo importado
-                  </div>
-                )}
-                {tracks
-                  .filter((t) => t.source === "catalog")
-                  .map((t) => (
-                    <SelectItem key={t.spotify_track_uri} value={t.spotify_track_uri}>
-                      {t.name}
-                    </SelectItem>
-                  ))}
-                {hasDna && (
-                  <div
-                    className={`px-2 py-1 text-[10px] text-muted-foreground uppercase tracking-wide ${
-                      hasCatalog ? "border-t mt-1 pt-2" : ""
-                    }`}
-                  >
-                    Análises Music DNA
-                  </div>
-                )}
-                {tracks
-                  .filter((t) => t.source === "dna")
-                  .map((t) => (
-                    <SelectItem key={t.spotify_track_uri} value={t.spotify_track_uri}>
-                      {t.name}
-                    </SelectItem>
-                  ))}
-              </SelectContent>
-            </Select>
-          )}
+        {mode === "live" && (
+          <div className="space-y-3">
+            <Label className="text-sm">Qual faixa você quer monitorar?</Label>
 
-          <Collapsible open={manualOpen} onOpenChange={setManualOpen}>
-            <CollapsibleTrigger asChild>
-              <button
-                type="button"
-                className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
-              >
-                <ChevronDown className={`h-3 w-3 transition-transform ${manualOpen ? "rotate-180" : ""}`} />
-                Informar URI do Spotify manualmente
-              </button>
-            </CollapsibleTrigger>
-            <CollapsibleContent className="space-y-2 pt-2">
+            {loadingTracks ? (
+              <p className="text-xs text-muted-foreground italic">Carregando faixas…</p>
+            ) : tracks.length > 0 ? (
+              <Select value={selectedTrackUri} onValueChange={setSelectedTrackUri}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione uma faixa" />
+                </SelectTrigger>
+                <SelectContent>
+                  {hasCatalog && (
+                    <div className="px-2 py-1 text-[10px] text-muted-foreground uppercase tracking-wide">
+                      Catálogo importado
+                    </div>
+                  )}
+                  {tracks
+                    .filter((t) => t.source === "catalog")
+                    .map((t) => (
+                      <SelectItem key={t.spotify_track_uri} value={t.spotify_track_uri}>
+                        {t.name}
+                      </SelectItem>
+                    ))}
+                  {hasDna && (
+                    <div
+                      className={`px-2 py-1 text-[10px] text-muted-foreground uppercase tracking-wide ${
+                        hasCatalog ? "border-t mt-1 pt-2" : ""
+                      }`}
+                    >
+                      Análises Music DNA
+                    </div>
+                  )}
+                  {tracks
+                    .filter((t) => t.source === "dna")
+                    .map((t) => (
+                      <SelectItem key={t.spotify_track_uri} value={t.spotify_track_uri}>
+                        {t.name}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            ) : null}
+
+            <div className="space-y-2">
+              <p className="text-[11px] text-muted-foreground leading-relaxed">
+                {tracks.length === 0
+                  ? <>Nenhuma faixa encontrada.{onImportRequest ? <> <button type="button" className="underline underline-offset-2 hover:text-foreground" onClick={() => { onOpenChange(false); onImportRequest(); }}>Importe seu catálogo</button> ou use</> : " Use"} a URI abaixo.</>
+                  : "Ou informe a URI diretamente:"
+                }
+              </p>
               <Input
                 placeholder="spotify:track:4iV5W9uYEdYUVa79Axb7Rh"
                 value={manualUri}
                 onChange={(e) => setManualUri(e.target.value)}
               />
+              {manualUri && (
+                <Input
+                  placeholder="Nome da faixa"
+                  value={manualName}
+                  onChange={(e) => setManualName(e.target.value)}
+                />
+              )}
+              <p className="text-[10px] text-muted-foreground leading-relaxed">
+                Para encontrar a URI: Spotify for Artists → Catálogo → selecione a faixa → "•••" → Compartilhar → Copiar URI do Spotify.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {mode === "bookmark" && (
+          <div className="space-y-3">
+            <div className="rounded-lg bg-muted/40 border border-border/60 px-3 py-2.5 text-[11px] text-muted-foreground leading-relaxed">
+              A playlist ficará salva nas suas referências. Quando sua faixa estiver no Spotify, você poderá adicionar a URI para ativar o alerta automático.
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-sm">Nome da faixa <span className="text-muted-foreground font-normal">(opcional)</span></Label>
               <Input
-                placeholder="Nome da faixa"
-                value={manualName}
-                onChange={(e) => setManualName(e.target.value)}
+                placeholder="Ex: Não Me Esquece (feat. Artista)"
+                value={bookmarkName}
+                onChange={(e) => setBookmarkName(e.target.value)}
               />
-            </CollapsibleContent>
-          </Collapsible>
-        </div>
+            </div>
+          </div>
+        )}
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>
@@ -294,7 +348,7 @@ export function MonitorPlaylistDialog({ open, onOpenChange, playlist, onImportRe
           </Button>
           <Button onClick={handleSubmit} disabled={submitting}>
             {submitting && <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />}
-            Começar a monitorar
+            {mode === "bookmark" ? "Salvar referência" : "Começar a monitorar"}
           </Button>
         </DialogFooter>
       </DialogContent>
