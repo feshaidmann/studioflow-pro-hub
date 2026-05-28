@@ -7,8 +7,9 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/contexts/ProfileContext";
 import { toast } from "sonner";
-import { Music, ArrowLeft, Mail, Eye, EyeOff } from "lucide-react";
+import { ArrowLeft, Mail, Eye, EyeOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import logoMusicosAi from "@/assets/logo-musicos-ai.svg";
 import { lovable } from "@/integrations/lovable/index";
 
 type Mode = "login" | "signup" | "forgot";
@@ -144,8 +145,12 @@ export default function Auth() {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md glass-card border-border">
         <CardHeader className="text-center">
-          <div className="mx-auto mb-2 h-12 w-12 rounded-full bg-primary/20 flex items-center justify-center">
-            {mode === "forgot" ? <Mail className="h-6 w-6 text-primary" /> : <Music className="h-6 w-6 text-primary" />}
+          <div className="mx-auto mb-2 h-14 w-14 flex items-center justify-center">
+            {mode === "forgot" ? (
+              <Mail className="h-7 w-7 text-primary" />
+            ) : (
+              <img src={logoMusicosAi} alt="MusicOS.ai" className="h-14 w-14" />
+            )}
           </div>
           <CardTitle className="text-2xl font-semibold">MusicOS.ai</CardTitle>
           <CardDescription>
