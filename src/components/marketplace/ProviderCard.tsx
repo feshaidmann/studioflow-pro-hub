@@ -13,7 +13,7 @@ interface Props {
 }
 
 const SOURCE_BADGE: Record<MarketplaceProvider["source"], { label: string; icon: typeof ShieldCheck; cls: string }> = {
-  user: { label: "Artista StudioFlow", icon: Users, cls: "bg-primary/10 text-primary border-primary/20" },
+  user: { label: "Artista MusicOS.ai", icon: Users, cls: "bg-primary/10 text-primary border-primary/20" },
   contact: { label: "Indicado", cls: "bg-accent text-accent-foreground border-border", icon: ShieldCheck },
   curated: { label: "Curado", cls: "bg-chart-3/15 text-chart-3 border-chart-3/30", icon: ShieldCheck },
 };

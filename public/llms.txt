@@ -1,8 +1,8 @@
-# StudioFlow
+# MusicOS.ai
 
 > Plataforma de gestão para artistas independentes brasileiros — projetos musicais, financeiro, equipe, editais e IA criativa em um só app.
 
-StudioFlow centraliza o fluxo de trabalho do artista independente: do início do projeto ao lançamento, com módulos integrados de gestão financeira, agenda, equipe, editais e palcos, análise de DNA musical e direção visual assistida por IA.
+MusicOS.ai centraliza o fluxo de trabalho do artista independente: do início do projeto ao lançamento, com módulos integrados de gestão financeira, agenda, equipe, editais e palcos, análise de DNA musical e direção visual assistida por IA.
 
 ## Pages
 

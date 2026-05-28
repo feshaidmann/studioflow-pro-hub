@@ -64,7 +64,7 @@ function AppLogo() {
       <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-primary/10 mb-3">
         <Music2 className="h-6 w-6 text-primary" />
       </div>
-      <h1 className="text-xl font-semibold tracking-tight text-foreground">StudioFlow</h1>
+      <h1 className="text-xl font-semibold tracking-tight text-foreground">MusicOS.ai</h1>
       <p className="text-xs text-muted-foreground mt-0.5">Convite de participação</p>
     </div>
   );

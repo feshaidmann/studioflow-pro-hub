@@ -209,7 +209,7 @@ export default function ProjectOverviewTab({ project, progress, isOwner, onSwitc
               `🎵 Atualização do projeto "${project.name}"${project.artist ? ` — ${project.artist}` : ""}\n` +
               `📍 Estágio: ${STAGE_LABEL[project.stage] ?? project.stage}\n` +
               `📊 Progresso do lançamento: ${releaseProgress}% (${checkedItems}/${totalItems} itens)\n\n` +
-              `Enviado via StudioFlow`
+              `Enviado via MusicOS.ai`
             );
             window.open(`https://wa.me/?text=${text}`, "_blank");
           }}

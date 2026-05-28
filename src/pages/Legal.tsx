@@ -6,10 +6,10 @@ const TERMS_CONTENT = `
 Última atualização: 30 de março de 2026
 
 ## 1. Aceitação dos Termos
-Ao acessar e usar o StudioFlow, você concorda com estes Termos de Uso. Se não concordar, não utilize a plataforma.
+Ao acessar e usar o MusicOS.ai, você concorda com estes Termos de Uso. Se não concordar, não utilize a plataforma.
 
 ## 2. Descrição do Serviço
-O StudioFlow é uma plataforma de gestão para produtores musicais e artistas, oferecendo ferramentas de organização de projetos, controle financeiro, agenda e networking profissional.
+O MusicOS.ai é uma plataforma de gestão para produtores musicais e artistas, oferecendo ferramentas de organização de projetos, controle financeiro, agenda e networking profissional.
 
 ## 3. Conta do Usuário
 - Você é responsável por manter a confidencialidade da sua conta.
@@ -23,7 +23,7 @@ Você concorda em não utilizar a plataforma para:
 - Tentativas de comprometer a segurança do sistema.
 
 ## 5. Propriedade Intelectual
-Todo o conteúdo da plataforma (design, código, textos) é de propriedade do StudioFlow. O conteúdo que você cria (projetos, dados) permanece seu.
+Todo o conteúdo da plataforma (design, código, textos) é de propriedade do MusicOS.ai. O conteúdo que você cria (projetos, dados) permanece seu.
 
 ## 6. Limitação de Responsabilidade
 A plataforma é fornecida "como está". Não garantimos disponibilidade ininterrupta ou ausência de erros. Estamos em fase beta e melhorias contínuas estão sendo implementadas.

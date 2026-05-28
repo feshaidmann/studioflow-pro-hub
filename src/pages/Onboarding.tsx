@@ -187,7 +187,7 @@ export default function Onboarding() {
           <div className="mx-auto h-14 w-14 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center">
             <Music className="h-7 w-7 text-primary" />
           </div>
-          <h1 className="text-2xl font-bold text-foreground">StudioFlow</h1>
+          <h1 className="text-2xl font-bold text-foreground">MusicOS.ai</h1>
         </div>
 
         {/* Step indicator */}

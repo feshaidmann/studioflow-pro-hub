@@ -72,7 +72,7 @@ export default function OnboardingGuest() {
           <div className="mx-auto h-14 w-14 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center">
             <Music className="h-7 w-7 text-primary" />
           </div>
-          <h1 className="text-2xl font-bold text-foreground">Bem-vindo ao StudioFlow</h1>
+          <h1 className="text-2xl font-bold text-foreground">Bem-vindo ao MusicOS.ai</h1>
           <p className="text-muted-foreground text-sm">Você foi convidado para um projeto. Só uns dados rápidos.</p>
         </div>
 

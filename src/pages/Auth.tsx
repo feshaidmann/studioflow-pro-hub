@@ -147,7 +147,7 @@ export default function Auth() {
           <div className="mx-auto mb-2 h-12 w-12 rounded-full bg-primary/20 flex items-center justify-center">
             {mode === "forgot" ? <Mail className="h-6 w-6 text-primary" /> : <Music className="h-6 w-6 text-primary" />}
           </div>
-          <CardTitle className="text-2xl font-semibold">StudioFlow</CardTitle>
+          <CardTitle className="text-2xl font-semibold">MusicOS.ai</CardTitle>
           <CardDescription>
             {mode === "login" ? "Entre na sua conta" : mode === "signup" ? "Crie sua conta" : "Recuperar senha"}
           </CardDescription>

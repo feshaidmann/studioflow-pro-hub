@@ -16,7 +16,7 @@ export default function BetaBanner() {
     >
       <Sparkles className="h-3 w-3 text-primary shrink-0" />
       <p className="flex-1 text-[11px] text-muted-foreground leading-tight truncate">
-        <span className="font-medium text-foreground">StudioFlow está em fase beta</span>
+        <span className="font-medium text-foreground">MusicOS.ai está em fase beta</span>
         <span className="hidden sm:inline"> — sua experiência pode ter pequenos ajustes. Seu feedback é muito bem-vindo!</span>
       </p>
       <button

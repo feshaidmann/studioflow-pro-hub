@@ -21,7 +21,7 @@ async function buscarMBID(artista: string, titulo: string): Promise<string | nul
   try {
     const query = encodeURIComponent(`${titulo} artist:${artista}`);
     const response = await fetch(`https://musicbrainz.org/ws/2/recording?query=${query}&fmt=json&limit=1`, {
-      headers: { "User-Agent": "StudioFlowPro/2.0 (suporte@jamsessionproject.com.br)" },
+      headers: { "User-Agent": "MusicOSai/2.0 (suporte@jamsessionproject.com.br)" },
     });
     const data = await response.json();
     return data.recordings?.[0]?.id ?? null;

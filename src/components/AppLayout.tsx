@@ -165,7 +165,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 <ChevronLeft className="h-5 w-5" />
               </Button>
             )}
-            <NavLink to="/" className="text-base font-semibold hover:opacity-80 transition-opacity">StudioFlow</NavLink>
+            <NavLink to="/" className="text-base font-semibold hover:opacity-80 transition-opacity">MusicOS.ai</NavLink>
           </div>
           <div className="flex items-center gap-0.5">
             {/* P3: Configurações promovida ao header mobile */}
@@ -356,7 +356,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <div className="flex h-12 items-center justify-between px-3 border-b border-border/40">
           {sidebarOpen && (
             <NavLink to="/" className="text-[13px] font-semibold truncate hover:opacity-80 transition-opacity">
-              StudioFlow
+              MusicOS.ai
             </NavLink>
           )}
           <Button

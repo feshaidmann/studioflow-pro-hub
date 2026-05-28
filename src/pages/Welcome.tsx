@@ -27,7 +27,7 @@ export default function Welcome() {
 
   useEffect(() => {
     const prevTitle = document.title;
-    document.title = "StudioFlow — Gestão para artista independente brasileiro";
+    document.title = "MusicOS.ai — Gestão para artista independente brasileiro";
     const meta = document.querySelector('meta[name="description"]');
     const prevDesc = meta?.getAttribute("content") ?? "";
     meta?.setAttribute(

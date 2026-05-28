@@ -13,7 +13,7 @@ interface Props {
 }
 
 const SOURCE_BADGE: Record<MarketplaceProvider["source"], { label: string; icon: typeof ShieldCheck; cls: string }> = {
-  user: { label: "Artista StudioFlow", icon: Users, cls: "bg-primary/10 text-primary border-primary/20" },
+  user: { label: "Artista MusicOS.ai", icon: Users, cls: "bg-primary/10 text-primary border-primary/20" },
   contact: { label: "Indicado", cls: "bg-accent text-accent-foreground border-border", icon: ShieldCheck },
   curated: { label: "Curado", cls: "bg-chart-3/15 text-chart-3 border-chart-3/30", icon: ShieldCheck },
 };
@@ -96,7 +96,7 @@ export function ProviderProfileSheet({ provider, open, onOpenChange, onRequestQu
 
           {provider.source === "contact" && (
             <p className="text-[11px] text-muted-foreground rounded-md border border-border bg-muted/30 p-2">
-              Este profissional foi indicado por contatos da plataforma e ainda não possui um perfil público no StudioFlow.
+              Este profissional foi indicado por contatos da plataforma e ainda não possui um perfil público no MusicOS.ai.
             </p>
           )}
 

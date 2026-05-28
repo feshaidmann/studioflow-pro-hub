@@ -113,7 +113,7 @@ export default function FeedbackButton() {
             <div className="flex items-center justify-between border-b border-border px-5 py-4">
               <div>
                 <p className="text-sm font-semibold text-foreground">Enviar Feedback</p>
-                <p className="text-xs text-muted-foreground">Sua opinião melhora o StudioFlow</p>
+                <p className="text-xs text-muted-foreground">Sua opinião melhora o MusicOS.ai</p>
               </div>
               <Button
                 variant="ghost"

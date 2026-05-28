@@ -43,7 +43,7 @@ export default function CaptadorContactModal({ open, onOpenChange, captador, def
         <DialogHeader>
           <DialogTitle>Contatar {captador.display_name}</DialogTitle>
           <DialogDescription>
-            Edite a mensagem e escolha o canal. O StudioFlow não envia automaticamente — você dispara via e-mail/WhatsApp.
+            Edite a mensagem e escolha o canal. O MusicOS.ai não envia automaticamente — você dispara via e-mail/WhatsApp.
           </DialogDescription>
         </DialogHeader>
 

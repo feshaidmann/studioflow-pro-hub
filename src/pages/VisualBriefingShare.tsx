@@ -177,7 +177,7 @@ export default function VisualBriefingShare() {
         </section>
 
         <p className="text-center text-[11px] text-muted-foreground">
-          <Badge variant="outline" className="text-[10px]">StudioFlow · Direção Visual</Badge>
+          <Badge variant="outline" className="text-[10px]">MusicOS.ai · Direção Visual</Badge>
         </p>
       </main>
     </div>

@@ -59,7 +59,7 @@ export default function ResetPassword() {
           <div className="mx-auto mb-2 h-12 w-12 rounded-full bg-primary/20 flex items-center justify-center">
             {done ? <CheckCircle2 className="h-6 w-6 text-primary" /> : <KeyRound className="h-6 w-6 text-primary" />}
           </div>
-          <CardTitle className="text-2xl font-semibold">StudioFlow</CardTitle>
+          <CardTitle className="text-2xl font-semibold">MusicOS.ai</CardTitle>
           <CardDescription>{done ? "Senha redefinida!" : "Criar nova senha"}</CardDescription>
         </CardHeader>
         <CardContent>

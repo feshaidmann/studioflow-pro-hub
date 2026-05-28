@@ -88,7 +88,7 @@ const SAMPLE_PROJECTS = [
 const SAMPLE_PROFESSIONALS = [
   {
     name: "Bruno Nascimento",
-    email: "bruno.nascimento@studioflow.pro",
+    email: "bruno.nascimento@musicos.ai",
     phone: "(11) 97345-9921",
     specialty: "Bateria",
     bio: "Baterista com domínio em bateria acústica e eletrônica. Especialista em gravações de click track e programação de baterias para demo e álbuns.",
@@ -96,7 +96,7 @@ const SAMPLE_PROFESSIONALS = [
   },
   {
     name: "Lucas Freitas",
-    email: "lucas.freitas@studioflow.pro",
+    email: "lucas.freitas@musicos.ai",
     phone: "(11) 98100-2233",
     specialty: "Mix",
     bio: "Mix engineer com 10 anos de experiência em estúdios de São Paulo. Créditos em projetos de artistas nacionais e internacionais em pop, trap e eletrônico.",
@@ -104,7 +104,7 @@ const SAMPLE_PROFESSIONALS = [
   },
   {
     name: "Ana Lima",
-    email: "ana.lima@studioflow.pro",
+    email: "ana.lima@musicos.ai",
     phone: "(21) 99234-5678",
     specialty: "Voz",
     bio: "Cantora e backing vocal com experiência em gravações de estúdio. Especializada em pop, MPB e gospel. Disponível para features e projetos independentes.",
@@ -112,7 +112,7 @@ const SAMPLE_PROFESSIONALS = [
   },
   {
     name: "Ricardo Matos",
-    email: "ricardo.matos@studioflow.pro",
+    email: "ricardo.matos@musicos.ai",
     phone: "(31) 98877-1122",
     specialty: "Produção",
     bio: "Produtor musical focado em música regional e MPB. Trabalha com beat making e arranjos completos. Entrega arquivos stems e projeto DAW.",
@@ -121,13 +121,13 @@ const SAMPLE_PROFESSIONALS = [
 ];
 
 const SAMPLE_RATINGS = [
-  { professional_name: "Bruno Nascimento", professional_email: "bruno.nascimento@studioflow.pro", stars: 5, notes: "Incrível! Entregou os stems no prazo e o som ficou perfeito. Recomendo." },
-  { professional_name: "Bruno Nascimento", professional_email: "bruno.nascimento@studioflow.pro", stars: 4, notes: "Ótimo trabalho, só precisou de um ajuste no click track." },
-  { professional_name: "Lucas Freitas", professional_email: "lucas.freitas@studioflow.pro", stars: 5, notes: "O mix ficou profissional. Muito comunicativo e preciso nos detalhes." },
-  { professional_name: "Lucas Freitas", professional_email: "lucas.freitas@studioflow.pro", stars: 5, notes: "Trabalho impecável, entrega rápida." },
-  { professional_name: "Lucas Freitas", professional_email: "lucas.freitas@studioflow.pro", stars: 4, notes: "Muito bom, pediu um retorno extra mas resultado final valeu." },
-  { professional_name: "Ana Lima", professional_email: "ana.lima@studioflow.pro", stars: 5, notes: "Voz incrível, gravou todas as vozes num dia só." },
-  { professional_name: "Ricardo Matos", professional_email: "ricardo.matos@studioflow.pro", stars: 3, notes: "Entregou com atraso mas o resultado foi satisfatório." },
+  { professional_name: "Bruno Nascimento", professional_email: "bruno.nascimento@musicos.ai", stars: 5, notes: "Incrível! Entregou os stems no prazo e o som ficou perfeito. Recomendo." },
+  { professional_name: "Bruno Nascimento", professional_email: "bruno.nascimento@musicos.ai", stars: 4, notes: "Ótimo trabalho, só precisou de um ajuste no click track." },
+  { professional_name: "Lucas Freitas", professional_email: "lucas.freitas@musicos.ai", stars: 5, notes: "O mix ficou profissional. Muito comunicativo e preciso nos detalhes." },
+  { professional_name: "Lucas Freitas", professional_email: "lucas.freitas@musicos.ai", stars: 5, notes: "Trabalho impecável, entrega rápida." },
+  { professional_name: "Lucas Freitas", professional_email: "lucas.freitas@musicos.ai", stars: 4, notes: "Muito bom, pediu um retorno extra mas resultado final valeu." },
+  { professional_name: "Ana Lima", professional_email: "ana.lima@musicos.ai", stars: 5, notes: "Voz incrível, gravou todas as vozes num dia só." },
+  { professional_name: "Ricardo Matos", professional_email: "ricardo.matos@musicos.ai", stars: 3, notes: "Entregou com atraso mas o resultado foi satisfatório." },
 ];
 
 export default function Settings() {

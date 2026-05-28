@@ -101,9 +101,9 @@ type TabId = (typeof tabs)[number]["id"];
 const tabContent: Record<TabId, React.ReactNode> = {
   "getting-started": (
     <div className="space-y-2">
-      <SectionTitle>Bem-vindo ao StudioFlow</SectionTitle>
+      <SectionTitle>Bem-vindo ao MusicOS.ai</SectionTitle>
       <p className="text-sm text-muted-foreground leading-relaxed">
-        O StudioFlow organiza todo o ciclo dos seus projetos musicais — da ideia até o lançamento.
+        O MusicOS.ai organiza todo o ciclo dos seus projetos musicais — da ideia até o lançamento.
         Aqui você acompanha projetos, finanças, agenda, equipe e recebe orientação da IA, tudo em um só lugar.
       </p>
 
@@ -504,7 +504,7 @@ export default function Tutorial() {
           Guia de Uso
         </h1>
         <p className="text-muted-foreground mt-1">
-          Aprenda a usar cada funcionalidade do StudioFlow em poucos passos.
+          Aprenda a usar cada funcionalidade do MusicOS.ai em poucos passos.
         </p>
       </header>
 
