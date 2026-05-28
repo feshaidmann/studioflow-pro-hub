@@ -92,13 +92,11 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
 
   const updateProfile = async (updates: Partial<Omit<Profile, "id" | "created_at">>) => {
     if (!user) return;
+    // Optimistic update antes do upsert para UX imediata
+    setProfile((prev) => prev ? { ...prev, ...updates } : null);
     await supabase
       .from("profiles")
       .upsert({ id: user.id, ...updates });
-    
-    // Optimistic update
-    setProfile((prev) => prev ? { ...prev, ...updates } : null);
-    await fetchProfile();
   };
 
   const userType: UserType = profile?.user_type ?? "artist";

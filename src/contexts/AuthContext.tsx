@@ -20,6 +20,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // onAuthStateChange dispara INITIAL_SESSION na montagem — cobre o carregamento inicial.
+    // A chamada extra a getSession() era redundante e causava double render.
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
@@ -28,15 +30,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         identifyUser(session.user.id, { email: session.user.email });
       } else {
         resetAnalytics();
-      }
-    });
-
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-      if (session?.user) {
-        identifyUser(session.user.id, { email: session.user.email });
       }
     });
 

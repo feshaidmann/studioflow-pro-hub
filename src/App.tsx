@@ -51,7 +51,15 @@ const PalcoProposta = lazy(() => import("@/pages/PalcoProposta"));
 const VisualDirection = lazy(() => import("@/pages/VisualDirection"));
 const VisualBriefingShare = lazy(() => import("@/pages/VisualBriefingShare"));
 
-const queryClient = new QueryClient(); // singleton
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 2,       // 2 min — evita refetch a cada foco de aba
+      retry: 1,                         // 1 tentativa extra (padrão 3 é excessivo)
+      refetchOnWindowFocus: false,      // Supabase tem realtime; refetch automático é ruído
+    },
+  },
+});
 
 const LazyFallback = () => {
   const { t } = useLanguage();

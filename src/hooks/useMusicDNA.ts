@@ -402,19 +402,6 @@ Referências do artista: ${input.references.length ? input.references.join(", ")
 Vocabulário semântico de artistas do mesmo território (apenas referência de LINGUAGEM/curadoria, NÃO comparação acústica — comparação técnica real vem somente do bloco "VIZINHOS MAIS PRÓXIMOS NO CATÁLOGO REAL"): ${selectedReferences.length ? selectedReferences.join(", ") : "nenhum"}
 Notas do artista: ${input.notes || "não fornecidas"}
 
-
-════════════════════════════════════════════════
-DADOS DA FAIXA
-════════════════════════════════════════════════
-Nome:    "${input.name}"
-Gênero:  ${input.genre || "não especificado"}
-BPM:     ${analysis.bpm.toFixed(1)}
-Tom:     ${analysis.key}
-Duração: ${Math.floor(analysis.duration_sec / 60)}:${String(Math.round(analysis.duration_sec % 60)).padStart(2, "0")}
-Referências do artista: ${input.references.length ? input.references.join(", ") : "nenhuma fornecida"}
-Vocabulário semântico de artistas do mesmo território (apenas referência de LINGUAGEM/curadoria, NÃO comparação acústica — comparação técnica real vem somente do bloco "VIZINHOS MAIS PRÓXIMOS NO CATÁLOGO REAL"): ${selectedReferences.length ? selectedReferences.join(", ") : "nenhum"}
-Notas do artista: ${input.notes || "não fornecidas"}
-
 ════════════════════════════════════════════════
 ANÁLISE TÉCNICA — NÍVEL GLOBAL
 ════════════════════════════════════════════════
