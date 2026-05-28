@@ -84,12 +84,21 @@ const ACCEPTED_AUDIO = [
   "audio/aiff", "audio/x-aiff", "audio/x-aifc",
 ];
 
+const GENRE_ENUM_VALUES = [
+  "Indie Folk", "Pop Brasileiro", "Sertanejo Raiz", "Sertanejo Universitário",
+  "MPB Contemporânea", "Samba", "Pagode", "Funk Carioca", "Forró / Piseiro",
+  "Indie BR", "Rock Alternativo BR", "Rap BR", "R&B / Soul", "Reggae BR",
+  "Axé / Pop Bahia", "Eletrônica / House", "Pop Internacional", "Lo-Fi Hip Hop",
+  "Trap BR", "Bossa Nova", "Rock Alternativo",
+] as const;
+
 const formSchema = z.object({
   name: z.string().min(1, "Nome da faixa é obrigatório"),
   references: z.array(z.string()).max(5),
   notes: z.string().optional(),
   projectId: z.string().optional(),
   stage: z.enum(["demo", "mix", "master"]),
+  genre: z.enum(GENRE_ENUM_VALUES).optional(),
 });
 type FormValues = z.infer<typeof formSchema>;
 
@@ -421,10 +430,11 @@ function DetailSection({ id, title, icon, children }: {
   );
 }
 
-function ExecutiveSummary({ diagnosis, onAddAllSteps, allStepsAdded, analysisId, onSendSignal, stage = "master" }: {
+function ExecutiveSummary({ diagnosis, proximosPassos, addedItems, onAddStep, analysisId, onSendSignal, stage = "master" }: {
   diagnosis: DiagnosisResult;
-  onAddAllSteps: () => void;
-  allStepsAdded: boolean;
+  proximosPassos: Array<{ prioridade: "Alta" | "Média" | "Baixa"; acao: string; impacto: string }>;
+  addedItems: Set<string>;
+  onAddStep: (acao: string, key: string) => void;
   analysisId?: string;
   onSendSignal?: (signal: "thumbs_up" | "thumbs_down" | "copied") => void;
   stage?: AudioStage;
@@ -480,7 +490,7 @@ function ExecutiveSummary({ diagnosis, onAddAllSteps, allStepsAdded, analysisId,
   // Confiança da análise
   const totalCompared = diagnosis.catalogTotalCompared ?? 0;
 
-  const stepsCount = diagnosis.proximos_passos?.length ?? 0;
+  const stepsCount = proximosPassos.length;
 
   const handleCopy = () => {
     try {
@@ -525,6 +535,34 @@ function ExecutiveSummary({ diagnosis, onAddAllSteps, allStepsAdded, analysisId,
             </div>
           </div>
 
+          {/* A2 — Granular readiness checklist */}
+          {hasCoreMetrics && profile.readyBadge !== "hidden" && (() => {
+            const tp = truePeak as number;
+            const lf = lufs as number;
+            const dr = dynamicRange as number;
+            const isMix = profile.readyBadge === "mix";
+            const items = [
+              ...(!isMix ? [{ label: "LUFS", val: `${lf.toFixed(1)} LUFS`, pass: lf >= -15 && lf <= -13 }] : []),
+              { label: "True Peak", val: `${tp.toFixed(1)} dBTP`, pass: tp <= -1 },
+              { label: "DR", val: `${dr.toFixed(1)} LU`, pass: isMix ? dr >= 5 : dr >= 7 },
+            ];
+            return (
+              <div className="flex flex-wrap gap-2">
+                {items.map((item) => (
+                  <div key={item.label} className={cn(
+                    "flex items-center gap-1 text-[11px] font-mono border rounded-full px-2.5 py-0.5",
+                    item.pass
+                      ? "bg-primary/10 text-primary border-primary/30"
+                      : "bg-destructive/10 text-destructive border-destructive/30"
+                  )}>
+                    {item.pass ? <CheckCircle2 className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
+                    {item.label} · {item.val}
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
+
           {/* Feedback A/B */}
           {analysisId && (
             <div className="flex items-center justify-between gap-3 flex-wrap pt-1 border-t border-border/60">
@@ -561,21 +599,46 @@ function ExecutiveSummary({ diagnosis, onAddAllSteps, allStepsAdded, analysisId,
             </div>
           )}
 
-          {/* CTA primário */}
+          {/* A5 — Individual step selection */}
           {stepsCount > 0 && (
-            <div className="flex flex-wrap items-center justify-end gap-3 pt-1 border-t border-border/60">
-              <Button
-                size="sm"
-                onClick={onAddAllSteps}
-                disabled={allStepsAdded}
-                className="text-xs gap-1.5"
-              >
-                {allStepsAdded ? (
-                  <><Check className="h-3.5 w-3.5" /> {stepsCount} ações adicionadas</>
-                ) : (
-                  <><ListPlus className="h-3.5 w-3.5" /> Adicionar {stepsCount} ações ao checklist</>
-                )}
-              </Button>
+            <div className="space-y-1.5 pt-1.5 border-t border-border/60">
+              <p className="text-[10px] uppercase tracking-wider font-mono text-muted-foreground flex items-center gap-1.5">
+                <ListPlus className="h-3 w-3" /> Próximos passos — toque para adicionar ao checklist
+              </p>
+              <div className="space-y-1">
+                {proximosPassos.map((p, i) => {
+                  const key = `passo-${i}`;
+                  const added = addedItems.has(key);
+                  return (
+                    <button
+                      key={i}
+                      type="button"
+                      disabled={added}
+                      onClick={() => !added && onAddStep(p.acao, key)}
+                      className={cn(
+                        "flex w-full items-start gap-2 rounded-md px-2.5 py-1.5 text-left text-xs transition-colors",
+                        added
+                          ? "bg-primary/10 text-primary cursor-default"
+                          : "bg-muted/30 hover:bg-muted/60 text-foreground"
+                      )}
+                    >
+                      <span className={cn(
+                        "mt-0.5 h-3.5 w-3.5 shrink-0 rounded-full border flex items-center justify-center",
+                        added ? "border-primary bg-primary" : "border-muted-foreground/40"
+                      )}>
+                        {added && <Check className="h-2 w-2 text-background" />}
+                      </span>
+                      <span className="flex-1 leading-snug">{p.acao}</span>
+                      <span className={cn(
+                        "shrink-0 text-[10px] font-mono uppercase",
+                        p.prioridade === "Alta" ? "text-destructive" : p.prioridade === "Média" ? "text-amber-600" : "text-muted-foreground"
+                      )}>
+                        {p.prioridade}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           )}
 
@@ -1184,6 +1247,31 @@ function FormView({ onSubmit, isPending, projects }: {
               );
             }} />
 
+            <FormField control={form.control} name="genre" render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-[11px] uppercase tracking-widest font-mono text-muted-foreground">
+                  Gênero principal (opcional)
+                </FormLabel>
+                <Select
+                  value={field.value ?? "__none__"}
+                  onValueChange={(v) => field.onChange(v === "__none__" ? undefined : v)}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Não informar" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="__none__">Não informar</SelectItem>
+                    {GENRE_ENUM_VALUES.map((g) => (
+                      <SelectItem key={g} value={g}>{g}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )} />
+
             <Collapsible>
               <CollapsibleTrigger className="text-[11px] uppercase tracking-widest font-mono text-muted-foreground hover:text-foreground transition-colors">
                 + Notas adicionais (opcional)
@@ -1369,7 +1457,6 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
 }) {
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [addedItems, setAddedItems] = useState<Set<string>>(new Set());
-  const [allStepsAdded, setAllStepsAdded] = useState(false);
   const [openNeighbor, setOpenNeighbor] = useState<CatalogNeighbor | null>(null);
   const { addTask } = useTasks();
   const stage: AudioStage = ((input as { stage?: AudioStage }).stage ?? "master");
@@ -1418,21 +1505,6 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
     if (id) sendSignal({ analysisId: id, variant: summaryVariant, signal });
   };
 
-  const handleAddAllSteps = async () => {
-    const steps = proximos_passos ?? [];
-    let count = 0;
-    for (let i = 0; i < steps.length; i++) {
-      const key = `passo-${i}`;
-      if (addedItems.has(key)) continue;
-      const task = await addTask({ description: `[DNA] ${steps[i].acao}`, source: "music-dna" });
-      if (task) { setAddedItems(prev => new Set(prev).add(key)); count++; }
-    }
-    setAllStepsAdded(true);
-    if (count > 0) {
-      toast.success(`${count} ações adicionadas ao checklist`);
-      ensureSignal("task_created");
-    }
-  };
 
   // Sticky nav (~40px) + folga visual; evita que o título da seção fique escondido atrás da barra
   const jumpTo = (id: string) => {
@@ -1523,8 +1595,9 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
 
       <ExecutiveSummary
         diagnosis={diagnosis}
-        onAddAllSteps={handleAddAllSteps}
-        allStepsAdded={allStepsAdded}
+        proximosPassos={proximos_passos ?? []}
+        addedItems={addedItems}
+        onAddStep={handleAddToTasks}
         analysisId={savedAnalysisId}
         onSendSignal={(signal) => ensureSignal(signal)}
         stage={stage}
@@ -2085,7 +2158,7 @@ function SavedAnalysesList({ onLoad }: {
 
 export function MusicDNAAnalyzer() {
   const { progress, logs, result, isPending, error, analyze, reset } = useMusicDNA();
-  const [lastInput, setLastInput] = useState<{ name: string; notes?: string; references: string[]; projectId?: string; stage?: AudioStage } | null>(null);
+  const [lastInput, setLastInput] = useState<{ name: string; notes?: string; references: string[]; projectId?: string; stage?: AudioStage; genre?: Genre } | null>(null);
   const [viewingDiagnosis, setViewingDiagnosis] = useState<DiagnosisResult | null>(null);
   const [isSaved, setIsSaved] = useState(false);
   const { saveAnalysis, saveAnalysisAsync, isSaving } = useSavedAnalyses();
@@ -2123,6 +2196,7 @@ export function MusicDNAAnalyzer() {
       notes: values.notes,
       references: values.references,
       stage: values.stage,
+      genre: values.genre,
     };
     setLastInput({
       name: input.name,
@@ -2130,6 +2204,7 @@ export function MusicDNAAnalyzer() {
       references: input.references,
       projectId: values.projectId || undefined,
       stage: values.stage,
+      genre: values.genre,
     });
     setViewingDiagnosis(null);
     setRestoredFromCache(false);
