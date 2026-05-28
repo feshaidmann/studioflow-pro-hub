@@ -31,7 +31,7 @@ export function useMusicDnaLookup() {
           : null;
 
       if (external) {
-        toast.success(external.fonte === "acousticbrainz" ? "Dados encontrados no AcousticBrainz" : "BPM encontrado no Deezer");
+        toast.success("BPM encontrado no Deezer");
         return external;
       }
 

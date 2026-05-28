@@ -414,14 +414,14 @@ CENTROIDE ESPECT.: ${hz(analysis.spectral_centroid_hz)} (ref. típico do gênero
 SPECTRAL ROLLOFF:  ${hz(analysis.spectral_rolloff_hz)} (85% da energia espectral abaixo desta frequência)
 SPECTRAL FLATNESS: ${analysis.spectral_flatness.toFixed(3)} (0 = sinal tonal puro; 1 = ruído branco)
 
-ATRIBUTOS MEDIDOS (escala 0–100%):
-  Energia:           ${pct(analysis.energy)} — intensidade percebida / nível de ativação
-  Dançabilidade:     ${pct(analysis.danceability)} — adequação rítmica para dança
-  Acústica:          ${pct(analysis.acousticness)} — presença de timbre acústico vs eletrônico
-  Valência:          ${pct(analysis.valence)} — positividade / valência emocional
-  Instrumentalidade: ${pct(analysis.instrumentalness)} — proporção instrumental vs vocal
-  Liveness:          ${pct(analysis.liveness)} — presença de audiência / caráter ao vivo
-  Speechiness:       ${pct(analysis.speechiness)} — densidade de fala / spoken word
+ATRIBUTOS PERCEPTUAIS (estimativas heurísticas espectrais — NÃO calibradas com modelo treinado; usar como tendência qualitativa, não como medição exata):
+  Energia:           ${pct(analysis.energy)} — derivado de RMS + sub-band + centroid
+  Dançabilidade:     ${pct(analysis.danceability)} — kernel BPM + sub-band + onsets
+  Acústica:          ${pct(analysis.acousticness)} — ausência de sub eletrônico + flatness
+  Valência:          ${pct(analysis.valence)} — modo maior/menor + brilho espectral
+  Instrumentalidade: ${pct(analysis.instrumentalness)} — ausência de banda vocal
+  Liveness:          ${pct(analysis.liveness)} — variação RMS entre seções
+  Speechiness:       ${pct(analysis.speechiness)} — banda vocal 300–3400 Hz + ZCR
 
 ATRIBUTOS ESTILO SPOTIFY — FONTE CONSOLIDADA:
 ${JSON.stringify(spotifyAttrs, null, 2)}
@@ -570,7 +570,7 @@ export function useMusicDNA(): UseMusicDNAReturn {
 
       setProgress(35);
       appendLog("📊  Analisando arquivo local via Web Audio API…");
-      appendLog("🌐  Buscando referência externa em AcousticBrainz e Deezer…");
+      appendLog("🌐  Buscando BPM via Deezer…");
       appendLog(externalLookup ? `🌐  Fonte complementar encontrada: ${externalLookup.fonte}` : "🌐  Sem referência externa confiável; mantendo análise local como base.");
 
       // Step 2 — Features from real analysis

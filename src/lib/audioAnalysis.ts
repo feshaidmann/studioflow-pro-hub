@@ -568,16 +568,20 @@ function computeMfccChromaFromOffset(
   numCoefs: number,
   binPts: Float64Array,
 ): { mfcc: number[]; chroma: number[] } {
+  // Janela Hann + FFT.js O(N log N) — substitui DFT O(N²) anterior.
+  const fft = new FFT(fftSize);
+  const out = fft.createComplexArray();
+  const buf = new Array<number>(fftSize);
+  for (let n = 0; n < fftSize; n++) {
+    const sample = offset + n < mono.length ? mono[offset + n] : 0;
+    const w = 0.5 * (1 - Math.cos((2 * Math.PI * n) / (fftSize - 1)));
+    buf[n] = sample * w;
+  }
+  fft.realTransform(out, buf);
   const magnitudes = new Float64Array(binCount);
   for (let k = 0; k < binCount; k++) {
-    let re = 0, im = 0;
-    for (let n = 0; n < fftSize; n++) {
-      const sample = offset + n < mono.length ? mono[offset + n] : 0;
-      const w = 0.5 * (1 - Math.cos((2 * Math.PI * n) / (fftSize - 1)));
-      const angle = (2 * Math.PI * k * n) / fftSize;
-      re += sample * w * Math.cos(angle);
-      im -= sample * w * Math.sin(angle);
-    }
+    const re = out[2 * k];
+    const im = out[2 * k + 1];
     magnitudes[k] = Math.sqrt(re * re + im * im);
   }
 
@@ -809,17 +813,20 @@ function detectSections(mono: Float32Array, sampleRate: number): AudioSection[] 
     const freqPerBin = sampleRate / fftSize;
     let wSum = 0, mSum = 0;
 
-    // Just analyze the middle portion
+    // Centroide via FFT.js O(N log N) — substitui DFT O(N²) anterior.
     const midStart = Math.floor(segment.length / 2 - fftSize / 2);
     if (midStart >= 0 && midStart + fftSize <= segment.length) {
+      const secFft = new FFT(fftSize);
+      const secOut = secFft.createComplexArray();
+      const secBuf = new Array<number>(fftSize);
+      for (let n = 0; n < fftSize; n++) {
+        const w = 0.5 * (1 - Math.cos((2 * Math.PI * n) / (fftSize - 1)));
+        secBuf[n] = segment[midStart + n] * w;
+      }
+      secFft.realTransform(secOut, secBuf);
       for (let k = 0; k < binCount; k++) {
-        let re = 0, im = 0;
-        for (let n = 0; n < fftSize; n++) {
-          const w = 0.5 * (1 - Math.cos((2 * Math.PI * n) / (fftSize - 1)));
-          const angle = (2 * Math.PI * k * n) / fftSize;
-          re += segment[midStart + n] * w * Math.cos(angle);
-          im -= segment[midStart + n] * w * Math.sin(angle);
-        }
+        const re = secOut[2 * k];
+        const im = secOut[2 * k + 1];
         const mag = Math.sqrt(re * re + im * im);
         wSum += k * freqPerBin * mag;
         mSum += mag;
@@ -1136,7 +1143,7 @@ export async function analyzeAudioFull(file: File): Promise<{
     chroma_cens: fp.chroma.map(round4),
     sections,
     analyzed_duration_sec: Math.round(duration * 10) / 10,
-    extraction_confidence: "preview",
+    extraction_confidence: "full",
   };
 
   const legacy: AnalysisResult = {
