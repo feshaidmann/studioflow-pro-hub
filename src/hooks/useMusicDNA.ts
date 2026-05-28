@@ -673,8 +673,18 @@ export function useMusicDNA(): UseMusicDNAReturn {
           mode: /m$/.test(realAnalysis.key ?? "") ? "minor" : "major",
         },
       });
-      const clean = rawText.replace(/```json|```/g, "").trim();
-      const parsed = JSON.parse(clean);
+      const clean = rawText.replace(/```json\n?|```/g, "").trim();
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(clean);
+      } catch {
+        // IA ocasionalmente retorna JSON com chaves sem aspas (estilo JS) ou vírgulas
+        // sobressalentes. Tentamos corrigi-las antes de desistir.
+        const repaired = clean
+          .replace(/([{,]\s*)([a-zA-Z_$][a-zA-Z0-9_$]*)(\s*:)/g, '$1"$2"$3')
+          .replace(/,(\s*[}\]])/g, "$1");
+        parsed = JSON.parse(repaired);
+      }
 
       // Validação client-side: `referencias_proximas` deve conter APENAS bandas dos
       // vizinhos reais do catálogo com `similarity_score >= 0.70`. Curadoria estática
