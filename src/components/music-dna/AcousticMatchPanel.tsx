@@ -51,7 +51,33 @@ async function loadCatalog(): Promise<CatalogPayload> {
   return payload;
 }
 
+function parseKey(key: string | undefined): { key_name: string | null; mode: string | null } {
+  if (!key) return { key_name: null, mode: null };
+  const trimmed = key.trim();
+
+  // Long form: "A minor", "F# major" (catalog / CSV format)
+  const parts = trimmed.split(" ");
+  if (parts.length >= 2) {
+    const last = parts[parts.length - 1].toLowerCase();
+    if (last === "major" || last === "minor") {
+      return { key_name: parts.slice(0, -1).join(" "), mode: last };
+    }
+  }
+
+  // Short form from audioAnalysis.ts: "Am", "F#m", "C#m" → minor; "A", "F#" → major
+  // Root is 1–2 chars ("A", "F#", "C#", "D#", "A#", "G#" …)
+  if (trimmed.endsWith("m")) {
+    const root = trimmed.slice(0, -1);
+    if (root.length >= 1 && root.length <= 2) {
+      return { key_name: root, mode: "minor" };
+    }
+  }
+
+  return { key_name: trimmed, mode: "major" };
+}
+
 function toQuery(a: RealAudioAnalysis): QueryFeatures {
+  const { key_name, mode } = parseKey(a.key);
   return {
     bpm: a.bpm,
     lufs_integrated: a.lufs_integrated,
@@ -68,6 +94,8 @@ function toQuery(a: RealAudioAnalysis): QueryFeatures {
     speechiness: a.speechiness,
     mfcc: a.mfcc ?? null,
     chroma_cens: a.chroma_cens ?? null,
+    key_name,
+    mode,
   };
 }
 

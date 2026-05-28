@@ -27,6 +27,8 @@ export interface QueryFeatures {
   speechiness?: number | null;
   mfcc?: number[] | null;          // 13
   chroma_cens?: number[] | null;   // 12
+  key_name?: string | null;        // e.g. "A", "F#"
+  mode?: string | null;            // "major" | "minor"
 }
 
 export interface CatalogTrack {
@@ -75,7 +77,13 @@ const W_CENTROID = 1.0;
 const W_ROLLOFF = 0.7;
 const W_FLATNESS = 0.7;
 const W_BPM = 0.8;
+const W_KEY = 0.6;      // circle-of-fifths harmonic compatibility
 const W_PERCEPTUAL = 0.3; // each (energy, dance, valence, acous, instr, live, speech)
+
+// When a catalog track has no MFCC/Chroma, boost spectral proxies so the
+// remaining features still discriminate timbre meaningfully.
+const W_CENTROID_BOOST = 2.5;
+const W_ROLLOFF_BOOST = 1.5;
 
 // Normalization scales (so all dims are roughly comparable before weighting)
 const S_MFCC = 8;       // typical MFCC coef range
@@ -86,6 +94,28 @@ const S_CENTROID = 1500;
 const S_ROLLOFF = 2500;
 const S_FLATNESS = 0.25;
 const S_BPM = 30;       // half/double-time aware below
+const S_KEY = 6.5;      // max circle-of-fifths distance + mode penalty
+
+// ── Circle of fifths ─────────────────────────────────────────────────────────
+const COF: Record<string, number> = {
+  C: 0, G: 1, D: 2, A: 3, E: 4, B: 5,
+  "F#": 6, Gb: 6, Db: 7, "C#": 7, Ab: 8, "G#": 8,
+  Eb: 9, "D#": 9, Bb: 10, "A#": 10, F: 11,
+};
+
+function keyDistance(
+  kA: string | null | undefined, mA: string | null | undefined,
+  kB: string | null | undefined, mB: string | null | undefined,
+): number | null {
+  if (!kA || !kB) return null;
+  const posA = COF[kA];
+  const posB = COF[kB];
+  if (posA == null || posB == null) return null;
+  const d = Math.abs(posA - posB);
+  const cof = Math.min(d, 12 - d);           // 0 (same key) … 6 (tritone)
+  const modePenalty = mA && mB && mA !== mB ? 0.5 : 0;
+  return cof + modePenalty;
+}
 
 function bpmDistance(a: number, b: number): number {
   return Math.min(
@@ -112,9 +142,10 @@ function scoreTrack(q: QueryFeatures, t: CatalogTrack): { distance: number; weig
   };
 
   // MFCC vector (per-coefficient Euclidean, weighted)
-  if (q.mfcc && t.mfcc && q.mfcc.length === t.mfcc.length) {
-    for (let i = 0; i < q.mfcc.length; i++) {
-      const d = (q.mfcc[i] - t.mfcc[i]) / S_MFCC;
+  const hasMfcc = !!(q.mfcc && t.mfcc && q.mfcc.length === t.mfcc.length);
+  if (hasMfcc) {
+    for (let i = 0; i < q.mfcc!.length; i++) {
+      const d = (q.mfcc![i] - t.mfcc![i]) / S_MFCC;
       sum += W_MFCC * d * d;
       weight += W_MFCC;
     }
@@ -135,19 +166,32 @@ function scoreTrack(q: QueryFeatures, t: CatalogTrack): { distance: number; weig
     weight += W_BPM;
   }
 
+  // Key compatibility via circle of fifths.
+  // When catalog track has no mfcc this is the primary harmonic signal.
+  const kd = keyDistance(q.key_name, q.mode, t.key_name, t.mode);
+  if (kd != null) {
+    const d = kd / S_KEY;
+    sum += W_KEY * d * d;
+    weight += W_KEY;
+  }
+
   addNum(q.lufs_integrated, t.lufs_integrated, S_LUFS, W_LUFS);
   addNum(q.dynamic_range_lu, t.dynamic_range_db, S_DR, W_DR);
-  addNum(q.spectral_centroid_hz, t.spectral_centroid, S_CENTROID, W_CENTROID);
-  addNum(q.spectral_rolloff_hz, t.spectral_rolloff, S_ROLLOFF, W_ROLLOFF);
-  addNum(q.spectral_flatness, t.spectral_flatness, S_FLATNESS, W_FLATNESS);
 
-  addNum(q.energy, t.energy, 1, W_PERCEPTUAL);
-  addNum(q.danceability, t.danceability, 1, W_PERCEPTUAL);
-  addNum(q.valence, t.valence, 1, W_PERCEPTUAL);
-  addNum(q.acousticness, t.acousticness, 1, W_PERCEPTUAL);
+  // Spectral proxies: boost when MFCC is absent (best remaining timbre signal)
+  const wCentroid = hasMfcc ? W_CENTROID : W_CENTROID_BOOST;
+  const wRolloff  = hasMfcc ? W_ROLLOFF  : W_ROLLOFF_BOOST;
+  addNum(q.spectral_centroid_hz, t.spectral_centroid, S_CENTROID, wCentroid);
+  addNum(q.spectral_rolloff_hz,  t.spectral_rolloff,  S_ROLLOFF,  wRolloff);
+  addNum(q.spectral_flatness,    t.spectral_flatness,  S_FLATNESS, W_FLATNESS);
+
+  addNum(q.energy,           t.energy,           1, W_PERCEPTUAL);
+  addNum(q.danceability,     t.danceability,     1, W_PERCEPTUAL);
+  addNum(q.valence,          t.valence,          1, W_PERCEPTUAL);
+  addNum(q.acousticness,     t.acousticness,     1, W_PERCEPTUAL);
   addNum(q.instrumentalness, t.instrumentalness, 1, W_PERCEPTUAL);
-  addNum(q.liveness, t.liveness, 1, W_PERCEPTUAL);
-  addNum(q.speechiness, t.speechiness, 1, W_PERCEPTUAL);
+  addNum(q.liveness,         t.liveness,         1, W_PERCEPTUAL);
+  addNum(q.speechiness,      t.speechiness,      1, W_PERCEPTUAL);
 
   if (weight === 0) return null;
   return { distance: Math.sqrt(sum / weight), weight };
