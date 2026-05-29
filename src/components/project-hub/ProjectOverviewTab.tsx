@@ -279,9 +279,13 @@ export default function ProjectOverviewTab({ project, progress, isOwner, onSwitc
                 const lufs = a.lufs_integrated;
                 const lufsColor = lufs === null ? "text-muted-foreground" : lufs >= -14 ? "text-success" : lufs >= -16 ? "text-warning" : "text-destructive";
                 return (
-                  <div key={a.id} className="flex items-center gap-2.5 px-3 py-2">
+                  <Link
+                    key={a.id}
+                    to={`/music-dna?analysis=${a.id}`}
+                    className="flex items-center gap-2.5 px-3 py-2 hover:bg-muted/30 transition-colors group"
+                  >
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium truncate">{a.track_name}</p>
+                      <p className="text-xs font-medium truncate group-hover:text-primary transition-colors">{a.track_name}</p>
                       <div className="flex items-center gap-1.5 mt-0.5">
                         {a.stage && <Badge variant="outline" className="text-[9px] h-4 px-1">{a.stage}</Badge>}
                         {a.version_label && <span className="text-[10px] text-muted-foreground">{a.version_label}</span>}
@@ -295,7 +299,8 @@ export default function ProjectOverviewTab({ project, progress, isOwner, onSwitc
                         </p>
                       )}
                     </div>
-                  </div>
+                    <ChevronRight className="h-3 w-3 text-muted-foreground/40 group-hover:text-primary/60 shrink-0 transition-colors" />
+                  </Link>
                 );
               })}
             </div>

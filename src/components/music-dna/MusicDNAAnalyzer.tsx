@@ -1025,8 +1025,16 @@ function FormView({ onSubmit, isPending, projects, defaultProjectId }: {
   });
 
   useEffect(() => {
-    if (defaultProjectId) form.setValue("projectId", defaultProjectId);
-  }, [defaultProjectId, form]);
+    if (!defaultProjectId) return;
+    form.setValue("projectId", defaultProjectId);
+    if (!stageTouched) {
+      const proj = projects.find((p) => p.id === defaultProjectId);
+      if (proj?.stage) {
+        const derived = resolveStage(undefined, proj.stage);
+        form.setValue("stage", derived);
+      }
+    }
+  }, [defaultProjectId, form, projects, stageTouched]);
 
 
 
@@ -2144,18 +2152,38 @@ function SavedAnalysesList({ onLoad }: {
 
 // ── MAIN ─────────────────────────────────────────────────────────────────────
 
-export function MusicDNAAnalyzer({ defaultProjectId }: { defaultProjectId?: string } = {}) {
+export function MusicDNAAnalyzer({ defaultProjectId, initialAnalysisId }: { defaultProjectId?: string; initialAnalysisId?: string } = {}) {
   const { progress, logs, result, isPending, error, analyze, reset } = useMusicDNA();
   const [lastInput, setLastInput] = useState<{ name: string; notes?: string; references: string[]; projectId?: string; stage?: AudioStage; genre?: Genre } | null>(null);
   const [viewingDiagnosis, setViewingDiagnosis] = useState<DiagnosisResult | null>(null);
   const [isSaved, setIsSaved] = useState(false);
-  const { saveAnalysis, saveAnalysisAsync, isSaving } = useSavedAnalyses();
+  const { savedAnalyses, saveAnalysis, saveAnalysisAsync, isSaving } = useSavedAnalyses();
   const savingPromiseRef = useRef<Promise<string | undefined> | null>(null);
   const { data: benchmarks } = useMusicDnaBenchmarks();
   const { projects } = useProjects();
 
-  // Restore cached analysis on mount
+  // Load a saved analysis directly when opened via ?analysis=<id>
+  const loadedInitialRef = useRef(false);
+  const [savedAnalysisId, setSavedAnalysisId] = useState<string | undefined>(undefined);
+  const [restoredFromCache, setRestoredFromCache] = useState(false);
   useEffect(() => {
+    if (!initialAnalysisId || loadedInitialRef.current || savedAnalyses.length === 0) return;
+    const found = savedAnalyses.find((a) => a.id === initialAnalysisId);
+    if (!found) return;
+    const meta = found.input_metadata as { name: string; notes?: string; references: string[]; projectId?: string; stage?: AudioStage };
+    const stageVal: AudioStage = (meta.stage ?? (found.stage as AudioStage | undefined) ?? "master");
+    const input = { ...meta, projectId: meta.projectId ?? found.project_id ?? undefined, stage: stageVal };
+    setLastInput(input);
+    setViewingDiagnosis(found.diagnosis);
+    setIsSaved(true);
+    setSavedAnalysisId(found.id);
+    setRestoredFromCache(false);
+    loadedInitialRef.current = true;
+  }, [initialAnalysisId, savedAnalyses]);
+
+  // Restore cached analysis on mount (skip if opening a specific analysis by ID)
+  useEffect(() => {
+    if (initialAnalysisId) return;
     if (!result && !isPending) {
       const cached = getCachedAnalysis();
       if (cached) {
@@ -2208,9 +2236,6 @@ export function MusicDNAAnalyzer({ defaultProjectId }: { defaultProjectId?: stri
     setRestoredFromCache(false);
     reset();
   };
-
-  const [savedAnalysisId, setSavedAnalysisId] = useState<string | undefined>(undefined);
-  const [restoredFromCache, setRestoredFromCache] = useState(false);
 
   const handleSave = () => {
     if (lastInput && (viewingDiagnosis || result)) {
