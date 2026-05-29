@@ -103,8 +103,7 @@ export default function Onboarding() {
   const whatsappDigits = whatsapp.replace(/\D/g, "");
   const canStep1 =
     fullName.trim().length >= 2 &&
-    artistName.trim().length >= 1 &&
-    whatsappDigits.length >= 10;
+    artistName.trim().length >= 1;
   const canStep2 = !!primaryGenre && !!stateUf;
 
   const goToStep2 = () => {
@@ -237,7 +236,7 @@ export default function Onboarding() {
 
               <div className="space-y-1.5">
                 <Label htmlFor="whatsapp" className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Phone className="h-3 w-3" /> WhatsApp *
+                  <Phone className="h-3 w-3" /> WhatsApp <span className="text-muted-foreground/60">(opcional)</span>
                 </Label>
                 <Input
                   id="whatsapp"

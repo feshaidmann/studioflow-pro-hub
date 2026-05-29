@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo, lazy, type ReactNode } from "react";
+import { useState, useEffect, useRef, useMemo, lazy, Suspense, type ReactNode } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Bot, ChevronDown, FileText, Calendar, Receipt, Users } from "lucide-react";
 import LazyCardBoundary from "@/components/dashboard/LazyCardBoundary";
@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 import { scrollToAnchor } from "@/lib/scrollToAnchor";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { toast } from "sonner";
-import { AITaskAssistant, type AITaskAssistantHandle } from "@/components/AITaskAssistant";
+import type { AITaskAssistantHandle } from "@/components/AITaskAssistant";
 import { useProfessionals } from "@/hooks/useProfessionals";
 import { useAIConversations } from "@/hooks/useAIConversations";
 import { useProjectAlerts } from "@/hooks/useProjectAlerts";
@@ -32,6 +32,9 @@ import PendingTeamCard from "@/components/dashboard/PendingTeamCard";
 import { getJourneyPlan } from "@/lib/journeyPersonalization";
 
 // Lazy-loaded — não bloqueiam o first render do Dashboard
+const AITaskAssistant = lazy(() =>
+  import("@/components/AITaskAssistant").then((m) => ({ default: m.AITaskAssistant }))
+);
 const RecentTransactions = lazy(() => import("@/components/dashboard/RecentTransactions"));
 const UpcomingReleases = lazy(() => import("@/components/dashboard/UpcomingReleases"));
 const GuestProjectsList = lazy(() => import("@/components/dashboard/GuestProjectsList"));
@@ -249,27 +252,29 @@ export default function Dashboard() {
         </CollapsibleTrigger>
         <CollapsibleContent>
           <CardContent className="pt-0">
-            <AITaskAssistant
-              ref={aiRef}
-              alwaysOpen
-              contextChips={aiChips}
-              context={aiContext}
-              onAddTask={async (description, projectId) => {
-                const validProjectId = projectId && projects.some((p) => p.id === projectId) ? projectId : null;
-                const result = await addTask({ description, projectId: validProjectId, source: "manual" });
-                if (!result) await addTask({ description, projectId: null, source: "manual" });
-              }}
-              conversations={conversations}
-              activeConversationId={activeConversationId}
-              savedMessages={savedMessages}
-              loadingMessages={loadingMessages}
-              onCreateConversation={createConversation}
-              onSaveMessage={saveMessage}
-              onSelectConversation={setActiveConversationId}
-              onNewConversation={startNewConversation}
-              onDeleteConversation={deleteConversation}
-              onRenameConversation={renameConversation}
-            />
+            <Suspense fallback={<Skeleton className="h-32 w-full" />}>
+              <AITaskAssistant
+                ref={aiRef}
+                alwaysOpen
+                contextChips={aiChips}
+                context={aiContext}
+                onAddTask={async (description, projectId) => {
+                  const validProjectId = projectId && projects.some((p) => p.id === projectId) ? projectId : null;
+                  const result = await addTask({ description, projectId: validProjectId, source: "manual" });
+                  if (!result) await addTask({ description, projectId: null, source: "manual" });
+                }}
+                conversations={conversations}
+                activeConversationId={activeConversationId}
+                savedMessages={savedMessages}
+                loadingMessages={loadingMessages}
+                onCreateConversation={createConversation}
+                onSaveMessage={saveMessage}
+                onSelectConversation={setActiveConversationId}
+                onNewConversation={startNewConversation}
+                onDeleteConversation={deleteConversation}
+                onRenameConversation={renameConversation}
+              />
+            </Suspense>
           </CardContent>
         </CollapsibleContent>
       </Card>
@@ -326,9 +331,8 @@ export default function Dashboard() {
       {/* 2. Checklist do dia */}
       {dashboardSections.checklist}
 
-      {/* 3. Assistente IA — desktop: aqui; mobile: depois do checklist (já é o caso) */}
-      {!isMobile && aiAssistantCard}
-      {isMobile && aiAssistantCard}
+      {/* 3. Assistente IA */}
+      {aiAssistantCard}
 
       {/* 4. Demais seções na ordem do journeyPlan, exceto as já renderizadas acima */}
       {journeyPlan.sections
@@ -337,10 +341,12 @@ export default function Dashboard() {
           <div key={section}>{dashboardSections[section]}</div>
         ))}
 
-      {/* Projetos como parceiro */}
-      <LazyCardBoundary title="Projetos como parceiro" icon={Users} minHeight="8rem">
-        <GuestProjectsList projects={guestProjects} loading={loadingGuestProjects} />
-      </LazyCardBoundary>
+      {/* Projetos como parceiro — só renderiza quando há projetos ou estão carregando */}
+      {(loadingGuestProjects || guestProjects.length > 0) && (
+        <LazyCardBoundary title="Projetos como parceiro" icon={Users} minHeight="8rem">
+          <GuestProjectsList projects={guestProjects} loading={loadingGuestProjects} />
+        </LazyCardBoundary>
+      )}
     </div>
   );
 }

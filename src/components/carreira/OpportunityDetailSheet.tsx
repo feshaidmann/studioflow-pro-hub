@@ -8,7 +8,7 @@ import type { Edital } from "@/hooks/useEditais";
 import type { Opportunity } from "./types";
 import { buildGoogleFallbackUrl, formatLinkChecked } from "./linkHelpers";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { useState } from "react";
 
 function formatDate(d: string | null) {
@@ -33,8 +33,6 @@ interface Props {
 }
 
 export default function OpportunityDetailSheet({ opportunity: op, open, onOpenChange, onApply, onSave, alreadyApplied, pending }: Props) {
-  // Hooks devem ser chamados antes de qualquer early return (Rules of Hooks).
-  const { toast } = useToast();
   const [reporting, setReporting] = useState(false);
 
   if (!op) return null;
@@ -62,10 +60,10 @@ export default function OpportunityDetailSheet({ opportunity: op, open, onOpenCh
       .eq("id", op.editalId);
     setReporting(false);
     if (error) {
-      toast({ title: "Não foi possível reportar", description: error.message, variant: "destructive" });
+      toast.error("Não foi possível reportar", { description: error.message });
       return;
     }
-    toast({ title: "Obrigado!", description: "Marcamos o link como indisponível." });
+    toast.success("Obrigado!", { description: "Marcamos o link como indisponível." });
   }
 
   return (
