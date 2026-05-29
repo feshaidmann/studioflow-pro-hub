@@ -189,13 +189,17 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Global listing
+    // Global listing — user_id deve ser do profissional, não do dono do projeto
     if (status === "accepted" && allow_global_listing === true) {
+      const { data: usersData } = await adminClient.auth.admin.listUsers();
+      const professionalUser = usersData?.users?.find(
+        (u) => u.email?.toLowerCase() === inv.professional_email?.toLowerCase()
+      );
       await adminClient.from("professionals").insert({
         name: inv.professional_name,
         email: inv.professional_email,
         specialty: inv.professional_role,
-        user_id: inv.invited_by,
+        user_id: professionalUser?.id ?? null,
         active: true,
         allow_global_listing: true,
       });

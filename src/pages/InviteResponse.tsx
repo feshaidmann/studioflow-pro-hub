@@ -188,6 +188,21 @@ export default function InviteResponse() {
       const body = await res.json();
       setArtistName(body.artist_name ?? artistName);
       if (body.project_id) setProjectId(body.project_id);
+
+      if (decision === "accepted") {
+        try {
+          localStorage.setItem(
+            "sfp_invite_ctx",
+            JSON.stringify({
+              projectId: body.project_id ?? null,
+              projectName: invitation?.project?.name ?? null,
+              artistName: body.artist_name ?? artistName,
+              role: invitation?.professional_role ?? null,
+            })
+          );
+        } catch {}
+      }
+
       setPageState(decision);
     } else {
       const body = await res.json().catch(() => ({}));
@@ -271,6 +286,7 @@ export default function InviteResponse() {
   if (pageState === "accepted") {
     const projectPath = projectId ? `/projects/${projectId}` : "/projects";
     const invitedEmail = invitation?.professional_email ?? "";
+    const projectName = invitation?.project?.name ?? "o projeto";
     const baseRedirect = projectId ? `/projects/${projectId}` : "/dashboard";
     const loginPath = `/auth?redirect=${encodeURIComponent(baseRedirect)}${
       invitedEmail ? `&invited_email=${encodeURIComponent(invitedEmail)}` : ""
@@ -278,8 +294,8 @@ export default function InviteResponse() {
     return (
       <StatusScreen
         icon={<CheckCircle2 className="h-8 w-8 text-success" />}
-        title="Participação confirmada"
-        message={`Obrigado, ${invitation?.professional_name}. ${artistName} foi notificado.`}
+        title="Participação confirmada!"
+        message={`${artistName} foi notificado. Você faz parte de ${projectName} agora.`}
       >
         <div className="mt-6 space-y-3">
           {isLoggedIn ? (
@@ -289,11 +305,28 @@ export default function InviteResponse() {
               </Button>
             </Link>
           ) : (
-            <Link to={loginPath}>
-              <Button className="w-full gap-2">
-                <LogIn className="h-4 w-4" /> Entrar na plataforma
-              </Button>
-            </Link>
+            <>
+              <Link to={loginPath}>
+                <Button className="w-full gap-2">
+                  <LogIn className="h-4 w-4" /> Criar conta e acessar projeto
+                </Button>
+              </Link>
+              <div className="rounded-lg bg-muted/40 border border-border px-3 py-2.5 text-left space-y-1.5">
+                <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Próximos passos</p>
+                <div className="flex items-center gap-2 text-xs text-foreground/80">
+                  <span className="w-5 h-5 rounded-full bg-primary/20 text-primary flex items-center justify-center text-[10px] font-bold shrink-0">1</span>
+                  Criar conta com <span className="font-medium text-foreground ml-1">{invitedEmail}</span>
+                </div>
+                <div className="flex items-center gap-2 text-xs text-foreground/80">
+                  <span className="w-5 h-5 rounded-full bg-primary/20 text-primary flex items-center justify-center text-[10px] font-bold shrink-0">2</span>
+                  Confirmar e-mail
+                </div>
+                <div className="flex items-center gap-2 text-xs text-foreground/80">
+                  <span className="w-5 h-5 rounded-full bg-primary/20 text-primary flex items-center justify-center text-[10px] font-bold shrink-0">3</span>
+                  Acessar <span className="font-medium text-foreground ml-1">{projectName}</span>
+                </div>
+              </div>
+            </>
           )}
           <p className="text-xs text-muted-foreground">Você pode fechar esta aba com segurança.</p>
         </div>
