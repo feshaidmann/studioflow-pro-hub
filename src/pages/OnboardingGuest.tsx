@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, Navigate } from "react-router-dom";
-import { Music, ArrowRight, User, Mic2, Phone, Mail } from "lucide-react";
+import { Music, ArrowRight, User, Mic2, Phone, Mail, Briefcase } from "lucide-react";
 import { useProfile } from "@/contexts/ProfileContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { trackAppEvent } from "@/lib/analytics";
+import { readInviteCtx, clearInviteCtx, type InviteCtx } from "@/lib/inviteCtx";
 
 function maskWhatsapp(value: string) {
   const digits = value.replace(/\D/g, "").slice(0, 11);
@@ -26,14 +27,25 @@ export default function OnboardingGuest() {
   const [fullName, setFullName] = useState("");
   const [artistName, setArtistName] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
+  const [specialty, setSpecialty] = useState("");
+  const [inviteCtx, setInviteCtx] = useState<InviteCtx | null>(null);
   const fullNameRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    const ctx = readInviteCtx();
+    if (ctx) {
+      setInviteCtx(ctx);
+      if (ctx.role) setSpecialty(ctx.role);
+    }
     setTimeout(() => fullNameRef.current?.focus(), 200);
   }, []);
 
   if (authLoading || profileLoading) {
-    return <div className="flex items-center justify-center min-h-screen"><div className="animate-pulse text-muted-foreground">Carregando...</div></div>;
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-pulse text-muted-foreground">Carregando...</div>
+      </div>
+    );
   }
   if (!user) return <Navigate to="/auth" replace />;
   if (profile?.onboarding_completed) return <Navigate to="/dashboard" replace />;
@@ -53,29 +65,63 @@ export default function OnboardingGuest() {
         display_name: artistName.trim(),
         whatsapp: whatsapp.trim(),
         user_type: "artist",
+        specialties: specialty.trim() ? [specialty.trim()] : [],
         track_view_mode: "basic",
         onboarding_version: 3,
         onboarding_completed: true,
       });
       trackAppEvent("onboarding_completed", { onboarding_version: 3, origin: "guest" });
-      navigate("/dashboard", { replace: true });
+      clearInviteCtx();
+      const redirectTo = inviteCtx?.projectId ? `/projects/${inviteCtx.projectId}` : "/dashboard";
+      navigate(redirectTo, { replace: true });
     } catch {
       toast.error("Não foi possível salvar. Tente novamente.");
       setSubmitting(false);
     }
   };
 
+  const hasCtx = !!(inviteCtx?.projectName && inviteCtx?.artistName);
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="w-full max-w-sm space-y-6 animate-fade-in">
+        {/* Header */}
         <div className="text-center space-y-2">
           <div className="mx-auto h-14 w-14 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center">
             <Music className="h-7 w-7 text-primary" />
           </div>
           <h1 className="text-2xl font-bold text-foreground">Bem-vindo ao MusicOS.ai</h1>
-          <p className="text-muted-foreground text-sm">Você foi convidado para um projeto. Só uns dados rápidos.</p>
+          {hasCtx && inviteCtx ? (
+            <p className="text-muted-foreground text-sm leading-relaxed">
+              Você foi convidado por{" "}
+              <span className="text-foreground font-medium">{inviteCtx.artistName}</span>{" "}
+              para participar de{" "}
+              <span className="text-primary font-medium">{inviteCtx.projectName}</span>
+              {inviteCtx.role && (
+                <> como <span className="text-foreground font-medium">{inviteCtx.role}</span></>
+              )}
+              .
+            </p>
+          ) : (
+            <p className="text-muted-foreground text-sm">
+              Você foi convidado para um projeto. Só uns dados rápidos.
+            </p>
+          )}
         </div>
 
+        {/* Project context pill */}
+        {hasCtx && inviteCtx && (
+          <div className="rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 flex items-start gap-3">
+            <Music className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground">Seu acesso ao finalizar</p>
+              <p className="text-sm font-medium text-foreground truncate">{inviteCtx.projectName}</p>
+              <p className="text-xs text-muted-foreground">{inviteCtx.artistName}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Form */}
         <div className="glass-card rounded-2xl p-6 space-y-4 border border-border">
           <div className="space-y-1.5">
             <Label htmlFor="g-fullName" className="text-xs text-muted-foreground flex items-center gap-1">
@@ -106,6 +152,19 @@ export default function OnboardingGuest() {
           </div>
 
           <div className="space-y-1.5">
+            <Label htmlFor="g-specialty" className="text-xs text-muted-foreground flex items-center gap-1">
+              <Briefcase className="h-3 w-3" /> Especialidade
+            </Label>
+            <Input
+              id="g-specialty"
+              value={specialty}
+              onChange={(e) => setSpecialty(e.target.value)}
+              placeholder="Ex: Guitarrista, Produtor, Engenheiro de Som…"
+              maxLength={80}
+            />
+          </div>
+
+          <div className="space-y-1.5">
             <Label htmlFor="g-whatsapp" className="text-xs text-muted-foreground flex items-center gap-1">
               <Phone className="h-3 w-3" /> WhatsApp *
             </Label>
@@ -127,7 +186,9 @@ export default function OnboardingGuest() {
           </div>
 
           <Button onClick={finish} disabled={!canSubmit || submitting} className="w-full gap-2" size="lg">
-            {submitting ? "Salvando..." : <>Começar <ArrowRight className="h-4 w-4" /></>}
+            {submitting ? "Salvando..." : (
+              <><ArrowRight className="h-4 w-4" />{inviteCtx?.projectId ? "Acessar o projeto" : "Começar"}</>
+            )}
           </Button>
         </div>
       </div>

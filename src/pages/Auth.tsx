@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Navigate, useSearchParams } from "react-router-dom";
+import { INVITE_CTX_KEY, type InviteCtx } from "@/lib/inviteCtx";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -45,6 +46,7 @@ export default function Auth() {
   const invitedEmail = searchParams.get("invited_email") ?? "";
   const redirectParam = searchParams.get("redirect") || "";
   const isInviteFlow = redirectParam.startsWith("/invite/") || !!invitedEmail;
+  const [inviteCtx, setInviteCtx] = useState<InviteCtx | null>(null);
   const [mode, setMode] = useState<Mode>(initialMode);
   const [email, setEmail] = useState(invitedEmail);
   const [password, setPassword] = useState("");
@@ -53,6 +55,14 @@ export default function Auth() {
   const [forgotSent, setForgotSent] = useState(false);
   const [signupSent, setSignupSent] = useState(false);
   const [signupEmail, setSignupEmail] = useState("");
+
+  useEffect(() => {
+    if (!isInviteFlow) return;
+    try {
+      const stored = sessionStorage.getItem(INVITE_CTX_KEY);
+      if (stored) setInviteCtx(JSON.parse(stored));
+    } catch {}
+  }, [isInviteFlow]);
 
   const redirectTo = redirectParam || "/dashboard";
 
@@ -168,14 +178,26 @@ export default function Auth() {
         </CardHeader>
         <CardContent>
           {isInviteFlow && mode !== "forgot" && (
-            <div className="mb-4 rounded-lg border border-primary/30 bg-primary/5 p-3 text-xs text-foreground/80 leading-relaxed">
-              <strong className="font-semibold">Convite detectado.</strong> Use exatamente{" "}
-              {invitedEmail ? (
-                <span className="font-medium text-primary">{invitedEmail}</span>
+            <div className="mb-4 rounded-lg border border-primary/30 bg-primary/5 p-3 text-xs text-foreground/80 leading-relaxed space-y-1">
+              {inviteCtx?.projectName ? (
+                <p>
+                  <strong className="font-semibold">Convite para{" "}</strong>
+                  <span className="text-primary font-medium">{inviteCtx.projectName}</span>
+                  {inviteCtx.artistName && <span> de {inviteCtx.artistName}</span>}
+                  {inviteCtx.role && <span> — {inviteCtx.role}</span>}.
+                </p>
               ) : (
-                <>o mesmo email para o qual o convite foi enviado</>
+                <p><strong className="font-semibold">Convite detectado.</strong></p>
               )}
-              {" "}— senão o acesso ao projeto não será vinculado.
+              <p>
+                Use exatamente{" "}
+                {invitedEmail ? (
+                  <span className="font-medium text-primary">{invitedEmail}</span>
+                ) : (
+                  <>o mesmo email para o qual o convite foi enviado</>
+                )}
+                {" "}— senão o acesso ao projeto não será vinculado.
+              </p>
             </div>
           )}
           {mode === "forgot" && forgotSent ? (

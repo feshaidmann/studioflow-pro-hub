@@ -1151,12 +1151,18 @@ export default function Projects() {
                               </DropdownMenu>
                             </div>
 
-                            {/* Linha 2: estágio + status */}
+                            {/* Linha 2: estágio + status + BPM/Key */}
                             <div className="flex items-center justify-between gap-2 flex-wrap">
                               <div className="flex items-center gap-1.5 flex-wrap min-w-0">
                                 <Badge variant="outline" className="text-[10px]">{t(`stage.${project.stage}`)}</Badge>
                                 {project.projectType && project.projectType !== "single" && (
                                   <Badge variant="secondary" className="text-[10px]">{t(`projects.${project.projectType}`)}</Badge>
+                                )}
+                                {project.bpm > 0 && (
+                                  <span className="text-[10px] text-muted-foreground/70 font-mono-nums bg-secondary/40 rounded px-1.5 py-0.5">{project.bpm} BPM</span>
+                                )}
+                                {project.key && (
+                                  <span className="text-[10px] text-muted-foreground/70 bg-secondary/40 rounded px-1.5 py-0.5">{project.key}</span>
                                 )}
                               </div>
                               <Badge variant="outline" className={cn("text-[10px]", status.color)}>{status.label}</Badge>
@@ -1164,7 +1170,7 @@ export default function Projects() {
 
                             {/* Linha 3: barra de progresso */}
                             <div className="space-y-1">
-                              <Progress value={progressPct} className="h-1.5" />
+                              <Progress value={progressPct} className="h-2" />
                               <p className="text-[10px] text-muted-foreground font-mono-nums text-right">{progressPct}%</p>
                             </div>
 
