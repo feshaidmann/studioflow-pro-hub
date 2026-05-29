@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Navigate, useSearchParams } from "react-router-dom";
+import { INVITE_CTX_KEY, type InviteCtx } from "@/lib/inviteCtx";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -45,7 +46,7 @@ export default function Auth() {
   const invitedEmail = searchParams.get("invited_email") ?? "";
   const redirectParam = searchParams.get("redirect") || "";
   const isInviteFlow = redirectParam.startsWith("/invite/") || !!invitedEmail;
-  const [inviteCtx, setInviteCtx] = useState<{ projectName?: string; artistName?: string; role?: string } | null>(null);
+  const [inviteCtx, setInviteCtx] = useState<InviteCtx | null>(null);
   const [mode, setMode] = useState<Mode>(initialMode);
   const [email, setEmail] = useState(invitedEmail);
   const [password, setPassword] = useState("");
@@ -58,7 +59,7 @@ export default function Auth() {
   useEffect(() => {
     if (!isInviteFlow) return;
     try {
-      const stored = localStorage.getItem("sfp_invite_ctx");
+      const stored = sessionStorage.getItem(INVITE_CTX_KEY);
       if (stored) setInviteCtx(JSON.parse(stored));
     } catch {}
   }, [isInviteFlow]);

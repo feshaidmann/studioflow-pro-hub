@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
+import { INVITE_CTX_KEY } from "@/lib/inviteCtx";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -191,16 +192,20 @@ export default function InviteResponse() {
 
       if (decision === "accepted") {
         try {
-          localStorage.setItem(
-            "sfp_invite_ctx",
+          sessionStorage.setItem(
+            INVITE_CTX_KEY,
             JSON.stringify({
               projectId: body.project_id ?? null,
               projectName: invitation?.project?.name ?? null,
-              artistName: body.artist_name ?? artistName,
+              // Use body.artist_name directly — avoids stale closure on artistName state
+              artistName: body.artist_name ?? null,
               role: invitation?.professional_role ?? null,
             })
           );
         } catch {}
+      } else {
+        // Limpa ctx de aceite anterior para não vazar entre fluxos distintos
+        try { sessionStorage.removeItem(INVITE_CTX_KEY); } catch {}
       }
 
       setPageState(decision);
@@ -284,10 +289,11 @@ export default function InviteResponse() {
   }
 
   if (pageState === "accepted") {
-    const projectPath = projectId ? `/projects/${projectId}` : "/projects";
+    const projectRoute = projectId ? `/projects/${projectId}` : null;
+    const projectPath = projectRoute ?? "/projects";
+    const baseRedirect = projectRoute ?? "/dashboard";
     const invitedEmail = invitation?.professional_email ?? "";
     const projectName = invitation?.project?.name ?? "o projeto";
-    const baseRedirect = projectId ? `/projects/${projectId}` : "/dashboard";
     const loginPath = `/auth?redirect=${encodeURIComponent(baseRedirect)}${
       invitedEmail ? `&invited_email=${encodeURIComponent(invitedEmail)}` : ""
     }`;

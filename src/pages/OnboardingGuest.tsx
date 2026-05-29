@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { trackAppEvent } from "@/lib/analytics";
+import { readInviteCtx, clearInviteCtx, type InviteCtx } from "@/lib/inviteCtx";
 
 function maskWhatsapp(value: string) {
   const digits = value.replace(/\D/g, "").slice(0, 11);
@@ -16,15 +17,6 @@ function maskWhatsapp(value: string) {
   if (digits.length <= 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
   return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
 }
-
-interface InviteCtx {
-  projectId?: string;
-  projectName?: string;
-  artistName?: string;
-  role?: string;
-}
-
-const INVITE_CTX_KEY = "sfp_invite_ctx";
 
 export default function OnboardingGuest() {
   const { updateProfile, loading: profileLoading, profile } = useProfile();
@@ -40,14 +32,11 @@ export default function OnboardingGuest() {
   const fullNameRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(INVITE_CTX_KEY);
-      if (stored) {
-        const ctx = JSON.parse(stored) as InviteCtx;
-        setInviteCtx(ctx);
-        if (ctx.role) setSpecialty(ctx.role);
-      }
-    } catch {}
+    const ctx = readInviteCtx();
+    if (ctx) {
+      setInviteCtx(ctx);
+      if (ctx.role) setSpecialty(ctx.role);
+    }
     setTimeout(() => fullNameRef.current?.focus(), 200);
   }, []);
 
@@ -82,9 +71,7 @@ export default function OnboardingGuest() {
         onboarding_completed: true,
       });
       trackAppEvent("onboarding_completed", { onboarding_version: 3, origin: "guest" });
-
-      try { localStorage.removeItem(INVITE_CTX_KEY); } catch {}
-
+      clearInviteCtx();
       const redirectTo = inviteCtx?.projectId ? `/projects/${inviteCtx.projectId}` : "/dashboard";
       navigate(redirectTo, { replace: true });
     } catch {
@@ -104,14 +91,14 @@ export default function OnboardingGuest() {
             <Music className="h-7 w-7 text-primary" />
           </div>
           <h1 className="text-2xl font-bold text-foreground">Bem-vindo ao MusicOS.ai</h1>
-          {hasCtx ? (
+          {hasCtx && inviteCtx ? (
             <p className="text-muted-foreground text-sm leading-relaxed">
               Você foi convidado por{" "}
-              <span className="text-foreground font-medium">{inviteCtx!.artistName}</span>{" "}
+              <span className="text-foreground font-medium">{inviteCtx.artistName}</span>{" "}
               para participar de{" "}
-              <span className="text-primary font-medium">{inviteCtx!.projectName}</span>
-              {inviteCtx!.role && (
-                <> como <span className="text-foreground font-medium">{inviteCtx!.role}</span></>
+              <span className="text-primary font-medium">{inviteCtx.projectName}</span>
+              {inviteCtx.role && (
+                <> como <span className="text-foreground font-medium">{inviteCtx.role}</span></>
               )}
               .
             </p>
@@ -123,13 +110,13 @@ export default function OnboardingGuest() {
         </div>
 
         {/* Project context pill */}
-        {hasCtx && (
+        {hasCtx && inviteCtx && (
           <div className="rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 flex items-start gap-3">
             <Music className="h-4 w-4 text-primary shrink-0 mt-0.5" />
             <div className="min-w-0">
               <p className="text-xs text-muted-foreground">Seu acesso ao finalizar</p>
-              <p className="text-sm font-medium text-foreground truncate">{inviteCtx!.projectName}</p>
-              <p className="text-xs text-muted-foreground">{inviteCtx!.artistName}</p>
+              <p className="text-sm font-medium text-foreground truncate">{inviteCtx.projectName}</p>
+              <p className="text-xs text-muted-foreground">{inviteCtx.artistName}</p>
             </div>
           </div>
         )}
@@ -199,12 +186,9 @@ export default function OnboardingGuest() {
           </div>
 
           <Button onClick={finish} disabled={!canSubmit || submitting} className="w-full gap-2" size="lg">
-            {submitting
-              ? "Salvando..."
-              : inviteCtx?.projectId
-                ? <><ArrowRight className="h-4 w-4" /> Acessar o projeto</>
-                : <><ArrowRight className="h-4 w-4" /> Começar</>
-            }
+            {submitting ? "Salvando..." : (
+              <><ArrowRight className="h-4 w-4" />{inviteCtx?.projectId ? "Acessar o projeto" : "Começar"}</>
+            )}
           </Button>
         </div>
       </div>

@@ -115,10 +115,13 @@ Deno.serve(async (req) => {
       });
     }
 
-    // If accepted: find or create user, update project_member with correct user_id
+    // If accepted: find or create user, update project_member, handle global listing
     if (status === "accepted") {
       try {
-        const { data: usersData } = await adminClient.auth.admin.listUsers();
+        // Single listUsers call reused by both the member link and global listing blocks.
+        // perPage:1000 covers the vast majority of tenants; for very large tenants a
+        // paginated lookup or a custom RPC would be needed.
+        const { data: usersData } = await adminClient.auth.admin.listUsers({ perPage: 1000 });
         const matchedUser = usersData?.users?.find(
           (u) => u.email?.toLowerCase() === inv.professional_email?.toLowerCase()
         );
@@ -143,7 +146,6 @@ Deno.serve(async (req) => {
             .maybeSingle();
 
           if (existingMember) {
-            // UPDATE existing record with the collaborator's real user_id
             const { error: updateMemberErr } = await adminClient
               .from("project_members")
               .update({
@@ -160,7 +162,6 @@ Deno.serve(async (req) => {
               console.error("project_member update error (non-fatal):", updateMemberErr);
             }
           } else {
-            // INSERT new record with the collaborator's user_id
             const { error: insertErr } = await adminClient
               .from("project_members")
               .insert({
@@ -184,25 +185,21 @@ Deno.serve(async (req) => {
             }
           }
         }
+
+        // Global listing — reuse matchedUser from the lookup above
+        if (allow_global_listing === true) {
+          await adminClient.from("professionals").insert({
+            name: inv.professional_name,
+            email: inv.professional_email,
+            specialty: inv.professional_role,
+            user_id: matchedUser?.id ?? null,
+            active: true,
+            allow_global_listing: true,
+          });
+        }
       } catch (profileErr) {
         console.error("profile/member update error (non-fatal):", profileErr);
       }
-    }
-
-    // Global listing — user_id deve ser do profissional, não do dono do projeto
-    if (status === "accepted" && allow_global_listing === true) {
-      const { data: usersData } = await adminClient.auth.admin.listUsers();
-      const professionalUser = usersData?.users?.find(
-        (u) => u.email?.toLowerCase() === inv.professional_email?.toLowerCase()
-      );
-      await adminClient.from("professionals").insert({
-        name: inv.professional_name,
-        email: inv.professional_email,
-        specialty: inv.professional_role,
-        user_id: professionalUser?.id ?? null,
-        active: true,
-        allow_global_listing: true,
-      });
     }
 
     const projectName = (inv.project as any)?.name ?? "Projeto";
