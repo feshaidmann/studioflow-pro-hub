@@ -1004,10 +1004,11 @@ async function downloadAnalysisReport(input: { name: string; references: string[
   toast.success("Relatório PDF baixado");
 }
 
-function FormView({ onSubmit, isPending, projects }: {
+function FormView({ onSubmit, isPending, projects, defaultProjectId }: {
   onSubmit: (v: FormValues, file: File) => void;
   isPending: boolean;
   projects: Array<{ id: string; name: string; artist: string; stage?: string }>;
+  defaultProjectId?: string;
 }) {
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
@@ -1019,9 +1020,13 @@ function FormView({ onSubmit, isPending, projects }: {
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
-      references: [], notes: "", projectId: "", stage: "master",
+      references: [], notes: "", projectId: defaultProjectId ?? "", stage: "master",
     },
   });
+
+  useEffect(() => {
+    if (defaultProjectId) form.setValue("projectId", defaultProjectId);
+  }, [defaultProjectId, form]);
 
 
 
@@ -2139,7 +2144,7 @@ function SavedAnalysesList({ onLoad }: {
 
 // ── MAIN ─────────────────────────────────────────────────────────────────────
 
-export function MusicDNAAnalyzer() {
+export function MusicDNAAnalyzer({ defaultProjectId }: { defaultProjectId?: string } = {}) {
   const { progress, logs, result, isPending, error, analyze, reset } = useMusicDNA();
   const [lastInput, setLastInput] = useState<{ name: string; notes?: string; references: string[]; projectId?: string; stage?: AudioStage; genre?: Genre } | null>(null);
   const [viewingDiagnosis, setViewingDiagnosis] = useState<DiagnosisResult | null>(null);
@@ -2318,7 +2323,7 @@ export function MusicDNAAnalyzer() {
           <div className="mb-6">
             <SavedAnalysesList onLoad={handleLoadSaved} />
           </div>
-          <FormView onSubmit={handleSubmit} isPending={isPending} projects={projects} />
+          <FormView onSubmit={handleSubmit} isPending={isPending} projects={projects} defaultProjectId={defaultProjectId} />
         </>
       )}
     </div>

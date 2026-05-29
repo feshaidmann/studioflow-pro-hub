@@ -1,7 +1,11 @@
 import { Dna } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
 import MusicDNAAnalyzer from "@/components/music-dna/MusicDNAAnalyzer";
 
 export default function MusicDNA() {
+  const [searchParams] = useSearchParams();
+  const defaultProjectId = searchParams.get("project") ?? undefined;
+
   return (
     <div className="container max-w-5xl mx-auto px-4 py-6 space-y-6">
       <header className="space-y-1">
@@ -13,7 +17,7 @@ export default function MusicDNA() {
           Diagnóstico técnico e artístico da sua faixa: LUFS, dinâmica, espectro, identidade e referências próximas — com sugestões aplicáveis ao projeto.
         </p>
       </header>
-      <MusicDNAAnalyzer />
+      <MusicDNAAnalyzer defaultProjectId={defaultProjectId} />
     </div>
   );
 }

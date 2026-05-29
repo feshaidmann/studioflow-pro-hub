@@ -5,12 +5,13 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import {
   AlertTriangle, Calendar, CheckCircle2, Clock, DollarSign, ListChecks, Users, Rocket, ArrowRight, MessageCircle,
-  FileText, CalendarPlus, ChevronRight,
+  FileText, CalendarPlus, ChevronRight, Dna,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useProjects } from "@/contexts/ProjectContext";
 import { useTasks } from "@/hooks/useTasks";
 import { useReleaseChecklist } from "@/hooks/useReleaseChecklist";
+import { useProjectAnalyses } from "@/hooks/useProjectAnalyses";
 
 const STAGE_STEPS = ["inicio", "gravacao", "mix", "master", "upload", "lancado"] as const;
 const STAGE_LABEL: Record<string, string> = {
@@ -44,6 +45,8 @@ export default function ProjectOverviewTab({ project, progress, isOwner, onSwitc
   const { getProjectFinancials, professionals, transactions } = useProjects();
   const { activeTasks } = useTasks();
   const { progress: releaseProgress, checkedItems, totalItems } = useReleaseChecklist(project.id);
+
+  const { data: dnaAnalyses = [] } = useProjectAnalyses(isOwner ? project.id : null);
 
   const fin = isOwner ? getProjectFinancials(project.id) : null;
   const team = isOwner ? (professionals[project.id] || []) : [];
@@ -241,6 +244,63 @@ export default function ProjectOverviewTab({ project, progress, isOwner, onSwitc
             <p className="text-[10px] text-muted-foreground">Enviar resumo do projeto para contatos</p>
           </div>
         </button>
+      )}
+
+      {/* Music DNA panel */}
+      {isOwner && (
+        <div className="rounded-lg border border-border bg-card/50 overflow-hidden">
+          <div className="flex items-center justify-between px-3 py-2 border-b border-border/40">
+            <div className="flex items-center gap-1.5">
+              <Dna className="h-3.5 w-3.5 text-primary" />
+              <span className="text-xs font-semibold">Music DNA</span>
+              {dnaAnalyses.length > 0 && (
+                <Badge variant="secondary" className="text-[9px] h-4 px-1.5">{dnaAnalyses.length}</Badge>
+              )}
+            </div>
+            <Link
+              to={`/music-dna?project=${project.id}`}
+              className="text-[10px] text-primary hover:underline flex items-center gap-0.5"
+            >
+              Analisar faixa <ArrowRight className="h-3 w-3" />
+            </Link>
+          </div>
+          {dnaAnalyses.length === 0 ? (
+            <Link
+              to={`/music-dna?project=${project.id}`}
+              className="flex items-center gap-2.5 px-3 py-3 hover:bg-muted/30 transition-colors group"
+            >
+              <Dna className="h-4 w-4 text-muted-foreground/50 shrink-0" />
+              <p className="text-xs text-muted-foreground flex-1">Nenhuma análise vinculada — clique para analisar uma faixa</p>
+              <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50 group-hover:text-primary transition-colors shrink-0" />
+            </Link>
+          ) : (
+            <div className="divide-y divide-border/30">
+              {dnaAnalyses.map((a) => {
+                const lufs = a.lufs_integrated;
+                const lufsColor = lufs === null ? "text-muted-foreground" : lufs >= -14 ? "text-success" : lufs >= -16 ? "text-warning" : "text-destructive";
+                return (
+                  <div key={a.id} className="flex items-center gap-2.5 px-3 py-2">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium truncate">{a.track_name}</p>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        {a.stage && <Badge variant="outline" className="text-[9px] h-4 px-1">{a.stage}</Badge>}
+                        {a.version_label && <span className="text-[10px] text-muted-foreground">{a.version_label}</span>}
+                      </div>
+                    </div>
+                    <div className="shrink-0 text-right space-y-0.5">
+                      {a.genre && <p className="text-[10px] text-muted-foreground/80 truncate max-w-[100px]">{a.genre}</p>}
+                      {lufs !== null && (
+                        <p className={cn("text-[11px] font-mono-nums font-medium", lufsColor)}>
+                          {lufs.toFixed(1)} LUFS
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
       )}
 
       {/* Quick links to related modules */}
