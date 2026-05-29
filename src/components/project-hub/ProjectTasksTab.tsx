@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Plus, X, ListChecks, ChevronDown, CalendarClock, AlertTriangle } from "lucide-react";
+import { Plus, X, ListChecks, ChevronDown, CalendarClock, AlertTriangle, Calendar } from "lucide-react";
 import { useTasks, type Task } from "@/hooks/useTasks";
 import { cn } from "@/lib/utils";
 
@@ -74,6 +74,8 @@ function TaskRow({ task, onToggle, onDelete }: { task: Task; onToggle: () => voi
 export default function ProjectTasksTab({ projectId }: ProjectTasksTabProps) {
   const { activeTasks, completedTasks, addTask, toggleTask, deleteTask } = useTasks();
   const [newTaskDesc, setNewTaskDesc] = useState("");
+  const [newTaskDue, setNewTaskDue] = useState("");
+  const [showDueDate, setShowDueDate] = useState(false);
   const [completedOpen, setCompletedOpen] = useState(false);
 
   const projectActive = activeTasks.filter((t) => t.projectId === projectId);
@@ -85,8 +87,10 @@ export default function ProjectTasksTab({ projectId }: ProjectTasksTabProps) {
 
   const handleAddTask = async () => {
     if (!newTaskDesc.trim()) return;
-    await addTask({ description: newTaskDesc.trim(), projectId });
+    await addTask({ description: newTaskDesc.trim(), projectId, dueDate: newTaskDue || null });
     setNewTaskDesc("");
+    setNewTaskDue("");
+    setShowDueDate(false);
   };
 
   return (
@@ -97,17 +101,40 @@ export default function ProjectTasksTab({ projectId }: ProjectTasksTabProps) {
         <Badge variant="secondary" className="text-[10px]">{projectActive.length}</Badge>
       </div>
 
-      <div className="flex gap-2">
-        <Input
-          placeholder="Nova tarefa…"
-          value={newTaskDesc}
-          onChange={(e) => setNewTaskDesc(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter") handleAddTask(); }}
-          className="h-8 text-sm"
-        />
-        <Button size="sm" className="h-8 px-2 shrink-0" onClick={handleAddTask} disabled={!newTaskDesc.trim()}>
-          <Plus className="h-3.5 w-3.5" />
-        </Button>
+      <div className="space-y-1.5">
+        <div className="flex gap-1.5">
+          <Input
+            placeholder="Nova tarefa…"
+            value={newTaskDesc}
+            onChange={(e) => setNewTaskDesc(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter" && !showDueDate) handleAddTask(); }}
+            className="h-8 text-sm"
+          />
+          <Button
+            size="sm"
+            variant="ghost"
+            className={cn("h-8 w-8 px-0 shrink-0", showDueDate && "text-primary bg-primary/10")}
+            onClick={() => setShowDueDate(!showDueDate)}
+            title="Definir prazo"
+          >
+            <Calendar className="h-3.5 w-3.5" />
+          </Button>
+          <Button size="sm" className="h-8 px-2 shrink-0" onClick={handleAddTask} disabled={!newTaskDesc.trim()}>
+            <Plus className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+        {showDueDate && (
+          <div className="flex items-center gap-2 animate-fade-in pl-1">
+            <span className="text-[11px] text-muted-foreground shrink-0">Prazo:</span>
+            <Input
+              type="date"
+              value={newTaskDue}
+              onChange={(e) => setNewTaskDue(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") handleAddTask(); }}
+              className="h-7 text-xs flex-1 max-w-[160px]"
+            />
+          </div>
+        )}
       </div>
 
       {projectActive.length === 0 && projectCompleted.length === 0 ? (

@@ -180,6 +180,23 @@ export default function ProjectDetail() {
             {!isOwner && <Badge className="bg-primary/15 text-primary border-primary/30 text-xs">Colaborador</Badge>}
           </div>
           {project.artist && <p className="text-sm text-muted-foreground font-medium">{project.artist}</p>}
+          {isOwner && ownerProject && (ownerProject.bpm > 0 || ownerProject.key) && (
+            <div className="flex items-center gap-1.5 mt-0.5">
+              {ownerProject.bpm > 0 && (
+                <span className="text-[11px] text-muted-foreground/70 font-mono-nums">{ownerProject.bpm} BPM</span>
+              )}
+              {ownerProject.bpm > 0 && ownerProject.key && <span className="text-muted-foreground/30 text-xs select-none">·</span>}
+              {ownerProject.key && (
+                <span className="text-[11px] text-muted-foreground/70">{ownerProject.key}</span>
+              )}
+            </div>
+          )}
+          <div className="mt-2 h-1 rounded-full overflow-hidden bg-muted/50">
+            <div
+              className={cn("h-full rounded-full transition-all duration-500", progress >= 100 ? "bg-success" : "bg-primary")}
+              style={{ width: `${progress}%` }}
+            />
+          </div>
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
           <Button
