@@ -1767,7 +1767,7 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
                       const width = ((s.end_sec - s.start_sec) / totalDuration) * 100;
                       const colors: Record<string, string> = {
                         intro: "bg-primary/20",
-                        verse: "bg-primary/40",
+                        verse: "bg-sky-500/55",
                         pre_chorus: "bg-accent/40",
                         chorus: "bg-primary/80",
                         bridge: "bg-secondary/70",
@@ -1788,7 +1788,7 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
                   <div className="flex gap-3 mt-2 flex-wrap">
                     {[
                       { label: "intro", color: "bg-primary/20" },
-                      { label: "verse", color: "bg-primary/40" },
+                      { label: "verse", color: "bg-sky-500/55" },
                       { label: "pre chorus", color: "bg-accent/40" },
                       { label: "chorus", color: "bg-primary/80" },
                       { label: "bridge", color: "bg-secondary/70" },
