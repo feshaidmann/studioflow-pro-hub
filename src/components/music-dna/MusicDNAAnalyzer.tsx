@@ -1448,6 +1448,15 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
   const catalogGenreCount = diagnosis.catalogGenreCount ?? 0;
   const strictGenreUsed = diagnosis.strictGenreUsed ?? false;
 
+  // Only show catalog neighbors that share the classified genre AND are close enough (≥55% similarity).
+  // Cross-genre or low-similarity entries add noise without actionable insight.
+  const classifiedGenreNorm = (diagnosis.genero_classificado ?? "").toLowerCase().trim();
+  const relevantNeighbors = (catalogNeighbors ?? []).filter((n) => {
+    if (n.similarity_score < 0.55) return false;
+    const ng = (n.genre ?? "").toLowerCase().trim();
+    return ng === classifiedGenreNorm || ng.includes(classifiedGenreNorm) || classifiedGenreNorm.includes(ng);
+  });
+
   const fmt = (n: number | null | undefined, digits = 1) =>
     typeof n === "number" && Number.isFinite(n)
       ? n.toLocaleString("pt-BR", { minimumFractionDigits: digits, maximumFractionDigits: digits })
@@ -1887,10 +1896,12 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
         </DiagCard>
       </section>
 
-      {/* BENCHMARK */}
-      <section id="dna-referencias" className="scroll-mt-16 space-y-4">
-        <BenchmarkPanel diagnosis={diagnosis} benchmark={benchmark} />
-      </section>
+      {/* BENCHMARK — only when a real genre-matched benchmark exists */}
+      {benchmark && (
+        <section id="dna-referencias" className="scroll-mt-16 space-y-4">
+          <BenchmarkPanel diagnosis={diagnosis} benchmark={benchmark} />
+        </section>
+      )}
 
       {/* Perfil acústico (Radar + Bars vs GENRE_PRESETS) removido:
           os atributos estilo Spotify já são comparados em "Referências" via BenchmarkPanel
@@ -1902,8 +1913,12 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
 
       {/* AcousticMatchPanel removido do resultado: as referências unificadas (catálogo + IA) já cobrem o caso de uso. */}
 
-      {realAnalysis && (
-        <div className={cn("grid gap-4", stageProfile.showPlaylistMatch ? "md:grid-cols-2" : "md:grid-cols-1")}>
+      {realAnalysis && (stageProfile.showPlaylistMatch || (stageProfile.showCatalogNeighbors && relevantNeighbors.length > 0)) && (
+        <div className={cn("grid gap-4",
+          stageProfile.showPlaylistMatch && stageProfile.showCatalogNeighbors && relevantNeighbors.length > 0
+            ? "md:grid-cols-2"
+            : "md:grid-cols-1"
+        )}>
           {stageProfile.showPlaylistMatch && (
             <PlaylistMatchCard
               user={{
@@ -1918,9 +1933,9 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
               }}
             />
           )}
-          {stageProfile.showCatalogNeighbors && (
+          {stageProfile.showCatalogNeighbors && relevantNeighbors.length > 0 && (
             <CatalogNeighborsPanel
-              neighbors={catalogNeighbors}
+              neighbors={relevantNeighbors}
               totalCompared={diagnosis.catalogTotalCompared ?? diagnosis.catalogTotal}
               userTrack={{
                 bpm: typeof realAnalysis.bpm === "number" ? realAnalysis.bpm : undefined,
