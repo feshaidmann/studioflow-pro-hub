@@ -163,6 +163,11 @@ export function useSavedAnalyses() {
       queryClient.invalidateQueries({ queryKey: ["music-dna-analyses"] });
       queryClient.invalidateQueries({ queryKey: ["music-dna-benchmarks"] });
       queryClient.invalidateQueries({ queryKey: ["track-versions"] });
+      // Refresh project analysis panel when analysis is linked to a project
+      const projectId = variables.input.projectId;
+      if (projectId) {
+        queryClient.invalidateQueries({ queryKey: ["project-analyses", projectId] });
+      }
       if (!variables.silent) toast.success("Análise salva com sucesso");
     },
     onError: (err: Error, variables) => {
@@ -175,9 +180,10 @@ export function useSavedAnalyses() {
       const { error } = await supabase.from("music_dna_analyses").delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => {
+    onSuccess: (_data, deletedId) => {
       queryClient.invalidateQueries({ queryKey: ["music-dna-analyses"] });
       queryClient.invalidateQueries({ queryKey: ["track-versions"] });
+      queryClient.invalidateQueries({ queryKey: ["project-analyses"] });
       toast.success("Análise removida");
     },
   });

@@ -1025,8 +1025,16 @@ function FormView({ onSubmit, isPending, projects, defaultProjectId }: {
   });
 
   useEffect(() => {
-    if (defaultProjectId) form.setValue("projectId", defaultProjectId);
-  }, [defaultProjectId, form]);
+    if (!defaultProjectId) return;
+    form.setValue("projectId", defaultProjectId);
+    if (!stageTouched) {
+      const proj = projects.find((p) => p.id === defaultProjectId);
+      if (proj?.stage) {
+        const derived = resolveStage(undefined, proj.stage);
+        form.setValue("stage", derived);
+      }
+    }
+  }, [defaultProjectId, form, projects, stageTouched]);
 
 
 
@@ -1439,6 +1447,15 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
   const catalogTotal = diagnosis.catalogTotal ?? 0;
   const catalogGenreCount = diagnosis.catalogGenreCount ?? 0;
   const strictGenreUsed = diagnosis.strictGenreUsed ?? false;
+
+  // Only show catalog neighbors that share the classified genre AND are close enough (≥55% similarity).
+  // Cross-genre or low-similarity entries add noise without actionable insight.
+  const classifiedGenreNorm = (diagnosis.genero_classificado ?? "").toLowerCase().trim();
+  const relevantNeighbors = (catalogNeighbors ?? []).filter((n) => {
+    if (n.similarity_score < 0.55) return false;
+    const ng = (n.genre ?? "").toLowerCase().trim();
+    return ng === classifiedGenreNorm || ng.includes(classifiedGenreNorm) || classifiedGenreNorm.includes(ng);
+  });
 
   const fmt = (n: number | null | undefined, digits = 1) =>
     typeof n === "number" && Number.isFinite(n)
@@ -1879,10 +1896,12 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
         </DiagCard>
       </section>
 
-      {/* BENCHMARK */}
-      <section id="dna-referencias" className="scroll-mt-16 space-y-4">
-        <BenchmarkPanel diagnosis={diagnosis} benchmark={benchmark} />
-      </section>
+      {/* BENCHMARK — only when a real genre-matched benchmark exists */}
+      {benchmark && (
+        <section id="dna-referencias" className="scroll-mt-16 space-y-4">
+          <BenchmarkPanel diagnosis={diagnosis} benchmark={benchmark} />
+        </section>
+      )}
 
       {/* Perfil acústico (Radar + Bars vs GENRE_PRESETS) removido:
           os atributos estilo Spotify já são comparados em "Referências" via BenchmarkPanel
@@ -1894,8 +1913,12 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
 
       {/* AcousticMatchPanel removido do resultado: as referências unificadas (catálogo + IA) já cobrem o caso de uso. */}
 
-      {realAnalysis && (
-        <div className={cn("grid gap-4", stageProfile.showPlaylistMatch ? "md:grid-cols-2" : "md:grid-cols-1")}>
+      {realAnalysis && (stageProfile.showPlaylistMatch || (stageProfile.showCatalogNeighbors && relevantNeighbors.length > 0)) && (
+        <div className={cn("grid gap-4",
+          stageProfile.showPlaylistMatch && stageProfile.showCatalogNeighbors && relevantNeighbors.length > 0
+            ? "md:grid-cols-2"
+            : "md:grid-cols-1"
+        )}>
           {stageProfile.showPlaylistMatch && (
             <PlaylistMatchCard
               user={{
@@ -1910,9 +1933,9 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
               }}
             />
           )}
-          {stageProfile.showCatalogNeighbors && (
+          {stageProfile.showCatalogNeighbors && relevantNeighbors.length > 0 && (
             <CatalogNeighborsPanel
-              neighbors={catalogNeighbors}
+              neighbors={relevantNeighbors}
               totalCompared={diagnosis.catalogTotalCompared ?? diagnosis.catalogTotal}
               userTrack={{
                 bpm: typeof realAnalysis.bpm === "number" ? realAnalysis.bpm : undefined,
@@ -2144,18 +2167,38 @@ function SavedAnalysesList({ onLoad }: {
 
 // ── MAIN ─────────────────────────────────────────────────────────────────────
 
-export function MusicDNAAnalyzer({ defaultProjectId }: { defaultProjectId?: string } = {}) {
+export function MusicDNAAnalyzer({ defaultProjectId, initialAnalysisId }: { defaultProjectId?: string; initialAnalysisId?: string } = {}) {
   const { progress, logs, result, isPending, error, analyze, reset } = useMusicDNA();
   const [lastInput, setLastInput] = useState<{ name: string; notes?: string; references: string[]; projectId?: string; stage?: AudioStage; genre?: Genre } | null>(null);
   const [viewingDiagnosis, setViewingDiagnosis] = useState<DiagnosisResult | null>(null);
   const [isSaved, setIsSaved] = useState(false);
-  const { saveAnalysis, saveAnalysisAsync, isSaving } = useSavedAnalyses();
+  const { savedAnalyses, saveAnalysis, saveAnalysisAsync, isSaving } = useSavedAnalyses();
   const savingPromiseRef = useRef<Promise<string | undefined> | null>(null);
   const { data: benchmarks } = useMusicDnaBenchmarks();
   const { projects } = useProjects();
 
-  // Restore cached analysis on mount
+  // Load a saved analysis directly when opened via ?analysis=<id>
+  const loadedInitialRef = useRef(false);
+  const [savedAnalysisId, setSavedAnalysisId] = useState<string | undefined>(undefined);
+  const [restoredFromCache, setRestoredFromCache] = useState(false);
   useEffect(() => {
+    if (!initialAnalysisId || loadedInitialRef.current || savedAnalyses.length === 0) return;
+    const found = savedAnalyses.find((a) => a.id === initialAnalysisId);
+    if (!found) return;
+    const meta = found.input_metadata as { name: string; notes?: string; references: string[]; projectId?: string; stage?: AudioStage };
+    const stageVal: AudioStage = (meta.stage ?? (found.stage as AudioStage | undefined) ?? "master");
+    const input = { ...meta, projectId: meta.projectId ?? found.project_id ?? undefined, stage: stageVal };
+    setLastInput(input);
+    setViewingDiagnosis(found.diagnosis);
+    setIsSaved(true);
+    setSavedAnalysisId(found.id);
+    setRestoredFromCache(false);
+    loadedInitialRef.current = true;
+  }, [initialAnalysisId, savedAnalyses]);
+
+  // Restore cached analysis on mount (skip if opening a specific analysis by ID)
+  useEffect(() => {
+    if (initialAnalysisId) return;
     if (!result && !isPending) {
       const cached = getCachedAnalysis();
       if (cached) {
@@ -2208,9 +2251,6 @@ export function MusicDNAAnalyzer({ defaultProjectId }: { defaultProjectId?: stri
     setRestoredFromCache(false);
     reset();
   };
-
-  const [savedAnalysisId, setSavedAnalysisId] = useState<string | undefined>(undefined);
-  const [restoredFromCache, setRestoredFromCache] = useState(false);
 
   const handleSave = () => {
     if (lastInput && (viewingDiagnosis || result)) {
