@@ -51,7 +51,6 @@ export interface AudioFeatures {
 export interface TrackInput {
   name: string;
   file: File;
-  notes?: string;
   genre?: Genre;
   stage?: string;
   references: string[];
@@ -424,7 +423,7 @@ Tom:     ${analysis.key}
 Duração: ${Math.floor(analysis.duration_sec / 60)}:${String(Math.round(analysis.duration_sec % 60)).padStart(2, "0")}
 Referências do artista: ${input.references.length ? input.references.join(", ") : "nenhuma fornecida"}
 Vocabulário semântico de artistas do mesmo território (apenas referência de LINGUAGEM/curadoria, NÃO comparação acústica — comparação técnica real vem somente do bloco "VIZINHOS MAIS PRÓXIMOS NO CATÁLOGO REAL"): ${selectedReferences.length ? selectedReferences.join(", ") : "nenhum"}
-Notas do artista: ${input.notes || "não fornecidas"}
+Notas do artista: (não fornecidas)
 
 ════════════════════════════════════════════════
 ANÁLISE TÉCNICA — NÍVEL GLOBAL
