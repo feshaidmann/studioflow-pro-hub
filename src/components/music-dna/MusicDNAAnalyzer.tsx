@@ -1014,6 +1014,7 @@ function FormView({ onSubmit, isPending, projects, defaultProjectId }: {
   const [fileError, setFileError] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const [stageTouched, setStageTouched] = useState(false);
+  const [refInput, setRefInput] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<FormValues>({
@@ -1062,6 +1063,15 @@ function FormView({ onSubmit, isPending, projects, defaultProjectId }: {
     if (file) handleFile(file);
   }, [handleFile]);
 
+  const handleAddRef = () => {
+    const trimmed = refInput.trim();
+    if (!trimmed) return;
+    const current = form.getValues("references");
+    if (current.length >= 5 || current.includes(trimmed)) { setRefInput(""); return; }
+    form.setValue("references", [...current, trimmed]);
+    setRefInput("");
+  };
+
   const handleFormSubmit = (values: FormValues) => {
     if (!audioFile) {
       setFileError("Selecione um arquivo de áudio");
@@ -1073,6 +1083,15 @@ function FormView({ onSubmit, isPending, projects, defaultProjectId }: {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4">
+        {/* Expectation strip — shown before any field to set context */}
+        <div className="flex items-start gap-2 rounded-lg bg-muted/30 border border-border px-3 py-2.5 text-xs text-muted-foreground leading-relaxed animate-fade-in">
+          <span className="text-primary shrink-0 mt-0.5">🧬</span>
+          <span>
+            Analisa LUFS, True Peak, BPM, tom, espectro e seções — a IA gera diagnóstico técnico e sugestões de produção.{" "}
+            <span className="font-medium text-foreground/70">Leva ~20–60s.</span>
+          </span>
+        </div>
+
         {/* Upload zone */}
         <Card className="animate-slide-up">
           <CardHeader className="pb-2">
@@ -1146,6 +1165,7 @@ function FormView({ onSubmit, isPending, projects, defaultProjectId }: {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* 1. Track name — auto-filled from file */}
             <FormField control={form.control} name="name" render={({ field }) => (
               <FormItem>
                 <FormLabel className="text-[11px] uppercase tracking-widest font-mono text-muted-foreground">
@@ -1158,50 +1178,7 @@ function FormView({ onSubmit, isPending, projects, defaultProjectId }: {
               </FormItem>
             )} />
 
-            <FormField control={form.control} name="projectId" render={({ field }) => {
-              const derivedStage = (() => {
-                const proj = projects.find((p) => p.id === field.value);
-                if (!proj?.stage) return null;
-                return resolveStage(undefined, proj.stage);
-              })();
-              return (
-                <FormItem>
-                  <FormLabel className="text-[11px] uppercase tracking-widest font-mono text-muted-foreground">
-                    Vincular a um projeto (opcional)
-                  </FormLabel>
-                  <Select
-                    value={field.value || "__none__"}
-                    onValueChange={(v) => {
-                      const newId = v === "__none__" ? "" : v;
-                      field.onChange(newId);
-                      // Se usuário ainda não tocou no seletor de estágio, deriva do projeto
-                      if (!stageTouched) {
-                        const proj = projects.find((p) => p.id === newId);
-                        const derived = resolveStage(undefined, proj?.stage);
-                        form.setValue("stage", derived);
-                      }
-                    }}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Sem projeto vinculado" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="__none__">Sem projeto vinculado</SelectItem>
-                      {projects.map((p) => (
-                        <SelectItem key={p.id} value={p.id}>
-                          {p.name}{p.artist ? ` — ${p.artist}` : ""}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                  <input type="hidden" data-derived-stage={derivedStage ?? ""} />
-                </FormItem>
-              );
-            }} />
-
+            {/* 2. Stage — most impactful: determines what the AI focuses on */}
             <FormField control={form.control} name="stage" render={({ field }) => {
               const projectId = form.watch("projectId");
               const proj = projects.find((p) => p.id === projectId);
@@ -1220,6 +1197,7 @@ function FormView({ onSubmit, isPending, projects, defaultProjectId }: {
               );
             }} />
 
+            {/* 3. Genre — determines benchmark and streaming context */}
             <FormField control={form.control} name="genre" render={({ field }) => (
               <FormItem>
                 <FormLabel className="text-[11px] uppercase tracking-widest font-mono text-muted-foreground">
@@ -1248,13 +1226,72 @@ function FormView({ onSubmit, isPending, projects, defaultProjectId }: {
               </FormItem>
             )} />
 
+            {/* 4. References — orients IA vocabulary and tone */}
+            <FormField control={form.control} name="references" render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-[11px] uppercase tracking-widest font-mono text-muted-foreground">
+                  Referências artísticas (até 5, opcional)
+                </FormLabel>
+                <div className="space-y-2">
+                  {field.value.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {field.value.map((ref, i) => (
+                        <Badge key={i} variant="secondary" className="gap-1 pl-2.5 pr-1.5 text-xs font-normal">
+                          {ref}
+                          <button
+                            type="button"
+                            onClick={() => field.onChange(field.value.filter((_, idx) => idx !== i))}
+                            className="ml-0.5 hover:text-destructive transition-colors"
+                            aria-label={`Remover ${ref}`}
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                  {field.value.length < 5 && (
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="Ex: Seu Jorge, Emicida, Djonga…"
+                        value={refInput}
+                        onChange={(e) => setRefInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") { e.preventDefault(); handleAddRef(); }
+                        }}
+                        className="flex-1 h-9"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="shrink-0 h-9 text-xs px-3"
+                        onClick={handleAddRef}
+                        disabled={!refInput.trim()}
+                      >
+                        Adicionar
+                      </Button>
+                    </div>
+                  )}
+                  <p className="text-[10px] text-muted-foreground leading-relaxed">
+                    Orienta o vocabulário e o tom das sugestões. Não afeta as métricas medidas.
+                  </p>
+                </div>
+                <FormMessage />
+              </FormItem>
+            )} />
+
+            {/* 5 & 6. Optional context — collapsible */}
             <Collapsible>
               <CollapsibleTrigger className="text-[11px] uppercase tracking-widest font-mono text-muted-foreground hover:text-foreground transition-colors">
-                + Notas adicionais (opcional)
+                + Contexto adicional (opcional)
               </CollapsibleTrigger>
-              <CollapsibleContent className="mt-2">
+              <CollapsibleContent className="mt-2 space-y-3">
                 <FormField control={form.control} name="notes" render={({ field }) => (
                   <FormItem>
+                    <FormLabel className="text-[11px] uppercase tracking-widest font-mono text-muted-foreground">
+                      Notas para a IA
+                    </FormLabel>
                     <FormControl>
                       <Textarea
                         placeholder="Ex: Verso com violão e voz, refrão quer explodir mas não sobe o suficiente…"
@@ -1264,19 +1301,54 @@ function FormView({ onSubmit, isPending, projects, defaultProjectId }: {
                     </FormControl>
                   </FormItem>
                 )} />
+
+                <FormField control={form.control} name="projectId" render={({ field }) => {
+                  const derivedStage = (() => {
+                    const proj = projects.find((p) => p.id === field.value);
+                    if (!proj?.stage) return null;
+                    return resolveStage(undefined, proj.stage);
+                  })();
+                  return (
+                    <FormItem>
+                      <FormLabel className="text-[11px] uppercase tracking-widest font-mono text-muted-foreground">
+                        Vincular a um projeto
+                      </FormLabel>
+                      <Select
+                        value={field.value || "__none__"}
+                        onValueChange={(v) => {
+                          const newId = v === "__none__" ? "" : v;
+                          field.onChange(newId);
+                          if (!stageTouched) {
+                            const proj = projects.find((p) => p.id === newId);
+                            const derived = resolveStage(undefined, proj?.stage);
+                            form.setValue("stage", derived);
+                          }
+                        }}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Sem projeto vinculado" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="__none__">Sem projeto vinculado</SelectItem>
+                          {projects.map((p) => (
+                            <SelectItem key={p.id} value={p.id}>
+                              {p.name}{p.artist ? ` — ${p.artist}` : ""}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                      <input type="hidden" data-derived-stage={derivedStage ?? ""} />
+                    </FormItem>
+                  );
+                }} />
               </CollapsibleContent>
             </Collapsible>
           </CardContent>
         </Card>
 
-
-        <div className="flex gap-3 p-3 rounded-lg bg-muted/30 border border-border text-xs text-muted-foreground leading-relaxed animate-fade-in">
-          <span className="text-primary shrink-0 mt-0.5">ℹ</span>
-          <span>
-            O sistema analisa o áudio real (LUFS, True Peak, Dynamic Range, BPM, Tom, Espectro),
-            detecta seções e calcula features acústicas. A IA gera diagnóstico técnico e sugestões de produção.
-          </span>
-        </div>
 
         <Button type="submit" disabled={isPending} className="w-full font-semibold animate-scale-in">
           {isPending ? "Analisando…" : "Analisar DNA Musical →"}
