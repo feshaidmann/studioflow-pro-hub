@@ -95,7 +95,6 @@ const GENRE_ENUM_VALUES = [
 const formSchema = z.object({
   name: z.string().min(1, "Nome da faixa é obrigatório"),
   references: z.array(z.string()).max(5),
-  notes: z.string().optional(),
   projectId: z.string().optional(),
   stage: z.enum(["demo", "mix", "master"]),
   genre: z.enum(GENRE_ENUM_VALUES).optional(),
@@ -1021,7 +1020,7 @@ function FormView({ onSubmit, isPending, projects, defaultProjectId }: {
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
-      references: [], notes: "", projectId: defaultProjectId ?? "", stage: "master",
+      references: [], projectId: defaultProjectId ?? "", stage: "master",
     },
   });
 
@@ -1281,27 +1280,12 @@ function FormView({ onSubmit, isPending, projects, defaultProjectId }: {
               </FormItem>
             )} />
 
-            {/* 5 & 6. Optional context — collapsible */}
+            {/* 5. Optional context — collapsible */}
             <Collapsible>
               <CollapsibleTrigger className="text-[11px] uppercase tracking-widest font-mono text-muted-foreground hover:text-foreground transition-colors">
                 + Contexto adicional (opcional)
               </CollapsibleTrigger>
               <CollapsibleContent className="mt-2 space-y-3">
-                <FormField control={form.control} name="notes" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-[11px] uppercase tracking-widest font-mono text-muted-foreground">
-                      Notas para a IA
-                    </FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Ex: Verso com violão e voz, refrão quer explodir mas não sobe o suficiente…"
-                        className="resize-none min-h-[68px]"
-                        {...field}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )} />
-
                 <FormField control={form.control} name="projectId" render={({ field }) => {
                   const derivedStage = (() => {
                     const proj = projects.find((p) => p.id === field.value);
@@ -2296,14 +2280,12 @@ export function MusicDNAAnalyzer({ defaultProjectId, initialAnalysisId }: { defa
     const input: TrackInput = {
       name: values.name,
       file,
-      notes: values.notes,
       references: values.references,
       stage: values.stage,
       genre: values.genre,
     };
     setLastInput({
       name: input.name,
-      notes: input.notes,
       references: input.references,
       projectId: values.projectId || undefined,
       stage: values.stage,
