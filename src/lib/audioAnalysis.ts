@@ -867,26 +867,58 @@ function detectSections(mono: Float32Array, sampleRate: number): AudioSection[] 
     });
   }
 
-  // Cluster sections into labels based on energy profile
-  // Simple approach: sort by energy, assign labels
+  // Sequence-aware section labeling using energy, centroid, position, and local context.
   const avgEnergy = sectionData.reduce((a, s) => a + s.energy, 0) / sectionData.length;
   const avgCentroid = sectionData.reduce((a, s) => a + s.centroid, 0) / sectionData.length;
+  const totalSections = sectionData.length;
+
+  // First pass: rank each section by energy to identify candidate chorus regions.
+  const energySorted = [...sectionData].sort((a, b) => b.energy - a.energy);
+  const topEnergyThreshold = energySorted[Math.floor(totalSections * 0.25)]?.energy ?? avgEnergy * 1.2;
 
   const sections: AudioSection[] = sectionData.map((sd, i) => {
     let label: string;
-    const totalSections = sectionData.length;
 
-    if (i === 0 && sd.energy < avgEnergy * 0.8) {
+    const isFirst = i === 0;
+    const isLast = i >= totalSections - 1;
+    const isSecondToLast = i >= totalSections - 2;
+    const relPos = i / Math.max(totalSections - 1, 1); // 0..1 relative position in song
+
+    // Intro: leading section(s) with below-average energy
+    if (isFirst && sd.energy < avgEnergy * 0.85) {
       label = "intro";
-    } else if (i >= totalSections - 1 && sd.energy < avgEnergy * 0.7) {
+    }
+    // Extend intro to second section if still quiet AND song has >= 5 sections
+    else if (i === 1 && totalSections >= 5 && sd.energy < avgEnergy * 0.80 && sectionData[0].energy < avgEnergy * 0.85) {
+      label = "intro";
+    }
+    // Outro: trailing section(s) with below-average energy in last 15% of song
+    else if (isLast && sd.energy < avgEnergy * 0.80) {
       label = "outro";
-    } else if (sd.energy > avgEnergy * 1.15 && sd.centroid > avgCentroid * 1.05) {
+    }
+    else if (isSecondToLast && totalSections >= 6 && sd.energy < avgEnergy * 0.75) {
+      label = "outro";
+    }
+    // Chorus: high energy + high centroid (bright, loud) — occurs in top 25% energy sections
+    // Bias toward mid-to-late positions (chorus rarely in first 20% of song)
+    else if (sd.energy >= topEnergyThreshold && sd.centroid > avgCentroid * 1.02 && relPos > 0.15) {
       label = "chorus";
-    } else if (sd.energy > avgEnergy * 1.05 && sd.centroid < avgCentroid * 0.95) {
-      label = "pre_chorus";
-    } else if (sd.energy < avgEnergy * 0.85 && sd.centroid > avgCentroid * 1.1) {
+    }
+    // Bridge: mid-to-late section with distinctly different character (high centroid but lower energy)
+    // Appears after first chorus and before outro
+    else if (relPos > 0.5 && relPos < 0.85 && sd.energy < avgEnergy * 0.90 && sd.centroid > avgCentroid * 1.12) {
       label = "bridge";
-    } else {
+    }
+    // Pre-chorus: section just before a chorus — rising energy, above-average centroid
+    else if (
+      i < totalSections - 1 &&
+      sd.energy > avgEnergy * 0.95 &&
+      sd.centroid > avgCentroid &&
+      sectionData[i + 1].energy >= topEnergyThreshold
+    ) {
+      label = "pre_chorus";
+    }
+    else {
       label = "verse";
     }
 
