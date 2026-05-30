@@ -385,8 +385,8 @@ serve(async (req: Request) => {
       },
       body: JSON.stringify({
         model: MODEL,
-        max_tokens: 2500,
-        temperature: 0.4,
+        max_tokens: 3500,
+        temperature: 0.35,
         messages: [
           {
             role: "system",

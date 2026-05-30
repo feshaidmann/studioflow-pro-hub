@@ -293,6 +293,18 @@ function buildPrompt(
   const externalFeatures = externalLookup?.features ?? {};
   const keyIndex = Math.max(0, KEY_NAMES.findIndex((key) => analysis.key?.startsWith(key)));
   const mode = /minor|menor|m\b/i.test(analysis.key ?? "") ? 0 : 1;
+
+  // Deezer BPM validation: only use it when it's close to the browser-detected BPM
+  // (within 15% and within a genre-plausible range). Deezer returns the BPM of the
+  // matched commercial track, which is often wrong or mismatched for Brazilian
+  // independent releases — the browser BPM is the ground truth for the actual file.
+  const deezerBpm = typeof externalFeatures.tempo === "number" && externalFeatures.tempo > 60 ? externalFeatures.tempo : null;
+  const browserBpm = analysis.bpm;
+  const useDeezerBpm = deezerBpm !== null &&
+    Math.abs(deezerBpm - browserBpm) / Math.max(browserBpm, 1) < 0.15 &&
+    deezerBpm >= 60 && deezerBpm <= 210;
+  const resolvedBpm = useDeezerBpm ? deezerBpm : browserBpm;
+
   const spotifyAttrs = {
     danceability: externalFeatures.danceability ?? analysis.danceability,
     energy: externalFeatures.energy ?? analysis.energy,
@@ -304,7 +316,7 @@ function buildPrompt(
     instrumentalness: externalFeatures.instrumentalness ?? analysis.instrumentalness,
     liveness: externalFeatures.liveness ?? analysis.liveness,
     valence: externalFeatures.valence ?? analysis.valence,
-    tempo: externalFeatures.tempo ?? analysis.bpm,
+    tempo: resolvedBpm,
     duration_ms: externalFeatures.duration_ms ?? Math.round(analysis.duration_sec * 1000),
     time_signature: externalFeatures.time_signature ?? 4,
   };
@@ -333,6 +345,7 @@ function buildPrompt(
     "Indie Folk":             "Indie Folk: loudness baixo −14 a −16 LUFS. Instrumentos acústicos em espaço natural são a estética — reverb de sala grande, coerência espacial. Voz folk não deve ter compressão agressiva — o vibrato natural e as inflexões são identidade. Não 'limpar' o que é textura intencional.",
     "Samba":                  "Samba: loudness médio −12 a −14 LUFS. Percussão de samba (surdo, caixa, agogô, pandeiro) é densa espectralmente — verificar acúmulo em 800 Hz–2 kHz. Cavaquinho e violão 7 cordas precisam de espaço na região 2–4 kHz. Pandeiro deve ter presença em 5–8 kHz para brilho.",
     "Pop Internacional":      "Pop Internacional: loudness competitivo −10 a −11 LUFS, alinhado com padrão global. Referências de mercado são internacionais. Verificar LUFS em playlists do Spotify usando 'Stats for Spotify' para posicionamento competitivo. Tonal balance em Genelec ou nearfields é obrigatório.",
+    "Rock Alternativo":       "Rock Alternativo (internacional): loudness médio ~−11 a −13 LUFS. Distorção de guitarra ocupa 500 Hz–4 kHz — verificar mascaramento da voz. Bateria com transientes vivos define o groove; atenção à coerência de fase entre microfones close e overhead. Produção indie/bedroom de rock alt tende a preservar mais dinâmica que o equivalente comercial — isso é uma vantagem, não um defeito. Verificar presença do baixo em mono (100–250 Hz) para Bluetooth e rádio.",
   };
 
   const genreStreamingNote = input.genre ? (GENRE_STREAMING_CONTEXT[input.genre] || "") : "";
@@ -344,8 +357,19 @@ function buildPrompt(
     const dr = analysis.dynamic_range_lu;
     const tp = analysis.true_peak_dbtp;
     const liveness = analysis.liveness ?? 0;
+    const centroid = analysis.spectral_centroid_hz;
+
+    // Pro-leaning: loudness agressivo + hiperlimitado (DR < 7 é sinal de limiter pesado)
     if (lufs >= -10 && dr < 7) return "pro-leaning";
+    // Pro-leaning: loud + tight peak + espectro aberto (centroid alto = hi-fi tratado)
+    if (lufs >= -11 && tp >= -2 && dr < 9 && centroid > 2000) return "pro-leaning";
+
+    // Bedroom: muito quieto OU múltiplos sinais de gravação caseira sem tratamento
+    if (lufs < -18) return "bedroom";
     if (lufs < -16 && (dr > 11 || liveness > 0.3 || tp < -3)) return "bedroom";
+    // Bedroom: dinâmica altíssima + centroid baixo (acústico não tratado)
+    if (dr > 14 && centroid < 2000 && lufs < -14) return "bedroom";
+
     return "mid";
   })();
 
