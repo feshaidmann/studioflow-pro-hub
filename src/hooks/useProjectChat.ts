@@ -36,7 +36,7 @@ export function useProjectChat(projectId: string) {
     if (error) { setLoading(false); return; }
 
     const userIds = [...new Set((data ?? []).map((m) => m.user_id))];
-    let profileMap: Record<string, { display_name: string; avatar_url: string | null }> = {};
+    const profileMap: Record<string, { display_name: string; avatar_url: string | null }> = {};
 
     if (userIds.length > 0) {
       const { data: profiles } = await supabase

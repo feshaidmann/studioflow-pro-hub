@@ -34,7 +34,7 @@ export function trackSlug(name: string): string {
   // normaliza acentos
   s = s.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   // remove conteúdo entre () e []
-  s = s.replace(/[\(\[][^\)\]]*[\)\]]/g, " ");
+  s = s.replace(/[([][^)\]]*[)\]]/g, " ");
   // marca delimitadores
   s = s.replace(/[_\-.]+/g, " ");
   // remove marcadores de versão
