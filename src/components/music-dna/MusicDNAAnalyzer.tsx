@@ -1235,7 +1235,7 @@ function FormView({ onSubmit, isPending, projects, defaultProjectId }: {
                   {field.value.length > 0 && (
                     <div className="flex flex-wrap gap-1.5">
                       {field.value.map((ref, i) => (
-                        <Badge key={i} variant="secondary" className="gap-1 pl-2.5 pr-1.5 text-xs font-normal">
+                        <Badge key={ref} variant="secondary" className="gap-1 pl-2.5 pr-1.5 text-xs font-normal">
                           {ref}
                           <button
                             type="button"
@@ -1775,7 +1775,7 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
                       };
                       return (
                         <div
-                          key={i}
+                          key={`seg-${s.start_sec}`}
                           className={cn("flex items-center justify-center text-[7px] font-mono text-foreground/80 uppercase", colors[s.label] || "bg-muted")}
                           style={{ width: `${width}%` }}
                           title={`${s.label} (${s.start_sec.toFixed(0)}s–${s.end_sec.toFixed(0)}s) · LUFS ${s.lufs} · E ${Math.round(s.energy * 100)}%`}
@@ -1840,7 +1840,7 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
           <DiagCard icon="✅" title="Pontos fortes" variant="success">
             <ul className="space-y-1.5">
               {(pontos_fortes ?? []).map((p, i) => (
-                <li key={i} className="flex gap-2 text-xs leading-relaxed">
+                <li key={`pf-${i}`} className="flex gap-2 text-xs leading-relaxed">
                   <span className="text-primary shrink-0 font-bold">+</span> {p}
                 </li>
               ))}
@@ -1850,7 +1850,7 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
           <DiagCard icon="⚠️" title="Gargalos criativos" variant="destructive">
             <ul className="space-y-1.5">
               {(gargalos_criativos ?? []).map((g, i) => (
-                <li key={i} className="flex gap-2 text-xs leading-relaxed">
+                <li key={`gc-${i}`} className="flex gap-2 text-xs leading-relaxed">
                   <span className="text-destructive shrink-0 font-bold">!</span> {g}
                 </li>
               ))}
@@ -1864,7 +1864,7 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
               const key = `passo-${i}`;
               const added = addedItems.has(key);
               return (
-                <div key={i} className="flex gap-3 items-start bg-muted/20 rounded-lg p-3">
+                <div key={key} className="flex gap-3 items-start bg-muted/20 rounded-lg p-3">
                   <PriorityBadge priority={p.prioridade} />
                   <div className="flex-1">
                     <p className="text-xs leading-relaxed">{p.acao}</p>
@@ -1894,7 +1894,7 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
               const key = `arranjo-${i}`;
               const added = addedItems.has(key);
               return (
-                <div key={i}
+                <div key={key}
                   className="bg-muted/30 rounded-lg p-3 text-xs leading-relaxed border-l-2 border-primary/40 flex items-start gap-2">
                   <span className="flex-1">{s}</span>
                   <Button
