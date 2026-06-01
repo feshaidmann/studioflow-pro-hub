@@ -211,7 +211,7 @@ Deno.serve(async (req) => {
     );
   } catch (err) {
     console.error("respond-to-invite error:", err);
-    return new Response(JSON.stringify({ error: String(err) }), {
+    return new Response(JSON.stringify({ error: "Erro interno. Tente novamente." }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
