@@ -19,6 +19,7 @@ import {
 import { analyzeAudioFull } from "@/lib/audioAnalysis";
 import type { RealAudioAnalysis } from "@/lib/audioAnalysis";
 import { supabase } from "@/integrations/supabase/client";
+import type { TablesInsert } from "@/integrations/supabase/types";
 import { toast } from "sonner";
 import { type Genre } from "@/hooks/useMusicDNA";
 
@@ -88,12 +89,12 @@ export function ReferenceTrackIngestor({ onInserted }: { onInserted?: () => void
 
     const { key_name, mode } = parseKey(analysis.key ?? "");
 
-    const row = {
+    const row: TablesInsert<"music_reference_tracks"> = {
       band: band.trim(),
       filename: trackTitle.trim(),
       genre: genre,
       source_batch: sourceBatch.trim() || "audio-ingest",
-      beat_times: [] as unknown as string,  // jsonb default
+      // beat_times tem DEFAULT '[]'::jsonb no banco — omitido de propósito
       duration_sec: analysis.duration_sec ?? null,
       tempo_bpm: analysis.bpm ?? null,
       key_name,
@@ -117,9 +118,11 @@ export function ReferenceTrackIngestor({ onInserted }: { onInserted?: () => void
       quarantined: false,
     };
 
+    // upsert por (band, filename): re-analisar a mesma faixa atualiza ao invés de
+    // falhar na constraint UNIQUE music_reference_tracks_band_filename_unique
     const { error: insertErr } = await supabase
       .from("music_reference_tracks")
-      .insert(row as Parameters<typeof supabase.from<"music_reference_tracks">>[0] extends never ? never : any);
+      .upsert(row, { onConflict: "band,filename" });
 
     if (insertErr) {
       setErrorMsg(insertErr.message);
@@ -133,7 +136,7 @@ export function ReferenceTrackIngestor({ onInserted }: { onInserted?: () => void
     setPhase("matching");
     try {
       const { data: neighbors, error: rpcErr } = await supabase.rpc(
-        "find_nearest_reference_tracks" as any,
+        "find_nearest_reference_tracks",
         {
           p_mfcc: analysis.mfcc ?? null,
           p_chroma_cens: analysis.chroma_cens ?? null,
@@ -160,8 +163,14 @@ export function ReferenceTrackIngestor({ onInserted }: { onInserted?: () => void
         }
       );
       if (rpcErr) throw rpcErr;
-      const top = (neighbors as any[])?.[0] ?? null;
-      if (top) setSelfMatch({ similarity_score: top.similarity_score, band: top.band, filename: top.filename });
+      const top = neighbors?.[0] ?? null;
+      if (top) {
+        setSelfMatch({
+          similarity_score: Number(top.similarity_score),
+          band: top.band,
+          filename: top.filename,
+        });
+      }
     } catch (e) {
       // Self-match is non-critical; show warning but keep "done"
       toast.warning("Não foi possível calcular self-match: " + (e as Error).message);
