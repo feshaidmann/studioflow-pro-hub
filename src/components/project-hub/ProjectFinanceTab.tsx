@@ -22,13 +22,12 @@ const STAGE_CATEGORIES: Record<string, string[]> = {
 };
 
 export default function ProjectFinanceTab({ projectId }: ProjectFinanceTabProps) {
-  const { getProjectFinancials, transactions, professionals } = useProjects();
+  const { getProjectFinancials, transactions, professionals, projects } = useProjects();
   const financials = getProjectFinancials(projectId);
   const projectTransactions = transactions.filter((t) => t.projectId === projectId);
   const team = professionals[projectId] || [];
 
   // Budget from project
-  const { projects } = useProjects();
   const project = projects.find((p) => p.id === projectId);
   const budget = project?.totalContractValue ?? 0;
   const budgetUsed = budget > 0 ? Math.round((financials.totalExpense / budget) * 100) : 0;
@@ -53,7 +52,7 @@ export default function ProjectFinanceTab({ projectId }: ProjectFinanceTabProps)
   // Cost per track – group "Cachê — <Name>" expenses by musician name
   const trackExpenses: Record<string, number> = {};
   projectTransactions
-    .filter((t) => t.type === "expense" && t.category === "Músicos e Session")
+    .filter((t) => t.type === "expense" && t.category === "Músicos/Session Players")
     .forEach((t) => {
       const match = t.description.match(/Cachê\s*—\s*([^(]+)/);
       const key = match ? match[1].trim() : t.description;

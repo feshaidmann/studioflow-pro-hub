@@ -209,11 +209,11 @@ export default function FinancialTracker() {
       .then(({ data }) => {
         if (data) {
           // Check which have unpaid transactions
-          const fees: PendingFee[] = data.map((d: any) => ({
-            name: d.name,
-            role: d.role,
-            projectName: d.projects?.name || "—",
-            fee: d.fee,
+          const fees: PendingFee[] = data.map((d) => ({
+            name: d.name as string,
+            role: d.role as string,
+            projectName: (d.projects as { name: string } | null)?.name || "—",
+            fee: d.fee as number,
             feePaid: false,
           }));
           // Match against paid transactions with matching description
@@ -404,7 +404,7 @@ export default function FinancialTracker() {
     const label = selectedMonthLabel.replace(/\s+/g, "_");
     a.download = `transacoes_${label}_${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
-    URL.revokeObjectURL(url);
+    setTimeout(() => URL.revokeObjectURL(url), 100);
     toast.success(`${filtered.length} transações exportadas`);
   };
 
@@ -560,8 +560,8 @@ export default function FinancialTracker() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-1.5">
-            {pendingFees.map((pf, i) => (
-              <div key={i} className="flex items-center gap-2 text-xs px-2 py-1.5 rounded-md hover:bg-muted/30 transition-colors">
+            {pendingFees.map((pf) => (
+              <div key={`${pf.name}-${pf.projectName}`} className="flex items-center gap-2 text-xs px-2 py-1.5 rounded-md hover:bg-muted/30 transition-colors">
                 <div className="flex-1 min-w-0">
                   <span className="font-medium">{pf.name}</span>
                   {pf.role && <span className="text-muted-foreground"> · {pf.role}</span>}

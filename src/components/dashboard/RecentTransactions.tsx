@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { DollarSign, ArrowRight } from "lucide-react";
@@ -14,7 +15,10 @@ interface RecentTransactionsProps {
 export default function RecentTransactions({ transactions }: RecentTransactionsProps) {
   const navigate = useNavigate();
   const { projects } = useProjects();
-  const projectMap = Object.fromEntries(projects.map((p) => [p.id, p.name]));
+  const projectMap = useMemo(
+    () => Object.fromEntries(projects.map((p) => [p.id, p.name])),
+    [projects]
+  );
 
   if (transactions.length === 0) return null;
 

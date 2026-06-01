@@ -107,20 +107,25 @@ export default function TransactionForm({
       paid,
       notes: notes.trim(),
     };
-    if (editTransaction) {
-      await updateTransaction(editTransaction.id, payload);
-      toast.success(t("finance.updated"));
-      onOpenChange(false);
-    } else {
-      const ok = await addTransaction(payload);
-      if (ok) {
-        toast.success(t("finance.created"));
+    try {
+      if (editTransaction) {
+        await updateTransaction(editTransaction.id, payload);
+        toast.success(t("finance.updated"));
         onOpenChange(false);
       } else {
-        toast.error("Erro ao salvar transação. Tente novamente.");
+        const ok = await addTransaction(payload);
+        if (ok) {
+          toast.success(t("finance.created"));
+          onOpenChange(false);
+        } else {
+          toast.error("Erro ao salvar transação. Tente novamente.");
+        }
       }
+    } catch {
+      toast.error("Erro ao salvar transação. Tente novamente.");
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
   }, [description, amount, projectId, category, customCategory, type, date, paid, notes, editTransaction, addTransaction, updateTransaction, t, onOpenChange]);
 
   // Ctrl+Enter shortcut
