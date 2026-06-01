@@ -46,7 +46,7 @@ function dbRowToTask(r: any): Task {
 }
 
 // ── Time-based grouping helpers ──
-function daysUntil(dateStr: string): number {
+export function daysUntil(dateStr: string): number {
   const d = new Date(dateStr + "T12:00:00");
   const today = new Date(); today.setHours(0, 0, 0, 0);
   return Math.floor((d.getTime() - today.getTime()) / 86400000);
