@@ -266,8 +266,8 @@ export function ReferenceTrackIngestor({ onInserted }: { onInserted?: () => void
             </div>
           </div>
 
-          <Button onClick={handleAnalyze} disabled={!canAnalyze || currentPhase === "analyzing"}>
-            {currentPhase === "analyzing"
+          <Button onClick={handleAnalyze} disabled={!canAnalyze || isPhase("analyzing")}>
+            {isPhase("analyzing")
               ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Analisando…</>
               : <><FlaskConical className="h-4 w-4 mr-2" />Analisar áudio</>}
           </Button>
