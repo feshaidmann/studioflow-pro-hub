@@ -314,10 +314,10 @@ export function ReferenceTrackIngestor({ onInserted }: { onInserted?: () => void
               Chroma CENS: {analysis.chroma_cens?.length ?? 0} classes
             </div>
 
-            <Button onClick={handleInsertAndMatch} disabled={!canInsert || phase === "inserting" || phase === "matching"}>
-              {phase === "inserting"
+            <Button onClick={handleInsertAndMatch} disabled={!canInsert || isPhase("inserting") || isPhase("matching")}>
+              {isPhase("inserting")
                 ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Inserindo…</>
-                : phase === "matching"
+                : isPhase("matching")
                 ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Testando precisão…</>
                 : "Inserir como referência + calibrar"}
             </Button>
