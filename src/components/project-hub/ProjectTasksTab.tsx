@@ -4,37 +4,25 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Plus, X, ListChecks, ChevronDown, CalendarClock, AlertTriangle, Calendar } from "lucide-react";
-import { useTasks, type Task } from "@/hooks/useTasks";
+import { Plus, X, ListChecks, ChevronDown, CalendarClock, AlertTriangle, Calendar, Ban } from "lucide-react";
+import { useTasks, categorizeTask, groupTasks, daysUntil, type Task } from "@/hooks/useTasks";
 import { cn } from "@/lib/utils";
 
 interface ProjectTasksTabProps {
   projectId: string;
 }
 
-function daysUntil(dateStr: string): number {
-  const d = new Date(dateStr + "T12:00:00");
-  const today = new Date(); today.setHours(0, 0, 0, 0);
-  return Math.floor((d.getTime() - today.getTime()) / 86400000);
-}
-
-function categorize(task: Task): "overdue" | "today" | "week" | "later" {
-  if (!task.dueDate) return "later";
-  const d = daysUntil(task.dueDate);
-  if (d < 0) return "overdue";
-  if (d === 0) return "today";
-  if (d <= 7) return "week";
-  return "later";
-}
+const COMPLETED_LIMIT = 10;
 
 const SECTION_META = {
-  overdue: { label: "Vencidas", icon: AlertTriangle, color: "text-destructive" },
-  today: { label: "Hoje", icon: CalendarClock, color: "text-warning" },
-  week: { label: "Esta semana", icon: CalendarClock, color: "text-primary" },
-  later: { label: "Futuras / Sem prazo", icon: ListChecks, color: "text-muted-foreground" },
+  overdue:  { label: "Vencidas",           icon: AlertTriangle, color: "text-destructive" },
+  today:    { label: "Hoje",               icon: CalendarClock, color: "text-warning" },
+  week:     { label: "Esta semana",        icon: CalendarClock, color: "text-primary" },
+  blocked:  { label: "Bloqueadas",         icon: Ban,           color: "text-warning" },
+  later:    { label: "Futuras / Sem prazo",icon: ListChecks,    color: "text-muted-foreground" },
 } as const;
 
-const SECTION_ORDER: Array<keyof typeof SECTION_META> = ["overdue", "today", "week", "later"];
+const SECTION_ORDER: Array<keyof typeof SECTION_META> = ["overdue", "today", "week", "blocked", "later"];
 
 function TaskRow({ task, onToggle, onDelete }: { task: Task; onToggle: () => void; onDelete: () => void }) {
   const dueBadge = task.dueDate ? (() => {
@@ -50,10 +38,24 @@ function TaskRow({ task, onToggle, onDelete }: { task: Task; onToggle: () => voi
   return (
     <div className={cn("flex items-start gap-2 rounded-lg px-2 py-1.5 hover:bg-secondary/30 transition-colors group", isSubtask && "pl-7")}>
       <Checkbox checked={task.completed} onCheckedChange={onToggle} className="shrink-0 mt-0.5" />
-      <span className={cn("flex-1 text-xs leading-snug", isSubtask && "text-muted-foreground")}>
-        {isSubtask ? task.description.slice(2) : task.description}
-      </span>
+      <div className="flex-1 min-w-0">
+        <span className={cn("text-xs leading-snug block", isSubtask && "text-muted-foreground")}>
+          {isSubtask ? task.description.slice(2) : task.description}
+        </span>
+        {task.blocked && task.blockedReason && (
+          <span className="text-[10px] text-warning flex items-center gap-0.5 mt-0.5">
+            <Ban className="h-2.5 w-2.5 shrink-0" />
+            {task.blockedReason}
+          </span>
+        )}
+      </div>
       <div className="flex items-center gap-1 shrink-0">
+        {task.blocked && !task.blockedReason && (
+          <span className="text-[10px] text-warning flex items-center gap-0.5">
+            <Ban className="h-3 w-3" />
+            Bloqueada
+          </span>
+        )}
         {dueBadge && (
           <span className={cn("text-[10px] font-mono-nums flex items-center gap-0.5", dueBadge.color)}>
             <CalendarClock className="h-3 w-3" />
@@ -80,10 +82,8 @@ export default function ProjectTasksTab({ projectId }: ProjectTasksTabProps) {
 
   const projectActive = activeTasks.filter((t) => t.projectId === projectId);
   const projectCompleted = completedTasks.filter((t) => t.projectId === projectId);
-
-  // Group by time
-  const grouped: Record<string, Task[]> = { overdue: [], today: [], week: [], later: [] };
-  projectActive.forEach((t) => { grouped[categorize(t)].push(t); });
+  const grouped = groupTasks(projectActive);
+  const completedHidden = Math.max(0, projectCompleted.length - COMPLETED_LIMIT);
 
   const handleAddTask = async () => {
     if (!newTaskDesc.trim()) return;
@@ -173,12 +173,17 @@ export default function ProjectTasksTab({ projectId }: ProjectTasksTabProps) {
               </CollapsibleTrigger>
               <CollapsibleContent>
                 <div className="space-y-0.5 mt-1 max-h-40 overflow-y-auto">
-                  {projectCompleted.slice(0, 10).map((task) => (
+                  {projectCompleted.slice(0, COMPLETED_LIMIT).map((task) => (
                     <div key={task.id} className="flex items-center gap-2 rounded-lg px-2 py-1 opacity-60 hover:opacity-80">
                       <Checkbox checked onCheckedChange={() => toggleTask(task.id)} className="shrink-0" />
                       <span className="flex-1 text-xs line-through text-muted-foreground">{task.description}</span>
                     </div>
                   ))}
+                  {completedHidden > 0 && (
+                    <p className="text-[10px] text-muted-foreground text-center pt-0.5">
+                      + {completedHidden} tarefa{completedHidden > 1 ? "s" : ""} mais antiga{completedHidden > 1 ? "s" : ""} não exibida{completedHidden > 1 ? "s" : ""}
+                    </p>
+                  )}
                 </div>
               </CollapsibleContent>
             </Collapsible>
