@@ -155,12 +155,14 @@ function calibrateForCatalog(features: {
   spectral_centroid_hz: number | null;
   spectral_rolloff: number | null;
   spectral_flatness: number | null;
+  spectral_bandwidth_hz: number | null;
 }) {
   return {
     lufs_integrated: features.lufs_integrated == null ? null : features.lufs_integrated + BROWSER_CALIBRATION.lufs_offset_db,
     spectral_centroid_hz: features.spectral_centroid_hz == null ? null : features.spectral_centroid_hz * BROWSER_CALIBRATION.centroid_scale,
     spectral_rolloff: features.spectral_rolloff == null ? null : features.spectral_rolloff * BROWSER_CALIBRATION.rolloff_scale,
     spectral_flatness: features.spectral_flatness == null ? null : features.spectral_flatness + BROWSER_CALIBRATION.flatness_offset,
+    spectral_bandwidth_hz: features.spectral_bandwidth_hz,
   };
 }
 
@@ -633,6 +635,7 @@ export function useMusicDNA(): UseMusicDNAReturn {
         spectral_centroid_hz: realAnalysis.spectral_centroid_hz,
         spectral_rolloff: realAnalysis.spectral_rolloff_hz,
         spectral_flatness: realAnalysis.spectral_flatness,
+        spectral_bandwidth_hz: realAnalysis.spectral_bandwidth_hz,
       });
 
       // Classificação independente por features (cosine similarity sobre perfis hardcoded + benchmarks BR)
@@ -673,9 +676,9 @@ export function useMusicDNA(): UseMusicDNAReturn {
         classifier_hint: classifierHint,
         track_features: {
           // ── Acoustic fingerprint — primary similarity signal ──────────────
-          mfcc: (realAnalysis as any).mfcc,
-          chroma_cens: (realAnalysis as any).chroma_cens,
-          zero_crossing_rate: (realAnalysis as any).zcr ?? (realAnalysis as any).zero_crossing_rate,
+          mfcc: realAnalysis.mfcc,
+          chroma_cens: realAnalysis.chroma_cens,
+          zero_crossing_rate: realAnalysis.zero_crossing_rate,
           // ── Reliable scalar features (high weight in SQL) ─────────────────
           tempo_bpm: realAnalysis.bpm,
           lufs_integrated: calibrated.lufs_integrated,
@@ -683,6 +686,7 @@ export function useMusicDNA(): UseMusicDNAReturn {
           spectral_centroid_hz: calibrated.spectral_centroid_hz,
           spectral_rolloff: calibrated.spectral_rolloff,
           spectral_flatness: calibrated.spectral_flatness,
+          spectral_bandwidth_hz: calibrated.spectral_bandwidth_hz,
           // ── Unreliable Spotify-style features (low weight in SQL) ─────────
           energy: realAnalysis.energy,
           danceability: realAnalysis.danceability,
