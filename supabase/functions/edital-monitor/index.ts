@@ -193,6 +193,11 @@ Deno.serve(async (req) => {
       query = query.eq("id", fonteId);
     }
 
+    // Authenticated (non-cron) callers may only process their OWN fontes.
+    if (!isCron && callerUserId) {
+      query = query.eq("user_id", callerUserId);
+    }
+
     const { data: fontes, error: fetchErr } = await query;
     if (fetchErr) throw fetchErr;
 
