@@ -152,13 +152,19 @@ Deno.serve(async (req) => {
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
   let authorized = false;
+  let isCron = false;
+  let callerUserId: string | null = null;
   if (token) {
     const { data: cronOk } = await supabase.rpc("verify_cron_token", { p_token: token });
     if (cronOk === true) {
       authorized = true;
+      isCron = true;
     } else {
       const { data, error } = await supabase.auth.getUser(token);
-      if (!error && data?.user) authorized = true;
+      if (!error && data?.user) {
+        authorized = true;
+        callerUserId = data.user.id;
+      }
     }
   }
   if (!authorized) {
@@ -185,6 +191,11 @@ Deno.serve(async (req) => {
 
     if (fonteId) {
       query = query.eq("id", fonteId);
+    }
+
+    // Authenticated (non-cron) callers may only process their OWN fontes.
+    if (!isCron && callerUserId) {
+      query = query.eq("user_id", callerUserId);
     }
 
     const { data: fontes, error: fetchErr } = await query;
@@ -262,7 +273,7 @@ Deno.serve(async (req) => {
     });
   } catch (err) {
     console.error("edital-monitor error:", err);
-    return new Response(JSON.stringify({ error: err.message }), {
+    return new Response(JSON.stringify({ error: "Erro interno. Tente novamente." }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
