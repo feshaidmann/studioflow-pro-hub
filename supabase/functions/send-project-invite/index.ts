@@ -76,7 +76,7 @@ Deno.serve(async (req) => {
     }
 
     // Build invite URL — use the published app URL or fallback
-    const appUrl = Deno.env.get("APP_URL") || "https://jsp-flux.lovable.app";
+    const appUrl = Deno.env.get("APP_URL") || "https://musicos-ai.com";
     const inviteUrl = `${appUrl}/invite/${inv.token}`;
 
     const projectName = (inv.project as any)?.name ?? "Projeto";
