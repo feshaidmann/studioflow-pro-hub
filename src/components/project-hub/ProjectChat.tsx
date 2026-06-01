@@ -282,7 +282,7 @@ export default function ProjectChat({ projectId, isOwner = false }: ProjectChatP
         const isMember = members.some((m) => m.name.toLowerCase() === mentionName);
         if (isMember) {
           return (
-            <span key={i} className="bg-primary/20 text-primary font-medium rounded px-0.5">
+            <span key={i} className="bg-primary/20 text-primary font-medium rounded px-0.5 break-words">
               {part}
             </span>
           );
