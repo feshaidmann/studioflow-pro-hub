@@ -18,6 +18,8 @@ export interface QueryFeatures {
   spectral_centroid_hz?: number | null;
   spectral_rolloff_hz?: number | null;
   spectral_flatness?: number | null;
+  spectral_bandwidth_hz?: number | null;
+  zero_crossing_rate?: number | null;
   energy?: number | null;
   danceability?: number | null;
   valence?: number | null;
@@ -43,6 +45,8 @@ export interface CatalogTrack {
   spectral_centroid?: number | null;
   spectral_rolloff?: number | null;
   spectral_flatness?: number | null;
+  spectral_bandwidth?: number | null;
+  zero_crossing_rate?: number | null;
   energy?: number | null;
   danceability?: number | null;
   valence?: number | null;
@@ -84,17 +88,35 @@ const W_PERCEPTUAL = 0.3; // each (energy, dance, valence, acous, instr, live, s
 // remaining features still discriminate timbre meaningfully.
 const W_CENTROID_BOOST = 2.5;
 const W_ROLLOFF_BOOST = 1.5;
+const W_BANDWIDTH = 0.5;
+const W_ZCR = 0.3;
 
 // Normalization scales (so all dims are roughly comparable before weighting)
-const S_MFCC = 8;       // typical MFCC coef range
-const S_CHROMA = 0.3;   // L2-normalized chroma diffs
+// S_MFCC / S_CHROMA are unused (cosine path now), kept for documentation.
+const S_MFCC = 8;       // kept for reference
+const S_CHROMA = 0.3;   // kept for reference
 const S_LUFS = 6;
 const S_DR = 6;
 const S_CENTROID = 1500;
 const S_ROLLOFF = 2500;
 const S_FLATNESS = 0.25;
+const S_BANDWIDTH = 1500; // typical spectral bandwidth range in Hz
+const S_ZCR = 0.15;       // typical ZCR range for music (fraction of Nyquist crossings)
 const S_BPM = 30;       // half/double-time aware below
 const S_KEY = 6.5;      // max circle-of-fifths distance + mode penalty
+
+// ── Cosine similarity between two equal-length vectors ───────────────────────
+function cosineSimilarity(a: number[], b: number[]): number | null {
+  if (a.length !== b.length || a.length === 0) return null;
+  let dot = 0, na = 0, nb = 0;
+  for (let i = 0; i < a.length; i++) {
+    dot += a[i] * b[i];
+    na  += a[i] * a[i];
+    nb  += b[i] * b[i];
+  }
+  const denom = Math.sqrt(na) * Math.sqrt(nb);
+  return denom === 0 ? null : dot / denom; // –1 … +1
+}
 
 // ── Circle of fifths ─────────────────────────────────────────────────────────
 const COF: Record<string, number> = {
@@ -141,19 +163,22 @@ function scoreTrack(q: QueryFeatures, t: CatalogTrack): { distance: number; weig
     weight += w;
   };
 
-  // MFCC vector (per-coefficient Euclidean, weighted)
+  // MFCC — cosine similarity (consistent with SQL find_nearest_reference_tracks)
+  // Convert similarity [–1,+1] to a distance contribution [0,+∞] via (1 – cos) / 2
   const hasMfcc = !!(q.mfcc && t.mfcc && q.mfcc.length === t.mfcc.length);
   if (hasMfcc) {
-    for (let i = 0; i < q.mfcc!.length; i++) {
-      const d = (q.mfcc![i] - t.mfcc![i]) / S_MFCC;
+    const cos = cosineSimilarity(q.mfcc!, t.mfcc!);
+    if (cos != null) {
+      const d = (1 - cos) / 2; // 0 = identical, 1 = opposite
       sum += W_MFCC * d * d;
       weight += W_MFCC;
     }
   }
-  // Chroma vector
+  // Chroma CENS — cosine similarity
   if (q.chroma_cens && t.chroma_cens && q.chroma_cens.length === t.chroma_cens.length) {
-    for (let i = 0; i < q.chroma_cens.length; i++) {
-      const d = (q.chroma_cens[i] - t.chroma_cens[i]) / S_CHROMA;
+    const cos = cosineSimilarity(q.chroma_cens, t.chroma_cens);
+    if (cos != null) {
+      const d = (1 - cos) / 2;
       sum += W_CHROMA * d * d;
       weight += W_CHROMA;
     }
@@ -181,9 +206,11 @@ function scoreTrack(q: QueryFeatures, t: CatalogTrack): { distance: number; weig
   // Spectral proxies: boost when MFCC is absent (best remaining timbre signal)
   const wCentroid = hasMfcc ? W_CENTROID : W_CENTROID_BOOST;
   const wRolloff  = hasMfcc ? W_ROLLOFF  : W_ROLLOFF_BOOST;
-  addNum(q.spectral_centroid_hz, t.spectral_centroid, S_CENTROID, wCentroid);
-  addNum(q.spectral_rolloff_hz,  t.spectral_rolloff,  S_ROLLOFF,  wRolloff);
-  addNum(q.spectral_flatness,    t.spectral_flatness,  S_FLATNESS, W_FLATNESS);
+  addNum(q.spectral_centroid_hz,   t.spectral_centroid,   S_CENTROID,   wCentroid);
+  addNum(q.spectral_rolloff_hz,    t.spectral_rolloff,    S_ROLLOFF,    wRolloff);
+  addNum(q.spectral_flatness,      t.spectral_flatness,   S_FLATNESS,   W_FLATNESS);
+  addNum(q.spectral_bandwidth_hz,  t.spectral_bandwidth,  S_BANDWIDTH,  W_BANDWIDTH);
+  addNum(q.zero_crossing_rate,     t.zero_crossing_rate,  S_ZCR,        W_ZCR);
 
   addNum(q.energy,           t.energy,           1, W_PERCEPTUAL);
   addNum(q.danceability,     t.danceability,     1, W_PERCEPTUAL);

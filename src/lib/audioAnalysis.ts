@@ -70,6 +70,8 @@ export interface RealAudioAnalysis {
   spectral_centroid_hz: number;
   spectral_rolloff_hz: number;
   spectral_flatness: number;
+  spectral_bandwidth_hz: number;
+  zero_crossing_rate: number;
   rms_dbfs: number;
 
   // Spotify-style features
@@ -1058,7 +1060,7 @@ function computeSpotifyFeatures(
 
   // ── SPEECHINESS (banda vocal + ZCR) ──────────────────────────────────────
   // Reaproveita ZCR já calculado em spectral
-  const zcrNorm = clamp(spectral.zcr * sampleRate / 8000);
+  const zcrNorm = clamp(spectral.zcr * sampleRate / 2000);
   const speechiness = clamp(
     vocalBandRatio * 0.45 +
     zcrNorm * 0.30 +
@@ -1163,6 +1165,8 @@ export async function analyzeAudioFull(file: File): Promise<{
     spectral_centroid_hz: Math.round(spectral.centroid),
     spectral_rolloff_hz: Math.round(spectral.rolloff),
     spectral_flatness: Math.round(spectral.flatness * 1000) / 1000,
+    spectral_bandwidth_hz: Math.round(spectral.bandwidth),
+    zero_crossing_rate: Math.round(spectral.zcr * 10000) / 10000,
     rms_dbfs: r(rmsDb),
     energy: Math.round(features.energy * 100) / 100,
     danceability: Math.round(features.danceability * 100) / 100,
