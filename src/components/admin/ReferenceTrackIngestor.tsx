@@ -197,9 +197,9 @@ export function ReferenceTrackIngestor({ onInserted }: { onInserted?: () => void
   const precisionLabel = (s: number) =>
     s >= 0.95 ? "Excelente" : s >= 0.80 ? "Boa" : s >= 0.70 ? "Aceitável" : "Abaixo do limiar";
 
-  const currentPhase: string = phase;
-  const canAnalyze = !!audioFile && currentPhase === "idle";
-  const canInsert = currentPhase === "analyzed" && !!band.trim() && !!trackTitle.trim() && !!genre;
+  const isPhase = (p: string) => phase === (p as typeof phase);
+  const canAnalyze = !!audioFile && isPhase("idle");
+  const canInsert = isPhase("analyzed") && !!band.trim() && !!trackTitle.trim() && !!genre;
 
   return (
     <div className="space-y-6">
