@@ -260,6 +260,14 @@ AS $function$
   LIMIT GREATEST(p_limit, 1);
 $function$;
 
+-- Hardening: o catálogo só deve ser consultado por usuários autenticados (o fluxo
+-- de análise sempre roda logado) e pela service_role (edge function). Revoga anon.
+REVOKE EXECUTE ON FUNCTION public.find_nearest_reference_tracks(
+  numeric,numeric,numeric,numeric,numeric,numeric,numeric,numeric,
+  float8[],float8[],numeric,numeric,numeric,numeric,numeric,numeric,numeric,
+  text,text,text,integer,boolean
+) FROM anon;
+
 -- 5. Seed track para o self-match test
 INSERT INTO public.music_reference_tracks (
   band, filename, genre, source_batch,
