@@ -197,8 +197,9 @@ export function ReferenceTrackIngestor({ onInserted }: { onInserted?: () => void
   const precisionLabel = (s: number) =>
     s >= 0.95 ? "Excelente" : s >= 0.80 ? "Boa" : s >= 0.70 ? "Aceitável" : "Abaixo do limiar";
 
-  const canAnalyze = !!audioFile && phase === "idle";
-  const canInsert = phase === "analyzed" && !!band.trim() && !!trackTitle.trim() && !!genre;
+  const isPhase = (p: string) => phase === (p as typeof phase);
+  const canAnalyze = !!audioFile && isPhase("idle");
+  const canInsert = isPhase("analyzed") && !!band.trim() && !!trackTitle.trim() && !!genre;
 
   return (
     <div className="space-y-6">
@@ -265,8 +266,8 @@ export function ReferenceTrackIngestor({ onInserted }: { onInserted?: () => void
             </div>
           </div>
 
-          <Button onClick={handleAnalyze} disabled={!canAnalyze || phase === "analyzing"}>
-            {phase === "analyzing"
+          <Button onClick={handleAnalyze} disabled={!canAnalyze || isPhase("analyzing")}>
+            {isPhase("analyzing")
               ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Analisando…</>
               : <><FlaskConical className="h-4 w-4 mr-2" />Analisar áudio</>}
           </Button>
@@ -313,10 +314,10 @@ export function ReferenceTrackIngestor({ onInserted }: { onInserted?: () => void
               Chroma CENS: {analysis.chroma_cens?.length ?? 0} classes
             </div>
 
-            <Button onClick={handleInsertAndMatch} disabled={!canInsert || phase === "inserting" || phase === "matching"}>
-              {phase === "inserting"
+            <Button onClick={handleInsertAndMatch} disabled={!canInsert || isPhase("inserting") || isPhase("matching")}>
+              {isPhase("inserting")
                 ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Inserindo…</>
-                : phase === "matching"
+                : isPhase("matching")
                 ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Testando precisão…</>
                 : "Inserir como referência + calibrar"}
             </Button>
