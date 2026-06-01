@@ -3276,8 +3276,9 @@ export type Database = {
           bio: string
           captador_generos: string[]
           captador_palco_tipos: string[]
-          captador_porte: string
+          captador_porte: string[]
           captador_regioes: string[]
+          captador_taxa: string
           captador_verificado: boolean
           city: string
           display_name: string
