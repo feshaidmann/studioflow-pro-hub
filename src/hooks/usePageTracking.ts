@@ -57,10 +57,12 @@ export function usePageTracking() {
         });
         // Best-effort beacon - no need to handle response
         try {
-          navigator.sendBeacon && navigator.sendBeacon(
-            `${(import.meta as any).env.VITE_SUPABASE_URL}/rest/v1/page_views`,
-            new Blob([body], { type: "application/json" })
-          );
+          if (navigator.sendBeacon) {
+            navigator.sendBeacon(
+              `${(import.meta as any).env.VITE_SUPABASE_URL}/rest/v1/page_views`,
+              new Blob([body], { type: "application/json" })
+            );
+          }
         } catch {
           // ignore
         }

@@ -356,7 +356,7 @@ export default function PublicProfile() {
             size="lg"
             onClick={() => {
               if (!user) {
-                navigate(`/auth?return_to=/u/${username}`);
+                navigate(`/auth?redirect=/u/${username}`);
                 return;
               }
               setQuoteOpen(true);
@@ -371,7 +371,7 @@ export default function PublicProfile() {
               className="gap-2 h-10"
               onClick={() => {
                 if (!user) {
-                  navigate(`/auth?return_to=/u/${username}`);
+                  navigate(`/auth?redirect=/u/${username}`);
                   return;
                 }
                 navigate(`/?invite=${profile.username}`);
