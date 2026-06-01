@@ -152,13 +152,19 @@ Deno.serve(async (req) => {
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
   let authorized = false;
+  let isCron = false;
+  let callerUserId: string | null = null;
   if (token) {
     const { data: cronOk } = await supabase.rpc("verify_cron_token", { p_token: token });
     if (cronOk === true) {
       authorized = true;
+      isCron = true;
     } else {
       const { data, error } = await supabase.auth.getUser(token);
-      if (!error && data?.user) authorized = true;
+      if (!error && data?.user) {
+        authorized = true;
+        callerUserId = data.user.id;
+      }
     }
   }
   if (!authorized) {
