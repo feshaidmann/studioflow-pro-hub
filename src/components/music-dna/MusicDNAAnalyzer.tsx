@@ -2008,12 +2008,23 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
       />
 
       {/* Playlists Compatíveis (Spotify) */}
-      <CompatiblePlaylistsCard
-        genre={diagnosis.genero_classificado}
-        mood={diagnosis.identidade?.mood_principal ? [diagnosis.identidade.mood_principal] : []}
-        styleTags={diagnosis.identidade?.tags ?? []}
-        references={(diagnosis.referencias_proximas ?? []).map((r) => r.artista).filter(Boolean)}
-      />
+      {(() => {
+        // genero_classificado can be "Sertanejo / Universitário" or "Sertanejo Universitário"
+        // Split into primary genre + optional subgenre for better Spotify queries.
+        const rawGenre = diagnosis.genero_classificado ?? "";
+        const [genrePart, subgenrePart] = rawGenre.includes("/")
+          ? rawGenre.split("/").map((s) => s.trim())
+          : [rawGenre, undefined];
+        return (
+          <CompatiblePlaylistsCard
+            genre={genrePart}
+            subgenre={subgenrePart}
+            mood={diagnosis.identidade?.mood_principal ? [diagnosis.identidade.mood_principal] : []}
+            styleTags={diagnosis.identidade?.tags ?? []}
+            references={(diagnosis.referencias_proximas ?? []).map((r) => r.artista).filter(Boolean)}
+          />
+        );
+      })()}
 
       {savedAnalysisId && (
         <TrackVersionsPanel trackName={input.name} currentAnalysisId={savedAnalysisId} />

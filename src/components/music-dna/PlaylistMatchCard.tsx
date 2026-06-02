@@ -124,6 +124,12 @@ export function PlaylistMatchCard({ user }: Props) {
           </div>
         )}
 
+        {matches !== null && matches.length === 0 && (
+          <p className="text-xs text-muted-foreground italic py-4 text-center">
+            Nenhum cluster de referência disponível ainda.
+          </p>
+        )}
+
         {best && (
           <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-3">
             <div className="flex items-start justify-between gap-3">
