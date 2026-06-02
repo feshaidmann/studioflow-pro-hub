@@ -7,13 +7,12 @@ import {
   Radar, RadarChart, PolarAngleAxis, PolarGrid, PolarRadiusAxis,
   ResponsiveContainer, Legend,
 } from "recharts";
-import { Upload, X, FileAudio, Music, MessageSquare, ListPlus, Check, Save, Trash2, History, Palette, ArrowRight, FolderKanban, Download, CheckCircle2, AlertTriangle, XCircle, ChevronRight, Info, User, ThumbsUp, ThumbsDown, Copy, GitCompare, Link2 } from "lucide-react";
+import { Upload, X, FileAudio, Music, MessageSquare, ListPlus, Check, Save, Trash2, History, Download, CheckCircle2, AlertTriangle, XCircle, ChevronRight, User, ThumbsUp, ThumbsDown, Copy, Link2 } from "lucide-react";
 import { LinkAnalysisTrackDialog } from "@/components/spotify-import/LinkAnalysisTrackDialog";
 import { useAcceptanceSignal } from "@/hooks/useAcceptanceSignal";
 import { TrackVersionsPanel } from "@/components/music-dna/TrackVersionsPanel";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { useNavigate } from "react-router-dom";
 import { useProjects } from "@/contexts/ProjectContext";
 import { useTasks } from "@/hooks/useTasks";
 import { toast } from "sonner";
@@ -1281,11 +1280,6 @@ function FormView({ onSubmit, isPending, projects, defaultProjectId }: {
               </CollapsibleTrigger>
               <CollapsibleContent className="mt-2 space-y-3">
                 <FormField control={form.control} name="projectId" render={({ field }) => {
-                  const derivedStage = (() => {
-                    const proj = projects.find((p) => p.id === field.value);
-                    if (!proj?.stage) return null;
-                    return resolveStage(undefined, proj.stage);
-                  })();
                   return (
                     <FormItem>
                       <FormLabel className="text-[11px] uppercase tracking-widest font-mono text-muted-foreground">
@@ -1318,7 +1312,6 @@ function FormView({ onSubmit, isPending, projects, defaultProjectId }: {
                         </SelectContent>
                       </Select>
                       <FormMessage />
-                      <input type="hidden" data-derived-stage={derivedStage ?? ""} />
                     </FormItem>
                   );
                 }} />
@@ -2008,12 +2001,23 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
       />
 
       {/* Playlists Compatíveis (Spotify) */}
-      <CompatiblePlaylistsCard
-        genre={diagnosis.genero_classificado}
-        mood={diagnosis.identidade?.mood_principal ? [diagnosis.identidade.mood_principal] : []}
-        styleTags={diagnosis.identidade?.tags ?? []}
-        references={(diagnosis.referencias_proximas ?? []).map((r) => r.artista).filter(Boolean)}
-      />
+      {(() => {
+        // genero_classificado can be "Sertanejo / Universitário" or "Sertanejo Universitário"
+        // Split into primary genre + optional subgenre for better Spotify queries.
+        const rawGenre = diagnosis.genero_classificado ?? "";
+        const [genrePart, subgenrePart] = rawGenre.includes("/")
+          ? rawGenre.split("/").map((s) => s.trim())
+          : [rawGenre, undefined];
+        return (
+          <CompatiblePlaylistsCard
+            genre={genrePart}
+            subgenre={subgenrePart}
+            mood={diagnosis.identidade?.mood_principal ? [diagnosis.identidade.mood_principal] : []}
+            styleTags={diagnosis.identidade?.tags ?? []}
+            references={(diagnosis.referencias_proximas ?? []).map((r) => r.artista).filter(Boolean)}
+          />
+        );
+      })()}
 
       {savedAnalysisId && (
         <TrackVersionsPanel trackName={input.name} currentAnalysisId={savedAnalysisId} />
@@ -2082,48 +2086,6 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
   );
 }
 
-// ── NEXT STEPS BAR ───────────────────────────────────────────────────────────
-
-function NextStepsBar({
-  diagnosis,
-  input,
-  isSaved,
-  savedAnalysisId,
-}: {
-  diagnosis: DiagnosisResult;
-  input: TrackInput | { name: string; notes?: string; references: string[]; projectId?: string; stage?: AudioStage };
-  isSaved: boolean;
-  savedAnalysisId?: string;
-}) {
-  const navigate = useNavigate();
-  const projectId = (input as { projectId?: string }).projectId;
-  const dnaParam = isSaved && savedAnalysisId ? savedAnalysisId : "session";
-  const genre = diagnosis.genero_classificado || "";
-  const trackTitle = encodeURIComponent(input.name || "");
-
-  return (
-    <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 animate-fade-in">
-      <p className="text-[11px] font-mono uppercase tracking-widest text-primary mb-2 flex items-center gap-1.5">
-        <ArrowRight className="h-3 w-3" /> Continuar fluxo
-      </p>
-      <div className="flex flex-wrap gap-2">
-        {projectId && (
-          <Button
-            size="sm"
-            variant="outline"
-            className="gap-1.5 text-xs bg-background"
-            onClick={() => navigate(`/projects/${projectId}`)}
-          >
-            <FolderKanban className="h-3.5 w-3.5" /> Voltar ao projeto
-            <ArrowRight className="h-3 w-3" />
-          </Button>
-        )}
-      </div>
-    </div>
-  );
-}
-
-
 // ── SAVED ANALYSES LIST ──────────────────────────────────────────────────────
 
 function SavedAnalysesList({ onLoad }: {
@@ -2159,7 +2121,7 @@ function SavedAnalysesList({ onLoad }: {
       </CardHeader>
       {!collapsed && (
       <CardContent className="space-y-1.5">
-        {savedAnalyses.map((a: any) => (
+        {savedAnalyses.map((a) => (
           <div
             key={a.id}
             className="flex items-center gap-3 p-2.5 rounded-lg bg-muted/30 border border-border hover:border-primary/30 transition-colors cursor-pointer group"

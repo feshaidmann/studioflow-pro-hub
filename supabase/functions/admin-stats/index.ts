@@ -272,7 +272,7 @@ Deno.serve(async (req) => {
   ];
 
   const edgeFunctions = [
-    "ai-task-assistant", "audio-analyze", "generate-daily-tasks",
+    "ai-task-assistant", "generate-daily-tasks",
     "respond-to-invite", "search-platform-professionals", "send-project-invite", "admin-stats",
   ];
 
