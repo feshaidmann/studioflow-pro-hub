@@ -79,7 +79,7 @@ export default function CollaboratorTasksTab({ projectId }: CollaboratorTasksTab
             task.blocked ? "border-warning/40 bg-warning/5" : isOverdue(task) ? "border-destructive/40 bg-destructive/5" : "border-border bg-card/60"
           }`}>
             <Checkbox
-              checked={false}
+              checked={task.completed}
               onCheckedChange={() => toggleTask(task.id, true)}
               className="mt-0.5"
             />
