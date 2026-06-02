@@ -104,7 +104,7 @@ describe("classifyGenre", () => {
 
   it("confidence is 'alta' when gap >= 10", () => {
     // Use a profile with only one genre to force gap = 100
-    const singleProfile = { "Pop": HARDCODED_GENRE_PROFILES["Pop"] };
+    const singleProfile = { "Pop Internacional": HARDCODED_GENRE_PROFILES["Pop Internacional"] };
     const result = classifyGenre(BASE_FEATURES, singleProfile);
     expect(result!.confidence).toBe("alta");
     expect(result!.gapPct).toBe(100);

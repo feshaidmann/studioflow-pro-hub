@@ -873,7 +873,10 @@ function detectSections(mono: Float32Array, sampleRate: number): AudioSection[] 
 
   // First pass: rank each section by energy to identify candidate chorus regions.
   const energySorted = [...sectionData].sort((a, b) => b.energy - a.energy);
-  const topEnergyThreshold = energySorted[Math.floor(totalSections * 0.25)]?.energy ?? avgEnergy * 1.2;
+  // Math.floor(N * 0.25) = 0 quando N < 4, tornando o threshold o máximo
+  // absoluto e impedindo chorus em faixas curtas. Clampar para mínimo 1
+  // garante que pelo menos a 2ª seção mais energética seja o limiar.
+  const topEnergyThreshold = energySorted[Math.max(1, Math.floor(totalSections * 0.25))]?.energy ?? avgEnergy * 1.2;
 
   // Adaptive thresholds scale with the actual distribution spread, so that
   // heavily compressed tracks (Funk Carioca, Trap BR at DR < 5 LU) still get
@@ -1081,8 +1084,10 @@ function computeSpotifyFeatures(
   );
 
   // ── SPEECHINESS (banda vocal + ZCR) ──────────────────────────────────────
-  // Reaproveita ZCR já calculado em spectral
-  const zcrNorm = clamp(spectral.zcr * sampleRate / 2000);
+  // spectral.zcr é taxa por amostra (crossings / blockSize). Multiplicar por
+  // sampleRate converte para crossings/seg; divisor 8000 normaliza para 0-1.
+  // Divisor < 8000 satura para SR ≥ 32 kHz (0.05 * 44100 / 2000 = 1.1 > 1).
+  const zcrNorm = clamp(spectral.zcr * sampleRate / 8000);
   const speechiness = clamp(
     vocalBandRatio * 0.45 +
     zcrNorm * 0.30 +
