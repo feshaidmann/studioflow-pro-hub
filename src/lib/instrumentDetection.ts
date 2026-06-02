@@ -99,11 +99,13 @@ export async function detectInstruments(file: File): Promise<InstrumentDetection
   const prevMags = new Float64Array(binCount);
   let totalFlux = 0;
   let fluxFrames = 0;
+  let actualSegments = 0;
 
   // Pre-allocate once outside the loop — avoids repeated GC pressure
   const fft = new FFT(fftSize);
   const fftOut = fft.createComplexArray();
   const fftBuf = new Array<number>(fftSize);
+  const segMags = new Float64Array(binCount);
   const hannWindow = new Float32Array(fftSize);
   for (let i = 0; i < fftSize; i++) {
     hannWindow[i] = 0.5 * (1 - Math.cos((2 * Math.PI * i) / (fftSize - 1)));
@@ -114,18 +116,18 @@ export async function detectInstruments(file: File): Promise<InstrumentDetection
       ? Math.floor(seg * (length - fftSize) / Math.max(cappedSegments - 1, 1))
       : seg * hopSize;
     if (offset + fftSize > length) break;
+    actualSegments++;
 
     // Apply Hann window then FFT (O(N log N))
     for (let i = 0; i < fftSize; i++) fftBuf[i] = mono[offset + i] * hannWindow[i];
     fft.realTransform(fftOut, fftBuf);
     fft.completeSpectrum(fftOut);
 
-    const segMags = new Float64Array(binCount);
     for (let k = 0; k < binCount; k++) {
       const re = fftOut[2 * k];
       const im = fftOut[2 * k + 1];
       segMags[k] = Math.sqrt(re * re + im * im);
-      magnitudes[k] += segMags[k] / cappedSegments;
+      magnitudes[k] += segMags[k]; // accumulate raw sum; divide after loop
     }
 
     // Spectral flux: sum of positive magnitude differences from previous frame
@@ -139,6 +141,11 @@ export async function detectInstruments(file: File): Promise<InstrumentDetection
       fluxFrames++;
     }
     prevMags.set(segMags);
+  }
+
+  // Divide by actual iterations so an early break doesn't under-count averages
+  if (actualSegments > 0) {
+    for (let k = 0; k < binCount; k++) magnitudes[k] /= actualSegments;
   }
 
   // Normalize spectral flux (0-1)

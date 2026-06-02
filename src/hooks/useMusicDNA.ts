@@ -572,9 +572,22 @@ export function filterValidReferences(
 }
 
 export function repairJsonString(raw: string): string {
-  return raw
-    .replace(/([{,]\s*)([a-zA-Z_$][a-zA-Z0-9_$]*)(\s*:)/g, '$1"$2"$3')
-    .replace(/,(\s*[}\]])/g, "$1");
+  // Split on already-quoted string literals so the key-quoting regex never
+  // touches content inside string values (e.g. "tempo: parecido, label: x").
+  const strLiteral = /"(?:[^"\\]|\\.)*"/g;
+  const strings = raw.match(strLiteral) ?? [];
+  const parts = raw.split(strLiteral);
+  const fixedParts = parts.map((part) =>
+    part
+      .replace(/([{,]\s*)([a-zA-Z_$][a-zA-Z0-9_$]*)(\s*:)/g, '$1"$2"$3')
+      .replace(/,(\s*[}\]])/g, "$1"),
+  );
+  let result = "";
+  for (let i = 0; i < fixedParts.length; i++) {
+    result += fixedParts[i];
+    if (i < strings.length) result += strings[i];
+  }
+  return result;
 }
 
 // ── HOOK ─────────────────────────────────────────────────────────────────────

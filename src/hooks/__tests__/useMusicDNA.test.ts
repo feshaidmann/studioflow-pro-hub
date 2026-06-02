@@ -358,4 +358,20 @@ describe("repairJsonString", () => {
     expect(() => JSON.parse(result)).not.toThrow();
     expect(JSON.parse(result)).toEqual({ already: "quoted", unquoted: "not" });
   });
+
+  it("does not corrupt colon-containing string values", () => {
+    const broken = '{motivo: "patamar: bedroom, label: indie"}';
+    const result = repairJsonString(broken);
+    expect(() => JSON.parse(result)).not.toThrow();
+    expect(JSON.parse(result)).toEqual({ motivo: "patamar: bedroom, label: indie" });
+  });
+
+  it("handles nested string values with commas and colons safely", () => {
+    const broken = '{artista: "Ana Vilela", descricao: "tempo: 120 bpm, energia: alta"}';
+    const result = repairJsonString(broken);
+    expect(() => JSON.parse(result)).not.toThrow();
+    const parsed = JSON.parse(result);
+    expect(parsed.artista).toBe("Ana Vilela");
+    expect(parsed.descricao).toBe("tempo: 120 bpm, energia: alta");
+  });
 });

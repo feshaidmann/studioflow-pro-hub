@@ -1212,7 +1212,9 @@ export async function analyzeAudio(file: File): Promise<AnalysisResult> {
 
   // Step 1 — decode at original rate using a temporary AudioContext
   const WebkitAudioCtx = (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-  const probeCtx = new (window.AudioContext || WebkitAudioCtx!)();
+  const AudioCtx = window.AudioContext ?? WebkitAudioCtx;
+  if (!AudioCtx) throw new Error("Web Audio API não disponível neste navegador.");
+  const probeCtx = new AudioCtx();
   let decoded: AudioBuffer;
   try {
     decoded = await probeCtx.decodeAudioData(arrayBuffer.slice(0));
