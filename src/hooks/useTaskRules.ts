@@ -61,6 +61,16 @@ function dbRowToRule(row: any): RuleConfig {
   };
 }
 
+export function mergeRulesWithDefaults(
+  dbRules: RuleConfig[],
+  defaults: Omit<RuleConfig, "id">[] = DEFAULT_RULES,
+): RuleConfig[] {
+  return defaults.map((def) => {
+    const found = dbRules.find((r) => r.ruleType === def.ruleType);
+    return found ?? { ...def };
+  });
+}
+
 export function useTaskRules() {
   const { user } = useAuth();
   const [rules, setRules] = useState<RuleConfig[]>([]);
@@ -76,12 +86,7 @@ export function useTaskRules() {
 
     const dbRules: RuleConfig[] = (data ?? []).map(dbRowToRule);
 
-    // Merge with defaults — any rule type not yet in DB uses defaults
-    const merged = DEFAULT_RULES.map((def) => {
-      const found = dbRules.find((r) => r.ruleType === def.ruleType);
-      return found ?? { ...def };
-    });
-    setRules(merged);
+    setRules(mergeRulesWithDefaults(dbRules));
     setLoading(false);
   }, [user]);
 
