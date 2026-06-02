@@ -2,16 +2,12 @@ import { useMemo, useState } from "react";
 import { Sparkles, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import OpportunityCard from "./OpportunityCard";
-import { editalToOpportunity, palcoToOpportunity, type Opportunity } from "./types";
+import { editalToOpportunity, palcoToOpportunity, normalize, type Opportunity } from "./types";
 import type { Edital } from "@/hooks/useEditais";
 import type { PalcoCurado } from "@/hooks/usePalcos";
 
 interface ScoredEdital extends Edital { __score: number }
 interface ScoredPalco extends PalcoCurado { score: number }
-
-function normalize(s: string) {
-  return (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-}
 
 function scoreEdital(e: Edital, perfil: { estado?: string | null; specialties?: string[]; query?: string }): number {
   let s = 0;

@@ -101,7 +101,7 @@ export default function OpportunityDetailSheet({ opportunity: op, open, onOpenCh
             {op.valor && (
               <div>
                 <div className="text-muted-foreground inline-flex items-center gap-1 mb-0.5"><DollarSign className="h-3 w-3" /> {isEdital ? "Valor" : "Cachet médio"}</div>
-                <div className="font-medium text-green-700">{op.valor}</div>
+                <div className="font-medium text-success">{op.valor}</div>
               </div>
             )}
             {palco?.porte && (

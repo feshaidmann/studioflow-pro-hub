@@ -47,6 +47,9 @@ export interface PalcoCurado {
   publico_estimado: string | null;
   resumo: string | null;
   ativo: boolean;
+  link_status?: string | null;
+  link_checked_at?: string | null;
+  match_reason?: string | null;
 }
 
 export interface PalcoSearchResult {
