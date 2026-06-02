@@ -1,7 +1,5 @@
-import { Button } from "@/components/ui/button";
 import { ChevronRight, Music2 } from "lucide-react";
 import { GoogleIcon } from "./GoogleIcon";
-import logoMusicosAi from "@/assets/logo-musicos-ai.svg";
 
 type Props = {
   onGoogle: () => void;
@@ -11,58 +9,63 @@ type Props = {
 
 export function WelcomeHero({ onGoogle, onSignupEmail, onLogin }: Props) {
   return (
-    <>
-      <section className="welcome-fade w-full text-center" style={{ "--delay": "60ms" } as React.CSSProperties}>
-        <img
-          src={logoMusicosAi}
-          alt="MusicOS.ai"
-          className="mx-auto mb-5 h-16 w-16 md:h-20 md:w-20"
-        />
-        <h1 className="text-[2rem] font-semibold leading-[1.15] tracking-tight text-foreground md:text-5xl">
+    <section
+      className="welcome-fade grid grid-cols-1 gap-4 md:grid-cols-12"
+      style={{ "--delay": "60ms" } as React.CSSProperties}
+      aria-label="Apresentação"
+    >
+      {/* Card gradiente principal */}
+      <div className="flex flex-col justify-center rounded-3xl bg-gradient-to-br from-orange-600 via-pink-600 to-purple-800 p-8 md:col-span-8 md:p-12">
+        <div className="mb-8 flex items-center gap-2">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white text-purple-900 shadow-xl">
+            <Music2 className="h-5 w-5" strokeWidth={2.5} aria-hidden />
+          </div>
+          <span className="font-display text-2xl tracking-wider text-white">MusicOS.ai</span>
+        </div>
+        <h1 className="font-display mb-6 text-5xl leading-[0.9] text-white md:text-7xl lg:text-8xl">
           Sua música merece mais que{" "}
-          <span className="text-primary">WhatsApp e planilha</span>
+          <span className="text-orange-200">WhatsApp</span> e{" "}
+          <span className="text-orange-200">planilha</span>
         </h1>
-        <p className="mt-3 text-sm leading-relaxed text-muted-foreground md:text-base max-w-md mx-auto">
-          Projetos, financeiro, agenda, equipe e carreira — num só app, feito para o artista independente brasileiro.
-        </p>
-      </section>
-
-
-      <div
-        className="welcome-fade mt-7 flex w-full max-w-sm flex-col gap-2.5"
-        style={{ "--delay": "120ms" } as React.CSSProperties}
-      >
-        <Button
-          size="lg"
-          onClick={onGoogle}
-          className="w-full gap-2 h-12 text-sm font-semibold active:scale-95 transition-transform"
-        >
-          <GoogleIcon />
-          Começar com Google — grátis
-        </Button>
-
-        <Button
-          size="lg"
-          variant="outline"
-          onClick={onSignupEmail}
-          className="w-full gap-2 h-12 text-sm border-border/60 hover:border-primary/40 active:scale-95 transition-transform"
-        >
-          <Music2 className="h-4 w-4" />
-          Criar conta com e-mail
-        </Button>
-
-        <button
-          onClick={onLogin}
-          className="mt-0.5 text-xs text-muted-foreground hover:text-primary transition-colors flex items-center justify-center gap-1"
-        >
-          Já tenho conta — entrar
-          <ChevronRight className="h-3 w-3" />
-        </button>
-
-        <p className="text-center text-[10px] text-muted-foreground/60 mt-1">
-          Gratuito · Sem cartão de crédito · Sem compromisso
+        <p className="max-w-xl text-lg font-light text-orange-50 md:text-xl">
+          Projetos, financeiro, agenda, equipe e carreira — num só app, feito para o artista
+          independente brasileiro.
         </p>
       </div>
-    </>
+
+      {/* Side block: CTAs + 2 KPIs coloridos */}
+      <div className="grid grid-rows-[auto_auto] gap-4 md:col-span-4">
+        <div className="flex flex-col justify-between gap-5 rounded-3xl border border-white/10 bg-white/5 p-6">
+          <p className="text-xs font-semibold uppercase tracking-widest text-orange-400">
+            Acesso imediato
+          </p>
+          <div className="space-y-3">
+            <button
+              onClick={onGoogle}
+              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-white py-4 font-bold text-black transition-colors hover:bg-orange-100 active:scale-[0.98]"
+            >
+              <GoogleIcon />
+              Começar com Google
+            </button>
+            <button
+              onClick={onSignupEmail}
+              className="w-full rounded-2xl border border-white/20 bg-white/10 py-4 font-bold text-white transition-colors hover:bg-white/20 active:scale-[0.98]"
+            >
+              Criar conta com e-mail
+            </button>
+            <button
+              onClick={onLogin}
+              className="flex w-full items-center justify-center gap-1 pt-1 text-xs text-white/60 transition-colors hover:text-orange-300"
+            >
+              Já tenho conta — entrar
+              <ChevronRight className="h-3 w-3" />
+            </button>
+          </div>
+          <p className="text-center text-[10px] uppercase tracking-widest text-white/40">
+            Gratuito · Sem cartão · Sem compromisso
+          </p>
+        </div>
+      </div>
+    </section>
   );
 }

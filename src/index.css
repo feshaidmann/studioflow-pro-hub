@@ -91,6 +91,21 @@
     @apply bg-card/70 backdrop-blur-xl border border-border/50 shadow-sm;
   }
 
+  /* Welcome landing shell — dark sunset (escopo restrito a /welcome) */
+  .welcome-shell {
+    font-family: 'Barlow', system-ui, -apple-system, sans-serif;
+    background-color: #0d0216;
+    color: #ffffff;
+  }
+  .welcome-shell .font-display {
+    font-family: 'Bebas Neue', Impact, sans-serif;
+    letter-spacing: 0.01em;
+  }
+  .welcome-shell ::selection {
+    background-color: #ff6b35;
+    color: #ffffff;
+  }
+
 
   .font-mono-nums {
     font-family: 'SF Mono', 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;

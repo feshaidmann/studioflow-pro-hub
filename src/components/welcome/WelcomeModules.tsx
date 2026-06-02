@@ -3,35 +3,31 @@ import { MODULES } from "./welcome.data";
 export function WelcomeModules() {
   return (
     <section
-      className="welcome-fade mt-10 w-full"
+      className="welcome-fade pt-8"
       style={{ "--delay": "300ms" } as React.CSSProperties}
+      aria-label="Módulos integrados"
     >
-      <p className="mb-1 text-center text-base font-semibold text-foreground">
-        Tudo que um lançamento precisa
-      </p>
-      <p className="mb-4 text-center text-xs text-muted-foreground">
+      <h2 className="font-display mb-2 text-4xl text-white">Tudo que um lançamento precisa</h2>
+      <p className="mb-8 text-white/40">
         {MODULES.length} módulos integrados — use o que precisar.
       </p>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-        {MODULES.map((mod, i) => (
-          <div
-            key={i}
-            className="rounded-[var(--radius)] border border-border/50 bg-card/60 backdrop-blur-sm p-3 flex flex-col gap-2 hover:border-primary/30 hover:bg-card/80 transition-colors"
-          >
-            <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center">
-              <mod.icon className="h-3.5 w-3.5 text-primary" />
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
+        {MODULES.map((mod, i) => {
+          const Icon = mod.icon;
+          return (
+            <div
+              key={i}
+              className="rounded-3xl border border-white/5 bg-white/5 p-6 transition-colors hover:bg-white/10"
+            >
+              <div className="mb-4 flex h-8 w-8 items-center justify-center rounded-lg bg-white/10 text-orange-400">
+                <Icon className="h-4 w-4" />
+              </div>
+              <h4 className="mb-1 font-bold text-white">{mod.name}</h4>
+              <p className="text-xs text-white/50 leading-snug">{mod.desc}</p>
             </div>
-            <div>
-              <p className="text-xs font-semibold text-foreground leading-tight">
-                {mod.name}
-              </p>
-              <p className="text-[10px] text-muted-foreground leading-snug mt-0.5">
-                {mod.desc}
-              </p>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </section>
   );
