@@ -111,8 +111,6 @@ export interface CatalogNeighbor {
   instrumentalness: number | null;
   dynamic_range_db: number | null;
   spectral_centroid: number | null;
-  dims_used?: number | null;
-  dims_total?: number | null;
 }
 
 export interface DiagnosisResult {
