@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ReferenceCoverageReport } from "@/components/admin/ReferenceCoverageReport";
 import { ReferenceTrackIngestor } from "@/components/admin/ReferenceTrackIngestor";
+import { SonaraCsvImporter } from "@/components/admin/SonaraCsvImporter";
 
 interface PreviewStats {
   rows: number;
@@ -244,12 +245,17 @@ export default function ReferenceTracks() {
           <TabsTrigger value="ingest" className="flex items-center gap-1.5">
             <Music2 className="h-3.5 w-3.5" /> Inserir por áudio
           </TabsTrigger>
+          <TabsTrigger value="sonara">Importar Sonara CSV</TabsTrigger>
           <TabsTrigger value="import">Importação CSV & lotes</TabsTrigger>
           <TabsTrigger value="coverage">Cobertura por gênero</TabsTrigger>
         </TabsList>
 
         <TabsContent value="ingest" className="mt-4">
           <ReferenceTrackIngestor onInserted={() => { refreshMeta(); refreshSnapshotMeta(); }} />
+        </TabsContent>
+
+        <TabsContent value="sonara" className="mt-4">
+          <SonaraCsvImporter onInserted={() => { refreshMeta(); refreshSnapshotMeta(); }} />
         </TabsContent>
 
         <TabsContent value="coverage" className="mt-4">
