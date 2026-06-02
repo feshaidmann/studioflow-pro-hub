@@ -24,11 +24,15 @@ import { toast } from "sonner";
 import { type Genre } from "@/hooks/useMusicDNA";
 
 const GENRES: Genre[] = [
-  "Indie Folk", "Pop Brasileiro", "Sertanejo Raiz", "Sertanejo Universitário",
-  "MPB Contemporânea", "Samba", "Pagode", "Funk Carioca", "Forró / Piseiro",
-  "Indie BR", "Rock Alternativo BR", "Rap BR", "R&B / Soul", "Reggae BR",
-  "Axé / Pop Bahia", "Eletrônica / House", "Pop Internacional", "Lo-Fi Hip Hop",
-  "Trap BR", "Bossa Nova", "Rock Alternativo",
+  // BR
+  "Indie Folk", "Pop Brasileiro", "Bossa Nova", "MPB Contemporânea",
+  "Samba", "Pagode", "Sertanejo Raiz", "Sertanejo Universitário",
+  "Forró / Piseiro", "Funk Carioca", "Trap BR", "Rap BR",
+  "Indie BR", "Rock Alternativo BR", "Reggae BR", "Axé / Pop Bahia", "Lo-Fi Hip Hop",
+  // Internacional
+  "Pop Internacional", "Rock Alternativo", "Heavy Metal", "Punk Rock",
+  "Folk Rock", "Grunge", "Hip-Hop", "Jazz", "Synth-Pop",
+  "Eletrônica / House", "Country", "Reggae", "Ambient", "R&B / Soul", "Funk",
 ];
 
 interface SelfMatchResult {

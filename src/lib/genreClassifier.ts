@@ -42,23 +42,27 @@ export interface ClassifierResult {
 // Fonte: combinação de AcousticBrainz, médias do mercado BR (Spotify) e GENRE_PRESETS.
 export const HARDCODED_GENRE_PROFILES: Record<string, GenreFeatureProfile> = {
   // ── Internacionais ──────────────────────────────────────────────
-  "Pop":          { tempo: 0.45, danceability: 0.72, energy: 0.68, acousticness: 0.20, instrumentalness: 0.04, valence: 0.64, speechiness: 0.08, loudness: 0.78 },
-  "Rock":         { tempo: 0.55, danceability: 0.52, energy: 0.78, acousticness: 0.12, instrumentalness: 0.08, valence: 0.52, speechiness: 0.07, loudness: 0.80 },
-  "Heavy Metal":  { tempo: 0.68, danceability: 0.40, energy: 0.92, acousticness: 0.04, valence: 0.40, instrumentalness: 0.18, speechiness: 0.08, loudness: 0.88 },
-  "Punk Rock":    { tempo: 0.75, danceability: 0.48, energy: 0.88, acousticness: 0.06, instrumentalness: 0.06, valence: 0.55, speechiness: 0.10, loudness: 0.85 },
-  "Folk Rock":    { tempo: 0.42, danceability: 0.50, energy: 0.45, acousticness: 0.65, instrumentalness: 0.08, valence: 0.55, speechiness: 0.06, loudness: 0.55 },
-  "Grunge":       { tempo: 0.52, danceability: 0.45, energy: 0.75, acousticness: 0.15, instrumentalness: 0.10, valence: 0.38, speechiness: 0.08, loudness: 0.78 },
-  "Hip-Hop":      { tempo: 0.50, danceability: 0.78, energy: 0.65, acousticness: 0.18, instrumentalness: 0.05, valence: 0.50, speechiness: 0.28, loudness: 0.82 },
-  "Jazz":         { tempo: 0.38, danceability: 0.45, energy: 0.35, acousticness: 0.75, instrumentalness: 0.55, valence: 0.50, speechiness: 0.05, loudness: 0.45 },
-  "Synth-Pop":    { tempo: 0.50, danceability: 0.72, energy: 0.70, acousticness: 0.10, instrumentalness: 0.20, valence: 0.62, speechiness: 0.06, loudness: 0.78 },
-  "Eletrônico":   { tempo: 0.62, danceability: 0.82, energy: 0.82, acousticness: 0.05, instrumentalness: 0.55, valence: 0.55, speechiness: 0.05, loudness: 0.82 },
-  "Country":      { tempo: 0.48, danceability: 0.58, energy: 0.55, acousticness: 0.55, instrumentalness: 0.04, valence: 0.62, speechiness: 0.07, loudness: 0.62 },
-  "Reggae":       { tempo: 0.42, danceability: 0.72, energy: 0.55, acousticness: 0.32, instrumentalness: 0.10, valence: 0.68, speechiness: 0.10, loudness: 0.65 },
-  "Ambient":      { tempo: 0.30, danceability: 0.20, energy: 0.18, acousticness: 0.85, instrumentalness: 0.80, valence: 0.45, speechiness: 0.03, loudness: 0.30 },
-  "Soul":         { tempo: 0.40, danceability: 0.65, energy: 0.58, acousticness: 0.35, instrumentalness: 0.06, valence: 0.58, speechiness: 0.08, loudness: 0.68 },
-  "Funk":         { tempo: 0.52, danceability: 0.80, energy: 0.72, acousticness: 0.15, instrumentalness: 0.08, valence: 0.68, speechiness: 0.10, loudness: 0.78 },
+  // Chaves alinhadas com o tipo Genre para que classifyGenre() produza
+  // os mesmos rótulos usados no upload por áudio (ReferenceTrackIngestor).
+  "Pop Internacional": { tempo: 0.45, danceability: 0.72, energy: 0.68, acousticness: 0.20, instrumentalness: 0.04, valence: 0.64, speechiness: 0.08, loudness: 0.78 },
+  "Rock Alternativo":  { tempo: 0.55, danceability: 0.52, energy: 0.78, acousticness: 0.12, instrumentalness: 0.08, valence: 0.52, speechiness: 0.07, loudness: 0.80 },
+  "Heavy Metal":       { tempo: 0.68, danceability: 0.40, energy: 0.92, acousticness: 0.04, valence: 0.40, instrumentalness: 0.18, speechiness: 0.08, loudness: 0.88 },
+  "Punk Rock":         { tempo: 0.75, danceability: 0.48, energy: 0.88, acousticness: 0.06, instrumentalness: 0.06, valence: 0.55, speechiness: 0.10, loudness: 0.85 },
+  "Folk Rock":         { tempo: 0.42, danceability: 0.50, energy: 0.45, acousticness: 0.65, instrumentalness: 0.08, valence: 0.55, speechiness: 0.06, loudness: 0.55 },
+  "Grunge":            { tempo: 0.52, danceability: 0.45, energy: 0.75, acousticness: 0.15, instrumentalness: 0.10, valence: 0.38, speechiness: 0.08, loudness: 0.78 },
+  "Hip-Hop":           { tempo: 0.50, danceability: 0.78, energy: 0.65, acousticness: 0.18, instrumentalness: 0.05, valence: 0.50, speechiness: 0.28, loudness: 0.82 },
+  "Jazz":              { tempo: 0.38, danceability: 0.45, energy: 0.35, acousticness: 0.75, instrumentalness: 0.55, valence: 0.50, speechiness: 0.05, loudness: 0.45 },
+  "Synth-Pop":         { tempo: 0.50, danceability: 0.72, energy: 0.70, acousticness: 0.10, instrumentalness: 0.20, valence: 0.62, speechiness: 0.06, loudness: 0.78 },
+  "Eletrônica / House":{ tempo: 0.62, danceability: 0.82, energy: 0.82, acousticness: 0.05, instrumentalness: 0.55, valence: 0.55, speechiness: 0.05, loudness: 0.82 },
+  "Country":           { tempo: 0.48, danceability: 0.58, energy: 0.55, acousticness: 0.55, instrumentalness: 0.04, valence: 0.62, speechiness: 0.07, loudness: 0.62 },
+  "Reggae":            { tempo: 0.42, danceability: 0.72, energy: 0.55, acousticness: 0.32, instrumentalness: 0.10, valence: 0.68, speechiness: 0.10, loudness: 0.65 },
+  "Ambient":           { tempo: 0.30, danceability: 0.20, energy: 0.18, acousticness: 0.85, instrumentalness: 0.80, valence: 0.45, speechiness: 0.03, loudness: 0.30 },
+  "R&B / Soul":        { tempo: 0.40, danceability: 0.66, energy: 0.57, acousticness: 0.30, instrumentalness: 0.06, valence: 0.53, speechiness: 0.09, loudness: 0.69 },
+  "Funk":              { tempo: 0.52, danceability: 0.80, energy: 0.72, acousticness: 0.15, instrumentalness: 0.08, valence: 0.68, speechiness: 0.10, loudness: 0.78 },
 
-  // ── BR (cobertura local) ────────────────────────────────────────
+  // ── BR ──────────────────────────────────────────────────────────
+  "Indie Folk":              { tempo: 0.35, danceability: 0.42, energy: 0.35, acousticness: 0.88, instrumentalness: 0.12, valence: 0.45, speechiness: 0.06, loudness: 0.45 },
+  "Pop Brasileiro":          { tempo: 0.48, danceability: 0.78, energy: 0.72, acousticness: 0.22, instrumentalness: 0.03, valence: 0.68, speechiness: 0.07, loudness: 0.82 },
   "Bossa Nova":              { tempo: 0.32, danceability: 0.52, energy: 0.28, acousticness: 0.82, instrumentalness: 0.20, valence: 0.58, speechiness: 0.06, loudness: 0.40 },
   "MPB Contemporânea":       { tempo: 0.40, danceability: 0.58, energy: 0.52, acousticness: 0.55, instrumentalness: 0.15, valence: 0.50, speechiness: 0.07, loudness: 0.58 },
   "Samba":                   { tempo: 0.55, danceability: 0.70, energy: 0.62, acousticness: 0.58, instrumentalness: 0.08, valence: 0.70, speechiness: 0.08, loudness: 0.62 },
@@ -71,7 +75,6 @@ export const HARDCODED_GENRE_PROFILES: Record<string, GenreFeatureProfile> = {
   "Rap BR":                  { tempo: 0.50, danceability: 0.74, energy: 0.66, acousticness: 0.18, instrumentalness: 0.04, valence: 0.44, speechiness: 0.32, loudness: 0.78 },
   "Indie BR":                { tempo: 0.45, danceability: 0.55, energy: 0.55, acousticness: 0.38, instrumentalness: 0.18, valence: 0.48, speechiness: 0.06, loudness: 0.65 },
   "Rock Alternativo BR":     { tempo: 0.55, danceability: 0.50, energy: 0.76, acousticness: 0.14, instrumentalness: 0.12, valence: 0.45, speechiness: 0.07, loudness: 0.80 },
-  "R&B / Soul":              { tempo: 0.38, danceability: 0.66, energy: 0.55, acousticness: 0.26, instrumentalness: 0.06, valence: 0.48, speechiness: 0.10, loudness: 0.70 },
   "Reggae BR":               { tempo: 0.45, danceability: 0.72, energy: 0.55, acousticness: 0.38, instrumentalness: 0.06, valence: 0.68, speechiness: 0.08, loudness: 0.68 },
   "Axé / Pop Bahia":         { tempo: 0.62, danceability: 0.80, energy: 0.82, acousticness: 0.18, instrumentalness: 0.03, valence: 0.78, speechiness: 0.07, loudness: 0.82 },
   "Lo-Fi Hip Hop":           { tempo: 0.35, danceability: 0.60, energy: 0.30, acousticness: 0.72, instrumentalness: 0.78, valence: 0.40, speechiness: 0.05, loudness: 0.50 },
