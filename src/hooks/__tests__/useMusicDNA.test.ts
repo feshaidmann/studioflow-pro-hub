@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import {
   calcDistance,
   getAveragePreset,
@@ -7,6 +7,7 @@ import {
   detectProductionTier,
   filterValidReferences,
   repairJsonString,
+  updateBrowserCalibration,
   GENRE_PRESETS,
   FEATURE_KEYS,
   FEATURE_LABELS,
@@ -373,5 +374,41 @@ describe("repairJsonString", () => {
     const parsed = JSON.parse(result);
     expect(parsed.artista).toBe("Ana Vilela");
     expect(parsed.descricao).toBe("tempo: 120 bpm, energia: alta");
+  });
+});
+
+// ── updateBrowserCalibration ──────────────────────────────────────────────────
+
+describe("updateBrowserCalibration", () => {
+  afterEach(() => {
+    // Restore defaults after each test so mutations don't bleed across tests
+    updateBrowserCalibration({ lufs_offset_db: 0, centroid_scale: 1, rolloff_scale: 1, flatness_offset: 0 });
+  });
+
+  it("applies partial updates to BROWSER_CALIBRATION", () => {
+    updateBrowserCalibration({ lufs_offset_db: -1.5 });
+    expect(BROWSER_CALIBRATION.lufs_offset_db).toBe(-1.5);
+    expect(BROWSER_CALIBRATION.centroid_scale).toBe(1); // unchanged
+  });
+
+  it("calibrateForCatalog reflects updated offsets immediately", () => {
+    updateBrowserCalibration({ lufs_offset_db: -2.0, centroid_scale: 0.95 });
+    const result = calibrateForCatalog({
+      lufs_integrated: -14,
+      spectral_centroid_hz: 3000,
+      spectral_rolloff: 8000,
+      spectral_flatness: 0.3,
+      spectral_bandwidth_hz: 1500,
+    });
+    expect(result.lufs_integrated).toBeCloseTo(-16, 5);
+    expect(result.spectral_centroid_hz).toBeCloseTo(2850, 5);
+  });
+
+  it("full update replaces all fields", () => {
+    updateBrowserCalibration({ lufs_offset_db: 1, centroid_scale: 1.1, rolloff_scale: 0.9, flatness_offset: 0.05 });
+    expect(BROWSER_CALIBRATION.lufs_offset_db).toBe(1);
+    expect(BROWSER_CALIBRATION.centroid_scale).toBe(1.1);
+    expect(BROWSER_CALIBRATION.rolloff_scale).toBe(0.9);
+    expect(BROWSER_CALIBRATION.flatness_offset).toBe(0.05);
   });
 });

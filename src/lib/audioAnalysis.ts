@@ -875,6 +875,27 @@ function detectSections(mono: Float32Array, sampleRate: number): AudioSection[] 
   const energySorted = [...sectionData].sort((a, b) => b.energy - a.energy);
   const topEnergyThreshold = energySorted[Math.floor(totalSections * 0.25)]?.energy ?? avgEnergy * 1.2;
 
+  // Adaptive thresholds scale with the actual distribution spread, so that
+  // heavily compressed tracks (Funk Carioca, Trap BR at DR < 5 LU) still get
+  // meaningful intro/outro/chorus labels instead of "verse" for everything.
+  // Fixed multipliers like 0.85×avg silently fail when all sections are within
+  // ±2% of each other. Using mean ± k×std adapts automatically to both
+  // dynamic and flat mixes.
+  const energyStd = Math.sqrt(sectionData.reduce((a, s) => a + (s.energy - avgEnergy) ** 2, 0) / sectionData.length);
+  const centroidStd = Math.sqrt(sectionData.reduce((a, s) => a + (s.centroid - avgCentroid) ** 2, 0) / sectionData.length);
+  // Floors prevent collapse on perfectly uniform tracks
+  const eSpread = Math.max(energyStd, avgEnergy * 0.04);
+  const cSpread = Math.max(centroidStd, avgCentroid * 0.02);
+  // Named thresholds (k values calibrated to match original behavior on typical tracks)
+  const T_INTRO     = avgEnergy  - 0.75 * eSpread; // ≈ avg * 0.85 at energyCV = 0.20
+  const T_INTRO2    = avgEnergy  - 1.00 * eSpread; // second section extends intro
+  const T_OUTRO     = avgEnergy  - 0.80 * eSpread; // ≈ avg * 0.80
+  const T_OUTRO2    = avgEnergy  - 1.25 * eSpread; // earlier second-to-last outro
+  const T_BRIDGE_E  = avgEnergy  - 0.50 * eSpread; // bridge: slightly below avg
+  const T_PRECHORUS = avgEnergy  - 0.25 * eSpread; // pre-chorus: near avg
+  const T_CHORUS_C  = avgCentroid + 0.15 * cSpread; // chorus: noticeably brighter
+  const T_BRIDGE_C  = avgCentroid + 0.80 * cSpread; // bridge: distinctly brighter
+
   const sections: AudioSection[] = sectionData.map((sd, i) => {
     let label: string;
 
@@ -884,34 +905,34 @@ function detectSections(mono: Float32Array, sampleRate: number): AudioSection[] 
     const relPos = i / Math.max(totalSections - 1, 1); // 0..1 relative position in song
 
     // Intro: leading section(s) with below-average energy
-    if (isFirst && sd.energy < avgEnergy * 0.85) {
+    if (isFirst && sd.energy < T_INTRO) {
       label = "intro";
     }
     // Extend intro to second section if still quiet AND song has >= 5 sections
-    else if (i === 1 && totalSections >= 5 && sd.energy < avgEnergy * 0.80 && sectionData[0].energy < avgEnergy * 0.85) {
+    else if (i === 1 && totalSections >= 5 && sd.energy < T_INTRO2 && sectionData[0].energy < T_INTRO) {
       label = "intro";
     }
     // Outro: trailing section(s) with below-average energy in last 15% of song
-    else if (isLast && sd.energy < avgEnergy * 0.80) {
+    else if (isLast && sd.energy < T_OUTRO) {
       label = "outro";
     }
-    else if (isSecondToLast && totalSections >= 6 && sd.energy < avgEnergy * 0.75) {
+    else if (isSecondToLast && totalSections >= 6 && sd.energy < T_OUTRO2) {
       label = "outro";
     }
-    // Chorus: high energy + high centroid (bright, loud) — occurs in top 25% energy sections
+    // Chorus: high energy + brighter than average centroid — occurs in top 25% energy sections
     // Bias toward mid-to-late positions (chorus rarely in first 20% of song)
-    else if (sd.energy >= topEnergyThreshold && sd.centroid > avgCentroid * 1.02 && relPos > 0.15) {
+    else if (sd.energy >= topEnergyThreshold && sd.centroid > T_CHORUS_C && relPos > 0.15) {
       label = "chorus";
     }
     // Bridge: mid-to-late section with distinctly different character (high centroid but lower energy)
     // Appears after first chorus and before outro
-    else if (relPos > 0.5 && relPos < 0.85 && sd.energy < avgEnergy * 0.90 && sd.centroid > avgCentroid * 1.12) {
+    else if (relPos > 0.5 && relPos < 0.85 && sd.energy < T_BRIDGE_E && sd.centroid > T_BRIDGE_C) {
       label = "bridge";
     }
     // Pre-chorus: section just before a chorus — rising energy, above-average centroid
     else if (
       i < totalSections - 1 &&
-      sd.energy > avgEnergy * 0.95 &&
+      sd.energy > T_PRECHORUS &&
       sd.centroid > avgCentroid &&
       sectionData[i + 1].energy >= topEnergyThreshold
     ) {
@@ -1037,11 +1058,14 @@ function computeSpotifyFeatures(
     (1 - rmsNorm) * 0.15
   );
 
-  // ── VALENCE (mode-aware) ──────────────────────────────────────────────────
-  // +0.15 se modo maior, −0.15 se menor; combinado com brilho e contraste
+  // ── VALENCE (mode + rhythm + brightness) ──────────────────────────────────
+  // Mode shift reduced from ±0.15 to ±0.08: the major=happy / minor=sad
+  // heuristic is acoustically weak for Brazilian music where minor-key sambas,
+  // bossas, and forró are typically joyful. Rhythm (onsetNorm) is added as a
+  // positive valence signal — percussive, high-onset tracks (samba, forró,
+  // baile funk) express positive affect regardless of harmonic mode.
   const isMinor = /m$/.test(keyName ?? "");
-  const modeShift = isMinor ? -0.15 : 0.15;
-  // Contraste de RMS entre seções (faixas alegres variam)
+  const modeShift = isMinor ? -0.08 : 0.08;
   let sectionContrast = 0;
   if (sections.length >= 2) {
     const rmsList = sections.map(s => s.rms_dbfs);
@@ -1051,8 +1075,9 @@ function computeSpotifyFeatures(
   const valence = clamp(
     0.5 + modeShift +
     (centroidNorm - 0.5) * 0.25 +
-    (energy - 0.5) * 0.20 +
-    sectionContrast * 0.15
+    (energy - 0.5) * 0.25 +
+    (onsetNorm - 0.3) * 0.10 +
+    sectionContrast * 0.10
   );
 
   // ── SPEECHINESS (banda vocal + ZCR) ──────────────────────────────────────

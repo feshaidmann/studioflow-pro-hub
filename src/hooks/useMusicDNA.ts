@@ -141,14 +141,32 @@ export interface DiagnosisResult {
 }
 
 // Calibração v1: offsets empíricos para alinhar features extraídas pelo navegador
-// (Web Audio API) com o pipeline Python/Librosa do catálogo. Stub conservador.
-// Atualizar conforme dados de calibração reais forem coletados.
-export const BROWSER_CALIBRATION = {
+// (Web Audio API) com o pipeline Python/Librosa do catálogo.
+//
+// Como medir offsets reais:
+//   1. Exportar 20+ faixas do catálogo (referências com features Python conhecidas).
+//   2. Rodá-las por analyzeAudioFull() no browser, coletar as mesmas features.
+//   3. Calcular mean(browser_value − python_value) por feature.
+//   4. Chamar updateBrowserCalibration({ lufs_offset_db: média, ... }) na inicialização.
+//
+// Defaults conservadores (zero/um) são matematicamente neutros e não degradam
+// a similaridade com o catálogo enquanto dados reais não estiverem disponíveis.
+export const BROWSER_CALIBRATION: {
+  lufs_offset_db: number;
+  centroid_scale: number;
+  rolloff_scale: number;
+  flatness_offset: number;
+} = {
   lufs_offset_db: 0,
   centroid_scale: 1,
   rolloff_scale: 1,
   flatness_offset: 0,
-} as const;
+};
+
+/** Atualiza os offsets de calibração em runtime (e.g., após carregar de Supabase). */
+export function updateBrowserCalibration(updates: Partial<typeof BROWSER_CALIBRATION>): void {
+  Object.assign(BROWSER_CALIBRATION, updates);
+}
 
 export function calibrateForCatalog(features: {
   lufs_integrated: number | null;
