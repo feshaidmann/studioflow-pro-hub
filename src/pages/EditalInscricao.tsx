@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Sparkles, Copy, Check, Save, Loader2, FileText, ClipboardList, RefreshCw, BookmarkPlus, ChevronRight, User, Upload } from "lucide-react";
+import { ArrowLeft, Sparkles, Copy, Check, Save, Loader2, FileText, ClipboardList, RefreshCw, BookmarkPlus, ChevronRight, User, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -38,9 +38,13 @@ export default function EditalInscricao() {
   const { t } = useLanguage();
   const { projects } = useProjects();
   const { profile } = useProfile();
-  const { extracting, extractedFields, extractFields, extractFieldsFromFile, saving, saveRascunho, loadRascunho, lastError, attemptProgress } = useRascunhoEdital();
+  const { extracting, extractedFields, extractFields: _extractFields, extractFieldsFromFile, extractFieldsFromText, setExtractedFieldsManual, saving, saveRascunho, loadRascunho, lastError, attemptProgress } = useRascunhoEdital();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [editalText, setEditalText] = useState("");
+  const [inputMode, setInputMode] = useState<"upload" | "paste">("upload");
+  type Step = "docInput" | "filling";
+  const [step, setStep] = useState<Step>("docInput");
 
   const [edital, setEdital] = useState<EditalInfo | null>(null);
   const [loadingEdital, setLoadingEdital] = useState(true);
@@ -60,7 +64,7 @@ export default function EditalInscricao() {
     [allApplications, id]
   );
 
-  // Load edital info
+  // Load edital info + existing draft
   useEffect(() => {
     if (!id || !user) return;
     (async () => {
@@ -73,54 +77,28 @@ export default function EditalInscricao() {
       setEdital(data as any);
       setLoadingEdital(false);
 
-      // Load existing draft
       const draft = await loadRascunho(id);
       if (draft) {
-        setFormValues(draft.campos as Record<string, string>);
+        const savedValues = draft.campos as Record<string, string>;
+        setFormValues(savedValues);
         setRascunhoId(draft.id);
         setSelectedProject(draft.project_id || "");
+        // Reconstruct campo definitions from saved keys so the form renders without re-extraction
+        const reconstructed: EditalField[] = Object.keys(savedValues)
+          .filter((k) => savedValues[k])
+          .map((k) => ({ nome: k, tipo: "textarea", obrigatorio: false, descricao: "", opcoes: null }));
+        if (reconstructed.length > 0) {
+          setExtractedFieldsManual({ campos: reconstructed, resumo_edital: "", documentos_exigidos: [] });
+          setStep("filling");
+        }
       }
     })();
-  }, [id, user, loadRascunho]);
+  }, [id, user, loadRascunho, setExtractedFieldsManual]);
 
-  // Extract fields (manual trigger — usado como fallback no card de setup)
-  const handleExtract = () => {
-    if (!edital) return;
-    extractFields(edital.link || undefined, edital.titulo, edital.id);
-  };
-
-  // Auto-extração: dispara uma vez assim que o edital carrega e não houver rascunho
-  // nem campos extraídos. Evita a tela vazia em que o usuário precisava clicar
-  // "Extrair campos" para começar.
-  const autoExtractedRef = useRef(false);
+  // When extraction succeeds, move to the filling step
   useEffect(() => {
-    if (!edital || extracting || extractedFields || autoExtractedRef.current) return;
-    if (rascunhoId) return;
-    autoExtractedRef.current = true;
-    extractFields(edital.link || undefined, edital.titulo, edital.id);
-  }, [edital, extracting, extractedFields, rascunhoId, extractFields]);
-
-  // Após esgotar as 3 tentativas em erro transitório, apaga o edital e volta
-  // para /carreira — evita deixar entradas "fantasma" inutilizáveis na lista.
-  const purgedRef = useRef(false);
-  useEffect(() => {
-    if (!lastError?.exhausted || !edital || !user || purgedRef.current) return;
-    purgedRef.current = true;
-    (async () => {
-      try {
-        // Apaga rascunho (se houver) e o edital (RLS garante escopo por user_id)
-        await supabase.from("rascunhos_editais").delete().eq("edital_id", edital.id).eq("user_id", user.id);
-        await supabase.from("editais").delete().eq("id", edital.id).eq("user_id", user.id);
-        toast.error(`Edital "${edital.titulo}" foi removido após 3 tentativas sem sucesso.`, {
-          description: "Você pode adicioná-lo de novo mais tarde quando o portal estiver estável.",
-        });
-      } catch (err) {
-        console.error("Falha ao apagar edital:", err);
-      } finally {
-        navigate("/carreira", { replace: true });
-      }
-    })();
-  }, [lastError, edital, user, navigate]);
+    if (extractedFields) setStep("filling");
+  }, [extractedFields]);
 
 
   // Pre-fill simple fields from profile — more aggressive matching
@@ -150,6 +128,31 @@ export default function EditalInscricao() {
     setFormValues(vals);
     if (filled > 0) toast.success(`${filled} campo${filled > 1 ? "s" : ""} preenchido${filled > 1 ? "s" : ""} com seu perfil`);
   }, [extractedFields, profile, formValues]);
+
+  const DEFAULT_CAMPOS: EditalField[] = [
+    { nome: "Nome do projeto", tipo: "text", obrigatorio: true, descricao: "", opcoes: null },
+    { nome: "Artista / Grupo responsável", tipo: "text", obrigatorio: true, descricao: "", opcoes: null },
+    { nome: "Área artística", tipo: "text", obrigatorio: true, descricao: "Ex: Música, Teatro, Dança, Circo…", opcoes: null },
+    { nome: "Resumo do projeto", tipo: "textarea", obrigatorio: true, descricao: "Breve descrição do projeto (até 300 palavras)", opcoes: null },
+    { nome: "Memória descritiva", tipo: "textarea", obrigatorio: false, descricao: "Histórico, justificativa e objetivos do projeto", opcoes: null },
+    { nome: "Público-alvo", tipo: "textarea", obrigatorio: false, descricao: "A quem o projeto se destina", opcoes: null },
+    { nome: "Justificativa cultural", tipo: "textarea", obrigatorio: false, descricao: "Relevância cultural e social do projeto", opcoes: null },
+    { nome: "Cronograma de execução", tipo: "textarea", obrigatorio: false, descricao: "Etapas de produção com datas estimadas", opcoes: null },
+    { nome: "Planilha de orçamento", tipo: "textarea", obrigatorio: false, descricao: "Custos previstos e fontes de financiamento", opcoes: null },
+    { nome: "Biografia do proponente", tipo: "textarea", obrigatorio: false, descricao: "Trajetória artística resumida", opcoes: null },
+  ];
+
+  const handleSkip = useCallback(() => {
+    const preFilled: Record<string, string> = {};
+    if (profile) {
+      preFilled["Artista / Grupo responsável"] = profile.display_name || "";
+      preFilled["Área artística"] = profile.specialties?.join(", ") || "";
+      preFilled["Biografia do proponente"] = profile.bio || "";
+    }
+    setExtractedFieldsManual({ campos: DEFAULT_CAMPOS, resumo_edital: "", documentos_exigidos: [] });
+    setFormValues(preFilled);
+    setStep("filling");
+  }, [profile, setExtractedFieldsManual]);
 
   // Batch fill all textarea fields with AI
   const handleBatchFill = useCallback(async () => {
@@ -375,115 +378,137 @@ export default function EditalInscricao() {
         </Card>
       )}
 
-      {/* Step 0: fallback — só aparece se a auto-extração falhou (toast de erro foi
-          mostrado pelo hook). Permite tentar de novo e escolher um projeto a vincular. */}
-      {!extractedFields && !extracting && autoExtractedRef.current && (
+      {/* Step 0 — documento do edital */}
+      {step === "docInput" && (
         <Card>
-          <CardContent className="pt-5 space-y-4">
-            <div className="flex flex-col items-center text-center py-6">
-              <ClipboardList className="h-12 w-12 text-muted-foreground/40 mb-4" />
-              <h2 className="text-lg font-medium mb-2">Não conseguimos ler o edital automaticamente</h2>
-              {lastError && (
-                <div className="flex items-center gap-2 mb-3">
-                  <Badge variant="destructive">{extractCauseLabel(lastError.cause)}</Badge>
-                  {lastError.attempt > 0 && (
-                    <span className="text-xs text-muted-foreground">Tentativa {lastError.attempt}</span>
-                  )}
-                </div>
+          <CardContent className="pt-6 pb-5 space-y-5">
+            <div className="text-center space-y-2">
+              <FileText className="h-10 w-10 text-muted-foreground/40 mx-auto" />
+              <h2 className="text-base font-semibold">Forneça o documento do edital</h2>
+              <p className="text-sm text-muted-foreground max-w-md mx-auto">
+                A IA lê o regulamento e preenche os campos da candidatura com base no seu perfil e projeto.
+              </p>
+              {edital.link && (
+                <a
+                  href={edital.link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-primary hover:underline inline-flex items-center gap-1"
+                >
+                  <ExternalLink className="h-3 w-3" /> Abrir edital oficial
+                </a>
               )}
-              <p className="text-sm text-foreground max-w-md mb-2">
-                {lastError?.message ?? "O link pode estar fora do ar ou o regulamento exige login."}
-              </p>
-              <p className="text-sm text-muted-foreground max-w-md mb-6">
-                {lastError ? extractCauseGuidance(lastError.cause) : "Tente novamente — ou abra o edital oficial e preencha manualmente."}
-              </p>
+            </div>
 
-              <div className="w-full max-w-sm space-y-3">
-                <div>
-                  <Label>Vincular a um projeto (opcional)</Label>
-                  <Select value={selectedProject} onValueChange={setSelectedProject}>
-                    <SelectTrigger><SelectValue placeholder="Selecione um projeto" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Nenhum</SelectItem>
-                      {projects.filter((p) => !p.completed).map((p) => (
-                        <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <Button className="w-full" onClick={handleExtract}>
-                  <RefreshCw className="h-4 w-4 mr-1.5" />
-                  Tentar novamente
-                </Button>
-                {edital.link && (
-                  <Button variant="outline" className="w-full" asChild>
-                    <a href={edital.link} target="_blank" rel="noopener noreferrer">
-                      Abrir edital oficial
-                    </a>
-                  </Button>
-                )}
-              </div>
+            {/* Project selector */}
+            <div>
+              <Label className="text-xs mb-1.5 block">Vincular a projeto (opcional)</Label>
+              <Select value={selectedProject} onValueChange={setSelectedProject}>
+                <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Nenhum projeto" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Nenhum</SelectItem>
+                  {projects.filter((p) => !p.completed).map((p) => (
+                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-              {/* Fallback: upload manual do edital */}
+            {/* Mode toggle */}
+            <div className="flex rounded-lg border border-border overflow-hidden text-sm font-medium">
+              {(["upload", "paste"] as const).map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => setInputMode(m)}
+                  className={
+                    "flex-1 py-2 transition-colors " +
+                    (inputMode === m
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:bg-muted")
+                  }
+                >
+                  {m === "upload" ? "📎 Upload PDF/DOC" : "📋 Colar texto"}
+                </button>
+              ))}
+            </div>
+
+            {inputMode === "upload" && (
               <UploadEditalPanel
                 fileInputRef={fileInputRef}
                 selectedFile={selectedFile}
                 setSelectedFile={setSelectedFile}
                 extracting={extracting}
-                onExtract={() => {
-                  if (!selectedFile || !edital) return;
-                  extractFieldsFromFile(selectedFile, edital.id);
-                }}
-                className="mt-6 pt-6 border-t"
+                onExtract={() => { if (selectedFile) extractFieldsFromFile(selectedFile, edital.id); }}
+                className="w-full"
+                title=""
+                description="PDF, DOC, DOCX ou TXT — até 10 MB"
               />
-            </div>
-          </CardContent>
-        </Card>
-      )}
+            )}
 
-      {/* Loading — primeira extração ou retry. Mostra também o upload pra
-          quem já tem o PDF em mãos e quer pular o scraping do link. */}
-      {extracting && (
-        <Card>
-          <CardContent className="py-8 flex flex-col items-center text-center space-y-6">
-            <div className="flex flex-col items-center w-full max-w-xs">
-              <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
-              <p className="text-sm text-muted-foreground">
+            {inputMode === "paste" && (
+              <div className="space-y-2">
+                <Label className="text-xs">Conteúdo do edital</Label>
+                <p className="text-xs text-muted-foreground">
+                  Cole os requisitos, campos obrigatórios e critérios de seleção.
+                </p>
+                <Textarea
+                  value={editalText}
+                  onChange={(e) => setEditalText(e.target.value.slice(0, 50_000))}
+                  rows={8}
+                  placeholder="Cole aqui o texto do edital, os campos do formulário de inscrição ou os critérios de seleção…"
+                  className="resize-none text-sm"
+                  disabled={extracting}
+                />
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground">
+                    {editalText.length.toLocaleString("pt-BR")} / 50.000 caracteres
+                  </span>
+                  <Button
+                    size="sm"
+                    onClick={() => extractFieldsFromText(editalText, edital.id)}
+                    disabled={extracting || editalText.trim().length < 50}
+                  >
+                    <Sparkles className="h-3.5 w-3.5 mr-1.5" />
+                    Analisar e preencher
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Extraction loading feedback */}
+            {extracting && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin shrink-0" />
                 {attemptProgress && attemptProgress.current > 1
-                  ? `Tentativa ${attemptProgress.current} de ${attemptProgress.max} — a IA pode estar instável…`
-                  : "Analisando edital e extraindo campos..."}
-              </p>
-              {attemptProgress && (
-                <>
-                  <Progress
-                    value={(attemptProgress.current / attemptProgress.max) * 100}
-                    className="h-1.5 mt-3 w-full"
-                  />
-                  <p className="text-xs text-muted-foreground mt-1.5">
-                    {attemptProgress.current}/{attemptProgress.max} tentativas
-                  </p>
-                </>
-              )}
+                  ? `Tentativa ${attemptProgress.current}/${attemptProgress.max} — aguarde…`
+                  : "Lendo o edital…"}
+              </div>
+            )}
+
+            {/* Error feedback */}
+            {lastError && !extracting && (
+              <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs space-y-0.5">
+                <div className="font-medium text-destructive">{extractCauseLabel(lastError.cause)}</div>
+                <div className="text-muted-foreground">{extractCauseGuidance(lastError.cause)}</div>
+              </div>
+            )}
+
+            <div className="flex items-center justify-between pt-2 border-t">
+              <Button variant="ghost" size="sm" onClick={() => navigate("/carreira")}>
+                <ArrowLeft className="h-3.5 w-3.5 mr-1" /> Voltar
+              </Button>
+              <Button variant="ghost" size="sm" onClick={handleSkip} disabled={extracting}>
+                Pular e preencher manualmente
+                <ChevronRight className="h-3.5 w-3.5 ml-1" />
+              </Button>
             </div>
-            <UploadEditalPanel
-              fileInputRef={fileInputRef}
-              selectedFile={selectedFile}
-              setSelectedFile={setSelectedFile}
-              extracting={extracting}
-              onExtract={() => {
-                if (!selectedFile || !edital) return;
-                extractFieldsFromFile(selectedFile, edital.id);
-              }}
-              className="w-full max-w-sm pt-6 border-t text-left"
-              title="Já tem o PDF do edital?"
-              description="Envie aqui para pular o scraping e extrair os campos direto do arquivo oficial."
-            />
           </CardContent>
         </Card>
       )}
 
-      {/* Fields form */}
-      {extractedFields && !extracting && (
+      {/* Fields form — only in filling step */}
+      {step === "filling" && extractedFields && !extracting && (
         <>
           {/* Summary */}
           {extractedFields.resumo_edital && (
@@ -519,28 +544,36 @@ export default function EditalInscricao() {
             </Button>
           </div>
 
-          {/* Re-extrair a partir de um PDF oficial (opcional) */}
+          {/* Re-extrair a partir de outro documento */}
           <Card>
             <CardContent className="pt-4 pb-5">
               <details className="group">
                 <summary className="flex items-center gap-2 cursor-pointer text-sm font-medium select-none">
                   <FileText className="h-4 w-4 text-muted-foreground" />
-                  Enviar PDF do edital (re-extrair campos)
+                  Substituir campos com outro documento
                   <span className="text-xs text-muted-foreground font-normal ml-auto">opcional</span>
                 </summary>
-                <div className="mt-4 flex justify-center">
+                <div className="mt-4 space-y-3">
+                  <p className="text-xs text-muted-foreground">
+                    Os campos serão re-extraídos do novo arquivo. Suas respostas salvas são mantidas.
+                  </p>
                   <UploadEditalPanel
                     fileInputRef={fileInputRef}
                     selectedFile={selectedFile}
                     setSelectedFile={setSelectedFile}
                     extracting={extracting}
-                    onExtract={() => {
-                      if (!selectedFile || !edital) return;
-                      extractFieldsFromFile(selectedFile, edital.id);
-                    }}
-                    title="Substituir pelos campos do PDF"
-                    description="Os campos atuais serão substituídos pelos extraídos do arquivo oficial. Suas respostas em rascunho são mantidas."
+                    onExtract={() => { if (selectedFile) extractFieldsFromFile(selectedFile, edital.id); }}
+                    title=""
+                    description="PDF, DOC, DOCX ou TXT — até 10 MB"
                   />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-xs"
+                    onClick={() => { setStep("docInput"); }}
+                  >
+                    <RefreshCw className="h-3 w-3 mr-1" /> Voltar à entrada do documento
+                  </Button>
                 </div>
               </details>
             </CardContent>

@@ -107,13 +107,14 @@ Deno.serve(async (req) => {
     userId = user.id;
 
     const body = await req.json().catch(() => ({}));
-    const { url, titulo, file } = body ?? {};
+    const { url, titulo, file, text } = body ?? {};
     hasUrl = !!url;
     hasTitulo = !!titulo;
     const hasFile = !!file && typeof file === "object" && typeof file.base64 === "string";
+    const hasText = typeof text === "string" && text.trim().length > 0;
 
-    if (!url && !titulo && !hasFile) {
-      return await finish(400, "bad_request", { error: "URL, título ou arquivo é obrigatório" });
+    if (!url && !titulo && !hasFile && !hasText) {
+      return await finish(400, "bad_request", { error: "URL, título, arquivo ou texto é obrigatório" });
     }
 
     const userPromptForFields = `Você está analisando um edital cultural brasileiro.
@@ -127,7 +128,84 @@ Extraia TODOS os campos obrigatórios do formulário de inscrição. Para cada c
 
 Retorne APENAS um JSON válido no formato: { "campos": [...], "resumo_edital": "breve resumo do edital", "documentos_exigidos": ["lista de documentos"] }`;
 
-    // ============ Branch: arquivo enviado pelo usuário (fallback) ============
+    // ============ Branch: texto colado pelo usuário ============
+    if (hasText) {
+      if (!LOVABLE_API_KEY) {
+        return await finish(500, "lovable_ai_error", { error: "Integração de IA indisponível" });
+      }
+
+      // Cap at 50k chars to avoid token overuse (~12k tokens)
+      const textContent = (text as string).slice(0, 50_000);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 60_000);
+      let aiRes: Response;
+      try {
+        aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          },
+          body: JSON.stringify({
+            model: "google/gemini-2.5-flash",
+            messages: [
+              {
+                role: "system",
+                content: "Você é um assistente especialista em editais culturais brasileiros. Extraia campos de formulários de inscrição e retorne JSON válido.",
+              },
+              {
+                role: "user",
+                content: `${userPromptForFields}\n\nCONTEÚDO DO EDITAL:\n${textContent}`,
+              },
+            ],
+          }),
+          signal: controller.signal,
+        });
+      } catch (fetchErr: any) {
+        clearTimeout(timeoutId);
+        const isAbort = fetchErr?.name === "AbortError";
+        return await finish(504, isAbort ? "perplexity_timeout" : "lovable_ai_error", {
+          error: isAbort ? "Tempo esgotado ao analisar texto" : "Falha de rede ao consultar IA",
+          fetch_error: String(fetchErr?.message ?? fetchErr),
+        });
+      }
+      clearTimeout(timeoutId);
+
+      if (!aiRes.ok) {
+        const errText = await aiRes.text().catch(() => "");
+        return await finish(502, "lovable_ai_error", {
+          error: "Erro ao consultar IA",
+          ai_status: aiRes.status,
+          raw_excerpt: errText.slice(0, 500),
+        });
+      }
+      const aiData = await aiRes.json().catch(() => null);
+      const rawContent: string = aiData?.choices?.[0]?.message?.content ?? "";
+      if (!rawContent.trim()) {
+        return await finish(502, "empty_response", { error: "A IA não retornou conteúdo" });
+      }
+
+      let parsed: any;
+      let parseFailed = false;
+      try {
+        const jsonMatch = rawContent.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) throw new Error("no_json_match");
+        parsed = JSON.parse(jsonMatch[0]);
+      } catch {
+        parseFailed = true;
+        parsed = { campos: [], resumo_edital: rawContent, documentos_exigidos: [] };
+      }
+      const fieldsCount = Array.isArray(parsed?.campos) ? parsed.campos.length : 0;
+      if (parseFailed) {
+        return await finish(200, "invalid_json", { ...parsed, fields_count: 0, raw_excerpt: rawContent.slice(0, 500) });
+      }
+      if (fieldsCount === 0) {
+        return await finish(200, "no_fields_extracted", { ...parsed, fields_count: 0, raw_excerpt: rawContent.slice(0, 500) });
+      }
+      return await finish(200, "ok", { ...parsed, fields_count: fieldsCount, source: "text" });
+    }
+
+    // ============ Branch: arquivo enviado pelo usuário ============
     if (hasFile) {
       if (!LOVABLE_API_KEY) {
         return await finish(500, "lovable_ai_error", { error: "Integração de IA indisponível" });
