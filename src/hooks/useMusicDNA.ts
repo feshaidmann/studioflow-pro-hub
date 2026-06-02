@@ -16,27 +16,40 @@ export type { RealAudioAnalysis, AudioSection } from "@/lib/audioAnalysis";
 // ── TYPES ────────────────────────────────────────────────────────────────────
 
 export type Genre =
+  // ── BR ──────────────────────────────────────────────
   | "Indie Folk"
   | "Pop Brasileiro"
-  | "Sertanejo Raiz"
-  | "Sertanejo Universitário"
+  | "Bossa Nova"
   | "MPB Contemporânea"
   | "Samba"
   | "Pagode"
-  | "Funk Carioca"
+  | "Sertanejo Raiz"
+  | "Sertanejo Universitário"
   | "Forró / Piseiro"
+  | "Funk Carioca"
+  | "Trap BR"
+  | "Rap BR"
   | "Indie BR"
   | "Rock Alternativo BR"
-  | "Rap BR"
-  | "R&B / Soul"
   | "Reggae BR"
   | "Axé / Pop Bahia"
-  | "Eletrônica / House"
-  | "Pop Internacional"
   | "Lo-Fi Hip Hop"
-  | "Trap BR"
-  | "Bossa Nova"
-  | "Rock Alternativo";
+  // ── Internacional ───────────────────────────────────
+  | "Pop Internacional"
+  | "Rock Alternativo"
+  | "Heavy Metal"
+  | "Punk Rock"
+  | "Folk Rock"
+  | "Grunge"
+  | "Hip-Hop"
+  | "Jazz"
+  | "Synth-Pop"
+  | "Eletrônica / House"
+  | "Country"
+  | "Reggae"
+  | "Ambient"
+  | "R&B / Soul"
+  | "Funk";
 
 
 export interface AudioFeatures {
@@ -208,6 +221,18 @@ export const GENRE_PRESETS: Record<Genre, AudioFeatures> = {
   "Trap BR":           { energy: 0.80, danceability: 0.76, acousticness: 0.06, valence: 0.35, instrumentalness: 0.05, liveness: 0.12 },
   "Bossa Nova":        { energy: 0.28, danceability: 0.52, acousticness: 0.82, valence: 0.58, instrumentalness: 0.20, liveness: 0.12 },
   "Rock Alternativo":  { energy: 0.78, danceability: 0.52, acousticness: 0.15, valence: 0.42, instrumentalness: 0.18, liveness: 0.25 },
+  // ── Internacional (alinhados com HARDCODED_GENRE_PROFILES) ──────
+  "Heavy Metal":       { energy: 0.92, danceability: 0.40, acousticness: 0.04, valence: 0.40, instrumentalness: 0.18, liveness: 0.20 },
+  "Punk Rock":         { energy: 0.88, danceability: 0.48, acousticness: 0.06, valence: 0.55, instrumentalness: 0.06, liveness: 0.25 },
+  "Folk Rock":         { energy: 0.45, danceability: 0.50, acousticness: 0.65, valence: 0.55, instrumentalness: 0.08, liveness: 0.18 },
+  "Grunge":            { energy: 0.75, danceability: 0.45, acousticness: 0.15, valence: 0.38, instrumentalness: 0.10, liveness: 0.22 },
+  "Hip-Hop":           { energy: 0.65, danceability: 0.78, acousticness: 0.18, valence: 0.50, instrumentalness: 0.05, liveness: 0.10 },
+  "Jazz":              { energy: 0.35, danceability: 0.45, acousticness: 0.75, valence: 0.50, instrumentalness: 0.55, liveness: 0.28 },
+  "Synth-Pop":         { energy: 0.70, danceability: 0.72, acousticness: 0.10, valence: 0.62, instrumentalness: 0.20, liveness: 0.10 },
+  "Country":           { energy: 0.55, danceability: 0.58, acousticness: 0.55, valence: 0.62, instrumentalness: 0.04, liveness: 0.22 },
+  "Reggae":            { energy: 0.55, danceability: 0.72, acousticness: 0.32, valence: 0.68, instrumentalness: 0.10, liveness: 0.22 },
+  "Ambient":           { energy: 0.18, danceability: 0.20, acousticness: 0.85, valence: 0.45, instrumentalness: 0.80, liveness: 0.05 },
+  "Funk":              { energy: 0.72, danceability: 0.80, acousticness: 0.15, valence: 0.68, instrumentalness: 0.08, liveness: 0.18 },
 };
 
 export const REFERENCE_ARTISTS: string[] = ALL_REFERENCE_ARTISTS;
