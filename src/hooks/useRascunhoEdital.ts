@@ -64,7 +64,7 @@ const CAUSE_PT: Record<ExtractCause, string> = {
   empty_response: "A IA não retornou conteúdo sobre este edital",
   invalid_json: "A IA respondeu, mas não em formato de formulário",
   no_fields_extracted: "Não identificamos campos obrigatórios na página",
-  lovable_ai_error: "A IA falhou ao analisar o arquivo enviado",
+  lovable_ai_error: "A IA falhou ao processar o conteúdo",
   file_too_large: "Arquivo excede o limite de 10 MB",
   unsupported_file_type: "Tipo de arquivo não suportado",
   unknown_error: "Erro inesperado ao consultar a IA",
@@ -88,7 +88,7 @@ export const CAUSE_GUIDANCE: Record<ExtractCause, string> = {
   no_fields_extracted:
     "A página provavelmente não contém o formulário em si. Procure o link do regulamento (geralmente PDF) e envie pelo upload manual abaixo.",
   lovable_ai_error:
-    "Tente reenviar o arquivo. Se persistir, converta para PDF e envie novamente.",
+    "Tente novamente. Se persistir, envie o PDF do regulamento pelo upload manual abaixo.",
   file_too_large:
     "Compacte o PDF (ex.: ilovepdf.com/compress_pdf) ou envie apenas as páginas do formulário e dos documentos exigidos.",
   unsupported_file_type:
@@ -107,7 +107,7 @@ const CAUSE_LABEL_SHORT: Record<ExtractCause, string> = {
   empty_response: "Resposta vazia",
   invalid_json: "Formato inválido",
   no_fields_extracted: "Sem campos",
-  lovable_ai_error: "Falha no arquivo",
+  lovable_ai_error: "Falha na IA",
   file_too_large: "Arquivo grande",
   unsupported_file_type: "Formato inválido",
   unknown_error: "Erro",
@@ -196,8 +196,14 @@ export function useRascunhoEdital() {
             body: invokeBody,
           });
           if (error) {
-            cause = "unknown_error";
-            httpStatus = (error as any)?.status;
+            try {
+              const body = await (error as any).context?.json?.();
+              cause = (body?.cause as ExtractCause) ?? "unknown_error";
+              httpStatus = body?.http_status ?? (error as any)?.status;
+            } catch {
+              cause = "unknown_error";
+              httpStatus = (error as any)?.status;
+            }
             extra = { error_message: error.message };
           } else {
             const p = (data ?? {}) as Partial<ExtractedFields> & {

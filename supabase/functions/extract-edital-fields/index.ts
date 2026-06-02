@@ -134,10 +134,16 @@ Retorne APENAS um JSON válido no formato: { "campos": [...], "resumo_edital": "
         return await finish(500, "lovable_ai_error", { error: "Integração de IA indisponível" });
       }
 
-      // Cap at 50k chars to avoid token overuse (~12k tokens)
-      const textContent = (text as string).slice(0, 50_000);
+      // Normalize whitespace, then send head+tail so Annexes at end of
+      // Brazilian editais (ANEXO I — form fields) are not cut off.
+      const normalized = (text as string).replace(/\s{3,}/g, "\n\n").trim();
+      const MAX_CHARS = 80_000;
+      const textContent =
+        normalized.length <= MAX_CHARS
+          ? normalized
+          : normalized.slice(0, 40_000) + "\n\n[…]\n\n" + normalized.slice(-40_000);
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 60_000);
+      const timeoutId = setTimeout(() => controller.abort(), 90_000);
       let aiRes: Response;
       try {
         aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
