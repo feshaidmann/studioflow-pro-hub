@@ -8,7 +8,15 @@
  * - Zero-crossing rate (noise/brightness indicator)
  * - Transient detection (onset peaks per second)
  * - Raw band values + derived metrics exposed for AI prompt enrichment
+ *
+ * v2 performance fix: replaced O(N²) DFT with FFT.js O(N log N), matching
+ * audioAnalysis.ts. Segments are now distributed across the full track
+ * (strided sampling) rather than capped to the opening seconds.
  */
+
+type FFTCtor = new (size: number) => { createComplexArray(): number[]; realTransform(out: number[], data: ArrayLike<number>): void; completeSpectrum(out: number[]): void };
+import FFTImport from "fft.js";
+const FFT: FFTCtor = FFTImport as unknown as FFTCtor;
 
 export interface SpectralMetrics {
   spectralFlux: number;       // 0-1, average change between frames
@@ -76,45 +84,51 @@ export async function detectInstruments(file: File): Promise<InstrumentDetection
   const rawZCR = zeroCrossings / durationSec;
   const normalizedZCR = Math.min(1, Math.max(0, rawZCR / 10000));
 
-  // ── FFT with 50% overlap ───────────────────────────────────────────
+  // ── FFT with 50% overlap (O(N log N) via FFT.js) ─────────────────────────
   const fftSize = 4096;
   const hopSize = fftSize / 2; // 50% overlap
   const binCount = fftSize / 2;
   const numSegments = Math.max(1, Math.floor((length - fftSize) / hopSize) + 1);
-  const cappedSegments = Math.min(numSegments, 60); // cap for performance
+  // With FFT.js the cost per frame is ~O(N log N), so 200 frames is cheap.
+  // When the track is longer than 200 natural hops we stride evenly across the
+  // full duration so we sample the whole arrangement, not just the opening bars.
+  const cappedSegments = Math.min(numSegments, 200);
+  const useStride = numSegments > 200;
 
   const magnitudes = new Float64Array(binCount);
   const prevMags = new Float64Array(binCount);
   let totalFlux = 0;
   let fluxFrames = 0;
 
+  // Pre-allocate once outside the loop — avoids repeated GC pressure
+  const fft = new FFT(fftSize);
+  const fftOut = fft.createComplexArray();
+  const fftBuf = new Array<number>(fftSize);
+  const hannWindow = new Float32Array(fftSize);
+  for (let i = 0; i < fftSize; i++) {
+    hannWindow[i] = 0.5 * (1 - Math.cos((2 * Math.PI * i) / (fftSize - 1)));
+  }
+
   for (let seg = 0; seg < cappedSegments; seg++) {
-    const offset = seg * hopSize;
+    const offset = useStride
+      ? Math.floor(seg * (length - fftSize) / Math.max(cappedSegments - 1, 1))
+      : seg * hopSize;
     if (offset + fftSize > length) break;
 
-    const real = new Float64Array(fftSize);
-    const imag = new Float64Array(fftSize);
+    // Apply Hann window then FFT (O(N log N))
+    for (let i = 0; i < fftSize; i++) fftBuf[i] = mono[offset + i] * hannWindow[i];
+    fft.realTransform(fftOut, fftBuf);
+    fft.completeSpectrum(fftOut);
 
-    // Hann window
-    for (let i = 0; i < fftSize; i++) {
-      const w = 0.5 * (1 - Math.cos((2 * Math.PI * i) / (fftSize - 1)));
-      real[i] = mono[offset + i] * w;
-    }
-
-    // DFT for binCount bins
     const segMags = new Float64Array(binCount);
     for (let k = 0; k < binCount; k++) {
-      let re = 0, im = 0;
-      for (let n = 0; n < fftSize; n++) {
-        const angle = (2 * Math.PI * k * n) / fftSize;
-        re += real[n] * Math.cos(angle);
-        im -= real[n] * Math.sin(angle);
-      }
+      const re = fftOut[2 * k];
+      const im = fftOut[2 * k + 1];
       segMags[k] = Math.sqrt(re * re + im * im);
       magnitudes[k] += segMags[k] / cappedSegments;
     }
 
-    // Spectral flux: sum of positive differences from previous frame
+    // Spectral flux: sum of positive magnitude differences from previous frame
     if (seg > 0) {
       let flux = 0;
       for (let k = 0; k < binCount; k++) {
