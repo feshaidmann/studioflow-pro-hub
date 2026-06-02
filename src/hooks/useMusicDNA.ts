@@ -724,11 +724,11 @@ export function useMusicDNA(): UseMusicDNAReturn {
         },
       });
       const clean = rawText.replace(/```json\n?|```/g, "").trim();
-      let parsed: any;
+      let parsed: Partial<DiagnosisResult>;
       try {
-        parsed = JSON.parse(clean);
+        parsed = JSON.parse(clean) as Partial<DiagnosisResult>;
       } catch {
-        parsed = JSON.parse(repairJsonString(clean));
+        parsed = JSON.parse(repairJsonString(clean)) as Partial<DiagnosisResult>;
       }
 
       const rawReferences: ReferenceMatch[] = Array.isArray(parsed.referencias_proximas) ? parsed.referencias_proximas : [];
@@ -744,7 +744,7 @@ export function useMusicDNA(): UseMusicDNAReturn {
       appendLog(catalogNeighbors.length ? `🎯  ${catalogNeighbors.length} faixas próximas encontradas no catálogo.` : "✅  Diagnóstico concluído.");
 
       return {
-        ...parsed,
+        ...(parsed as DiagnosisResult),
         distance,
         trackFeatures: tFeatures,
         refFeatures: rFeatures,
