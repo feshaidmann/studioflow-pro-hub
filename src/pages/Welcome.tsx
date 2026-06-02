@@ -42,8 +42,8 @@ export default function Welcome() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-pulse text-muted-foreground text-sm">{t("misc.loading")}</div>
+      <div className="welcome-shell flex items-center justify-center min-h-screen">
+        <div className="animate-pulse text-white/50 text-sm">{t("misc.loading")}</div>
       </div>
     );
   }
@@ -58,31 +58,25 @@ export default function Welcome() {
   };
 
   return (
-    <div className="relative min-h-screen overflow-x-hidden bg-background">
-      <div
-        className="pointer-events-none fixed inset-0 z-0 opacity-[0.03]"
-        aria-hidden
-        style={{
-          backgroundImage:
-            "radial-gradient(circle at 20% 20%, hsl(var(--primary)) 0%, transparent 50%)",
-        }}
-      />
-
-      <main className="relative z-10 mx-auto flex max-w-2xl flex-col items-center px-5 pb-16 pt-8 md:px-8 md:pt-16">
+    <div className="welcome-shell min-h-screen w-full overflow-x-hidden">
+      <main className="mx-auto max-w-6xl space-y-4 p-4 md:space-y-6 md:p-8 lg:p-12">
         <WelcomeHero
           onGoogle={handleGoogleSignIn}
           onSignupEmail={() => navigate("/auth?mode=signup")}
           onLogin={() => navigate("/auth")}
         />
 
-        <ImpactMetrics />
-
         <WelcomeProductPreview />
+
+        <ImpactMetrics />
 
         <Suspense fallback={null}>
           <WelcomePainPoints />
           <WelcomeModules />
-          <WelcomeFinalCTA onGoogle={handleGoogleSignIn} />
+          <WelcomeFinalCTA
+            onGoogle={handleGoogleSignIn}
+            onSignupEmail={() => navigate("/auth?mode=signup")}
+          />
         </Suspense>
       </main>
     </div>
