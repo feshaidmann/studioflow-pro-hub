@@ -69,6 +69,14 @@ export default {
           DEFAULT: "hsl(var(--info))",
           foreground: "hsl(var(--info-foreground))",
         },
+        welcome: {
+          bg: "#0d0216",
+          surface: "#1a0b2e",
+        },
+      },
+      fontFamily: {
+        display: ['"Bebas Neue"', "Impact", "sans-serif"],
+        body: ['Barlow', 'system-ui', 'sans-serif'],
       },
       borderRadius: {
         lg: "var(--radius)",
