@@ -296,10 +296,7 @@ interface SpectralResult {
   freqPerBin: number;
 }
 
-// Carregamento dinâmico de fft.js (CommonJS via Vite)
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type FFTCtor = new (size: number) => { createComplexArray(): number[]; realTransform(out: number[], data: ArrayLike<number>): void; completeSpectrum(out: number[]): void };
-// eslint-disable-next-line @typescript-eslint/no-require-imports
 import FFTImport from "fft.js";
 const FFT: FFTCtor = FFTImport as unknown as FFTCtor;
 
@@ -1078,7 +1075,9 @@ function computeSpotifyFeatures(
   );
 
   // ── LIVENESS (variação de RMS por seção + high-band) ─────────────────────
-  // Gravações ao vivo têm mais variação dinâmica e ar (high-band)
+  // Gravações ao vivo têm mais variação dinâmica inter-seção e mais "ar" em
+  // high-band (ambience de sala, microfone ambiente). O termo anterior
+  // (1 − rmsNorm) penalizava tracks mais altos arbitrariamente — removido.
   let rmsVariation = 0;
   if (sections.length >= 3) {
     const rmsList = sections.map(s => s.rms_dbfs);
@@ -1087,9 +1086,8 @@ function computeSpotifyFeatures(
     rmsVariation = clamp(Math.sqrt(variance) / 6);
   }
   const liveness = clamp(
-    rmsVariation * 0.50 +
-    highBandRatio * 0.30 +
-    (1 - rmsNorm) * 0.20
+    rmsVariation * 0.60 +
+    highBandRatio * 0.40
   );
 
   return { energy, danceability, acousticness, valence, instrumentalness, liveness, speechiness };
@@ -1205,14 +1203,18 @@ export async function analyzeAudio(file: File): Promise<AnalysisResult> {
 
   // Detect mobile/low-memory devices to apply stricter limits and avoid tab kills
   const isMobile = typeof navigator !== "undefined" && /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
-  const lowMem = typeof navigator !== "undefined" && (navigator as any).deviceMemory && (navigator as any).deviceMemory <= 4;
+  const navExt = typeof navigator !== "undefined" ? (navigator as Navigator & { deviceMemory?: number }) : null;
+  const lowMem = (navExt?.deviceMemory ?? Infinity) <= 4;
   // Analyze at most ~120s on mobile (representative window for LUFS/TP/DR), full track on desktop
   const MAX_DURATION_SEC = isMobile || lowMem ? 120 : 600;
 
   let arrayBuffer: ArrayBuffer | null = await file.arrayBuffer();
 
   // Step 1 — decode at original rate using a temporary AudioContext
-  const probeCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+  const WebkitAudioCtx = (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+  const AudioCtx = window.AudioContext ?? WebkitAudioCtx;
+  if (!AudioCtx) throw new Error("Web Audio API não disponível neste navegador.");
+  const probeCtx = new AudioCtx();
   let decoded: AudioBuffer;
   try {
     decoded = await probeCtx.decodeAudioData(arrayBuffer.slice(0));

@@ -150,7 +150,7 @@ export const BROWSER_CALIBRATION = {
   flatness_offset: 0,
 } as const;
 
-function calibrateForCatalog(features: {
+export function calibrateForCatalog(features: {
   lufs_integrated: number | null;
   spectral_centroid_hz: number | null;
   spectral_rolloff: number | null;
@@ -235,6 +235,27 @@ export function toRadarData(track: AudioFeatures, ref: AudioFeatures) {
     Referência: Math.round(ref[k] * 100),
     fullMark: 100,
   }));
+}
+
+// ── PRODUCTION TIER ──────────────────────────────────────────────────────────
+
+export type ProductionTier = "bedroom" | "mid" | "pro-leaning";
+
+export function detectProductionTier(analysis: {
+  lufs_integrated: number;
+  dynamic_range_lu: number;
+  true_peak_dbtp: number;
+  liveness?: number | null;
+  spectral_centroid_hz: number;
+}): ProductionTier {
+  const { lufs_integrated: lufs, dynamic_range_lu: dr, true_peak_dbtp: tp, spectral_centroid_hz: centroid } = analysis;
+  const liveness = analysis.liveness ?? 0;
+  if (lufs >= -10 && dr < 7) return "pro-leaning";
+  if (lufs >= -11 && tp >= -2 && dr < 9 && centroid > 2000) return "pro-leaning";
+  if (lufs < -18) return "bedroom";
+  if (lufs < -16 && (dr > 11 || liveness > 0.3 || tp < -3)) return "bedroom";
+  if (dr > 14 && centroid < 2000 && lufs < -14) return "bedroom";
+  return "mid";
 }
 
 // ── PROMPT ────────────────────────────────────────────────────────────────────
@@ -351,28 +372,7 @@ function buildPrompt(
 
   const genreStreamingNote = input.genre ? (GENRE_STREAMING_CONTEXT[input.genre] || "") : "";
 
-  // Auto-detecta nível de produção a partir das próprias métricas — define o tom
-  // das sugestões (bedroom → DIY puro / mid → meio-termo / pro-leaning → master comercial).
-  const productionTier: "bedroom" | "mid" | "pro-leaning" = (() => {
-    const lufs = analysis.lufs_integrated;
-    const dr = analysis.dynamic_range_lu;
-    const tp = analysis.true_peak_dbtp;
-    const liveness = analysis.liveness ?? 0;
-    const centroid = analysis.spectral_centroid_hz;
-
-    // Pro-leaning: loudness agressivo + hiperlimitado (DR < 7 é sinal de limiter pesado)
-    if (lufs >= -10 && dr < 7) return "pro-leaning";
-    // Pro-leaning: loud + tight peak + espectro aberto (centroid alto = hi-fi tratado)
-    if (lufs >= -11 && tp >= -2 && dr < 9 && centroid > 2000) return "pro-leaning";
-
-    // Bedroom: muito quieto OU múltiplos sinais de gravação caseira sem tratamento
-    if (lufs < -18) return "bedroom";
-    if (lufs < -16 && (dr > 11 || liveness > 0.3 || tp < -3)) return "bedroom";
-    // Bedroom: dinâmica altíssima + centroid baixo (acústico não tratado)
-    if (dr > 14 && centroid < 2000 && lufs < -14) return "bedroom";
-
-    return "mid";
-  })();
+  const productionTier = detectProductionTier(analysis);
 
   const tierBlock = (() => {
     if (productionTier === "bedroom") {
@@ -554,6 +554,42 @@ async function callMusicDNAAnalyze(
   };
 }
 
+export function filterValidReferences(
+  rawRefs: ReferenceMatch[],
+  neighbors: CatalogNeighbor[],
+  floor = 0.7,
+): ReferenceMatch[] {
+  const validBands = new Set<string>(
+    neighbors
+      .filter((n) => typeof n.similarity_score === "number" && n.similarity_score >= floor)
+      .map((n) => (n.band ?? "").toLowerCase().trim())
+      .filter((s) => s.length > 0),
+  );
+  return rawRefs.filter((r) => {
+    const name = (r.artista ?? "").toLowerCase().trim();
+    return name.length > 0 && validBands.has(name);
+  });
+}
+
+export function repairJsonString(raw: string): string {
+  // Split on already-quoted string literals so the key-quoting regex never
+  // touches content inside string values (e.g. "tempo: parecido, label: x").
+  const strLiteral = /"(?:[^"\\]|\\.)*"/g;
+  const strings = raw.match(strLiteral) ?? [];
+  const parts = raw.split(strLiteral);
+  const fixedParts = parts.map((part) =>
+    part
+      .replace(/([{,]\s*)([a-zA-Z_$][a-zA-Z0-9_$]*)(\s*:)/g, '$1"$2"$3')
+      .replace(/,(\s*[}\]])/g, "$1"),
+  );
+  let result = "";
+  for (let i = 0; i < fixedParts.length; i++) {
+    result += fixedParts[i];
+    if (i < strings.length) result += strings[i];
+  }
+  return result;
+}
+
 // ── HOOK ─────────────────────────────────────────────────────────────────────
 
 type AnalysisStep = "idle" | "extracting" | "profiling" | "computing" | "generating" | "done";
@@ -701,33 +737,15 @@ export function useMusicDNA(): UseMusicDNAReturn {
         },
       });
       const clean = rawText.replace(/```json\n?|```/g, "").trim();
-      let parsed: any;
+      let parsed: Partial<DiagnosisResult>;
       try {
-        parsed = JSON.parse(clean);
+        parsed = JSON.parse(clean) as Partial<DiagnosisResult>;
       } catch {
-        // IA ocasionalmente retorna JSON com chaves sem aspas (estilo JS) ou vírgulas
-        // sobressalentes. Tentamos corrigi-las antes de desistir.
-        const repaired = clean
-          .replace(/([{,]\s*)([a-zA-Z_$][a-zA-Z0-9_$]*)(\s*:)/g, '$1"$2"$3')
-          .replace(/,(\s*[}\]])/g, "$1");
-        parsed = JSON.parse(repaired);
+        parsed = JSON.parse(repairJsonString(clean)) as Partial<DiagnosisResult>;
       }
 
-      // Validação client-side: `referencias_proximas` deve conter APENAS bandas dos
-      // vizinhos reais do catálogo com `similarity_score >= 0.70`. Curadoria estática
-      // (ALL_REFERENCE_ARTISTS) NÃO é fonte válida de proximidade técnica.
-      const SIMILARITY_FLOOR = 0.7;
-      const validNeighborBands = new Set<string>(
-        catalogNeighbors
-          .filter((n) => typeof n.similarity_score === "number" && n.similarity_score >= SIMILARITY_FLOOR)
-          .map((n) => (n.band ?? "").toLowerCase().trim())
-          .filter((s) => s.length > 0),
-      );
       const rawReferences: ReferenceMatch[] = Array.isArray(parsed.referencias_proximas) ? parsed.referencias_proximas : [];
-      const validatedReferences = rawReferences.filter((r) => {
-        const name = (r.artista ?? "").toLowerCase().trim();
-        return name.length > 0 && validNeighborBands.has(name);
-      });
+      const validatedReferences = filterValidReferences(rawReferences, catalogNeighbors);
       if (rawReferences.length !== validatedReferences.length) {
         const dropped = rawReferences.filter((r) => !validatedReferences.includes(r));
         console.warn("[music-dna] referências IA descartadas (fora dos vizinhos reais com score >= 0.70):", dropped.map((r) => r.artista));
@@ -739,7 +757,7 @@ export function useMusicDNA(): UseMusicDNAReturn {
       appendLog(catalogNeighbors.length ? `🎯  ${catalogNeighbors.length} faixas próximas encontradas no catálogo.` : "✅  Diagnóstico concluído.");
 
       return {
-        ...parsed,
+        ...(parsed as DiagnosisResult),
         distance,
         trackFeatures: tFeatures,
         refFeatures: rFeatures,
