@@ -63,8 +63,8 @@ interface ClassifyResult {
 async function classifyIntent(query: string): Promise<ClassifyResult> {
   // Heurística rápida — economiza chamada IA quando a intenção é óbvia
   const q = query.toLowerCase();
-  const editalHints = ["edital", "fomento", "bolsa", "prêmio", "premio", "aldir", "lei rouanet", "incentivo", "patroc"];
-  const palcoHints  = ["palco", "festival", "showcase", "abertura", "residência", "residencia", "show", "circuito", "sesc apresent"];
+  const editalHints = ["edital", "fomento", "bolsa", "prêmio", "premio", "aldir", "lei rouanet", "incentivo", "patroc", "concurso", "chamada publ", "convocatoria", "convocatória", "subvencao", "subvenção", "proac", "funarte"];
+  const palcoHints  = ["palco", "festival", "showcase", "abertura", "residência", "residencia", "circuito", "sesc apresent", "apresentacao", "apresentação", "selecao de artistas", "seleção de artistas"];
   const hitEdital = editalHints.some((h) => q.includes(h));
   const hitPalco  = palcoHints.some((h) => q.includes(h));
   if (hitEdital && !hitPalco) return { intent: "edital", reason: "heurística" };
@@ -229,15 +229,15 @@ serve(async (req) => {
           const enrichData = await enrichResp.json();
           const txt = enrichData?.choices?.[0]?.message?.content || "{}";
           const parsed = JSON.parse(txt);
-          summary = String(parsed.summary || "").slice(0, 200);
+          summary = String(parsed.summary || "").slice(0, 140);
           const reasons: Record<string, string> = parsed.reasons || {};
           editais.forEach((e: any, i: number) => {
             const r = reasons[`e${i}`];
-            if (r) e.match_reason = String(r).slice(0, 140);
+            if (r) e.match_reason = String(r).slice(0, 90);
           });
           palcos.forEach((p: any, i: number) => {
             const r = reasons[`p${i}`];
-            if (r) p.match_reason = String(r).slice(0, 140);
+            if (r) p.match_reason = String(r).slice(0, 90);
           });
           enrich_status = "ok";
         } else {
