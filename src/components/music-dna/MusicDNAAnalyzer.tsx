@@ -84,13 +84,7 @@ const ACCEPTED_AUDIO = [
   "audio/aiff", "audio/x-aiff", "audio/x-aifc",
 ];
 
-const GENRE_ENUM_VALUES = [
-  "Indie Folk", "Pop Brasileiro", "Sertanejo Raiz", "Sertanejo Universitário",
-  "MPB Contemporânea", "Samba", "Pagode", "Funk Carioca", "Forró / Piseiro",
-  "Indie BR", "Rock Alternativo BR", "Rap BR", "R&B / Soul", "Reggae BR",
-  "Axé / Pop Bahia", "Eletrônica / House", "Pop Internacional", "Lo-Fi Hip Hop",
-  "Trap BR", "Bossa Nova", "Rock Alternativo",
-] as const;
+const GENRE_ENUM_VALUES = Object.keys(GENRE_PRESETS) as [Genre, ...Genre[]];
 
 const formSchema = z.object({
   name: z.string().min(1, "Nome da faixa é obrigatório"),

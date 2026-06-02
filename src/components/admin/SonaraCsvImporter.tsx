@@ -10,7 +10,15 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { classifyGenre, HARDCODED_GENRE_PROFILES } from "@/lib/genreClassifier";
+import { classifyGenre, HARDCODED_GENRE_PROFILES, type ClassifierResult } from "@/lib/genreClassifier";
+
+// Converte string de CSV para number, retornando null para NaN/"nan"/vazio.
+// Diferente de `Number(x) || null`, preserva o valor 0 legítimo.
+function toNum(s: string | undefined): number | null {
+  if (s === undefined || s === "") return null;
+  const v = Number(s);
+  return Number.isFinite(v) ? v : null;
+}
 
 // ── Column mapping: Sonara CSV → import-reference-tracks schema ──────────────
 const SONARA_TO_DB: Record<string, string> = {
@@ -48,6 +56,7 @@ interface SonaraRow extends Record<string, string> {
 interface TransformPreview {
   totalRows: number;
   validRows: number;
+  noGenreSkipped: number;
   genreDistribution: Record<string, number>;
   confidenceCounts: Record<"alta" | "média" | "baixa" | "nula", number>;
   lowConfidenceExamples: Array<{ band: string; filename: string; detected: string; gap: number }>;
@@ -73,7 +82,7 @@ function transformRow(
   raw: SonaraRow,
   batchName: string,
   analysisDate: string,
-): Record<string, string> | null {
+): { row: Record<string, string>; cls: ClassifierResult | null } | null {
   const band = raw.artista?.trim();
   const arquivo = raw.arquivo?.trim();
   if (!band || !arquivo) return null;
@@ -91,32 +100,34 @@ function transformRow(
 
   // Remap known numeric columns
   for (const [sonaraCol, dbCol] of Object.entries(SONARA_TO_DB)) {
-    if (sonaraCol === "artista") continue; // already handled
+    if (sonaraCol === "artista") continue;
     const val = raw[sonaraCol];
     if (val !== undefined && val !== "" && isFinite(Number(val))) {
       out[dbCol] = val;
     }
   }
 
-  // Auto-classify genre
-  const genre = classifyGenre(
+  // Auto-classify genre — toNum() preserva 0 legítimo (|| null trataria como ausente)
+  const cls = classifyGenre(
     {
-      tempo_bpm:    Number(raw.bpm)                   || null,
-      energy:       Number(raw.energia)               || null,
-      danceability: Number(raw.dancabilidade)         || null,
-      valence:      Number(raw.sentimento_valence)    || null,
-      acousticness: Number(raw.acousticidade)         || null,
-      lufs_integrated: Number(raw.loudness_lufs)      || null,
+      tempo_bpm:       toNum(raw.bpm),
+      energy:          toNum(raw.energia),
+      danceability:    toNum(raw.dancabilidade),
+      valence:         toNum(raw.sentimento_valence),
+      acousticness:    toNum(raw.acousticidade),
+      lufs_integrated: toNum(raw.loudness_lufs),
     },
     HARDCODED_GENRE_PROFILES,
   );
 
-  out.genre = genre?.detected ?? "Indefinido";
+  // Linhas sem BPM/LUFS não classificáveis são descartadas; "Indefinido" não é
+  // um gênero válido e contaminaria os benchmarks da view music_dna_benchmarks.
+  if (!cls) return null;
 
-  // Drop ignored columns (mfcc_media, arquivo, status_analise) — not written to out
-  // mfcc_1..13, chroma_cens_1..12, spectral_contrast_1..7 left absent (treated as null by edge fn)
+  out.genre = cls.detected;
 
-  return out;
+  // mfcc_media (scalar) e chroma_cens (ausente no Sonara) omitidos de propósito
+  return { row: out, cls };
 }
 
 function buildTransformedCsv(rows: Array<Record<string, string>>): string {
@@ -169,40 +180,31 @@ export function SonaraCsvImporter({ onInserted }: Props) {
 
         const tempBatch = defaultBatch;
         const rows: Array<Record<string, string>> = [];
+        let noGenreSkipped = 0;
 
         for (const raw of parsed.data) {
-          const transformed = transformRow(raw as SonaraRow, tempBatch, analysisDate);
-          if (!transformed) continue;
+          // transformRow já chama classifyGenre — reutilizamos cls sem segunda chamada
+          const result = transformRow(raw as SonaraRow, tempBatch, analysisDate);
+          if (!result) {
+            // null pode ser: artista/arquivo vazio OU BPM+LUFS ausentes (sem genre)
+            if (raw.artista?.trim() && raw.arquivo?.trim()) noGenreSkipped++;
+            continue;
+          }
 
+          const { row: transformed, cls } = result;
           rows.push(transformed);
 
           const g = transformed.genre;
           genreDistribution[g] = (genreDistribution[g] ?? 0) + 1;
 
-          const cls = classifyGenre(
-            {
-              tempo_bpm:    Number(raw.bpm)                || null,
-              energy:       Number(raw.energia)            || null,
-              danceability: Number(raw.dancabilidade)      || null,
-              valence:      Number(raw.sentimento_valence) || null,
-              acousticness: Number(raw.acousticidade)      || null,
-              lufs_integrated: Number(raw.loudness_lufs)   || null,
-            },
-            HARDCODED_GENRE_PROFILES,
-          );
-
-          if (!cls) {
-            confidenceCounts.nula++;
-          } else {
-            confidenceCounts[cls.confidence]++;
-            if (cls.confidence === "baixa" && lowConfidenceExamples.length < 5) {
-              lowConfidenceExamples.push({
-                band: transformed.band,
-                filename: transformed.filename,
-                detected: cls.detected,
-                gap: cls.gapPct,
-              });
-            }
+          confidenceCounts[cls.confidence]++;
+          if (cls.confidence === "baixa" && lowConfidenceExamples.length < 5) {
+            lowConfidenceExamples.push({
+              band: transformed.band,
+              filename: transformed.filename,
+              detected: cls.detected,
+              gap: cls.gapPct,
+            });
           }
         }
 
@@ -210,6 +212,7 @@ export function SonaraCsvImporter({ onInserted }: Props) {
         setPreview({
           totalRows: parsed.data.length,
           validRows: rows.length,
+          noGenreSkipped,
           genreDistribution,
           confidenceCounts,
           lowConfidenceExamples,
@@ -310,9 +313,14 @@ export function SonaraCsvImporter({ onInserted }: Props) {
             <>
               <div className="flex flex-wrap gap-2">
                 <Badge variant="secondary">{preview.validRows} faixas válidas</Badge>
-                {preview.totalRows !== preview.validRows && (
+                {preview.noGenreSkipped > 0 && (
+                  <Badge variant="outline" className="text-amber-600">
+                    {preview.noGenreSkipped} sem BPM/LUFS (descartadas — não classificáveis)
+                  </Badge>
+                )}
+                {preview.totalRows - preview.validRows - preview.noGenreSkipped > 0 && (
                   <Badge variant="outline" className="text-muted-foreground">
-                    {preview.totalRows - preview.validRows} ignoradas (sem artista/arquivo)
+                    {preview.totalRows - preview.validRows - preview.noGenreSkipped} ignoradas (sem artista/arquivo)
                   </Badge>
                 )}
                 <Badge variant="secondary">{Object.keys(preview.genreDistribution).length} gêneros detectados</Badge>
