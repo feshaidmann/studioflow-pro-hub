@@ -49,7 +49,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { NeighborDetailDialog } from "@/components/music-dna/NeighborDetailDialog";
 import { GenreMismatchHint } from "@/components/music-dna/GenreMismatchHint";
 import { PlaylistMatchCard } from "@/components/music-dna/PlaylistMatchCard";
-import { CompatiblePlaylistsCard } from "@/components/music-dna/CompatiblePlaylistsCard";
 import { SpotifyPopularityCard } from "@/components/music-dna/SpotifyPopularityCard";
 import { ActiveMonitorsCard } from "@/components/music-dna/ActiveMonitorsCard";
 import { StageSelector } from "@/components/music-dna/StageSelector";
@@ -2000,24 +1999,7 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
         genre={diagnosis.genero_classificado ?? null}
       />
 
-      {/* Playlists Compatíveis (Spotify) */}
-      {(() => {
-        // genero_classificado can be "Sertanejo / Universitário" or "Sertanejo Universitário"
-        // Split into primary genre + optional subgenre for better Spotify queries.
-        const rawGenre = diagnosis.genero_classificado ?? "";
-        const [genrePart, subgenrePart] = rawGenre.includes("/")
-          ? rawGenre.split("/").map((s) => s.trim())
-          : [rawGenre, undefined];
-        return (
-          <CompatiblePlaylistsCard
-            genre={genrePart}
-            subgenre={subgenrePart}
-            mood={diagnosis.identidade?.mood_principal ? [diagnosis.identidade.mood_principal] : []}
-            styleTags={diagnosis.identidade?.tags ?? []}
-            references={(diagnosis.referencias_proximas ?? []).map((r) => r.artista).filter(Boolean)}
-          />
-        );
-      })()}
+      {/* Playlists Compatíveis (Spotify) — desativado temporariamente */}
 
       {savedAnalysisId && (
         <TrackVersionsPanel trackName={input.name} currentAnalysisId={savedAnalysisId} />
