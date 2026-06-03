@@ -58,7 +58,7 @@ export function useEditais(projectId?: string | null) {
       if (projectId) q = q.eq("project_id", projectId);
       const { data, error } = await q;
       if (error) throw error;
-      setEditais((data as any[]) || []);
+      setEditais((data as unknown as Edital[]) || []);
     } catch (err) {
       console.error("Error fetching editais:", err);
     } finally {
@@ -77,7 +77,7 @@ export function useEditais(projectId?: string | null) {
         const { data, error } = await q;
         if (!active) return;
         if (error) throw error;
-        setEditais((data as any[]) || []);
+        setEditais((data as unknown as Edital[]) || []);
       } catch (err) {
         if (active) console.error("Error fetching editais:", err);
       } finally {

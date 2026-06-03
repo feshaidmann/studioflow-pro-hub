@@ -1,6 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import { useAuth } from "@/contexts/AuthContext";
+
+type TaskRow = Database["public"]["Tables"]["tasks"]["Row"];
 
 export type TaskSeverity = "low" | "medium" | "high" | "critical";
 export type TaskArea = "mix" | "gravacao" | "financeiro" | "equipe" | "lancamento" | "geral";
@@ -24,7 +27,7 @@ export interface Task {
   sourceModule: string;
 }
 
-function dbRowToTask(r: any): Task {
+function dbRowToTask(r: TaskRow): Task {
   return {
     id: r.id,
     userId: r.user_id,

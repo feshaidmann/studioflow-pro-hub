@@ -171,6 +171,7 @@ export function useReleaseChecklist(projectId: string) {
   // Fetch
   useEffect(() => {
     if (!user || !projectId) return;
+    let active = true;
     setLoading(true);
     supabase
       .from("release_checklists")
@@ -178,6 +179,7 @@ export function useReleaseChecklist(projectId: string) {
       .eq("project_id", projectId)
       .maybeSingle()
       .then(({ data }) => {
+        if (!active) return;
         if (data) {
           rowIdRef.current = data.id;
           const merged = { ...defaultState(), ...(data.items as ChecklistState) };
@@ -188,6 +190,7 @@ export function useReleaseChecklist(projectId: string) {
         }
         setLoading(false);
       });
+    return () => { active = false; };
   }, [user, projectId]);
 
   // Persist (debounced)

@@ -8,11 +8,8 @@ export function useAdminRole() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user) {
-      setIsAdmin(false);
-      setLoading(false);
-      return;
-    }
+    if (!user) { setIsAdmin(false); setLoading(false); return; }
+    let active = true;
     supabase
       .from("user_roles")
       .select("role")
@@ -20,10 +17,12 @@ export function useAdminRole() {
       .eq("role", "admin")
       .maybeSingle()
       .then(({ data, error }) => {
+        if (!active) return;
         if (error) console.error("useAdminRole fetch error:", error);
         setIsAdmin(!!data);
         setLoading(false);
       });
+    return () => { active = false; };
   }, [user]);
 
   return { isAdmin, loading };

@@ -44,16 +44,19 @@ export function useEvents() {
 
   useEffect(() => {
     if (!user) { setEvents([]); setLoading(false); return; }
+    let active = true;
     setLoading(true);
     supabase
       .from("events")
       .select("*")
       .order("start_datetime", { ascending: true })
       .then(({ data, error }) => {
+        if (!active) return;
         if (error) console.error("useEvents fetch error:", error);
         if (data) setEvents(data.map(dbToEvent));
         setLoading(false);
       });
+    return () => { active = false; };
   }, [user]);
 
   const addEvent = useCallback(async (ev: NewEvent): Promise<CalendarEvent | null> => {

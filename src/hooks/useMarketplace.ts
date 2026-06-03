@@ -33,8 +33,29 @@ export function useMarketplaceProviders(filters: MarketplaceFilters) {
   }, [filters.specialty, filters.genre, filters.state, filters.search]);
 
   useEffect(() => {
-    fetchProviders();
-  }, [fetchProviders]);
+    let active = true;
+    const run = async () => {
+      setLoading(true);
+      const { data, error } = await (supabase as any).rpc("get_marketplace_providers", {
+        p_specialty: filters.specialty ?? null,
+        p_genre: filters.genre ?? null,
+        p_state: filters.state ?? null,
+        p_search: filters.search ?? null,
+        p_limit: 50,
+        p_offset: 0,
+      });
+      if (!active) return;
+      if (error) {
+        console.error("marketplace fetch error", error);
+        toast.error("Erro ao carregar profissionais");
+      } else {
+        setProviders((data as MarketplaceProvider[]) ?? []);
+      }
+      setLoading(false);
+    };
+    run();
+    return () => { active = false; };
+  }, [filters.specialty, filters.genre, filters.state, filters.search]);
 
   return { providers, loading, refetch: fetchProviders };
 }
@@ -58,8 +79,23 @@ export function useServiceRequests() {
   }, [user]);
 
   useEffect(() => {
-    fetchRequests();
-  }, [fetchRequests]);
+    let active = true;
+    const run = async () => {
+      if (!user) return;
+      setLoading(true);
+      const { data, error } = await (supabase as any)
+        .from("service_requests")
+        .select("*")
+        .eq("requester_user_id", user.id)
+        .order("created_at", { ascending: false });
+      if (!active) return;
+      if (error) console.error("service_requests fetch", error);
+      setRequests(((data as ServiceRequest[]) ?? []));
+      setLoading(false);
+    };
+    run();
+    return () => { active = false; };
+  }, [user]);
 
   const createRequest = useCallback(
     async (payload: Partial<ServiceRequest>) => {
@@ -120,8 +156,23 @@ export function useServiceProposals(requestId?: string) {
   }, [requestId]);
 
   useEffect(() => {
-    fetchProposals();
-  }, [fetchProposals]);
+    let active = true;
+    const run = async () => {
+      if (!requestId) return;
+      setLoading(true);
+      const { data, error } = await (supabase as any)
+        .from("service_proposals")
+        .select("*")
+        .eq("request_id", requestId)
+        .order("created_at", { ascending: false });
+      if (!active) return;
+      if (error) console.error("proposals fetch", error);
+      setProposals(((data as ServiceProposal[]) ?? []));
+      setLoading(false);
+    };
+    run();
+    return () => { active = false; };
+  }, [requestId]);
 
   const acceptProposal = useCallback(
     async (id: string) => {
