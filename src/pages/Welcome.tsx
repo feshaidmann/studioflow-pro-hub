@@ -47,8 +47,9 @@ export default function Welcome() {
       </div>
     );
   }
-  if (user && needsProfileSetup) return <Navigate to="/onboarding" replace />;
-  if (user) return <Navigate to="/dashboard" replace />;
+  const previewMode = new URLSearchParams(window.location.search).has("preview");
+  if (!previewMode && user && needsProfileSetup) return <Navigate to="/onboarding" replace />;
+  if (!previewMode && user) return <Navigate to="/dashboard" replace />;
 
   const handleGoogleSignIn = async () => {
     const { error } = await lovable.auth.signInWithOAuth("google", {
