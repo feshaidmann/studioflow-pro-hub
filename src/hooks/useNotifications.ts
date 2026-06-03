@@ -45,7 +45,35 @@ export function useNotifications() {
     setLoading(false);
   }, [user]);
 
-  useEffect(() => { fetchNotifications(); }, [fetchNotifications]);
+  useEffect(() => {
+    let active = true;
+    const run = async () => {
+      if (!user) { setNotifications([]); return; }
+      setLoading(true);
+      const { data } = await supabase
+        .from("notifications")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(50);
+      if (!active) return;
+      if (data) {
+        setNotifications(data.map((r: NotificationRow) => ({
+          id: r.id,
+          userId: r.user_id,
+          title: r.title,
+          message: r.message,
+          link: r.link,
+          read: r.read,
+          type: r.type,
+          createdAt: r.created_at,
+        })));
+      }
+      setLoading(false);
+    };
+    run();
+    return () => { active = false; };
+  }, [user]);
 
   const markRead = useCallback(async (id: string) => {
     const { error } = await supabase.from("notifications").update({ read: true }).eq("id", id);

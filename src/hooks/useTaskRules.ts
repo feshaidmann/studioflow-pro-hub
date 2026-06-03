@@ -76,21 +76,22 @@ export function useTaskRules() {
   const [rules, setRules] = useState<RuleConfig[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const fetchRules = useCallback(async () => {
-    if (!user) { setRules([]); return; }
-    setLoading(true);
-    const { data } = await supabase
-      .from("task_rules")
-      .select("*")
-      .eq("user_id", user.id);
-
-    const dbRules: RuleConfig[] = (data ?? []).map(dbRowToRule);
-
-    setRules(mergeRulesWithDefaults(dbRules));
-    setLoading(false);
+  useEffect(() => {
+    let active = true;
+    const run = async () => {
+      if (!user) { setRules([]); return; }
+      setLoading(true);
+      const { data } = await supabase
+        .from("task_rules")
+        .select("*")
+        .eq("user_id", user.id);
+      if (!active) return;
+      setRules(mergeRulesWithDefaults((data ?? []).map(dbRowToRule)));
+      setLoading(false);
+    };
+    run();
+    return () => { active = false; };
   }, [user]);
-
-  useEffect(() => { fetchRules(); }, [fetchRules]);
 
   const updateRule = useCallback(async (ruleType: string, patch: Partial<Pick<RuleConfig, "isActive" | "parameters">>) => {
     if (!user) return;
