@@ -1,19 +1,18 @@
-export type ProviderSource = "user" | "contact" | "curated";
-
 export interface MarketplaceProvider {
-  provider_ref: string;
-  source: ProviderSource;
-  name: string;
-  handle: string | null;
-  avatar_url: string;
-  bio: string;
-  city: string;
-  state: string;
+  id: string;
+  user_id: string;
+  display_name: string;
+  bio: string | null;
   specialties: string[];
   genres: string[];
-  projects_completed: number;
-  accept_invites: boolean;
-  is_user: boolean;
+  state: string | null;
+  city: string | null;
+  base_rate_brl: number | null;
+  rate_unit: string;
+  portfolio_links: { label: string; url: string }[];
+  verified_by_jsp: boolean;
+  avg_rating: number;
+  review_count: number;
 }
 
 export interface MarketplaceFilters {
@@ -23,37 +22,52 @@ export interface MarketplaceFilters {
   search?: string;
 }
 
-export type RequestStatus = "open" | "fulfilled" | "cancelled" | "expired";
-
 export interface ServiceRequest {
   id: string;
-  requester_user_id: string;
+  requester_id: string;
   project_id: string | null;
-  specialty_needed: string;
+  specialty: string;
+  genre: string | null;
   title: string;
-  briefing: string;
-  desired_deadline: string | null;
-  budget_hint: string;
-  reference_url: string;
-  status: RequestStatus;
+  description: string;
+  budget_brl: number | null;
+  deadline_date: string | null;
+  status:
+    | 'open' | 'in_negotiation' | 'accepted' | 'in_progress'
+    | 'delivered' | 'approved' | 'completed' | 'cancelled';
   created_at: string;
   updated_at: string;
-  closed_at: string | null;
 }
-
-export type ProposalStatus = "sent" | "accepted" | "rejected" | "withdrawn";
 
 export interface ServiceProposal {
   id: string;
   request_id: string;
-  provider_user_id: string | null;
-  provider_professional_id: string | null;
-  provider_curated_id: string | null;
-  responder_user_id: string;
-  price: number;
+  provider_id: string;
+  value_brl: number;
   delivery_days: number;
-  message: string;
-  status: ProposalStatus;
+  message: string | null;
+  revisions: number;
+  status: 'pending' | 'accepted' | 'rejected' | 'withdrawn';
   created_at: string;
   updated_at: string;
+}
+
+export interface ServiceDelivery {
+  id: string;
+  proposal_id: string;
+  message: string | null;
+  revision_number: number;
+  status: 'pending_review' | 'approved' | 'revision_requested';
+  payment_status: 'pending' | 'confirmed' | 'disputed';
+  payment_method: string;
+  payment_note: string | null;
+  created_at: string;
+}
+
+export interface ServiceReview {
+  id: string;
+  provider_id: string;
+  rating: number;
+  comment: string | null;
+  created_at: string;
 }

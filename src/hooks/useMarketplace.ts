@@ -71,7 +71,7 @@ export function useServiceRequests() {
     const { data, error } = await (supabase as any)
       .from("service_requests")
       .select("*")
-      .eq("requester_user_id", user.id)
+      .eq("requester_id", user.id)
       .order("created_at", { ascending: false });
     if (error) console.error("service_requests fetch", error);
     setRequests(((data as ServiceRequest[]) ?? []));
@@ -86,7 +86,7 @@ export function useServiceRequests() {
       const { data, error } = await (supabase as any)
         .from("service_requests")
         .select("*")
-        .eq("requester_user_id", user.id)
+        .eq("requester_id", user.id)
         .order("created_at", { ascending: false });
       if (!active) return;
       if (error) console.error("service_requests fetch", error);
@@ -102,7 +102,7 @@ export function useServiceRequests() {
       if (!user) return null;
       const { data, error } = await (supabase as any)
         .from("service_requests")
-        .insert({ ...payload, requester_user_id: user.id, status: "open" })
+        .insert({ ...payload, requester_id: user.id, status: "open" })
         .select()
         .single();
       if (error) {
