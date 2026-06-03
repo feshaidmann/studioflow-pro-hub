@@ -67,7 +67,27 @@ export function useEditais(projectId?: string | null) {
     }
   }, [user, projectId]);
 
-  useEffect(() => { fetchEditais(); }, [fetchEditais]);
+  useEffect(() => {
+    let active = true;
+    const run = async () => {
+      if (!user) { setEditais([]); setLoading(false); return; }
+      setLoading(true);
+      try {
+        let q = supabase.from("editais").select("*").order("created_at", { ascending: false });
+        if (projectId) q = q.eq("project_id", projectId);
+        const { data, error } = await q;
+        if (!active) return;
+        if (error) throw error;
+        setEditais((data as any[]) || []);
+      } catch (err) {
+        if (active) console.error("Error fetching editais:", err);
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
+    run();
+    return () => { active = false; };
+  }, [user, projectId]);
 
   const search = useCallback(async (query: string, sources?: string[], linkedProjectId?: string) => {
     if (!user) return;

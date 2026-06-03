@@ -284,23 +284,37 @@ serve(async (req) => {
     }
     userPrompt += `\n\nData atual: ${new Date().toLocaleDateString("pt-BR")}`;
 
-    // Call Perplexity
-    const perplexityResponse = await fetch("https://api.perplexity.ai/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${PERPLEXITY_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "sonar-pro",
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: userPrompt },
-        ],
-        max_tokens: 4096,
-        temperature: 0.1,
-      }),
-    });
+    // Call Perplexity with a 45s timeout
+    const perplexityController = new AbortController();
+    const perplexityTimeout = setTimeout(() => perplexityController.abort(), 45_000);
+    let perplexityResponse: Response;
+    try {
+      perplexityResponse = await fetch("https://api.perplexity.ai/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${PERPLEXITY_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "sonar-pro",
+          messages: [
+            { role: "system", content: SYSTEM_PROMPT },
+            { role: "user", content: userPrompt },
+          ],
+          max_tokens: 4096,
+          temperature: 0.1,
+        }),
+        signal: perplexityController.signal,
+      });
+    } catch (fetchErr: any) {
+      clearTimeout(perplexityTimeout);
+      const isAbort = fetchErr?.name === "AbortError";
+      return new Response(
+        JSON.stringify({ error: isAbort ? "Tempo esgotado ao consultar a IA. Tente novamente." : "Falha de rede ao consultar a IA." }),
+        { status: 504, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    clearTimeout(perplexityTimeout);
 
     if (!perplexityResponse.ok) {
       const errText = await perplexityResponse.text();

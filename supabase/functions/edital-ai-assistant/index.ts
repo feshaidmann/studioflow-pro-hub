@@ -255,24 +255,38 @@ ${JSON.stringify(projects || [])}`;
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
-    const aiResponse = await fetch(
-      "https://ai.gateway.lovable.dev/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        },
-        body: JSON.stringify({
-          model: "google/gemini-3-flash-preview",
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: userMessage },
-          ],
-          max_tokens: 2500,
-        }),
-      }
-    );
+    const aiController = new AbortController();
+    const aiTimeout = setTimeout(() => aiController.abort(), 60_000);
+    let aiResponse: Response;
+    try {
+      aiResponse = await fetch(
+        "https://ai.gateway.lovable.dev/v1/chat/completions",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          },
+          body: JSON.stringify({
+            model: "google/gemini-3-flash-preview",
+            messages: [
+              { role: "system", content: systemPrompt },
+              { role: "user", content: userMessage },
+            ],
+            max_tokens: 2500,
+          }),
+          signal: aiController.signal,
+        }
+      );
+    } catch (fetchErr: any) {
+      clearTimeout(aiTimeout);
+      const isAbort = fetchErr?.name === "AbortError";
+      return new Response(
+        JSON.stringify({ error: isAbort ? "Tempo esgotado. Tente novamente." : "Falha de rede ao consultar IA." }),
+        { status: 504, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    clearTimeout(aiTimeout);
 
     if (!aiResponse.ok) {
       if (aiResponse.status === 429) {
