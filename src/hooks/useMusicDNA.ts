@@ -598,7 +598,7 @@ async function callMusicDNAAnalyze(
 export function filterValidReferences(
   rawRefs: ReferenceMatch[],
   neighbors: CatalogNeighbor[],
-  floor = 0.7,
+  floor = 0.55,
 ): ReferenceMatch[] {
   const validBands = new Set<string>(
     neighbors
