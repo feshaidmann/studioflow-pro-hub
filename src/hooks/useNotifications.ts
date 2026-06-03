@@ -45,14 +45,18 @@ export function useNotifications() {
   useEffect(() => { fetchNotifications(); }, [fetchNotifications]);
 
   const markRead = useCallback(async (id: string) => {
-    await supabase.from("notifications").update({ read: true }).eq("id", id);
-    setNotifications((prev) => prev.map((n) => n.id === id ? { ...n, read: true } : n));
+    const { error } = await supabase.from("notifications").update({ read: true }).eq("id", id);
+    if (!error) {
+      setNotifications((prev) => prev.map((n) => n.id === id ? { ...n, read: true } : n));
+    }
   }, []);
 
   const markAllRead = useCallback(async () => {
     if (!user) return;
-    await supabase.from("notifications").update({ read: true }).eq("user_id", user.id).eq("read", false);
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    const { error } = await supabase.from("notifications").update({ read: true }).eq("user_id", user.id).eq("read", false);
+    if (!error) {
+      setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    }
   }, [user]);
 
   const addNotification = useCallback(async (data: { title: string; message: string; link?: string; type?: string }) => {

@@ -11,7 +11,7 @@ const corsHeaders = {
 const ALLOWED_TTL_HOURS = new Set([1, 24, 24 * 7, 24 * 30]);
 
 function genToken(): string {
-  const bytes = new Uint8Array(24);
+  const bytes = new Uint8Array(32);
   crypto.getRandomValues(bytes);
   return Array.from(bytes).map((b) => b.toString(16).padStart(2, "0")).join("");
 }

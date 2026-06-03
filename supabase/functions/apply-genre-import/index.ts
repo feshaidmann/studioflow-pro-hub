@@ -53,6 +53,7 @@ Deno.serve(async (req) => {
       const fd = await req.formData();
       const file = fd.get("file") as File | null;
       if (!file) return jsonRes({ error: "Missing 'file' field" }, 400);
+      if (file.size > 10 * 1024 * 1024) return jsonRes({ error: "File exceeds 10 MB limit" }, 413);
       csvText = await file.text();
       const ds = fd.get("dropStaging");
       if (ds !== null) dropStaging = String(ds) !== "false";
