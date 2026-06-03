@@ -318,10 +318,8 @@ export function useRascunhoEdital() {
   const extractFieldsFromText = useCallback(async (text: string, editalId?: string) => {
     if (!user) return;
     if (!text.trim()) {
-      toast({
-        title: "Cole o conteúdo do edital",
+      toast.error("Cole o conteúdo do edital", {
         description: "O campo de texto está vazio. Cole o regulamento antes de continuar.",
-        variant: "destructive",
       });
       return;
     }
@@ -332,7 +330,7 @@ export function useRascunhoEdital() {
       { text },
       { editalId, has_url: false, has_titulo: false },
     );
-  }, [user, toast, runExtract]);
+  }, [user, runExtract]);
 
   const setExtractedFieldsManual = useCallback((fields: ExtractedFields) => {
     setExtractedFields(fields);
