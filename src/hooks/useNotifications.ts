@@ -1,6 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import { useAuth } from "@/contexts/AuthContext";
+
+type NotificationRow = Database["public"]["Tables"]["notifications"]["Row"];
 
 export interface Notification {
   id: string;
@@ -28,7 +31,7 @@ export function useNotifications() {
       .order("created_at", { ascending: false })
       .limit(50);
     if (data) {
-      setNotifications(data.map((r: any) => ({
+      setNotifications(data.map((r: NotificationRow) => ({
         id: r.id,
         userId: r.user_id,
         title: r.title,

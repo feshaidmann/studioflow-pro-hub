@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, useEffect, useRef, type ReactNode } from "react";
+import { createContext, useContext, useState, useCallback, useEffect, useRef, useMemo, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import type { AnalysisResult } from "@/lib/audioAnalysis";
@@ -583,18 +583,26 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     [transactions],
   );
 
+  const ctxValue = useMemo(() => ({
+    projects, tracks, professionals, masterResults, transactions, loading,
+    addProject, updateProject, deleteProject,
+    getMixPercent, getProjectFinancials,
+    addTrack, updateTrack, removeTrack,
+    addProfessional, removeProfessional, addProfessionalToGlobal,
+    addTransaction, updateTransaction, deleteTransaction,
+    saveMasterResult,
+  }), [
+    projects, tracks, professionals, masterResults, transactions, loading,
+    addProject, updateProject, deleteProject,
+    getMixPercent, getProjectFinancials,
+    addTrack, updateTrack, removeTrack,
+    addProfessional, removeProfessional, addProfessionalToGlobal,
+    addTransaction, updateTransaction, deleteTransaction,
+    saveMasterResult,
+  ]);
+
   return (
-    <ProjectContext.Provider
-      value={{
-        projects, tracks, professionals, masterResults, transactions, loading,
-        addProject, updateProject, deleteProject,
-        getMixPercent, getProjectFinancials,
-        addTrack, updateTrack, removeTrack,
-        addProfessional, removeProfessional, addProfessionalToGlobal,
-        addTransaction, updateTransaction, deleteTransaction,
-        saveMasterResult,
-      }}
-    >
+    <ProjectContext.Provider value={ctxValue}>
       {children}
     </ProjectContext.Provider>
   );
