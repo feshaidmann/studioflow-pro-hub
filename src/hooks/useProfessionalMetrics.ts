@@ -33,11 +33,11 @@ export function useProfessionalMetrics(prof: Professional | null) {
           .ilike("professional_name", prof.name),
         prof.email
           ? supabase
-              .from("profiles")
-              .select("username, display_name")
-              .eq("public_email", prof.email.toLowerCase())
-              .eq("allow_global_listing", true)
-              .maybeSingle()
+              .rpc("find_public_profile_by_email", { p_email: prof.email.toLowerCase() })
+              .then((res: any) => ({
+                data: Array.isArray(res.data) ? res.data[0] ?? null : null,
+                error: res.error,
+              }))
           : Promise.resolve({ data: null } as any),
       ]);
 

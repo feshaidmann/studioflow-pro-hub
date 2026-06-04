@@ -524,18 +524,10 @@ function computeMfccChromaMultiframe(
 
   const N = allMfcc.length;
 
-  // Cepstral Mean Subtraction (CMS)
-  const meanCoef = new Float64Array(NUM_COEFS);
-  for (const m of allMfcc) {
-    for (let c = 0; c < NUM_COEFS; c++) meanCoef[c] += m[c];
-  }
-  for (let c = 0; c < NUM_COEFS; c++) meanCoef[c] /= N;
-
-  const cmsVectors = allMfcc.map(m => m.map((v, c) => v - meanCoef[c]));
-
+  // Média direta dos frames — alinha com np.mean(mfcc, axis=1) do librosa/catálogo
   const globalMfcc = new Float64Array(NUM_COEFS);
-  for (const v of cmsVectors) {
-    for (let c = 0; c < NUM_COEFS; c++) globalMfcc[c] += v[c];
+  for (const m of allMfcc) {
+    for (let c = 0; c < NUM_COEFS; c++) globalMfcc[c] += m[c];
   }
   for (let c = 0; c < NUM_COEFS; c++) globalMfcc[c] /= N;
 

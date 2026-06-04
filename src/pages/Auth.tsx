@@ -53,6 +53,7 @@ export default function Auth() {
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [forgotSent, setForgotSent] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
   const [signupSent, setSignupSent] = useState(false);
   const [signupEmail, setSignupEmail] = useState("");
 
@@ -65,6 +66,13 @@ export default function Auth() {
   }, [isInviteFlow]);
 
   const redirectTo = redirectParam || "/dashboard";
+
+  // Cooldown para reenvio de e-mail de recuperação (60s)
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const t = setInterval(() => setResendCooldown((c) => Math.max(0, c - 1)), 1000);
+    return () => clearInterval(t);
+  }, [resendCooldown]);
 
   if (loading) return <div className="flex items-center justify-center min-h-screen"><div className="animate-pulse text-muted-foreground">Carregando...</div></div>;
   if (user && needsProfileSetup) return <Navigate to="/onboarding" replace />;
@@ -204,9 +212,29 @@ export default function Auth() {
             <div className="text-center space-y-4">
               <div className="rounded-lg bg-primary/10 border border-primary/20 p-4">
                 <p className="text-sm text-muted-foreground">
-                  Enviamos um link de recuperação para <span className="text-foreground font-medium">{email}</span>. Verifique sua caixa de entrada (e spam).
+                  Enviamos um link de recuperação para <span className="text-foreground font-medium">{email}</span>. Verifique sua caixa de entrada e a pasta de spam.
                 </p>
               </div>
+              <Button
+                variant="outline"
+                className="w-full text-sm"
+                disabled={resendCooldown > 0 || submitting}
+                onClick={async () => {
+                  setSubmitting(true);
+                  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                    redirectTo: `${window.location.origin}/auth/reset-password`,
+                  });
+                  setSubmitting(false);
+                  if (error) {
+                    toast.error(friendlyError(error.message));
+                  } else {
+                    setResendCooldown(60);
+                    toast.success("Link reenviado! Verifique sua caixa de entrada.");
+                  }
+                }}
+              >
+                {resendCooldown > 0 ? `Reenviar em ${resendCooldown}s` : submitting ? "Enviando…" : "Reenviar e-mail"}
+              </Button>
               <Button variant="ghost" className="w-full gap-2" onClick={() => { setMode("login"); setForgotSent(false); }}>
                 <ArrowLeft className="h-4 w-4" /> Voltar ao login
               </Button>
@@ -263,7 +291,7 @@ export default function Auth() {
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
                         className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                        tabIndex={-1}
+                        aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
                       >
                         {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </button>

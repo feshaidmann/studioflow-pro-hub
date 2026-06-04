@@ -18,29 +18,27 @@ interface Props {
 export function RequestQuoteModal({ open, onOpenChange, provider, projectId, specialty }: Props) {
   const { createRequest } = useServiceRequests();
   const [title, setTitle] = useState("");
-  const [briefing, setBriefing] = useState("");
-  const [deadline, setDeadline] = useState("");
-  const [budget, setBudget] = useState("");
-  const [reference, setReference] = useState("");
+  const [description, setDescription] = useState("");
+  const [deadlineDate, setDeadlineDate] = useState("");
+  const [budgetBrl, setBudgetBrl] = useState("");
   const [saving, setSaving] = useState(false);
 
   const handleSubmit = async () => {
-    if (!briefing.trim() || briefing.trim().length < 10) return;
+    if (!description.trim() || description.trim().length < 10) return;
     setSaving(true);
     const result = await createRequest({
-      title: title.trim() || `Pedido para ${provider?.name ?? "profissional"}`,
-      briefing: briefing.trim(),
-      specialty_needed: specialty ?? provider?.specialties?.[0] ?? "",
-      desired_deadline: deadline || null,
-      budget_hint: budget.trim(),
-      reference_url: reference.trim(),
+      title: title.trim() || `Pedido para ${provider?.display_name ?? "profissional"}`,
+      description: description.trim(),
+      specialty: specialty ?? provider?.specialties?.[0] ?? "",
+      deadline_date: deadlineDate || null,
+      budget_brl: budgetBrl ? Number(budgetBrl) : null,
       project_id: projectId ?? null,
       target_provider_ref: provider?.is_user ? provider.provider_ref : null,
       target_provider_name: provider?.name ?? null,
     });
     setSaving(false);
     if (result) {
-      setTitle(""); setBriefing(""); setDeadline(""); setBudget(""); setReference("");
+      setTitle(""); setDescription(""); setDeadlineDate(""); setBudgetBrl("");
       onOpenChange(false);
     }
   };
@@ -51,7 +49,7 @@ export function RequestQuoteModal({ open, onOpenChange, provider, projectId, spe
         <DialogHeader>
           <DialogTitle>Solicitar orçamento</DialogTitle>
           <DialogDescription>
-            {provider ? `Envie um briefing curto para ${provider.name}.` : "Descreva o serviço que você precisa."}
+            {provider ? `Envie um briefing curto para ${provider.display_name}.` : "Descreva o serviço que você precisa."}
             {" "}Profissionais interessados respondem com valor e prazo.
           </DialogDescription>
         </DialogHeader>
@@ -62,11 +60,11 @@ export function RequestQuoteModal({ open, onOpenChange, provider, projectId, spe
             <Input id="mkt-title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex: Mix de single 'Tarde de Quinta'" />
           </div>
           <div className="space-y-1">
-            <Label htmlFor="mkt-briefing">Briefing *</Label>
+            <Label htmlFor="mkt-description">Briefing *</Label>
             <Textarea
-              id="mkt-briefing"
-              value={briefing}
-              onChange={(e) => setBriefing(e.target.value)}
+              id="mkt-description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
               placeholder="O que precisa ser feito, estilo, contexto, faixa que vamos usar..."
               rows={4}
             />
@@ -75,22 +73,27 @@ export function RequestQuoteModal({ open, onOpenChange, provider, projectId, spe
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
               <Label htmlFor="mkt-deadline">Prazo desejado</Label>
-              <Input id="mkt-deadline" type="date" value={deadline} onChange={(e) => setDeadline(e.target.value)} />
+              <Input id="mkt-deadline" type="date" value={deadlineDate} onChange={(e) => setDeadlineDate(e.target.value)} />
             </div>
             <div className="space-y-1">
               <Label htmlFor="mkt-budget">Orçamento aproximado</Label>
-              <Input id="mkt-budget" value={budget} onChange={(e) => setBudget(e.target.value)} placeholder="R$ 500 – 800" />
+              <div className="flex items-center gap-1.5">
+                <span className="text-sm text-muted-foreground">R$</span>
+                <Input
+                  id="mkt-budget"
+                  type="number"
+                  value={budgetBrl}
+                  onChange={(e) => setBudgetBrl(e.target.value)}
+                  placeholder="500"
+                />
+              </div>
             </div>
-          </div>
-          <div className="space-y-1">
-            <Label htmlFor="mkt-ref">Link de referência</Label>
-            <Input id="mkt-ref" value={reference} onChange={(e) => setReference(e.target.value)} placeholder="YouTube, Spotify, Drive..." />
           </div>
         </div>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          <Button onClick={handleSubmit} disabled={saving || briefing.trim().length < 10}>
+          <Button onClick={handleSubmit} disabled={saving || description.trim().length < 10}>
             {saving ? "Enviando..." : "Enviar pedido"}
           </Button>
         </DialogFooter>

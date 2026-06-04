@@ -11,10 +11,6 @@ const NotFound = () => {
   const navigate = useNavigate();
   const [countdown, setCountdown] = useState(REDIRECT_SECONDS);
 
-  useEffect(() => {
-    console.warn("[404] Rota não encontrada:", location.pathname + location.search);
-  }, [location.pathname, location.search]);
-
   // Auto-redirect de cortesia para o dashboard, com cancelamento ao interagir
   useEffect(() => {
     let cancelled = false;

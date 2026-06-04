@@ -10,6 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
+  DialogClose,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -578,7 +579,7 @@ export default function Projects() {
                 <Input id="proj-artist" placeholder={t("projects.artistPlaceholder")} value={form.artist} onChange={(e) => setForm({ ...form, artist: e.target.value })} />
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5"><Label htmlFor="proj-bpm">{t("projects.bpm")}</Label><Input id="proj-bpm" placeholder="128" type="number" value={form.bpm} onChange={(e) => setForm({ ...form, bpm: e.target.value })} className="font-mono-nums" /></div>
+                <div className="space-y-1.5"><Label htmlFor="proj-bpm">{t("projects.bpm")}</Label><Input id="proj-bpm" placeholder="128" type="number" min="40" max="250" value={form.bpm} onChange={(e) => setForm({ ...form, bpm: e.target.value })} className="font-mono-nums" /></div>
                 <div className="space-y-1.5"><Label htmlFor="proj-key">{t("projects.key")}</Label><Input id="proj-key" placeholder={t("projects.keyPlaceholder")} value={form.key} onChange={(e) => setForm({ ...form, key: e.target.value })} /></div>
               </div>
               <div className="space-y-1.5">
@@ -654,7 +655,10 @@ export default function Projects() {
               </div>
             </div>
             <DialogFooter>
-              <Button onClick={handleAddProject} disabled={!form.name} className="active:scale-95 transition-transform">{t("projects.create")}</Button>
+              <DialogClose asChild>
+                <Button variant="outline">Cancelar</Button>
+              </DialogClose>
+              <Button onClick={handleAddProject} disabled={!form.name || !form.genre} className="active:scale-95 transition-transform">{t("projects.create")}</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -1234,7 +1238,7 @@ export default function Projects() {
               </CollapsibleTrigger>
               <CollapsibleContent className="space-y-2 mt-2">
                 {projects.filter((p) => p.completed).map((project) => (
-                  <Card key={project.id} className="glass-card opacity-60 hover:opacity-90 transition-opacity cursor-pointer" onClick={() => setSelectedProject(project)}>
+                  <Card key={project.id} className="glass-card opacity-60 hover:opacity-90 transition-opacity cursor-pointer" onClick={() => navigate(`/projects/${project.id}`)}>
                     <CardContent className="p-3 flex items-center justify-between">
                       <div>
                         <span className="font-medium text-sm">{project.name}</span>
@@ -1260,7 +1264,7 @@ export default function Projects() {
             <div className="space-y-1.5"><Label htmlFor="edit-name">{t("projects.projectName")}</Label><Input id="edit-name" value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} /></div>
             <div className="space-y-1.5"><Label htmlFor="edit-artist">{t("projects.artistProducer")}</Label><Input id="edit-artist" value={editForm.artist} onChange={(e) => setEditForm({ ...editForm, artist: e.target.value })} /></div>
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5"><Label>{t("projects.bpm")}</Label><Input type="number" value={editForm.bpm} onChange={(e) => setEditForm({ ...editForm, bpm: e.target.value })} className="font-mono-nums" /></div>
+              <div className="space-y-1.5"><Label>{t("projects.bpm")}</Label><Input type="number" min="40" max="250" value={editForm.bpm} onChange={(e) => setEditForm({ ...editForm, bpm: e.target.value })} className="font-mono-nums" /></div>
               <div className="space-y-1.5"><Label>{t("projects.key")}</Label><Input value={editForm.key} onChange={(e) => setEditForm({ ...editForm, key: e.target.value })} /></div>
             </div>
             <div className="space-y-1.5">

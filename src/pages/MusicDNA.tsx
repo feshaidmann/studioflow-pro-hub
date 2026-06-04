@@ -1,6 +1,7 @@
 import { Dna } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import MusicDNAAnalyzer from "@/components/music-dna/MusicDNAAnalyzer";
+import { MobileStickyHeader } from "@/components/ui/mobile-sticky-header";
 
 export default function MusicDNA() {
   const [searchParams] = useSearchParams();
@@ -9,7 +10,11 @@ export default function MusicDNA() {
 
   return (
     <div className="container max-w-5xl mx-auto px-4 py-6 space-y-6">
-      <header className="space-y-1">
+      <MobileStickyHeader
+        title="DNA Musical"
+        subtitle="Diagnóstico técnico e artístico da sua faixa"
+      />
+      <header className="hidden md:block space-y-1">
         <div className="flex items-center gap-2">
           <Dna className="h-5 w-5 text-primary" />
           <h1 className="text-2xl font-semibold tracking-tight">DNA Musical</h1>

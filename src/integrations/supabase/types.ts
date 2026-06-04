@@ -3128,6 +3128,13 @@ export type Database = {
           zero_crossing_rate: number
         }[]
       }
+      find_public_profile_by_email: {
+        Args: { p_email: string }
+        Returns: {
+          display_name: string
+          username: string
+        }[]
+      }
       genre_canonical: { Args: { p_genre: string }; Returns: string }
       genre_parent: { Args: { p_genero: string }; Returns: string }
       get_auth_email: { Args: never; Returns: string }
@@ -3260,6 +3267,26 @@ export type Database = {
         Returns: {
           avg_stars: number
           rating_count: number
+        }[]
+      }
+      get_public_captadores: {
+        Args: never
+        Returns: {
+          avatar_url: string
+          bio: string
+          captador_generos: string[]
+          captador_palco_tipos: string[]
+          captador_porte: string[]
+          captador_regioes: string[]
+          captador_taxa: string
+          captador_verificado: boolean
+          city: string
+          display_name: string
+          id: string
+          public_email: string
+          state: string
+          username: string
+          whatsapp: string
         }[]
       }
       get_public_profile: {

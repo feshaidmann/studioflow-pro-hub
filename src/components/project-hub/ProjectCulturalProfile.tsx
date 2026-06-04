@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { X, Plus, Save, ChevronDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 interface PerfilCultural {
   areas: string[];
@@ -28,7 +28,6 @@ const UF_OPTIONS = [
 ];
 
 export default function ProjectCulturalProfile({ projectId }: { projectId: string }) {
-  const { toast } = useToast();
   const [perfil, setPerfil] = useState<PerfilCultural>({ areas: [], estados: [], palavras_chave: [], porte: "" });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -117,9 +116,9 @@ export default function ProjectCulturalProfile({ projectId }: { projectId: strin
         .update({ perfil_cultural: perfil as any })
         .eq("id", projectId);
       if (error) throw error;
-      toast({ title: "Perfil cultural salvo!", description: "Veja recomendações de editais na aba Editais → Meus Editais" });
+      toast.success("Perfil cultural salvo!", { description: "Veja recomendações de editais na aba Editais → Meus Editais" });
     } catch (err: any) {
-      toast({ title: "Erro ao salvar", description: err.message, variant: "destructive" });
+      toast.error("Erro ao salvar", { description: err.message });
     } finally {
       setSaving(false);
     }

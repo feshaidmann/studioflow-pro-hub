@@ -15,6 +15,7 @@ import {
   useEditalApplications,
   useCreateApplication,
   useUpdateApplication,
+  useDeleteApplication,
   type ApplicationStatus,
   type EditalApplication,
 } from "@/hooks/useEditalApplications";
@@ -138,6 +139,7 @@ export default function Carreira() {
   const { data: applications = [], isLoading: loadingApps, refetch: refetchApps } = useEditalApplications();
   const createApp = useCreateApplication();
   const updateApp = useUpdateApplication();
+  const deleteApp = useDeleteApplication();
 
   // Projeto ativo: primeiro não concluído (proxy) — usado para busca IA + recomendações
   const activeProject = useMemo(() => projects.find((p) => !p.completed) || null, [projects]);
@@ -680,15 +682,28 @@ export default function Carreira() {
                               <Award className="h-3 w-3 mr-1" /> Registrar resultado
                             </Button>
                           )}
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-7 text-xs"
-                            onClick={() => handleApplicationClick(a)}
-                          >
-                            <ClipboardList className="h-3 w-3 mr-1" />
-                            {isPalco ? "Detalhes" : "Abrir"}
-                          </Button>
+                          {!a.edital ? (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                              aria-label="Remover candidatura órfã"
+                              disabled={deleteApp.isPending}
+                              onClick={() => deleteApp.mutate(a.id)}
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-7 text-xs"
+                              onClick={() => handleApplicationClick(a)}
+                            >
+                              <ClipboardList className="h-3 w-3 mr-1" />
+                              {isPalco ? "Detalhes" : "Abrir"}
+                            </Button>
+                          )}
                         </div>
                       </div>
                     </CardContent>

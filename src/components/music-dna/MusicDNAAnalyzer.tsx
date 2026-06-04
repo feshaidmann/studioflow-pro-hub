@@ -48,8 +48,6 @@ import { spotifyFeaturesFromDiagnosis, FEATURE_DESCRIPTIONS, type MusicDnaBenchm
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { NeighborDetailDialog } from "@/components/music-dna/NeighborDetailDialog";
 import { GenreMismatchHint } from "@/components/music-dna/GenreMismatchHint";
-import { PlaylistMatchCard } from "@/components/music-dna/PlaylistMatchCard";
-import { CompatiblePlaylistsCard } from "@/components/music-dna/CompatiblePlaylistsCard";
 import { SpotifyPopularityCard } from "@/components/music-dna/SpotifyPopularityCard";
 import { ActiveMonitorsCard } from "@/components/music-dna/ActiveMonitorsCard";
 import { StageSelector } from "@/components/music-dna/StageSelector";
@@ -1956,41 +1954,23 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
 
       {/* AcousticMatchPanel removido do resultado: as referências unificadas (catálogo + IA) já cobrem o caso de uso. */}
 
-      {realAnalysis && (stageProfile.showPlaylistMatch || (stageProfile.showCatalogNeighbors && relevantNeighbors.length > 0)) && (
-        <div className={cn("grid gap-4",
-          stageProfile.showPlaylistMatch && stageProfile.showCatalogNeighbors && relevantNeighbors.length > 0
-            ? "md:grid-cols-2"
-            : "md:grid-cols-1"
-        )}>
-          {stageProfile.showPlaylistMatch && (
-            <PlaylistMatchCard
-              user={{
-                lufs_integrated: realAnalysis.lufs_integrated ?? undefined,
-                dynamic_range_db: realAnalysis.dynamic_range_lu ?? undefined,
-                spectral_centroid: realAnalysis.spectral_centroid_hz ?? undefined,
-                tempo_bpm: typeof realAnalysis.bpm === "number" ? realAnalysis.bpm : undefined,
-                energy: realAnalysis.energy ?? undefined,
-                danceability: realAnalysis.danceability ?? undefined,
-                valence: realAnalysis.valence ?? undefined,
-                acousticness: realAnalysis.acousticness ?? undefined,
-              }}
-            />
-          )}
-          {stageProfile.showCatalogNeighbors && relevantNeighbors.length > 0 && (
-            <CatalogNeighborsPanel
-              neighbors={relevantNeighbors}
-              totalCompared={diagnosis.catalogTotalCompared ?? diagnosis.catalogTotal}
-              userTrack={{
-                bpm: typeof realAnalysis.bpm === "number" ? realAnalysis.bpm : undefined,
-                lufs: realAnalysis.lufs_integrated,
-                energy: realAnalysis.energy,
-                danceability: realAnalysis.danceability,
-                dynamic_range: realAnalysis.dynamic_range_lu,
-                spectral_centroid: realAnalysis.spectral_centroid_hz,
-                key: (realAnalysis as { key_name?: string }).key_name,
-              }}
-            />
-          )}
+      {/* PlaylistMatchCard — desativado temporariamente */}
+
+      {realAnalysis && stageProfile.showCatalogNeighbors && relevantNeighbors.length > 0 && (
+        <div className="grid gap-4 md:grid-cols-1">
+          <CatalogNeighborsPanel
+            neighbors={relevantNeighbors}
+            totalCompared={diagnosis.catalogTotalCompared ?? diagnosis.catalogTotal}
+            userTrack={{
+              bpm: typeof realAnalysis.bpm === "number" ? realAnalysis.bpm : undefined,
+              lufs: realAnalysis.lufs_integrated,
+              energy: realAnalysis.energy,
+              danceability: realAnalysis.danceability,
+              dynamic_range: realAnalysis.dynamic_range_lu,
+              spectral_centroid: realAnalysis.spectral_centroid_hz,
+              key: (realAnalysis as { key_name?: string }).key_name,
+            }}
+          />
         </div>
       )}
 
@@ -2000,24 +1980,7 @@ function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSaved, isS
         genre={diagnosis.genero_classificado ?? null}
       />
 
-      {/* Playlists Compatíveis (Spotify) */}
-      {(() => {
-        // genero_classificado can be "Sertanejo / Universitário" or "Sertanejo Universitário"
-        // Split into primary genre + optional subgenre for better Spotify queries.
-        const rawGenre = diagnosis.genero_classificado ?? "";
-        const [genrePart, subgenrePart] = rawGenre.includes("/")
-          ? rawGenre.split("/").map((s) => s.trim())
-          : [rawGenre, undefined];
-        return (
-          <CompatiblePlaylistsCard
-            genre={genrePart}
-            subgenre={subgenrePart}
-            mood={diagnosis.identidade?.mood_principal ? [diagnosis.identidade.mood_principal] : []}
-            styleTags={diagnosis.identidade?.tags ?? []}
-            references={(diagnosis.referencias_proximas ?? []).map((r) => r.artista).filter(Boolean)}
-          />
-        );
-      })()}
+      {/* Playlists Compatíveis (Spotify) — desativado temporariamente */}
 
       {savedAnalysisId && (
         <TrackVersionsPanel trackName={input.name} currentAnalysisId={savedAnalysisId} />

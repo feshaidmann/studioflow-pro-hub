@@ -598,7 +598,7 @@ async function callMusicDNAAnalyze(
 export function filterValidReferences(
   rawRefs: ReferenceMatch[],
   neighbors: CatalogNeighbor[],
-  floor = 0.7,
+  floor = 0.55,
 ): ReferenceMatch[] {
   const validBands = new Set<string>(
     neighbors
@@ -759,7 +759,9 @@ export function useMusicDNA(): UseMusicDNAReturn {
           // ── Reliable scalar features (high weight in SQL) ─────────────────
           tempo_bpm: realAnalysis.bpm,
           lufs_integrated: calibrated.lufs_integrated,
-          dynamic_range_db: realAnalysis.dynamic_range_lu,
+          // dynamic_range_db omitido: escala do browser (LU percentil p95/p10, ~2–14 LU)
+          // não é compatível com o catálogo (crest factor peak-RMS, ~8–30 dB).
+          // Passar NULL evita ruído na distância de similaridade.
           spectral_centroid_hz: calibrated.spectral_centroid_hz,
           spectral_rolloff: calibrated.spectral_rolloff,
           spectral_flatness: calibrated.spectral_flatness,

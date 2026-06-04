@@ -428,7 +428,7 @@ export default function PublicProfile() {
           projects_completed: profile.projects_completed,
           accept_invites: profile.accept_invites,
           is_user: true,
-        } satisfies MarketplaceProvider) : null}
+        } as unknown as MarketplaceProvider) : null}
       />
     </div>
   );
