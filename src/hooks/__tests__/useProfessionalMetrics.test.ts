@@ -49,7 +49,12 @@ vi.mock("@/integrations/supabase/client", () => {
         if (table === "profiles")             return profilesChain();
         return membersChain();
       },
-      rpc: () => Promise.resolve({ data: db.rpcCount, error: null }),
+      rpc: (name: string) => {
+        if (name === "find_public_profile_by_email") {
+          return Promise.resolve({ data: db.profile ? [db.profile] : [], error: null });
+        }
+        return Promise.resolve({ data: db.rpcCount, error: null });
+      },
     },
   };
 });
