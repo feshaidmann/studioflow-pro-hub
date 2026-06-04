@@ -478,6 +478,7 @@ export default function Projects() {
             getProjectStatus={getProjectStatus}
             onEdit={openEditDialog}
             onDelete={openDeleteDialog}
+            onCreateNew={() => setDialogOpen(true)}
             t={t}
           />
           <CompletedProjectsSection projects={projects} />

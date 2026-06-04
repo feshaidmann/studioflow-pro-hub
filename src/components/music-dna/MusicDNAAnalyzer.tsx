@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { Music, History } from "lucide-react";
+import { History } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   useMusicDNA,
@@ -165,10 +165,6 @@ export function MusicDNAAnalyzer({ defaultProjectId, initialAnalysisId }: { defa
 
       {!activeDiagnosis && !isPending && (
         <div className="mb-5 animate-slide-up">
-          <div className="flex items-center gap-2 mb-1">
-            <Music className="h-5 w-5 text-primary" />
-            <h1 className="text-xl font-bold">Analisador de DNA Musical</h1>
-          </div>
           <p className="text-sm text-muted-foreground leading-relaxed">
             Faça upload da sua demo para receber um diagnóstico técnico avançado com análise espectral,
             detecção de BPM e tom, segmentação por seções e sugestões de produção.
