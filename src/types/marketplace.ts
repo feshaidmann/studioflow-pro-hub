@@ -43,6 +43,9 @@ export interface ServiceRequest {
   target_provider_name: string | null;
 }
 
+/** Subset returned by the service_requests_inbound view — excludes requester_user_id. */
+export type InboundRequest = Omit<ServiceRequest, "requester_user_id">;
+
 export type ProposalStatus = "sent" | "accepted" | "rejected" | "withdrawn";
 
 export interface ServiceProposal {

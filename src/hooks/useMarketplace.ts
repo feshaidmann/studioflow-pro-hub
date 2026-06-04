@@ -7,6 +7,7 @@ import type {
   MarketplaceFilters,
   ServiceRequest,
   ServiceProposal,
+  InboundRequest,
 } from "@/types/marketplace";
 
 export function useMarketplaceProviders(filters: MarketplaceFilters) {
@@ -210,7 +211,7 @@ export function useServiceProposals(requestId?: string) {
 /** Hook para providers verem pedidos direcionados a eles. */
 export function useInboundRequests() {
   const { user } = useAuth();
-  const [requests, setRequests] = useState<ServiceRequest[]>([]);
+  const [requests, setRequests] = useState<InboundRequest[]>([]);
   const [myProposals, setMyProposals] = useState<ServiceProposal[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -219,10 +220,9 @@ export function useInboundRequests() {
     setLoading(true);
     const [reqRes, propRes] = await Promise.all([
       (supabase as any)
-        .from("service_requests")
+        .from("service_requests_inbound")
         .select("*")
         .eq("target_provider_ref", user.id)
-        .eq("status", "open")
         .order("created_at", { ascending: false }),
       (supabase as any)
         .from("service_proposals")
@@ -230,7 +230,7 @@ export function useInboundRequests() {
         .eq("responder_user_id", user.id)
         .order("created_at", { ascending: false }),
     ]);
-    setRequests((reqRes.data as ServiceRequest[]) ?? []);
+    setRequests((reqRes.data as InboundRequest[]) ?? []);
     setMyProposals((propRes.data as ServiceProposal[]) ?? []);
     setLoading(false);
   }, [user]);
@@ -242,10 +242,9 @@ export function useInboundRequests() {
       setLoading(true);
       const [reqRes, propRes] = await Promise.all([
         (supabase as any)
-          .from("service_requests")
+          .from("service_requests_inbound")
           .select("*")
           .eq("target_provider_ref", user.id)
-          .eq("status", "open")
           .order("created_at", { ascending: false }),
         (supabase as any)
           .from("service_proposals")
@@ -254,7 +253,7 @@ export function useInboundRequests() {
           .order("created_at", { ascending: false }),
       ]);
       if (!active) return;
-      setRequests((reqRes.data as ServiceRequest[]) ?? []);
+      setRequests((reqRes.data as InboundRequest[]) ?? []);
       setMyProposals((propRes.data as ServiceProposal[]) ?? []);
       setLoading(false);
     };
