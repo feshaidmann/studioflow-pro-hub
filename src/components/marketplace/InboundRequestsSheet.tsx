@@ -8,7 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { ArrowLeft, BriefcaseBusiness, CalendarClock, DollarSign, Loader2, Send } from "lucide-react";
 import { useInboundRequests } from "@/hooks/useMarketplace";
 import { SubmitProposalModal } from "./SubmitProposalModal";
-import type { ServiceRequest, ServiceProposal } from "@/types/marketplace";
+import type { InboundRequest, ServiceProposal } from "@/types/marketplace";
 
 const PROPOSAL_STATUS: Record<ServiceProposal["status"], { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
   sent:      { label: "Proposta enviada",  variant: "secondary" },
@@ -23,7 +23,7 @@ function RequestDetail({
   onBack,
   onSendProposal,
 }: {
-  request: ServiceRequest;
+  request: InboundRequest;
   myProposal: ServiceProposal | null;
   onBack: () => void;
   onSendProposal: () => void;
@@ -114,8 +114,8 @@ interface Props {
 
 export function InboundRequestsSheet({ open, onOpenChange }: Props) {
   const { requests, loading, proposalForRequest, refetch } = useInboundRequests();
-  const [selected, setSelected] = useState<ServiceRequest | null>(null);
-  const [proposalTarget, setProposalTarget] = useState<ServiceRequest | null>(null);
+  const [selected, setSelected] = useState<InboundRequest | null>(null);
+  const [proposalTarget, setProposalTarget] = useState<InboundRequest | null>(null);
 
   const handleClose = (v: boolean) => {
     if (!v) setSelected(null);

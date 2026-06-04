@@ -7,12 +7,12 @@ import { Label } from "@/components/ui/label";
 import { useServiceProposals } from "@/hooks/useMarketplace";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/contexts/ProfileContext";
-import type { ServiceRequest } from "@/types/marketplace";
+import type { InboundRequest } from "@/types/marketplace";
 
 interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
-  request: ServiceRequest | null;
+  request: InboundRequest | null;
   onSuccess?: () => void;
 }
 
