@@ -28,10 +28,10 @@ export function RequestQuoteModal({ open, onOpenChange, provider, projectId, spe
     setSaving(true);
     const result = await createRequest({
       title: title.trim() || `Pedido para ${provider?.display_name ?? "profissional"}`,
-      description: description.trim(),
-      specialty: specialty ?? provider?.specialties?.[0] ?? "",
-      deadline_date: deadlineDate || null,
-      budget_brl: budgetBrl ? Number(budgetBrl) : null,
+      briefing: description.trim(),
+      specialty_needed: specialty ?? provider?.specialties?.[0] ?? "",
+      desired_deadline: deadlineDate || null,
+      budget_hint: budgetBrl ? `R$ ${budgetBrl}` : "",
       project_id: projectId ?? null,
       target_provider_ref: provider?.is_user ? provider.provider_ref : null,
       target_provider_name: provider?.name ?? null,

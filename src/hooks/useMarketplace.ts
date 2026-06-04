@@ -35,9 +35,28 @@ export function useMarketplaceProviders(filters: MarketplaceFilters) {
 
   useEffect(() => {
     let active = true;
-    fetchProviders().finally(() => { if (!active) setLoading(false); });
+    const run = async () => {
+      setLoading(true);
+      const { data, error } = await (supabase as any).rpc("get_marketplace_providers", {
+        p_specialty: filters.specialty ?? null,
+        p_genre: filters.genre ?? null,
+        p_state: filters.state ?? null,
+        p_search: filters.search ?? null,
+        p_limit: 50,
+        p_offset: 0,
+      });
+      if (!active) return;
+      if (error) {
+        console.error("marketplace fetch error", error);
+        toast.error("Erro ao carregar profissionais");
+      } else {
+        setProviders((data as MarketplaceProvider[]) ?? []);
+      }
+      setLoading(false);
+    };
+    run();
     return () => { active = false; };
-  }, [fetchProviders]);
+  }, [filters.specialty, filters.genre, filters.state, filters.search]);
 
   return { providers, loading, refetch: fetchProviders };
 }
