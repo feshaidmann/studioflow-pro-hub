@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Users, Plus, Filter, Store, Inbox, BriefcaseBusiness } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
 import { MarketplaceSheet } from "@/components/marketplace/MarketplaceSheet";
 import { MyRequestsSheet } from "@/components/marketplace/MyRequestsSheet";
 import { InboundRequestsSheet } from "@/components/marketplace/InboundRequestsSheet";
@@ -36,6 +37,17 @@ export default function Professionals() {
   const [myRequestsOpen, setMyRequestsOpen] = useState(false);
   const [inboundOpen, setInboundOpen] = useState(false);
   const { profile } = useProfile();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  useEffect(() => {
+    if (searchParams.get("openRequests") === "1") {
+      setMyRequestsOpen(true);
+      setSearchParams({}, { replace: true });
+    } else if (searchParams.get("openInbound") === "1") {
+      setInboundOpen(true);
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   const specialties = useMemo(
     () => Array.from(new Set(professionals.map((p) => p.specialty).filter(Boolean))).sort(),
