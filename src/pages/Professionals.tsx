@@ -40,13 +40,16 @@ export default function Professionals() {
   const [searchParams, setSearchParams] = useSearchParams();
 
   useEffect(() => {
-    if (searchParams.get("openRequests") === "1") {
-      setMyRequestsOpen(true);
-      setSearchParams({}, { replace: true });
-    } else if (searchParams.get("openInbound") === "1") {
-      setInboundOpen(true);
-      setSearchParams({}, { replace: true });
-    }
+    const openRequests = searchParams.get("openRequests");
+    const openInbound = searchParams.get("openInbound");
+    if (!openRequests && !openInbound) return;
+    if (openRequests === "1") setMyRequestsOpen(true);
+    if (openInbound === "1") setInboundOpen(true);
+    setSearchParams((prev) => {
+      prev.delete("openRequests");
+      prev.delete("openInbound");
+      return prev;
+    }, { replace: true });
   }, [searchParams, setSearchParams]);
 
   const specialties = useMemo(

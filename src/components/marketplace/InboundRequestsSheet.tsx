@@ -56,7 +56,7 @@ function RequestDetail({
               {request.budget_hint}
             </span>
           )}
-          {request.reference_url && (
+          {request.reference_url && /^https?:\/\//i.test(request.reference_url) && (
             <a
               href={request.reference_url}
               target="_blank"
