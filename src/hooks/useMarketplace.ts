@@ -34,28 +34,9 @@ export function useMarketplaceProviders(filters: MarketplaceFilters) {
 
   useEffect(() => {
     let active = true;
-    const run = async () => {
-      setLoading(true);
-      const { data, error } = await (supabase as any).rpc("get_marketplace_providers", {
-        p_specialty: filters.specialty ?? null,
-        p_genre: filters.genre ?? null,
-        p_state: filters.state ?? null,
-        p_search: filters.search ?? null,
-        p_limit: 50,
-        p_offset: 0,
-      });
-      if (!active) return;
-      if (error) {
-        console.error("marketplace fetch error", error);
-        toast.error("Erro ao carregar profissionais");
-      } else {
-        setProviders((data as MarketplaceProvider[]) ?? []);
-      }
-      setLoading(false);
-    };
-    run();
+    fetchProviders().finally(() => { if (!active) setLoading(false); });
     return () => { active = false; };
-  }, [filters.specialty, filters.genre, filters.state, filters.search]);
+  }, [fetchProviders]);
 
   return { providers, loading, refetch: fetchProviders };
 }
@@ -71,7 +52,7 @@ export function useServiceRequests() {
     const { data, error } = await (supabase as any)
       .from("service_requests")
       .select("*")
-      .eq("requester_id", user.id)
+      .eq("requester_user_id", user.id)
       .order("created_at", { ascending: false });
     if (error) console.error("service_requests fetch", error);
     setRequests(((data as ServiceRequest[]) ?? []));
@@ -86,7 +67,7 @@ export function useServiceRequests() {
       const { data, error } = await (supabase as any)
         .from("service_requests")
         .select("*")
-        .eq("requester_id", user.id)
+        .eq("requester_user_id", user.id)
         .order("created_at", { ascending: false });
       if (!active) return;
       if (error) console.error("service_requests fetch", error);
@@ -102,7 +83,7 @@ export function useServiceRequests() {
       if (!user) return null;
       const { data, error } = await (supabase as any)
         .from("service_requests")
-        .insert({ ...payload, requester_id: user.id, status: "open" })
+        .insert({ ...payload, requester_user_id: user.id, status: "open" })
         .select()
         .single();
       if (error) {
@@ -139,6 +120,7 @@ export function useServiceRequests() {
 }
 
 export function useServiceProposals(requestId?: string) {
+  const { user } = useAuth();
   const [proposals, setProposals] = useState<ServiceProposal[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -183,12 +165,107 @@ export function useServiceProposals(requestId?: string) {
         toast.error("Erro ao aceitar proposta");
         return false;
       }
-      toast.success("Proposta aceita");
+      toast.success("Proposta aceita! O profissional será notificado.");
       await fetchProposals();
       return true;
     },
     [fetchProposals],
   );
 
-  return { proposals, loading, refetch: fetchProposals, acceptProposal };
+  const submitProposal = useCallback(
+    async (payload: { price: number; delivery_days: number; message: string; providerName: string; providerAvatar: string }) => {
+      if (!user || !requestId) return false;
+      const alreadySent = proposals.some((p) => p.responder_user_id === user.id && p.status === "sent");
+      if (alreadySent) {
+        toast.error("Você já enviou uma proposta para este pedido.");
+        return false;
+      }
+      const { error } = await (supabase as any)
+        .from("service_proposals")
+        .insert({
+          request_id: requestId,
+          provider_user_id: user.id,
+          responder_user_id: user.id,
+          price: payload.price,
+          delivery_days: payload.delivery_days,
+          message: payload.message,
+          provider_name: payload.providerName,
+          provider_avatar: payload.providerAvatar,
+          status: "sent",
+        });
+      if (error) {
+        toast.error("Erro ao enviar proposta: " + error.message);
+        return false;
+      }
+      toast.success("Proposta enviada com sucesso!");
+      await fetchProposals();
+      return true;
+    },
+    [user, requestId, proposals, fetchProposals],
+  );
+
+  return { proposals, loading, refetch: fetchProposals, acceptProposal, submitProposal };
+}
+
+/** Hook para providers verem pedidos direcionados a eles. */
+export function useInboundRequests() {
+  const { user } = useAuth();
+  const [requests, setRequests] = useState<ServiceRequest[]>([]);
+  const [myProposals, setMyProposals] = useState<ServiceProposal[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchAll = useCallback(async () => {
+    if (!user) return;
+    setLoading(true);
+    const [reqRes, propRes] = await Promise.all([
+      (supabase as any)
+        .from("service_requests")
+        .select("*")
+        .eq("target_provider_ref", user.id)
+        .eq("status", "open")
+        .order("created_at", { ascending: false }),
+      (supabase as any)
+        .from("service_proposals")
+        .select("*")
+        .eq("responder_user_id", user.id)
+        .order("created_at", { ascending: false }),
+    ]);
+    setRequests((reqRes.data as ServiceRequest[]) ?? []);
+    setMyProposals((propRes.data as ServiceProposal[]) ?? []);
+    setLoading(false);
+  }, [user]);
+
+  useEffect(() => {
+    let active = true;
+    const run = async () => {
+      if (!user) { setRequests([]); setMyProposals([]); setLoading(false); return; }
+      setLoading(true);
+      const [reqRes, propRes] = await Promise.all([
+        (supabase as any)
+          .from("service_requests")
+          .select("*")
+          .eq("target_provider_ref", user.id)
+          .eq("status", "open")
+          .order("created_at", { ascending: false }),
+        (supabase as any)
+          .from("service_proposals")
+          .select("*")
+          .eq("responder_user_id", user.id)
+          .order("created_at", { ascending: false }),
+      ]);
+      if (!active) return;
+      setRequests((reqRes.data as ServiceRequest[]) ?? []);
+      setMyProposals((propRes.data as ServiceProposal[]) ?? []);
+      setLoading(false);
+    };
+    run();
+    return () => { active = false; };
+  }, [user]);
+
+  const proposalForRequest = useCallback(
+    (requestId: string) => myProposals.find((p) => p.request_id === requestId) ?? null,
+    [myProposals],
+  );
+
+  return { requests, myProposals, loading, refetch: fetchAll, proposalForRequest };
 }

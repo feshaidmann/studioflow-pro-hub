@@ -1,6 +1,10 @@
-import { useMemo, useState } from "react";
-import { Users, Plus, Filter, Store } from "lucide-react";
+import { useMemo, useState, useEffect } from "react";
+import { Users, Plus, Filter, Store, Inbox, BriefcaseBusiness } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
 import { MarketplaceSheet } from "@/components/marketplace/MarketplaceSheet";
+import { MyRequestsSheet } from "@/components/marketplace/MyRequestsSheet";
+import { InboundRequestsSheet } from "@/components/marketplace/InboundRequestsSheet";
+import { useProfile } from "@/contexts/ProfileContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -30,6 +34,20 @@ export default function Professionals() {
   const [formOpen, setFormOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Professional | null>(null);
   const [marketplaceOpen, setMarketplaceOpen] = useState(false);
+  const [myRequestsOpen, setMyRequestsOpen] = useState(false);
+  const [inboundOpen, setInboundOpen] = useState(false);
+  const { profile } = useProfile();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  useEffect(() => {
+    if (searchParams.get("openRequests") === "1") {
+      setMyRequestsOpen(true);
+      setSearchParams({}, { replace: true });
+    } else if (searchParams.get("openInbound") === "1") {
+      setInboundOpen(true);
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   const specialties = useMemo(
     () => Array.from(new Set(professionals.map((p) => p.specialty).filter(Boolean))).sort(),
@@ -84,6 +102,14 @@ export default function Professionals() {
           <p className="text-muted-foreground mt-1">Sua agenda de profissionais — músicos, engenheiros e colaboradores.</p>
         </div>
         <div className="flex gap-2">
+          {profile?.allow_global_listing && (
+            <Button variant="outline" onClick={() => setInboundOpen(true)} className="gap-2">
+              <BriefcaseBusiness className="h-4 w-4" /> Pedidos Recebidos
+            </Button>
+          )}
+          <Button variant="outline" onClick={() => setMyRequestsOpen(true)} className="gap-2">
+            <Inbox className="h-4 w-4" /> Meus Pedidos
+          </Button>
           <Button variant="outline" onClick={() => setMarketplaceOpen(true)} className="gap-2">
             <Store className="h-4 w-4" /> Marketplace
           </Button>
@@ -192,6 +218,8 @@ export default function Professionals() {
       />
 
       <MarketplaceSheet open={marketplaceOpen} onOpenChange={setMarketplaceOpen} />
+      <MyRequestsSheet open={myRequestsOpen} onOpenChange={setMyRequestsOpen} />
+      <InboundRequestsSheet open={inboundOpen} onOpenChange={setInboundOpen} />
     </div>
   );
 }
