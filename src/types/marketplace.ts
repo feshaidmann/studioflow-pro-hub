@@ -39,6 +39,8 @@ export interface ServiceRequest {
   created_at: string;
   updated_at: string;
   closed_at: string | null;
+  target_provider_ref: string | null;
+  target_provider_name: string | null;
 }
 
 export type ProposalStatus = "sent" | "accepted" | "rejected" | "withdrawn";
@@ -56,4 +58,6 @@ export interface ServiceProposal {
   status: ProposalStatus;
   created_at: string;
   updated_at: string;
+  provider_name: string;
+  provider_avatar: string;
 }

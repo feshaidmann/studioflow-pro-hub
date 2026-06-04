@@ -1,14 +1,16 @@
 import { useState } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Store } from "lucide-react";
+import { Search, Store, Inbox } from "lucide-react";
 import { useMarketplaceProviders } from "@/hooks/useMarketplace";
 import { SPECIALTY_OPTIONS } from "@/constants/specialtyOptions";
 import { BRAZIL_STATES } from "@/constants/brazilStates";
 import { ProviderCard } from "./ProviderCard";
 import { ProviderProfileSheet } from "./ProviderProfileSheet";
 import { RequestQuoteModal } from "./RequestQuoteModal";
+import { MyRequestsSheet } from "./MyRequestsSheet";
 import type { MarketplaceProvider } from "@/types/marketplace";
 
 interface Props {
@@ -33,15 +35,26 @@ export function MarketplaceSheet({ open, onOpenChange, initialSpecialty, initial
 
   const [quoteTarget, setQuoteTarget] = useState<MarketplaceProvider | null>(null);
   const [profileTarget, setProfileTarget] = useState<MarketplaceProvider | null>(null);
+  const [myRequestsOpen, setMyRequestsOpen] = useState(false);
 
   return (
     <>
       <Sheet open={open} onOpenChange={onOpenChange}>
         <SheetContent side="right" className="w-full sm:max-w-2xl overflow-y-auto">
           <SheetHeader>
-            <SheetTitle className="flex items-center gap-2">
-              <Store className="h-5 w-5" /> Marketplace de Profissionais
-            </SheetTitle>
+            <div className="flex items-start justify-between">
+              <SheetTitle className="flex items-center gap-2">
+                <Store className="h-5 w-5" /> Marketplace de Profissionais
+              </SheetTitle>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="gap-1.5 text-muted-foreground -mr-2 -mt-1"
+                onClick={() => setMyRequestsOpen(true)}
+              >
+                <Inbox className="h-4 w-4" /> Meus Pedidos
+              </Button>
+            </div>
             <SheetDescription>
               Descubra prestadores, envie um briefing curto e receba orçamentos.
             </SheetDescription>
@@ -108,6 +121,8 @@ export function MarketplaceSheet({ open, onOpenChange, initialSpecialty, initial
         projectId={projectId}
         specialty={specialty === "all" ? undefined : specialty}
       />
+
+      <MyRequestsSheet open={myRequestsOpen} onOpenChange={setMyRequestsOpen} />
 
       <ProviderProfileSheet
         provider={profileTarget}

@@ -35,6 +35,8 @@ export function RequestQuoteModal({ open, onOpenChange, provider, projectId, spe
       budget_hint: budget.trim(),
       reference_url: reference.trim(),
       project_id: projectId ?? null,
+      target_provider_ref: provider?.is_user ? provider.provider_ref : null,
+      target_provider_name: provider?.name ?? null,
     });
     setSaving(false);
     if (result) {
