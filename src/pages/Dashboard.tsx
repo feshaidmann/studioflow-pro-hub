@@ -283,7 +283,7 @@ export default function Dashboard() {
   const dashboardSections: Record<string, ReactNode> = {
     checklist: (
       <div id="checklist-section" className="grid grid-cols-1 gap-3">
-        {isFirstRun && <FirstRunEmptyState onNavigate={navigate} recentProject={recentOnboardingProject} profile={profile} />}
+        {(isFirstRun || !!recentOnboardingProject) && <FirstRunEmptyState onNavigate={navigate} recentProject={recentOnboardingProject} profile={profile} />}
         <DailyChecklist
           activeTasks={activeTasks}
           completedTasks={completedTasks}

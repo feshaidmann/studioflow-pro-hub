@@ -221,6 +221,10 @@ export default function Projects() {
         artistState: (profile as any)?.state ?? null,
       });
       if (!newProj) { toast.error("Erro ao criar projeto. Verifique sua conexão e tente novamente."); return; }
+      if (projects.length === 0) {
+        localStorage.setItem("sfp_recent_onboarding_project", newProj.id);
+        window.dispatchEvent(new Event("sfp:recent-onboarding-project-changed"));
+      }
       setForm({ name: "", artist: "", bpm: "120", key: "C", stage: "inicio", projectType: "single", trackCount: "", uploadDate: "", template: "none", genre: "", audienceSize: "" });
       setDialogOpen(false);
       setSelectedProject(newProj);

@@ -172,7 +172,7 @@ export function InboundRequestsSheet({ open, onOpenChange }: Props) {
                             {PROPOSAL_STATUS[myProposal.status].label}
                           </Badge>
                         ) : (
-                          <Badge variant="outline" className="shrink-0 text-xs">Sem resposta</Badge>
+                          <Badge variant="outline" className="shrink-0 text-xs">Aguardando resposta</Badge>
                         )}
                       </div>
                       <p className="text-xs text-muted-foreground">{req.specialty_needed}</p>

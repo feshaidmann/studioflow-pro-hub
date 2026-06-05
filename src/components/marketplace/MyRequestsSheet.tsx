@@ -17,14 +17,23 @@ const STATUS_LABEL: Record<ServiceRequest["status"], { label: string; variant: "
   expired:   { label: "Expirado",  variant: "outline" },
 };
 
-function RequestDetail({ request, onBack }: { request: ServiceRequest; onBack: () => void }) {
+function RequestDetail({
+  request,
+  onBack,
+  onAccepted,
+}: {
+  request: ServiceRequest;
+  onBack: () => void;
+  onAccepted?: () => void;
+}) {
   const { proposals, loading, acceptProposal } = useServiceProposals(request.id);
   const [accepting, setAccepting] = useState<string | null>(null);
 
   const handleAccept = async (id: string) => {
     setAccepting(id);
-    await acceptProposal(id);
+    const ok = await acceptProposal(id);
     setAccepting(null);
+    if (ok) onAccepted?.();
   };
 
   const isOpen = request.status === "open";
@@ -103,7 +112,7 @@ interface Props {
 }
 
 export function MyRequestsSheet({ open, onOpenChange }: Props) {
-  const { requests, loading, cancelRequest } = useServiceRequests();
+  const { requests, loading, cancelRequest, refetch: refetchRequests } = useServiceRequests();
   const [selected, setSelected] = useState<ServiceRequest | null>(null);
   const [cancelling, setCancelling] = useState<string | null>(null);
 
@@ -112,6 +121,11 @@ export function MyRequestsSheet({ open, onOpenChange }: Props) {
     setCancelling(id);
     await cancelRequest(id);
     setCancelling(null);
+  };
+
+  const handleAccepted = async () => {
+    await refetchRequests();
+    setSelected((prev) => prev ? { ...prev, status: "fulfilled" } : null);
   };
 
   return (
@@ -130,7 +144,11 @@ export function MyRequestsSheet({ open, onOpenChange }: Props) {
 
         <div className="mt-4">
           {selected ? (
-            <RequestDetail request={selected} onBack={() => setSelected(null)} />
+            <RequestDetail
+              request={selected}
+              onBack={() => setSelected(null)}
+              onAccepted={handleAccepted}
+            />
           ) : loading ? (
             <div className="flex justify-center py-12">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />

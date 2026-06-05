@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -25,6 +25,10 @@ export function SubmitProposalModal({ open, onOpenChange, request, onSuccess }: 
   const [days, setDays] = useState("");
   const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!open) { setPrice(""); setDays(""); setMessage(""); }
+  }, [open]);
 
   const handleSubmit = async () => {
     if (!message.trim() || message.trim().length < 10) return;
