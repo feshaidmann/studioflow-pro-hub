@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -23,6 +23,10 @@ export function RequestQuoteModal({ open, onOpenChange, provider, projectId, spe
   const [budgetBrl, setBudgetBrl] = useState("");
   const [saving, setSaving] = useState(false);
 
+  useEffect(() => {
+    if (!open) { setTitle(""); setDescription(""); setDeadlineDate(""); setBudgetBrl(""); }
+  }, [open]);
+
   const handleSubmit = async () => {
     if (!description.trim() || description.trim().length < 10) return;
     setSaving(true);
@@ -37,10 +41,7 @@ export function RequestQuoteModal({ open, onOpenChange, provider, projectId, spe
       target_provider_name: provider?.name ?? null,
     });
     setSaving(false);
-    if (result) {
-      setTitle(""); setDescription(""); setDeadlineDate(""); setBudgetBrl("");
-      onOpenChange(false);
-    }
+    if (result) onOpenChange(false);
   };
 
   return (
@@ -50,26 +51,25 @@ export function RequestQuoteModal({ open, onOpenChange, provider, projectId, spe
           <DialogTitle>Solicitar orçamento</DialogTitle>
           <DialogDescription>
             {provider ? `Envie um briefing curto para ${provider.display_name}.` : "Descreva o serviço que você precisa."}
-            {" "}Profissionais interessados respondem com valor e prazo.
+            {" "}O profissional responde com valor e prazo.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-3">
-          <div className="space-y-1">
-            <Label htmlFor="mkt-title">Título <span className="text-muted-foreground text-xs">(opcional)</span></Label>
-            <Input id="mkt-title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex: Mix de single 'Tarde de Quinta'" />
-          </div>
+          {/* Briefing first — it's the only required field */}
           <div className="space-y-1">
             <Label htmlFor="mkt-description">Briefing *</Label>
             <Textarea
               id="mkt-description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="O que precisa ser feito, estilo, contexto, faixa que vamos usar..."
+              placeholder="O que precisa ser feito, estilo, contexto, faixa..."
               rows={4}
+              autoFocus
             />
             <p className="text-[11px] text-muted-foreground">Mínimo 10 caracteres.</p>
           </div>
+
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
               <Label htmlFor="mkt-deadline">Prazo desejado</Label>
@@ -88,6 +88,11 @@ export function RequestQuoteModal({ open, onOpenChange, provider, projectId, spe
                 />
               </div>
             </div>
+          </div>
+
+          <div className="space-y-1">
+            <Label htmlFor="mkt-title">Título <span className="text-muted-foreground text-xs">(opcional)</span></Label>
+            <Input id="mkt-title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex: Mix de single 'Tarde de Quinta'" />
           </div>
         </div>
 
