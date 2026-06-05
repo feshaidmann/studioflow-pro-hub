@@ -4,6 +4,8 @@ export interface MarketplaceProvider {
   provider_ref: string;
   source: ProviderSource;
   name: string;
+  /** Some DB views surface display_name separately; falls back to name. */
+  display_name?: string;
   handle: string | null;
   avatar_url: string;
   bio: string;
@@ -14,6 +16,13 @@ export interface MarketplaceProvider {
   projects_completed: number;
   accept_invites: boolean;
   is_user: boolean;
+  /** JSP-verified badge (curated providers only). */
+  verified_by_jsp?: boolean;
+  avg_rating?: number;
+  review_count?: number;
+  base_rate_brl?: number;
+  rate_unit?: string;
+  portfolio_links?: Array<{ url: string; label?: string }>;
 }
 
 export interface MarketplaceFilters {
