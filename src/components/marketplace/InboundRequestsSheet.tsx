@@ -5,7 +5,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, BriefcaseBusiness, CalendarClock, DollarSign, Loader2, Send } from "lucide-react";
+import { ArrowLeft, BriefcaseBusiness, CalendarClock, DollarSign, Loader2, Send, Undo2 } from "lucide-react";
 import { useInboundRequests } from "@/hooks/useMarketplace";
 import { SubmitProposalModal } from "./SubmitProposalModal";
 import type { InboundRequest, ServiceProposal } from "@/types/marketplace";
@@ -22,11 +22,13 @@ function RequestDetail({
   myProposal,
   onBack,
   onSendProposal,
+  onWithdrawProposal,
 }: {
   request: InboundRequest;
   myProposal: ServiceProposal | null;
   onBack: () => void;
   onSendProposal: () => void;
+  onWithdrawProposal: (id: string) => void;
 }) {
   return (
     <div className="space-y-4">
@@ -96,6 +98,16 @@ function RequestDetail({
             </div>
             <p className="text-muted-foreground">{myProposal.message}</p>
           </div>
+          {myProposal.status === "sent" && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5 text-muted-foreground hover:text-destructive hover:border-destructive/50"
+              onClick={() => onWithdrawProposal(myProposal.id)}
+            >
+              <Undo2 className="h-3.5 w-3.5" /> Retirar proposta
+            </Button>
+          )}
         </div>
       ) : (
         <Button className="w-full" onClick={onSendProposal}>
@@ -113,7 +125,7 @@ interface Props {
 }
 
 export function InboundRequestsSheet({ open, onOpenChange }: Props) {
-  const { requests, loading, proposalForRequest, refetch } = useInboundRequests();
+  const { requests, loading, proposalForRequest, refetch, withdrawProposal } = useInboundRequests();
   const [selected, setSelected] = useState<InboundRequest | null>(null);
   const [proposalTarget, setProposalTarget] = useState<InboundRequest | null>(null);
 
@@ -144,6 +156,7 @@ export function InboundRequestsSheet({ open, onOpenChange }: Props) {
                 myProposal={proposalForRequest(selected.id)}
                 onBack={() => setSelected(null)}
                 onSendProposal={() => setProposalTarget(selected)}
+                onWithdrawProposal={withdrawProposal}
               />
             ) : loading ? (
               <div className="flex justify-center py-12">

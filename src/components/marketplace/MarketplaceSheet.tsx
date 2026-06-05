@@ -103,7 +103,7 @@ export function MarketplaceSheet({ open, onOpenChange, initialSpecialty, initial
             ) : (
               providers.map((p) => (
                 <ProviderCard
-                  key={p.id}
+                  key={p.provider_ref}
                   provider={p}
                   onRequestQuote={setQuoteTarget}
                   onOpenProfile={setProfileTarget}

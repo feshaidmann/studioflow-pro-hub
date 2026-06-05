@@ -212,5 +212,25 @@ export function useInboundRequests() {
     [myProposals],
   );
 
-  return { requests, myProposals, loading, refetch: fetchAll, proposalForRequest };
+  const withdrawProposal = useCallback(
+    async (proposalId: string) => {
+      if (!user) return false;
+      const { error } = await supabase
+        .from("service_proposals")
+        .update({ status: "withdrawn" })
+        .eq("id", proposalId)
+        .eq("responder_user_id", user.id)
+        .in("status", ["sent"]);
+      if (error) {
+        toast.error("Erro ao retirar proposta");
+        return false;
+      }
+      toast.success("Proposta retirada.");
+      await fetchAll();
+      return true;
+    },
+    [user, fetchAll],
+  );
+
+  return { requests, myProposals, loading, refetch: fetchAll, proposalForRequest, withdrawProposal };
 }
