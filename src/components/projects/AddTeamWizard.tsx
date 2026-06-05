@@ -200,7 +200,7 @@ export function AddTeamWizard({
         await addProfessional(project.id, { name: newContact.name, role: wizardProfType ?? "", instrument: derived, email: newContact.email, phone: newContact.phone, fee, notes: proposal.scheduleNotes, invitationId: invId ?? undefined, permissionsScope: proposal.permissionsScope });
         if (fee > 0) onFeeRequired(project.id, newContact.name, derived || wizardProfType || "Profissional", fee);
         else addNotification({ title: "Profissional adicionado", message: `${newContact.name} adicionado à equipe`, link: "/projects", type: "general" });
-        toast.success(`${newContact.name} adicionado à equipe ✅`);
+        toast.success(`${newContact.name} adicionado à equipe`);
       } else {
         const prof = globalProfessionals.find((p) => p.id === selectedExistingProfId) as Professional & { email?: string; phone?: string };
         if (!prof) { setSaving(false); return; }
@@ -209,7 +209,7 @@ export function AddTeamWizard({
         await addProfessional(project.id, { name: prof.name, role: wizardProfType ?? "", instrument: prof.specialty, email: prof.email || "", phone: prof.phone || "", fee, notes: proposal.scheduleNotes, invitationId: invId ?? undefined, permissionsScope: proposal.permissionsScope });
         if (fee > 0) onFeeRequired(project.id, prof.name, prof.specialty || wizardProfType || "Profissional", fee);
         else addNotification({ title: "Profissional adicionado", message: `${prof.name} adicionado à equipe`, link: "/projects", type: "general" });
-        toast.success(`${prof.name} adicionado à equipe ✅`);
+        toast.success(`${prof.name} adicionado à equipe`);
       }
       handleOpenChange(false);
     } catch {
