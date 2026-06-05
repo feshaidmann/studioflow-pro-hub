@@ -132,7 +132,7 @@ export default function ProjectChat({ projectId, isOwner = false }: ProjectChatP
       }
       if (mentions.length > 0) {
         const names = mentions.map((m) => m.name).join(", ");
-        toast.success(`Tarefa atribuída a ${names} ✅`);
+        toast.success(`Tarefa atribuída a ${names}`);
       }
     }
 
@@ -226,7 +226,7 @@ export default function ProjectChat({ projectId, isOwner = false }: ProjectChatP
     if (!error && data) {
       await linkTask(msg.id, data.id);
       await togglePending(msg.id, true);
-      toast.success("Tarefa criada a partir da mensagem! ✅");
+      toast.success("Tarefa criada a partir da mensagem!");
     } else {
       toast.error("Erro ao criar tarefa");
     }
@@ -418,7 +418,7 @@ export default function ProjectChat({ projectId, isOwner = false }: ProjectChatP
                     )}
                     {msg.is_pending && !msg.is_resolved && (
                       <Button variant="ghost" size="sm" className="h-6 text-[10px] gap-1 px-2"
-                        onClick={() => { toggleResolved(msg.id, true); setActionMenuId(null); toast.success("Resolvido! ✅"); }}>
+                        onClick={() => { toggleResolved(msg.id, true); setActionMenuId(null); toast.success("Resolvido!"); }}>
                         <CheckCircle2 className="h-2.5 w-2.5 text-success" /> Resolver
                       </Button>
                     )}
