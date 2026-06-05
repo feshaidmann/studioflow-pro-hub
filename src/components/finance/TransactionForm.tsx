@@ -65,8 +65,10 @@ export default function TransactionForm({
   const [paid, setPaid] = useState(false);
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
 
   useEffect(() => {
+    setSubmitted(false);
     if (editTransaction) {
       setType(editTransaction.type);
       setDescription(editTransaction.description);
@@ -93,7 +95,8 @@ export default function TransactionForm({
   const categories = type === "income" ? artistIncomeCategories : artistExpenseCategories;
 
   const handleSave = useCallback(async () => {
-    if (!description.trim() || !amount || !category) return;
+    setSubmitted(true);
+    if (!description.trim() || !amount || Number(amount) <= 0 || !category) return;
     if (category === "Outros" && !customCategory.trim()) return;
     setSaving(true);
     const payload = {
@@ -118,11 +121,11 @@ export default function TransactionForm({
           toast.success(t("finance.created"));
           onOpenChange(false);
         } else {
-          toast.error("Erro ao salvar transação. Tente novamente.");
+          toast.error(t("finance.saveError"));
         }
       }
     } catch {
-      toast.error("Erro ao salvar transação. Tente novamente.");
+      toast.error(t("finance.saveError"));
     } finally {
       setSaving(false);
     }
@@ -141,11 +144,6 @@ export default function TransactionForm({
     return () => window.removeEventListener("keydown", handler);
   }, [open, handleSave]);
 
-  const valid =
-    description.trim() &&
-    Number(amount) > 0 &&
-    category &&
-    (category !== "Outros" || customCategory.trim());
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -163,7 +161,7 @@ export default function TransactionForm({
               className={cn("flex-1 active:scale-95 transition-transform", type === "income" && "bg-success hover:bg-success/90 text-success-foreground")}
               onClick={() => { setType("income"); setCategory(""); setCustomCategory(""); }}
             >
-              Receita
+              {t("finance.income")}
             </Button>
             <Button
               type="button"
@@ -171,23 +169,26 @@ export default function TransactionForm({
               className={cn("flex-1 active:scale-95 transition-transform", type === "expense" && "bg-destructive hover:bg-destructive/90 text-destructive-foreground")}
               onClick={() => { setType("expense"); setCategory(""); setCustomCategory(""); }}
             >
-              Despesa
+              {t("finance.expense")}
             </Button>
           </div>
 
           <div className="space-y-1.5">
-            <Label>Descrição *</Label>
+            <Label>{t("finance.description")} *</Label>
             <Input
               placeholder="Ex: Show no Sesc"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               maxLength={200}
             />
+            {submitted && !description.trim() && (
+              <p className="text-xs text-destructive">{t("finance.descRequired")}</p>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label>Valor (R$) *</Label>
+              <Label>{t("finance.amount")} *</Label>
               <Input
                 type="number"
                 placeholder="0,00"
@@ -197,16 +198,19 @@ export default function TransactionForm({
                 min="0"
                 step="0.01"
               />
+              {submitted && (!amount || Number(amount) <= 0) && (
+                <p className="text-xs text-destructive">{t("finance.amountRequired")}</p>
+              )}
             </div>
             <div className="space-y-1.5">
-              <Label>Data *</Label>
+              <Label>{t("finance.date")} *</Label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
                     className={cn("w-full justify-between font-normal", !date && "text-muted-foreground")}
                   >
-                    {date ? format(date, "dd/MM/yyyy") : "Selecionar data"}
+                    {date ? format(date, "dd/MM/yyyy") : t("finance.selectDate")}
                     <CalendarIcon className="h-4 w-4 text-primary" />
                   </Button>
                 </PopoverTrigger>
@@ -225,49 +229,55 @@ export default function TransactionForm({
 
           {/* Paid toggle */}
           <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2.5">
-            <Label htmlFor="paid-toggle" className="cursor-pointer">Status</Label>
+            <Label htmlFor="paid-toggle" className="cursor-pointer">{t("finance.status")}</Label>
             <div className="flex items-center gap-2">
               <span className={cn("text-xs font-medium", paid ? "text-success" : "text-muted-foreground")}>
-                {paid ? "✓ Pago" : "⏳ Pendente"}
+                {paid ? t("finance.paidOn") : t("finance.paidOff")}
               </span>
               <Switch id="paid-toggle" checked={paid} onCheckedChange={setPaid} />
             </div>
           </div>
 
           <div className="space-y-1.5">
-            <Label>Categoria *</Label>
+            <Label>{t("finance.category")} *</Label>
             <Select
               value={category}
               onValueChange={(v) => { setCategory(v); if (v !== "Outros") setCustomCategory(""); }}
             >
-              <SelectTrigger><SelectValue placeholder="Selecionar categoria" /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder={t("finance.selectCategory")} /></SelectTrigger>
               <SelectContent>
                 {categories.map((c) => (
                   <SelectItem key={c} value={c}>{c}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            {submitted && !category && (
+              <p className="text-xs text-destructive">{t("finance.categoryRequired")}</p>
+            )}
           </div>
 
           {category === "Outros" && (
             <div className="space-y-1.5">
-              <Label>Especifique a categoria *</Label>
+              <Label>{t("finance.customCategory")} *</Label>
               <Input
-                placeholder="Ex: Cachê de participação especial"
+                placeholder={t("finance.customCategoryPlaceholder")}
                 value={customCategory}
                 onChange={(e) => setCustomCategory(e.target.value)}
                 autoFocus
                 maxLength={100}
               />
+              {submitted && !customCategory.trim() && (
+                <p className="text-xs text-destructive">{t("finance.customCategoryRequired")}</p>
+              )}
             </div>
           )}
 
           <div className="space-y-1.5">
-            <Label>Projeto <span className="text-muted-foreground text-xs">(opcional)</span></Label>
+            <Label>{t("finance.project")} <span className="text-muted-foreground text-xs">{t("finance.optional")}</span></Label>
             <Select value={projectId} onValueChange={setProjectId} disabled={!!lockedProjectId}>
-              <SelectTrigger><SelectValue placeholder="Nenhum projeto" /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder={t("finance.noProject")} /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">Nenhum projeto</SelectItem>
+                <SelectItem value="none">{t("finance.noProject")}</SelectItem>
                 {projects.map((p) => (
                   <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                 ))}
@@ -276,7 +286,7 @@ export default function TransactionForm({
           </div>
 
           <div className="space-y-1.5">
-            <Label>Observações <span className="text-muted-foreground text-xs">(opcional)</span></Label>
+            <Label>{t("finance.notes")} <span className="text-muted-foreground text-xs">{t("finance.optional")}</span></Label>
             <Textarea
               placeholder="Notas internas, referências, etc."
               value={notes}
@@ -288,10 +298,10 @@ export default function TransactionForm({
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancelar
+            {t("finance.cancel")}
           </Button>
-          <Button onClick={handleSave} disabled={!valid || saving} className="active:scale-95 transition-transform" title="Ctrl+Enter">
-            {saving ? "Salvando…" : "Salvar Transação"}
+          <Button onClick={handleSave} disabled={saving} className="active:scale-95 transition-transform" title="Ctrl+Enter">
+            {saving ? t("finance.saving") : t("finance.saveTransaction")}
           </Button>
         </DialogFooter>
       </DialogContent>

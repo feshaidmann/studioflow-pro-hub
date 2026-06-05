@@ -25,7 +25,7 @@ import { maskPhone, isValidPhone, type Professional } from "./types";
 const CUSTOM_SPECIALTY_MAX = 60;
 
 const schema = z.object({
-  name: z.string().trim().min(2, "Nome obrigatório").max(100),
+  name: z.string().trim().min(1, "Nome é obrigatório").min(2, "Nome deve ter pelo menos 2 caracteres").max(100),
   email: z.string().trim().email("E-mail inválido").max(255),
   phone: z.string().trim().max(20).default("").refine(isValidPhone, "Telefone deve ter 10 ou 11 dígitos"),
   specialty: z.string().trim().max(100).default(""),
