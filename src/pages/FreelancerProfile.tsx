@@ -10,19 +10,15 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { UserCircle, Plus, X, Eye, Music, MapPin, Mail, Phone, Users, Briefcase, CalendarDays, Globe, Trash2, Loader2, Save, Link2, Check, ExternalLink, Camera, Youtube, AlertCircle } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-
-const SPECIALTY_OPTIONS = [
-  "Guitarrista", "Baixista", "Baterista", "Tecladista", "Violinista",
-  "Violonista", "Cantor(a)", "Produtor", "Mix Engineer", "Mastering Engineer",
-  "Compositor", "Arranjador", "Trompetista", "Saxofonista", "Percussionista",
-  "Marketing Musical", "Social Media", "Designer Gráfico", "Assessor de Imprensa",
-  "Videomaker", "Fotógrafo", "Diretor Criativo",
-];
+import { SPECIALTY_OPTIONS } from "@/constants/specialtyOptions";
+import { BRAZIL_STATES } from "@/constants/brazilStates";
+import { maskWhatsapp } from "@/lib/masks";
 
 const YOUTUBE_REGEX = /^https?:\/\/(www\.)?(youtube\.com|youtu\.be)(\/.*)?$/i;
 
@@ -49,6 +45,7 @@ export default function FreelancerProfile() {
   const [form, setForm] = useState({
     display_name: "",
     city: "",
+    state: "",
     whatsapp: "",
     public_email: "",
     specialties: [] as string[],
@@ -66,9 +63,15 @@ export default function FreelancerProfile() {
   useEffect(() => {
     if (!profile) return;
     const p = profile as any;
+    // Detect legacy "City, UF" combined format and split into separate fields
+    const cityRaw: string = p.city ?? "";
+    const legacyMatch = cityRaw.match(/^(.+),\s*([A-Z]{2})$/);
+    const cityVal = legacyMatch ? legacyMatch[1].trim() : cityRaw;
+    const stateVal: string = p.state ?? (legacyMatch ? legacyMatch[2] : "");
     setForm({
       display_name: p.display_name ?? "",
-      city: p.city ?? "",
+      city: cityVal,
+      state: stateVal,
       whatsapp: p.whatsapp ?? "",
       public_email: p.public_email ?? "",
       specialties: p.specialties ?? [],
@@ -175,6 +178,7 @@ export default function FreelancerProfile() {
       await updateProfile({
         display_name: form.display_name,
         city: form.city,
+        state: form.state || null,
         whatsapp: form.whatsapp,
         public_email: form.public_email,
         specialties: form.specialties,
@@ -348,14 +352,26 @@ export default function FreelancerProfile() {
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="city"><MapPin className="inline h-3 w-3 mr-1" />Cidade/Estado</Label>
+              <Label htmlFor="city"><MapPin className="inline h-3 w-3 mr-1" />Cidade</Label>
               <Input
                 id="city"
                 value={form.city}
                 onChange={(e) => setForm((prev) => ({ ...prev, city: e.target.value }))}
-                placeholder="ex: São Paulo, SP"
+                placeholder="ex: São Paulo"
               />
             </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label><MapPin className="inline h-3 w-3 mr-1" />Estado</Label>
+            <Select value={form.state || ""} onValueChange={(v) => setForm((prev) => ({ ...prev, state: v }))}>
+              <SelectTrigger><SelectValue placeholder="Selecione o estado" /></SelectTrigger>
+              <SelectContent>
+                {BRAZIL_STATES.map((s) => (
+                  <SelectItem key={s.uf} value={s.uf}>{s.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Specialties */}
@@ -431,8 +447,9 @@ export default function FreelancerProfile() {
               <Input
                 id="whatsapp"
                 value={form.whatsapp}
-                onChange={(e) => setForm((prev) => ({ ...prev, whatsapp: e.target.value }))}
-                placeholder="+55 11 99999-9999"
+                onChange={(e) => setForm((prev) => ({ ...prev, whatsapp: maskWhatsapp(e.target.value) }))}
+                placeholder="(11) 91234-5678"
+                inputMode="tel"
               />
             </div>
           </div>
@@ -533,18 +550,23 @@ export default function FreelancerProfile() {
                   variant="ghost"
                   size="sm"
                   className="h-8 gap-1.5 text-xs"
-                  asChild
+                  disabled={!form.allow_global_listing}
+                  asChild={form.allow_global_listing}
                 >
-                  <a href={publicProfileUrl!} target="_blank" rel="noopener noreferrer">
-                    <ExternalLink className="h-3.5 w-3.5" />
-                    Abrir
-                  </a>
+                  {form.allow_global_listing ? (
+                    <a href={publicProfileUrl!} target="_blank" rel="noopener noreferrer">
+                      <ExternalLink className="h-3.5 w-3.5" />
+                      Abrir
+                    </a>
+                  ) : (
+                    <span><ExternalLink className="h-3.5 w-3.5" />Abrir</span>
+                  )}
                 </Button>
               </div>
             </div>
             {!form.allow_global_listing && (
               <p className="text-[11px] text-muted-foreground/70 mt-2">
-                ⚠️ Perfil oculto — ative "Visível no banco" para torná-lo acessível
+                ⚠️ Não aparece nas buscas — ative "Visível no Marketplace" para ser encontrado por artistas
               </p>
             )}
           </CardContent>

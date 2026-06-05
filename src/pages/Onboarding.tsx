@@ -18,16 +18,9 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { GENRE_OPTIONS } from "@/constants/genreOptions";
 import { BRAZIL_STATES } from "@/constants/brazilStates";
+import { maskWhatsapp } from "@/lib/masks";
 import { ProfessionalDetailModal } from "@/components/professionals/ProfessionalDetailModal";
 import type { Professional } from "@/components/professionals/types";
-
-function maskWhatsapp(value: string) {
-  const digits = value.replace(/\D/g, "").slice(0, 11);
-  if (digits.length <= 2) return digits;
-  if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
-  if (digits.length <= 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
-  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
-}
 
 const MOMENT_OPTIONS = [
   { value: "começando", label: "Começando agora" },
