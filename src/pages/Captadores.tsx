@@ -53,11 +53,13 @@ export default function Captadores() {
         </Button>
       </header>
 
-      <Card className="glass-card">
-        <CardContent className="p-4">
-          <CaptadoresFilters filters={filters} onChange={setFilters} total={total} filtered={filtered} />
-        </CardContent>
-      </Card>
+      {(loading || data.length > 0 || Object.values(filters).some(Boolean)) && (
+        <Card className="glass-card">
+          <CardContent className="p-4">
+            <CaptadoresFilters filters={filters} onChange={setFilters} total={total} filtered={filtered} />
+          </CardContent>
+        </Card>
+      )}
 
       {loading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">

@@ -127,7 +127,7 @@ export function ProjectDetailCard({
           <div className="mt-4 rounded-lg bg-success/10 border border-success/30 p-3 flex items-center justify-between gap-2 animate-fade-in">
             <div className="flex items-center gap-2">
               <Trophy className="h-4 w-4 text-success" />
-              <span className="text-sm font-medium text-success">Projeto lançado e concluído! 🎉</span>
+              <span className="text-sm font-medium text-success">Projeto lançado e concluído!</span>
             </div>
             <Button
               variant="outline" size="sm"
@@ -135,7 +135,7 @@ export function ProjectDetailCard({
               onClick={async () => {
                 await updateProject(project.id, { completed: false, stage: "upload" });
                 setProject((prev) => prev ? { ...prev, completed: false, stage: "upload" } : null);
-                toast.success("Projeto reaberto ✅");
+                toast.success("Projeto reaberto");
               }}
             >
               Reabrir
