@@ -220,7 +220,7 @@ export default function Settings() {
     if (profCreated === 0 && ratingsCreated === 0) {
       toast.info(t("settings.contactsExist"));
     } else {
-      toast.success("🎉");
+      toast.success(t("settings.contactsCreated"));
     }
   };
 

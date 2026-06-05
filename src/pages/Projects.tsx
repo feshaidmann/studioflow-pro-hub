@@ -176,8 +176,8 @@ export default function Projects() {
   const handleLancadoCompletion = async (projectId: string, projectName: string) => {
     await updateProject(projectId, { completed: true, stage: "lancado" });
     setSelectedProject((prev) => prev ? { ...prev, completed: true, stage: "lancado" } : null);
-    addNotification({ title: "Projeto lançado! 🎉", message: `${projectName} foi lançado com sucesso`, link: "/projects", type: "stage" });
-    toast.success("🎉 Projeto lançado e concluído!");
+    addNotification({ title: "Projeto lançado!", message: `${projectName} foi lançado com sucesso`, link: "/projects", type: "stage" });
+    toast.success("Projeto lançado e concluído!");
     const { data: members } = await supabase.from("project_members").select("id, name, email, role").eq("project_id", projectId);
     setCompletedProjectMembers((members ?? []) as { id: string; name: string; email: string; role: string }[]);
     setCompletedProjectId(projectId);
@@ -188,7 +188,7 @@ export default function Projects() {
   const handleConfirmUpload = async () => {
     setConfirmUploadOpen(false);
     setMasterAnalyzerModalOpen(false);
-    toast.success("✅ Master analisado! Avance o projeto para 'Lançado' para concluí-lo.");
+    toast.success("Master analisado! Avance o projeto para 'Lançado' para concluí-lo.");
   };
 
   const handleCancelWithTask = async () => {

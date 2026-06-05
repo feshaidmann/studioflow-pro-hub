@@ -89,7 +89,7 @@ export default function Professionals() {
     <div className="p-4 md:p-6 space-y-6 max-w-5xl mx-auto">
       <MobileStickyHeader
         title="Meus Contatos"
-        subtitle={`${professionals.length} contato${professionals.length !== 1 ? "s" : ""}`}
+        subtitle={professionals.length > 0 ? `${professionals.length} contato${professionals.length !== 1 ? "s" : ""}` : undefined}
         cta={
           <Button size="sm" className="h-9 gap-1.5" onClick={openCreate}>
             <Plus className="h-4 w-4" /> Novo
@@ -138,18 +138,20 @@ export default function Professionals() {
       </header>
 
       <Card className="glass-card animate-fade-in" style={{ animationDelay: "0.1s" }}>
-        <CardHeader className="pb-3">
-          <ProfessionalsFilters
-            search={search} onSearchChange={setSearch}
-            status={filterStatus} onStatusChange={setFilterStatus}
-            favorite={filterFavorite} onFavoriteChange={setFilterFavorite}
-            allocated={filterAllocated} onAllocatedChange={setFilterAllocated}
-            specialty={filterSpecialty} onSpecialtyChange={setFilterSpecialty}
-            specialties={specialties}
-            total={professionals.length} filtered={filtered.length}
-            onClear={clearFilters} hasActive={hasActiveFilters}
-          />
-        </CardHeader>
+        {(loading || professionals.length > 0 || hasActiveFilters) && (
+          <CardHeader className="pb-3">
+            <ProfessionalsFilters
+              search={search} onSearchChange={setSearch}
+              status={filterStatus} onStatusChange={setFilterStatus}
+              favorite={filterFavorite} onFavoriteChange={setFilterFavorite}
+              allocated={filterAllocated} onAllocatedChange={setFilterAllocated}
+              specialty={filterSpecialty} onSpecialtyChange={setFilterSpecialty}
+              specialties={specialties}
+              total={professionals.length} filtered={filtered.length}
+              onClear={clearFilters} hasActive={hasActiveFilters}
+            />
+          </CardHeader>
+        )}
         <CardContent>
           {loading ? (
             <div className="space-y-2 py-2">

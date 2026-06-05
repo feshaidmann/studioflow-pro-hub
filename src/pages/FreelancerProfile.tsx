@@ -185,7 +185,7 @@ export default function FreelancerProfile() {
         youtube_url: form.youtube_url.trim(),
         work_links: form.work_links,
       } as any);
-      toast.success("Perfil atualizado ✅");
+      toast.success("Perfil atualizado!");
     } catch {
       toast.error("Erro ao salvar perfil");
     } finally {
@@ -595,7 +595,7 @@ export default function FreelancerProfile() {
                 {avatarPreview ? (
                   <img src={avatarPreview} alt="Avatar" className="h-full w-full object-cover" />
                 ) : (
-                  <div className="h-full w-full bg-primary/15 flex items-center justify-center text-2xl">🎵</div>
+                  <div className="h-full w-full bg-primary/15 flex items-center justify-center text-base font-semibold text-primary select-none">{(form.display_name || user?.email?.split("@")[0] || "?").charAt(0).toUpperCase()}</div>
                 )}
               </div>
               <div className="min-w-0">

@@ -163,7 +163,7 @@ export default function TransactionForm({
               className={cn("flex-1 active:scale-95 transition-transform", type === "income" && "bg-success hover:bg-success/90 text-success-foreground")}
               onClick={() => { setType("income"); setCategory(""); setCustomCategory(""); }}
             >
-              💰 Receita
+              Receita
             </Button>
             <Button
               type="button"
@@ -171,7 +171,7 @@ export default function TransactionForm({
               className={cn("flex-1 active:scale-95 transition-transform", type === "expense" && "bg-destructive hover:bg-destructive/90 text-destructive-foreground")}
               onClick={() => { setType("expense"); setCategory(""); setCustomCategory(""); }}
             >
-              💸 Despesa
+              Despesa
             </Button>
           </div>
 
