@@ -2,8 +2,9 @@ import { useState } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Store, Inbox } from "lucide-react";
+import { Search, Store, Inbox, FileText } from "lucide-react";
 import { useMarketplaceProviders } from "@/hooks/useMarketplace";
 import { SPECIALTY_OPTIONS } from "@/constants/specialtyOptions";
 import { BRAZIL_STATES } from "@/constants/brazilStates";
@@ -34,6 +35,7 @@ export function MarketplaceSheet({ open, onOpenChange, initialSpecialty, initial
   });
 
   const [quoteTarget, setQuoteTarget] = useState<MarketplaceProvider | null>(null);
+  const [openQuote, setOpenQuote] = useState(false);
   const [profileTarget, setProfileTarget] = useState<MarketplaceProvider | null>(null);
   const [myRequestsOpen, setMyRequestsOpen] = useState(false);
 
@@ -60,7 +62,18 @@ export function MarketplaceSheet({ open, onOpenChange, initialSpecialty, initial
             </SheetDescription>
           </SheetHeader>
 
-          <div className="mt-4 space-y-3">
+          <div className="mt-4">
+            <Button
+              variant="outline"
+              className="w-full gap-2 justify-start text-muted-foreground border-dashed mb-4"
+              onClick={() => setOpenQuote(true)}
+            >
+              <FileText className="h-4 w-4" />
+              Criar pedido aberto — qualquer profissional pode responder
+            </Button>
+          </div>
+
+          <div className="space-y-3">
             <div className="relative">
               <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <Input
@@ -94,7 +107,24 @@ export function MarketplaceSheet({ open, onOpenChange, initialSpecialty, initial
 
           <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
             {loading ? (
-              <p className="text-muted-foreground text-sm col-span-2 py-8 text-center animate-pulse">Carregando...</p>
+              Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="rounded-[14px] border bg-card p-4 flex flex-col gap-3">
+                  <div className="flex items-start gap-3">
+                    <Skeleton className="h-12 w-12 rounded-full shrink-0" />
+                    <div className="flex-1 space-y-2">
+                      <Skeleton className="h-4 w-3/4" />
+                      <Skeleton className="h-3 w-1/2" />
+                      <Skeleton className="h-3 w-1/3" />
+                    </div>
+                  </div>
+                  <Skeleton className="h-3 w-full" />
+                  <Skeleton className="h-3 w-5/6" />
+                  <div className="flex justify-between items-center">
+                    <Skeleton className="h-3 w-20" />
+                    <Skeleton className="h-8 w-24 rounded-md" />
+                  </div>
+                </div>
+              ))
             ) : providers.length === 0 ? (
               <div className="col-span-2 py-12 text-center space-y-2">
                 <Store className="h-10 w-10 text-muted-foreground/30 mx-auto" />
@@ -115,8 +145,8 @@ export function MarketplaceSheet({ open, onOpenChange, initialSpecialty, initial
       </Sheet>
 
       <RequestQuoteModal
-        open={!!quoteTarget}
-        onOpenChange={(v) => !v && setQuoteTarget(null)}
+        open={!!quoteTarget || openQuote}
+        onOpenChange={(v) => { if (!v) { setQuoteTarget(null); setOpenQuote(false); } }}
         provider={quoteTarget}
         projectId={projectId}
         specialty={specialty === "all" ? undefined : specialty}
