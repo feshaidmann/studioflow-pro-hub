@@ -22,7 +22,7 @@ export default function DashboardHeader({ displayName, projects, selectedProject
       <div>
         <h1 id="dashboard-title" className="text-2xl md:text-3xl font-bold text-foreground">Dashboard</h1>
         <p className="text-muted-foreground text-sm mt-1">
-          Olá, {displayName} 👋{focus ? ` Seu foco hoje é ${focus}.` : ""}
+          Olá, {displayName}{focus ? ` — Seu foco hoje é ${focus}.` : ""}
         </p>
       </div>
       <div className="flex items-center gap-2 flex-wrap">
