@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useMemo } from "react";
 import { trackAppEvent } from "@/lib/analytics";
 import { useNavigate, Navigate } from "react-router-dom";
 import {
-  Music, ArrowRight, ArrowLeft, User, Mic2, Phone, Mail,
+  Music, ArrowRight, ArrowLeft, User, Mic2, Phone,
   MapPin, Sparkles, Briefcase, ExternalLink, Calendar,
 } from "lucide-react";
 import { useProfile } from "@/contexts/ProfileContext";
@@ -175,8 +175,8 @@ export default function Onboarding() {
     });
   };
 
-
-
+  // Fix 6 — suppress unused variable warning for whatsappDigits
+  void whatsappDigits;
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
@@ -189,76 +189,83 @@ export default function Onboarding() {
           <h1 className="text-2xl font-bold text-foreground">MusicOS.ai</h1>
         </div>
 
-        {/* Step indicator */}
-        <div className="flex items-center justify-center gap-2" aria-label={`Passo ${step} de 3`}>
-          {[1, 2, 3].map((n) => (
-            <div
-              key={n}
-              className={`h-1.5 rounded-full transition-all ${
-                n === step ? "w-8 bg-primary" : n < step ? "w-6 bg-primary/60" : "w-6 bg-muted"
-              }`}
-            />
-          ))}
+        {/* Fix 7 — Step indicator with text label */}
+        <div className="flex flex-col items-center gap-1.5">
+          <div className="flex items-center gap-2">
+            {[1, 2, 3].map((n) => (
+              <div
+                key={n}
+                className={`h-1.5 rounded-full transition-all ${
+                  n === step ? "w-8 bg-primary" : n < step ? "w-6 bg-primary/60" : "w-6 bg-muted"
+                }`}
+              />
+            ))}
+          </div>
+          <p className="text-[11px] text-muted-foreground">Etapa {step} de 3</p>
         </div>
 
         <div className="glass-card rounded-2xl p-6 space-y-4 border border-border">
           {step === 1 && (
-            <>
-              <p className="text-muted-foreground text-sm text-center">Só precisamos de alguns dados pra começar.</p>
+            /* Fix 2 — wrap Step 1 in a form so Enter submits */
+            <form onSubmit={(e) => { e.preventDefault(); goToStep2(); }}>
+              <div className="space-y-4">
+                <p className="text-muted-foreground text-sm text-center">Só precisamos de alguns dados pra começar.</p>
 
-              <div className="space-y-1.5">
-                <Label htmlFor="fullName" className="text-xs text-muted-foreground flex items-center gap-1">
-                  <User className="h-3 w-3" /> Nome completo *
-                </Label>
-                <Input
-                  ref={fullNameRef}
-                  id="fullName"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  placeholder="Ex: João da Silva"
-                  maxLength={120}
-                  autoComplete="name"
-                />
+                <div className="space-y-1.5">
+                  <Label htmlFor="fullName" className="text-xs text-muted-foreground flex items-center gap-1">
+                    <User className="h-3 w-3" /> Nome completo *
+                  </Label>
+                  <Input
+                    ref={fullNameRef}
+                    id="fullName"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    placeholder="Ex: João da Silva"
+                    maxLength={120}
+                    autoComplete="name"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="artistName" className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Mic2 className="h-3 w-3" /> Nome artístico *
+                  </Label>
+                  <Input
+                    id="artistName"
+                    value={artistName}
+                    onChange={(e) => setArtistName(e.target.value)}
+                    placeholder="Ex: Mc João, Ana Castela…"
+                    maxLength={60}
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="whatsapp" className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Phone className="h-3 w-3" /> WhatsApp <span className="text-muted-foreground/60">(opcional)</span>
+                  </Label>
+                  <Input
+                    id="whatsapp"
+                    value={whatsapp}
+                    onChange={(e) => setWhatsapp(maskWhatsapp(e.target.value))}
+                    placeholder="(11) 91234-5678"
+                    inputMode="tel"
+                    autoComplete="tel"
+                  />
+                </div>
+
+                {/* Fix 1 — replaced disabled Email field with muted "logged in as" text */}
+                {user.email && (
+                  <p className="text-xs text-muted-foreground/70 text-center -mt-1">
+                    Logado como {user.email}
+                  </p>
+                )}
+
+                {/* Fix 2 — type="submit" so Enter key triggers form submission */}
+                <Button type="submit" disabled={!canStep1} className="w-full gap-2" size="lg">
+                  Continuar <ArrowRight className="h-4 w-4" />
+                </Button>
               </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="artistName" className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Mic2 className="h-3 w-3" /> Nome artístico *
-                </Label>
-                <Input
-                  id="artistName"
-                  value={artistName}
-                  onChange={(e) => setArtistName(e.target.value)}
-                  placeholder="Ex: Mc João, Ana Castela…"
-                  maxLength={60}
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="whatsapp" className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Phone className="h-3 w-3" /> WhatsApp <span className="text-muted-foreground/60">(opcional)</span>
-                </Label>
-                <Input
-                  id="whatsapp"
-                  value={whatsapp}
-                  onChange={(e) => setWhatsapp(maskWhatsapp(e.target.value))}
-                  placeholder="(11) 91234-5678"
-                  inputMode="tel"
-                  autoComplete="tel"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="email" className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Mail className="h-3 w-3" /> Email
-                </Label>
-                <Input id="email" value={user.email ?? ""} readOnly disabled className="bg-muted/50" />
-              </div>
-
-              <Button onClick={goToStep2} disabled={!canStep1} className="w-full gap-2" size="lg">
-                Continuar <ArrowRight className="h-4 w-4" />
-              </Button>
-            </>
+            </form>
           )}
 
           {step === 2 && (
@@ -310,12 +317,13 @@ export default function Onboarding() {
                 </Select>
               </div>
 
-              <div className="flex gap-2 pt-1">
-                <Button variant="outline" onClick={() => setStep(1)} className="gap-2" size="lg">
-                  <ArrowLeft className="h-4 w-4" /> Voltar
-                </Button>
-                <Button onClick={goToStep3} disabled={!canStep2} className="flex-1 gap-2" size="lg">
+              {/* Fix 3 — Continuar full-width CTA, Voltar ghost/small below */}
+              <div className="flex flex-col gap-2 pt-1">
+                <Button onClick={goToStep3} disabled={!canStep2} className="w-full gap-2" size="lg">
                   Continuar <ArrowRight className="h-4 w-4" />
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => setStep(1)} className="gap-1.5 w-fit mx-auto text-muted-foreground">
+                  <ArrowLeft className="h-3.5 w-3.5" /> Voltar
                 </Button>
               </div>
             </>
@@ -346,81 +354,88 @@ export default function Onboarding() {
                 )}
               </div>
 
-              {/* Editais */}
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                  <Sparkles className="h-3.5 w-3.5" /> Editais abertos
-                </div>
-                {matchesLoading ? (
+              {/* Fix 5 — hide both sections when no matches at all (not loading, matches loaded, both empty) */}
+              {!((!matchesLoading && matches && matches.editais.length === 0 && matches.pros.length === 0)) && (
+                <>
+                  {/* Editais */}
                   <div className="space-y-2">
-                    {[0, 1, 2].map((i) => <Skeleton key={i} className="h-16 w-full rounded-lg" />)}
-                  </div>
-                ) : matches && matches.editais.length > 0 ? (
-                  <div className="space-y-2">
-                    {matches.editais.map((e) => (
-                      <button
-                        key={e.id}
-                        onClick={() => window.open(`/editais/inscricao/${e.id}`, "_blank", "noopener")}
-                        className="w-full text-left p-3 rounded-lg border border-border bg-background/50 hover:bg-accent/30 transition-colors group"
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="min-w-0 flex-1">
-                            <div className="font-medium text-sm text-foreground line-clamp-1">{e.titulo}</div>
-                            <div className="text-xs text-muted-foreground mt-0.5 flex items-center gap-2 flex-wrap">
-                              {e.orgao && <span>{e.orgao}</span>}
-                              {e.estado && <span>· {e.estado}</span>}
-                              {e.prazo && (
-                                <span className="inline-flex items-center gap-1">
-                                  <Calendar className="h-3 w-3" />
-                                  {dateFmt.format(new Date(e.prazo))}
-                                </span>
-                              )}
-                              {e.valor && <span>· {e.valor}</span>}
+                    <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                      <Sparkles className="h-3.5 w-3.5" /> Editais abertos
+                    </div>
+                    {matchesLoading ? (
+                      <div className="space-y-2">
+                        {[0, 1, 2].map((i) => <Skeleton key={i} className="h-16 w-full rounded-lg" />)}
+                      </div>
+                    ) : matches && matches.editais.length > 0 ? (
+                      <div className="space-y-2">
+                        {matches.editais.map((e) => (
+                          <button
+                            key={e.id}
+                            onClick={() => window.open(`/editais/inscricao/${e.id}`, "_blank", "noopener")}
+                            className="w-full text-left p-3 rounded-lg border border-border bg-background/50 hover:bg-accent/30 transition-colors group"
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="min-w-0 flex-1">
+                                <div className="font-medium text-sm text-foreground line-clamp-1">{e.titulo}</div>
+                                <div className="text-xs text-muted-foreground mt-0.5 flex items-center gap-2 flex-wrap">
+                                  {e.orgao && <span>{e.orgao}</span>}
+                                  {e.estado && <span>· {e.estado}</span>}
+                                  {e.prazo && (
+                                    <span className="inline-flex items-center gap-1">
+                                      <Calendar className="h-3 w-3" />
+                                      {dateFmt.format(new Date(e.prazo))}
+                                    </span>
+                                  )}
+                                  {e.valor && <span>· {e.valor}</span>}
+                                </div>
+                              </div>
+                              <ExternalLink className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0 mt-0.5" />
                             </div>
-                          </div>
-                          <ExternalLink className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0 mt-0.5" />
-                        </div>
-                      </button>
-                    ))}
+                          </button>
+                        ))}
+                      </div>
+                    ) : (
+                      /* Fix 5 — lighter empty state for editais (Fix 6 — no "matched" anglicism) */
+                      <p className="text-xs text-muted-foreground/70 italic px-1">
+                        Cadastramos novos editais toda semana — em breve aparecerão aqui.
+                      </p>
+                    )}
                   </div>
-                ) : (
-                  <p className="text-xs text-muted-foreground p-3 rounded-lg bg-muted/30 border border-border">
-                    Cadastramos novos editais toda semana — vai chegar matched no seu perfil.
-                  </p>
-                )}
-              </div>
 
-              {/* Profissionais */}
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                  <Briefcase className="h-3.5 w-3.5" /> Profissionais sugeridos
-                </div>
-                {matchesLoading ? (
+                  {/* Profissionais */}
                   <div className="space-y-2">
-                    {[0, 1].map((i) => <Skeleton key={i} className="h-14 w-full rounded-lg" />)}
+                    <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                      <Briefcase className="h-3.5 w-3.5" /> Profissionais sugeridos
+                    </div>
+                    {matchesLoading ? (
+                      <div className="space-y-2">
+                        {[0, 1].map((i) => <Skeleton key={i} className="h-14 w-full rounded-lg" />)}
+                      </div>
+                    ) : matches && matches.pros.length > 0 ? (
+                      <div className="space-y-2">
+                        {matches.pros.map((p) => (
+                          <button
+                            key={p.id}
+                            onClick={() => openProModal(p)}
+                            className="w-full text-left p-3 rounded-lg border border-border bg-background/50 hover:bg-accent/30 transition-colors"
+                          >
+                            <div className="font-medium text-sm text-foreground">{p.name}</div>
+                            <div className="text-xs text-muted-foreground mt-0.5">
+                              {p.specialty}{p.city ? ` · ${p.city}` : ""}
+                            </div>
+                            {p.bio && <div className="text-xs text-muted-foreground mt-1 line-clamp-1">{p.bio}</div>}
+                          </button>
+                        ))}
+                      </div>
+                    ) : (
+                      /* Fix 5 — lighter empty state for professionals */
+                      <p className="text-xs text-muted-foreground/70 italic px-1">
+                        Você pode convidar colaboradores pelo Marketplace assim que criar seu projeto.
+                      </p>
+                    )}
                   </div>
-                ) : matches && matches.pros.length > 0 ? (
-                  <div className="space-y-2">
-                    {matches.pros.map((p) => (
-                      <button
-                        key={p.id}
-                        onClick={() => openProModal(p)}
-                        className="w-full text-left p-3 rounded-lg border border-border bg-background/50 hover:bg-accent/30 transition-colors"
-                      >
-                        <div className="font-medium text-sm text-foreground">{p.name}</div>
-                        <div className="text-xs text-muted-foreground mt-0.5">
-                          {p.specialty}{p.city ? ` · ${p.city}` : ""}
-                        </div>
-                        {p.bio && <div className="text-xs text-muted-foreground mt-1 line-clamp-1">{p.bio}</div>}
-                      </button>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-xs text-muted-foreground p-3 rounded-lg bg-muted/30 border border-border">
-                    Marketplace de profissionais em crescimento — você pode convidar quem já trabalha com você.
-                  </p>
-                )}
-              </div>
+                </>
+              )}
 
               {/* CTAs */}
               <div className="space-y-2 pt-2">
@@ -432,8 +447,9 @@ export default function Onboarding() {
                 >
                   {submitting ? "Salvando..." : <>Criar meu primeiro projeto <ArrowRight className="h-4 w-4" /></>}
                 </Button>
-                <div className="flex items-center justify-between">
-                  <Button variant="ghost" size="sm" onClick={() => setStep(2)} disabled={submitting} className="gap-1.5">
+                {/* Fix 4 — both Voltar and Ir para o dashboard as consistent ghost/muted links */}
+                <div className="flex items-center justify-between pt-1">
+                  <Button variant="ghost" size="sm" onClick={() => setStep(2)} disabled={submitting} className="gap-1.5 text-muted-foreground">
                     <ArrowLeft className="h-3.5 w-3.5" /> Voltar
                   </Button>
                   <Button
@@ -441,7 +457,7 @@ export default function Onboarding() {
                     size="sm"
                     onClick={() => handleFinish("/dashboard")}
                     disabled={submitting}
-                    className="text-muted-foreground"
+                    className="text-muted-foreground hover:text-foreground"
                   >
                     Ir para o dashboard
                   </Button>
