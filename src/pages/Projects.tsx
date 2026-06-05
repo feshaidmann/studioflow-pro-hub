@@ -16,7 +16,7 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Plus, DollarSign, MessageSquare, ArrowRight, Disc3, Users } from "lucide-react";
+import { Plus, DollarSign, MessageSquare, ArrowRight, Disc3, Users, ChevronDown } from "lucide-react";
 import { ImportSpotifyCatalogDialog } from "@/components/spotify-import/ImportSpotifyCatalogDialog";
 import { SpotifyCatalogSection } from "@/components/spotify-import/SpotifyCatalogSection";
 import { Label } from "@/components/ui/label";
@@ -69,6 +69,7 @@ export default function Projects() {
   /* ── Core state ── */
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [spotifyImportOpen, setSpotifyImportOpen] = useState(false);
   const [form, setForm] = useState({
     name: "", artist: "", bpm: "120", key: "C",
@@ -91,7 +92,8 @@ export default function Projects() {
     const idParam = searchParams.get("id");
     const newParam = searchParams.get("new");
     if (newParam === "1") {
-      setForm((prev) => ({ ...prev, artist: prev.artist || displayName }));
+      setForm((prev) => ({ ...prev, artist: prev.artist || displayName, genre: prev.genre || profile?.primary_genre || "" }));
+      setShowAdvanced(false);
       setDialogOpen(true);
       setSearchParams((prev) => { prev.delete("new"); return prev; }, { replace: true });
     }
@@ -298,7 +300,7 @@ export default function Projects() {
         cta={
           <Button
             size="sm" className="h-9 active:scale-95 transition-transform"
-            onClick={() => { setForm((prev) => ({ ...prev, artist: prev.artist || displayName })); setDialogOpen(true); }}
+            onClick={() => { setForm((prev) => ({ ...prev, artist: prev.artist || displayName, genre: prev.genre || profile?.primary_genre || "" })); setShowAdvanced(false); setDialogOpen(true); }}
           >
             <Plus className="h-4 w-4 mr-1" /> Novo
           </Button>
@@ -323,7 +325,13 @@ export default function Projects() {
           <Button variant="outline" className="active:scale-95 transition-transform" onClick={() => setSpotifyImportOpen(true)}>
             <Disc3 className="h-4 w-4 mr-1" /> Importar do Spotify
           </Button>
-          <Dialog open={dialogOpen} onOpenChange={(open) => { if (open) setForm((prev) => ({ ...prev, artist: prev.artist || displayName })); setDialogOpen(open); }}>
+          <Dialog open={dialogOpen} onOpenChange={(open) => {
+            if (open) {
+              setForm((prev) => ({ ...prev, artist: prev.artist || displayName, genre: prev.genre || profile?.primary_genre || "" }));
+              setShowAdvanced(false);
+            }
+            setDialogOpen(open);
+          }}>
             <DialogTrigger asChild>
               <Button className="active:scale-95 transition-transform"><Plus className="h-4 w-4 mr-1" /> {t("projects.addProject")}</Button>
             </DialogTrigger>
@@ -333,74 +341,101 @@ export default function Projects() {
                 <DialogDescription>{t("projects.newProjectDesc")}</DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
-                <div className="space-y-1.5"><Label htmlFor="proj-name">{t("projects.projectName")}</Label><Input id="proj-name" placeholder={t("projects.projectNamePlaceholder")} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
-                <div className="space-y-1.5"><Label htmlFor="proj-artist">Artista</Label><Input id="proj-artist" placeholder={t("projects.artistPlaceholder")} value={form.artist} onChange={(e) => setForm({ ...form, artist: e.target.value })} /></div>
+                {/* Essential fields */}
+                <div className="space-y-1.5">
+                  <Label htmlFor="proj-name">{t("projects.projectName")}</Label>
+                  <Input id="proj-name" placeholder={t("projects.projectNamePlaceholder")} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} autoFocus />
+                </div>
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5"><Label>{t("projects.bpm")}</Label><Input type="number" min="40" max="250" value={form.bpm} onChange={(e) => setForm({ ...form, bpm: e.target.value })} className="font-mono-nums" /></div>
-                  <div className="space-y-1.5"><Label>{t("projects.key")}</Label><Input value={form.key} onChange={(e) => setForm({ ...form, key: e.target.value })} /></div>
-                </div>
-                <div className="space-y-1.5">
-                  <Label>{t("projects.currentStage")}</Label>
-                  <Select value={form.stage} onValueChange={(v) => setForm({ ...form, stage: v as Project["stage"] })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {(["inicio", "gravacao", "mix", "master", "upload", "lancado"] as const).map((s) => <SelectItem key={s} value={s}>{t(`stage.${s}`)}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1.5">
-                  <Label>{t("projects.projectType")}</Label>
-                  <Select value={form.projectType} onValueChange={(v) => setForm({ ...form, projectType: v as ProjectType })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="single">{t("projects.single")}</SelectItem>
-                      <SelectItem value="ep">{t("projects.ep")}</SelectItem>
-                      <SelectItem value="album">{t("projects.album")}</SelectItem>
-                      <SelectItem value="beat">{t("projects.beat")}</SelectItem>
-                      <SelectItem value="trilha_guia">{t("projects.trilha_guia")}</SelectItem>
-                      <SelectItem value="feat">{t("projects.feat")}</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <div className="space-y-1.5">
+                    <Label>{t("projects.projectType")}</Label>
+                    <Select value={form.projectType} onValueChange={(v) => setForm({ ...form, projectType: v as ProjectType })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="single">{t("projects.single")}</SelectItem>
+                        <SelectItem value="ep">{t("projects.ep")}</SelectItem>
+                        <SelectItem value="album">{t("projects.album")}</SelectItem>
+                        <SelectItem value="beat">{t("projects.beat")}</SelectItem>
+                        <SelectItem value="trilha_guia">{t("projects.trilha_guia")}</SelectItem>
+                        <SelectItem value="feat">{t("projects.feat")}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Gênero *</Label>
+                    <Select value={form.genre} onValueChange={(v) => setForm({ ...form, genre: v })}>
+                      <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                      <SelectContent>{GENRE_OPTIONS.map((g) => <SelectItem key={g} value={g}>{g}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 {(form.projectType === "ep" || form.projectType === "album") && (
-                  <div className="space-y-1.5"><Label>{t("projects.trackCount")}</Label><Input type="number" min="1" placeholder="8" value={form.trackCount} onChange={(e) => setForm({ ...form, trackCount: e.target.value })} className="font-mono-nums" /></div>
+                  <div className="space-y-1.5">
+                    <Label>{t("projects.trackCount")}</Label>
+                    <Input type="number" min="1" placeholder="8" value={form.trackCount} onChange={(e) => setForm({ ...form, trackCount: e.target.value })} className="font-mono-nums" />
+                  </div>
                 )}
-                <div className="space-y-1.5">
-                  <Label>Gênero principal *</Label>
-                  <Select value={form.genre} onValueChange={(v) => setForm({ ...form, genre: v })}>
-                    <SelectTrigger><SelectValue placeholder="Selecione o gênero" /></SelectTrigger>
-                    <SelectContent>{GENRE_OPTIONS.map((g) => <SelectItem key={g} value={g}>{g}</SelectItem>)}</SelectContent>
-                  </Select>
-                  <p className="text-[11px] text-muted-foreground">Usamos para te mostrar referências do seu estilo.</p>
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Seus seguidores hoje</Label>
-                  <Select value={form.audienceSize} onValueChange={(v) => setForm({ ...form, audienceSize: v })}>
-                    <SelectTrigger><SelectValue placeholder="Opcional" /></SelectTrigger>
-                    <SelectContent>{AUDIENCE_SIZE_OPTIONS.map((a) => <SelectItem key={a.value} value={a.value}>{a.label}</SelectItem>)}</SelectContent>
-                  </Select>
-                  <p className="text-[11px] text-muted-foreground">Usamos para comparar seu crescimento ao longo do tempo.</p>
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Data estimada de lançamento</Label>
-                  <DatePickerField value={form.uploadDate} onChange={(val) => setForm({ ...form, uploadDate: val })} placeholder="Selecionar data de lançamento" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Template de tracks</Label>
-                  <Select value={form.template} onValueChange={(v) => setForm({ ...form, template: v as ProjectTemplate })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {(Object.entries(PROJECT_TEMPLATES) as [ProjectTemplate, typeof PROJECT_TEMPLATES[ProjectTemplate]][]).map(([key, tmpl]) => (
-                        <SelectItem key={key} value={key}>
-                          <div className="flex flex-col">
-                            <span>{tmpl.label}</span>
-                            <span className="text-[10px] text-muted-foreground">{tmpl.description}</span>
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+
+                {/* Advanced toggle */}
+                <button
+                  type="button"
+                  onClick={() => setShowAdvanced((v) => !v)}
+                  className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors w-full py-0.5"
+                >
+                  <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-200 ${showAdvanced ? "rotate-180" : ""}`} />
+                  {showAdvanced ? "Menos opções" : "Mais opções"}
+                </button>
+
+                {/* Advanced fields */}
+                {showAdvanced && (
+                  <div className="space-y-4 pt-1 border-t border-border/40">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="proj-artist">Artista</Label>
+                      <Input id="proj-artist" placeholder={t("projects.artistPlaceholder")} value={form.artist} onChange={(e) => setForm({ ...form, artist: e.target.value })} />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1.5"><Label>{t("projects.bpm")}</Label><Input type="number" min="40" max="250" value={form.bpm} onChange={(e) => setForm({ ...form, bpm: e.target.value })} className="font-mono-nums" /></div>
+                      <div className="space-y-1.5"><Label>{t("projects.key")}</Label><Input value={form.key} onChange={(e) => setForm({ ...form, key: e.target.value })} /></div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>{t("projects.currentStage")}</Label>
+                      <Select value={form.stage} onValueChange={(v) => setForm({ ...form, stage: v as Project["stage"] })}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {(["inicio", "gravacao", "mix", "master", "upload", "lancado"] as const).map((s) => <SelectItem key={s} value={s}>{t(`stage.${s}`)}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Seguidores atuais</Label>
+                      <Select value={form.audienceSize} onValueChange={(v) => setForm({ ...form, audienceSize: v })}>
+                        <SelectTrigger><SelectValue placeholder="Opcional" /></SelectTrigger>
+                        <SelectContent>{AUDIENCE_SIZE_OPTIONS.map((a) => <SelectItem key={a.value} value={a.value}>{a.label}</SelectItem>)}</SelectContent>
+                      </Select>
+                      <p className="text-[11px] text-muted-foreground">Para comparar seu crescimento ao longo do tempo.</p>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Data estimada de lançamento</Label>
+                      <DatePickerField value={form.uploadDate} onChange={(val) => setForm({ ...form, uploadDate: val })} placeholder="Selecionar data" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Template de tracks</Label>
+                      <Select value={form.template} onValueChange={(v) => setForm({ ...form, template: v as ProjectTemplate })}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {(Object.entries(PROJECT_TEMPLATES) as [ProjectTemplate, typeof PROJECT_TEMPLATES[ProjectTemplate]][]).map(([key, tmpl]) => (
+                            <SelectItem key={key} value={key}>
+                              <div className="flex flex-col">
+                                <span>{tmpl.label}</span>
+                                <span className="text-[10px] text-muted-foreground">{tmpl.description}</span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                )}
               </div>
               <DialogFooter>
                 <DialogClose asChild><Button variant="outline">Cancelar</Button></DialogClose>
