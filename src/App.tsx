@@ -30,7 +30,6 @@ const ProjectDetail = lazy(() => import("@/pages/ProjectDetail"));
 const FinancialTracker = lazy(() => import("@/pages/FinancialTracker"));
 const Tutorial = lazy(() => import("@/pages/Tutorial"));
 const Professionals = lazy(() => import("@/pages/Professionals"));
-const Captadores = lazy(() => import("@/pages/Captadores"));
 const Settings = lazy(() => import("@/pages/Settings"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
 const InviteResponse = lazy(() => import("@/pages/InviteResponse"));
@@ -95,7 +94,6 @@ const AppRoutes = () => (
           <Route path="/agenda" element={<Agenda />} />
           <Route path="/tutorial" element={<Tutorial />} />
           <Route path="/professionals" element={<Professionals />} />
-          <Route path="/captadores" element={<Captadores />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="/admin/reference-tracks" element={<ReferenceTracks />} />

@@ -22,7 +22,6 @@ import {
   Database,
   Mic2,
   Trophy,
-  Megaphone,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -54,14 +53,12 @@ const gestaoItems = [
   // Direção Visual removida do menu principal — acessível apenas dentro do contexto de cada projeto
   { labelKey: "nav.carreira",      path: "/carreira",      icon: Trophy,       proOnly: false, mobileLabel: "" },  // [3] — editais + palcos unificados
   { labelKey: "nav.professionals", path: "/professionals", icon: Users,        proOnly: false, mobileLabel: "" },  // [4] — equipe conforme necessidade
-  { labelKey: "nav.captadores",    path: "/captadores",    icon: Megaphone,    proOnly: false, mobileLabel: "" },  // [5] — marketplace de captadores
 ];
 
 // Sub-labels descritivos curtos (P2) — apenas para itens do drawer "Mais"
 const drawerSubLabels: Record<string, string> = {
   "/carreira":           "Editais, festivais e palcos",
   "/professionals":      "Equipe e parceiros",
-  "/captadores":         "Bookers e produtores executivos",
   "/music-dna":          "Análise técnica de mix/master",
 };
 
@@ -121,7 +118,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     switch (path) {
       case "/carreira":     import("@/pages/Carreira");      break;
       case "/professionals": import("@/pages/Professionals"); break;
-      case "/captadores": import("@/pages/Captadores"); break;
       case "/music-dna":    import("@/pages/MusicDNA");      break;
       case "/agenda":       import("@/pages/Agenda");        break;
       case "/finance":      import("@/pages/FinancialTracker"); break;
@@ -148,7 +144,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   const isItemActive = (item: { path: string }) => location.pathname === item.path;
 
-  const ROOT_ROUTES = ["/dashboard", "/projects", "/finance", "/agenda", "/professionals", "/captadores", "/settings", "/admin", "/tutorial", "/music-dna", "/carreira", "/"];
+  const ROOT_ROUTES = ["/dashboard", "/projects", "/finance", "/agenda", "/professionals", "/settings", "/admin", "/tutorial", "/music-dna", "/carreira", "/"];
   const isRootRoute = ROOT_ROUTES.includes(location.pathname);
 
   // ── Mobile ─────────────────────────────────────────────────────────────────
@@ -393,7 +389,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             {renderNavItem(gestaoItems[0])}
             {renderNavItem(gestaoItems[1])}
 
-            {/* Ferramentas — ordem espelhada do JOURNEY_ORDER: Carreira → DNA → Profissionais → Captadores */}
+            {/* Ferramentas — ordem espelhada do JOURNEY_ORDER: Carreira → DNA → Profissionais */}
             <div className="my-2 border-t border-border/30" />
             {sidebarOpen && (
               <div className="px-2.5 pt-1 pb-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground/60">
