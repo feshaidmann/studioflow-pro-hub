@@ -369,6 +369,18 @@ const translations: Record<string, string> = {
   "agenda.allTypes": "Todos os tipos",
   "agenda.allProjects": "Todos os projetos",
   "agenda.eventType": "Tipo de evento",
+  "agenda.editEvent": "Editar Evento",
+  "agenda.formDesc": "Preencha os dados para adicionar um evento à sua agenda.",
+  "agenda.formEditDesc": "Atualize os dados do evento.",
+  "agenda.titleLabel": "Título do Evento",
+  "agenda.titleRequired": "Informe o título do evento",
+  "agenda.endBeforeStart": "Término deve ser após o início",
+  "agenda.conflictConfirmed": "Conflito confirmado — clique em Salvar para continuar",
+  "agenda.cancel": "Cancelar",
+  "agenda.saveEvent": "Salvar Evento",
+  "agenda.saving": "Salvando...",
+  "agenda.saveAnyway": "Salvar mesmo assim",
+  "agenda.noProject": "Nenhum",
 
   // ── Welcome ─────────────────────────────────────────────────────────────────
   "welcome.beta": "Versão Beta — bugs podem ocorrer. Seu feedback é essencial.",
