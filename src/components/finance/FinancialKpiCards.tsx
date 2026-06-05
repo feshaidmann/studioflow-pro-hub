@@ -117,7 +117,7 @@ export function FinancialKpiCards({ kpis }: { kpis: Kpis }) {
               <Clock className="h-4 w-4 text-success" />
             </div>
             <div className="min-w-0">
-              <p className="text-xs text-muted-foreground">⏳ A receber</p>
+              <p className="text-xs text-muted-foreground">A receber</p>
               <p className="text-base font-bold font-mono-nums text-success leading-tight">
                 {formatCurrency(kpis.pendingIncome)}
               </p>
@@ -131,7 +131,7 @@ export function FinancialKpiCards({ kpis }: { kpis: Kpis }) {
               <Clock className="h-4 w-4 text-destructive" />
             </div>
             <div className="min-w-0">
-              <p className="text-xs text-muted-foreground">⏳ A pagar</p>
+              <p className="text-xs text-muted-foreground">A pagar</p>
               <p className="text-base font-bold font-mono-nums text-destructive leading-tight">
                 {formatCurrency(kpis.pendingExpense)}
               </p>

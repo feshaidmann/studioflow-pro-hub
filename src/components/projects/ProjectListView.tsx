@@ -9,7 +9,7 @@ import {
   DropdownMenuTrigger, DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import {
-  ArrowRight, Calendar, MessageSquare, MoreVertical, Music,
+  ArrowRight, Calendar, MessageSquare, MoreVertical, Music, Plus,
   Pencil, Rocket, Sliders, Sparkles, Trash2, Upload, Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -20,6 +20,7 @@ interface Props {
   getProjectStatus: (p: Project) => { label: string; color: string; key: string };
   onEdit: (p: Project) => void;
   onDelete: (id: string) => void;
+  onCreateNew?: () => void;
   t: (key: string) => string;
 }
 
@@ -44,7 +45,7 @@ const STATUS_FILTERS = [
 
 type StatusFilterKey = typeof STATUS_FILTERS[number]["value"];
 
-export function ProjectListView({ projects, getProjectStatus, onEdit, onDelete, t }: Props) {
+export function ProjectListView({ projects, getProjectStatus, onEdit, onDelete, onCreateNew, t }: Props) {
   const navigate = useNavigate();
   const [statusFilter, setStatusFilter] = useState<StatusFilterKey>("all");
 
@@ -78,9 +79,25 @@ export function ProjectListView({ projects, getProjectStatus, onEdit, onDelete, 
 
       <div className="space-y-3">
         {activeProjects.length === 0 ? (
-          <div className="text-center py-12 text-muted-foreground">
-            <Music className="h-12 w-12 mx-auto mb-3 opacity-30" />
-            <p>{statusFilter !== "all" ? "Nenhum projeto encontrado com esses filtros." : t("projects.empty")}</p>
+          <div className="text-center py-16 text-muted-foreground space-y-4">
+            <div className="mx-auto w-fit rounded-full bg-primary/10 p-4">
+              <Music className="h-10 w-10 text-primary/50" />
+            </div>
+            {statusFilter !== "all" ? (
+              <p className="text-sm">Nenhum projeto encontrado com esses filtros.</p>
+            ) : (
+              <>
+                <div className="space-y-1">
+                  <p className="font-medium text-foreground">Nenhum projeto ativo ainda</p>
+                  <p className="text-sm max-w-xs mx-auto">Crie seu primeiro projeto para organizar suas músicas e colaborações.</p>
+                </div>
+                {onCreateNew && (
+                  <Button onClick={onCreateNew} className="gap-1.5">
+                    <Plus className="h-4 w-4" /> Criar primeiro projeto
+                  </Button>
+                )}
+              </>
+            )}
           </div>
         ) : (
           activeProjects.map((project) => {

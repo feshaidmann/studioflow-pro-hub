@@ -339,7 +339,7 @@ const translations: Record<string, string> = {
   "agenda.newEvent": "Novo Evento",
   "agenda.event": "evento",
   "agenda.events": "eventos",
-  "agenda.noEvents": "Nenhum evento ainda. Clique em \"Novo Evento\" para começar.",
+  "agenda.noEvents": "Nenhum evento ainda. Clique em \"Novo\" para começar.",
   "agenda.noEventsFiltered": "Nenhum evento encontrado para os filtros selecionados.",
   "agenda.createFirst": "Criar primeiro evento",
   "agenda.deleteTitle": "Excluir evento",

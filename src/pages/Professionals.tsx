@@ -97,6 +97,21 @@ export default function Professionals() {
         }
       />
 
+      {/* Mobile-only quick-access row for marketplace actions */}
+      <div className="flex md:hidden gap-2 -mt-2">
+        <Button variant="outline" size="sm" className="flex-1 gap-1.5 text-xs h-8" onClick={() => setMyRequestsOpen(true)}>
+          <Inbox className="h-3.5 w-3.5" /> Meus Pedidos
+        </Button>
+        {profile?.allow_global_listing && (
+          <Button variant="outline" size="sm" className="flex-1 gap-1.5 text-xs h-8" onClick={() => setInboundOpen(true)}>
+            <BriefcaseBusiness className="h-3.5 w-3.5" /> Recebidos
+          </Button>
+        )}
+        <Button variant="outline" size="sm" className="flex-1 gap-1.5 text-xs h-8" onClick={() => setMarketplaceOpen(true)}>
+          <Store className="h-3.5 w-3.5" /> Marketplace
+        </Button>
+      </div>
+
       <header className="hidden md:flex items-center justify-between animate-fade-in">
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-2">
