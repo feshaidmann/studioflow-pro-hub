@@ -39,7 +39,7 @@ export default function UpgradeScreen() {
   const details = featureDetails[feature] ?? featureDetails.projects;
 
   const handleUpgrade = () => {
-    toast.info("Upgrade em breve! 🚀", {
+    toast.info("Upgrade em breve!", {
       description: "A funcionalidade de upgrade estará disponível em breve.",
     });
   };

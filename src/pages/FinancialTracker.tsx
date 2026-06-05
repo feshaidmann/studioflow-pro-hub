@@ -268,9 +268,9 @@ export default function FinancialTracker() {
         mode="finance"
         title="Assistente Financeiro IA"
         chips={[
-          { label: "📊 Análise geral", msg: "Analise meus dados financeiros. Quais padrões você identifica? Onde posso economizar?" },
-          { label: "🔥 Burn rate", msg: "Qual meu burn rate mensal? Em quanto tempo meu saldo vai acabar no ritmo atual?" },
-          { label: "💡 Otimizações", msg: "Sugira otimizações concretas para melhorar minha saúde financeira como artista independente." },
+          { label: "Análise geral", msg: "Analise meus dados financeiros. Quais padrões você identifica? Onde posso economizar?" },
+          { label: "Burn rate", msg: "Qual meu burn rate mensal? Em quanto tempo meu saldo vai acabar no ritmo atual?" },
+          { label: "Otimizações", msg: "Sugira otimizações concretas para melhorar minha saúde financeira como artista independente." },
         ]}
       />
     </div>

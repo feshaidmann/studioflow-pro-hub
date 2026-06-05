@@ -76,7 +76,7 @@ export default function FeedbackButton() {
       toast.error("Erro ao enviar feedback. Tente novamente.");
       return;
     }
-    toast.success("Obrigado pelo feedback! Cada opinião conta muito 🙏");
+    toast.success("Obrigado pelo feedback! Cada opinião conta muito.");
     setOpen(false);
     setMessage("");
     setCategory("geral");

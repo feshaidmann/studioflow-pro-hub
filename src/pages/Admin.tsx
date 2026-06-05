@@ -840,11 +840,11 @@ export default function Admin() {
 
 /* ── Beta Feedback Section ── */
 const CATEGORY_LABELS: Record<string, string> = {
-  bug: "🐛 Bug",
-  sugestao: "💡 Sugestão",
-  elogio: "🎉 Elogio",
-  duvida: "❓ Dúvida",
-  geral: "💬 Geral",
+  bug: "Bug",
+  sugestao: "Sugestão",
+  elogio: "Elogio",
+  duvida: "Dúvida",
+  geral: "Geral",
 };
 
 interface FeedbackRow {
