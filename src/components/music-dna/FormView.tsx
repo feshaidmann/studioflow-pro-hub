@@ -31,7 +31,7 @@ export const ACCEPTED_AUDIO = [
 export const GENRE_ENUM_VALUES = Object.keys(GENRE_PRESETS) as [Genre, ...Genre[]];
 
 export const formSchema = z.object({
-  name: z.string().min(1, "Nome da faixa é obrigatório"),
+  name: z.string().trim().min(1, "Nome da faixa é obrigatório").max(200),
   references: z.array(z.string()).max(5),
   projectId: z.string().optional(),
   stage: z.enum(["demo", "mix", "master"]),

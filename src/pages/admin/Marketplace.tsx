@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
 import {
   Store, Plus, CheckCircle2, XCircle, Pencil, Trash2, Loader2,
-  ChevronDown, Globe, Phone, Mail,
+  Globe, Phone, Mail, ShieldCheck,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -39,6 +39,10 @@ interface CuratedProvider {
   avatar_url: string;
   status: "pending_review" | "approved" | "rejected";
   notes: string;
+  verified_by_jsp: boolean;
+  base_rate_brl: number | null;
+  rate_unit: string;
+  portfolio_links: Array<{ label: string; url: string }>;
   created_at: string;
   updated_at: string;
 }
@@ -53,6 +57,8 @@ const EMPTY_FORM: Omit<CuratedProvider, "id" | "created_at" | "updated_at"> = {
   name: "", specialty: "", bio: "", portfolio_url: "",
   contact_email: "", contact_phone: "", city: "", state: "",
   genres: [], avatar_url: "", status: "pending_review", notes: "",
+  verified_by_jsp: false, base_rate_brl: null, rate_unit: "hora",
+  portfolio_links: [],
 };
 
 function ProviderForm({
@@ -141,6 +147,42 @@ function ProviderForm({
       <div className="space-y-1">
         <Label>URL do portfólio</Label>
         <Input value={form.portfolio_url} onChange={(e) => set("portfolio_url", e.target.value)} placeholder="https://..." />
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1">
+          <Label>Cachê base (R$) <span className="text-muted-foreground text-xs">(opcional)</span></Label>
+          <Input
+            type="number"
+            value={form.base_rate_brl ?? ""}
+            onChange={(e) => set("base_rate_brl", e.target.value ? Number(e.target.value) : null)}
+            placeholder="500"
+          />
+        </div>
+        <div className="space-y-1">
+          <Label>Unidade</Label>
+          <Select value={form.rate_unit || "hora"} onValueChange={(v) => set("rate_unit", v)}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="hora">hora</SelectItem>
+              <SelectItem value="dia">dia</SelectItem>
+              <SelectItem value="projeto">projeto</SelectItem>
+              <SelectItem value="faixa">faixa</SelectItem>
+              <SelectItem value="session">session</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <input
+          type="checkbox"
+          id="verified_by_jsp"
+          checked={!!form.verified_by_jsp}
+          onChange={(e) => set("verified_by_jsp", e.target.checked)}
+          className="h-4 w-4 rounded border"
+        />
+        <Label htmlFor="verified_by_jsp" className="cursor-pointer">Verificado JSP</Label>
       </div>
 
       <div className="space-y-1">
@@ -301,6 +343,16 @@ export default function AdminMarketplace() {
                           <Badge variant={STATUS_BADGE[p.status].variant} className="text-xs">
                             {STATUS_BADGE[p.status].label}
                           </Badge>
+                          {p.verified_by_jsp && (
+                            <Badge variant="outline" className="text-xs gap-1 bg-chart-3/15 text-chart-3 border-chart-3/30">
+                              <ShieldCheck className="h-3 w-3" /> Verificado
+                            </Badge>
+                          )}
+                          {p.base_rate_brl && (
+                            <span className="text-xs text-muted-foreground">
+                              R$ {p.base_rate_brl.toLocaleString("pt-BR")}/{p.rate_unit}
+                            </span>
+                          )}
                         </div>
                         {p.bio && <p className="text-sm text-muted-foreground line-clamp-2">{p.bio}</p>}
                         <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
@@ -397,6 +449,10 @@ export default function AdminMarketplace() {
               contact_phone: editTarget.contact_phone, city: editTarget.city, state: editTarget.state,
               genres: editTarget.genres, avatar_url: editTarget.avatar_url,
               status: editTarget.status, notes: editTarget.notes,
+              verified_by_jsp: editTarget.verified_by_jsp ?? false,
+              base_rate_brl: editTarget.base_rate_brl ?? null,
+              rate_unit: editTarget.rate_unit || "hora",
+              portfolio_links: editTarget.portfolio_links ?? [],
             } : EMPTY_FORM}
             onSave={handleSave}
             onCancel={() => { setFormOpen(false); setEditTarget(null); }}

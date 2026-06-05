@@ -32,13 +32,13 @@ export function ProviderCard({ provider, onRequestQuote, onOpenProfile }: Props)
       <div className="flex items-start gap-3">
         <div
           className="h-12 w-12 rounded-full flex items-center justify-center text-sm font-semibold text-foreground/70 shrink-0"
-          style={{ background: avatarColor(provider.display_name) }}
+          style={{ background: avatarColor(provider.display_name ?? provider.name) }}
         >
-          {avatarInitials(provider.display_name)}
+          {avatarInitials(provider.display_name ?? provider.name)}
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <p className="font-medium text-sm truncate group-hover:text-primary transition-colors">{provider.display_name}</p>
+            <p className="font-medium text-sm truncate group-hover:text-primary transition-colors">{provider.display_name ?? provider.name}</p>
             {provider.verified_by_jsp && (
               <Badge variant="outline" className="text-[10px] gap-1 bg-chart-3/15 text-chart-3 border-chart-3/30">
                 <ShieldCheck className="h-2.5 w-2.5" />
@@ -63,8 +63,8 @@ export function ProviderCard({ provider, onRequestQuote, onOpenProfile }: Props)
         <div className="flex flex-col gap-0.5">
           <span className="text-[11px] text-muted-foreground flex items-center gap-1">
             <Star className="h-3 w-3 text-chart-3" />
-            {provider.review_count > 0
-              ? `${provider.avg_rating.toFixed(1)} ★  ·  ${provider.review_count} avaliações`
+            {(provider.review_count ?? 0) > 0
+              ? `${provider.avg_rating?.toFixed(1)} ★  ·  ${provider.review_count} avaliações`
               : "Sem avaliações"}
           </span>
           {provider.base_rate_brl && (

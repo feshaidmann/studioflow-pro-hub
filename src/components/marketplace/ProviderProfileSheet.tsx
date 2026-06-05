@@ -20,7 +20,7 @@ export function ProviderProfileSheet({ provider, open, onOpenChange, onRequestQu
           <SheetTitle>Perfil do profissional</SheetTitle>
           <SheetDescription>
             {provider
-              ? `Informações disponíveis sobre ${provider.display_name}.`
+              ? `Informações disponíveis sobre ${provider.display_name ?? provider.name}.`
               : "Informações disponíveis sobre este profissional."}
           </SheetDescription>
         </SheetHeader>
@@ -30,12 +30,12 @@ export function ProviderProfileSheet({ provider, open, onOpenChange, onRequestQu
           <div className="flex items-start gap-4">
             <div
               className="h-16 w-16 rounded-full flex items-center justify-center text-base font-semibold text-foreground/70 shrink-0"
-              style={{ background: avatarColor(provider.display_name) }}
+              style={{ background: avatarColor(provider.display_name ?? provider.name) }}
             >
-              {avatarInitials(provider.display_name)}
+              {avatarInitials(provider.display_name ?? provider.name)}
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-base">{provider.display_name}</h3>
+              <h3 className="font-semibold text-base">{provider.display_name ?? provider.name}</h3>
               {provider.verified_by_jsp && (
                 <Badge variant="outline" className="text-[10px] gap-1 mt-1 bg-chart-3/15 text-chart-3 border-chart-3/30">
                   <ShieldCheck className="h-2.5 w-2.5" />
@@ -49,8 +49,8 @@ export function ProviderProfileSheet({ provider, open, onOpenChange, onRequestQu
               )}
               <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
                 <Star className="h-3 w-3 text-chart-3" />
-                {provider.review_count > 0
-                  ? `${provider.avg_rating.toFixed(1)} ★  ·  ${provider.review_count} avaliações`
+                {(provider.review_count ?? 0) > 0
+                  ? `${provider.avg_rating?.toFixed(1)} ★  ·  ${provider.review_count} avaliações`
                   : "Sem avaliações ainda"}
               </p>
               {provider.base_rate_brl && (

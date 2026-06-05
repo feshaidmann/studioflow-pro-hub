@@ -176,6 +176,63 @@ export function useServiceProposals(requestId?: string) {
   return { proposals, loading, refetch: fetchProposals, acceptProposal, submitProposal };
 }
 
+/** Lightweight count of open inbound requests for the badge indicator. */
+export function useInboundRequestCount() {
+  const { user } = useAuth();
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    if (!user) { setCount(0); return; }
+    supabase
+      .from("service_requests_inbound")
+      .select("id", { count: "exact", head: true })
+      .eq("target_provider_ref", user.id)
+      .eq("status", "open")
+      .then(({ count: c }) => setCount(c ?? 0));
+  }, [user?.id]);
+
+  return count;
+}
+
+/** Open marketplace feed: service_requests that are public (no specific target) and still open. */
+export function useOpenRequestFeed(enabled: boolean) {
+  const { user } = useAuth();
+  const [requests, setRequests] = useState<InboundRequest[]>([]);
+  const [myProposals, setMyProposals] = useState<ServiceProposal[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const fetchAll = useCallback(async () => {
+    if (!user || !enabled) return;
+    setLoading(true);
+    const [reqRes, propRes] = await Promise.all([
+      supabase
+        .from("service_requests")
+        .select("id, project_id, specialty_needed, title, briefing, desired_deadline, budget_hint, reference_url, status, created_at, updated_at, closed_at, target_provider_ref, target_provider_name")
+        .is("target_provider_ref", null)
+        .eq("status", "open")
+        .order("created_at", { ascending: false })
+        .limit(50),
+      supabase
+        .from("service_proposals")
+        .select("*")
+        .eq("responder_user_id", user.id)
+        .order("created_at", { ascending: false }),
+    ]);
+    setRequests((reqRes.data as unknown as InboundRequest[]) ?? []);
+    setMyProposals((propRes.data as ServiceProposal[]) ?? []);
+    setLoading(false);
+  }, [user, enabled]);
+
+  useEffect(() => { fetchAll(); }, [fetchAll]);
+
+  const proposalForRequest = useCallback(
+    (requestId: string) => myProposals.find((p) => p.request_id === requestId) ?? null,
+    [myProposals],
+  );
+
+  return { requests, loading, refetch: fetchAll, proposalForRequest };
+}
+
 /** Hook para providers verem pedidos direcionados a eles. */
 export function useInboundRequests() {
   const { user } = useAuth();
@@ -212,5 +269,25 @@ export function useInboundRequests() {
     [myProposals],
   );
 
-  return { requests, myProposals, loading, refetch: fetchAll, proposalForRequest };
+  const withdrawProposal = useCallback(
+    async (proposalId: string) => {
+      if (!user) return false;
+      const { error } = await supabase
+        .from("service_proposals")
+        .update({ status: "withdrawn" })
+        .eq("id", proposalId)
+        .eq("responder_user_id", user.id)
+        .in("status", ["sent"]);
+      if (error) {
+        toast.error("Erro ao retirar proposta");
+        return false;
+      }
+      toast.success("Proposta retirada.");
+      await fetchAll();
+      return true;
+    },
+    [user, fetchAll],
+  );
+
+  return { requests, myProposals, loading, refetch: fetchAll, proposalForRequest, withdrawProposal };
 }
