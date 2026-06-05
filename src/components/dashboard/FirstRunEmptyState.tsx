@@ -15,7 +15,7 @@ const ONBOARDING_STEPS = [
     id: "create_project",
     icon: FolderPlus,
     label: "Criar seu primeiro projeto",
-    desc: "Registre nome, artista, BPM e etapa atual",
+    desc: "Escolha um nome, tipo e gênero para sua música",
     action: "/projects?new=1",
   },
   {
@@ -177,7 +177,7 @@ export default function FirstRunEmptyState({ onNavigate, recentProject, profile 
               </div>
               {allDone && (
                 <p className="text-xs text-success font-medium text-center mt-3 animate-fade-in">
-                  🎉 Tudo pronto! Agora é só criar música.
+                  Tudo pronto! Agora é só criar música.
                 </p>
               )}
             </div>
