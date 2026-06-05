@@ -112,12 +112,12 @@ const priorityColor: Record<string, string> = {
 };
 
 const WELCOME_QUICK_ACTIONS: QuickAction[] = [
-  { label: "🚨 O que está travado?", message: "Analise meus projetos e tarefas. O que está bloqueado ou travado? Me dê ações concretas para resolver." },
-  { label: "📋 O que fazer agora?", message: "Com base nas minhas tarefas vencidas e do dia, qual é o plano de ação prático para agora?" },
-  { label: "⚠️ Pendências críticas", message: "Quais são as pendências mais críticas nos meus projetos? Orçamento, prazos, convites sem resposta." },
-  { label: "🚀 Próximo passo", message: "Qual é a próxima melhor ação para avançar meus projetos? Seja específico." },
-  { label: "🎛️ Dica de mix", message: "Me dá dicas práticas de EQ e compressão para melhorar minha mixagem." },
-  { label: "🔊 LUFS para streaming", message: "Quais são os alvos de LUFS, True Peak e loudness range para Spotify, YouTube e Apple Music?" },
+  { label: "O que está travado?", message: "Analise meus projetos e tarefas. O que está bloqueado ou travado? Me dê ações concretas para resolver." },
+  { label: "O que fazer agora?", message: "Com base nas minhas tarefas vencidas e do dia, qual é o plano de ação prático para agora?" },
+  { label: "Pendências críticas", message: "Quais são as pendências mais críticas nos meus projetos? Orçamento, prazos, convites sem resposta." },
+  { label: "Próximo passo", message: "Qual é a próxima melhor ação para avançar meus projetos? Seja específico." },
+  { label: "Dica de mix", message: "Me dá dicas práticas de EQ e compressão para melhorar minha mixagem." },
+  { label: "LUFS para streaming", message: "Quais são os alvos de LUFS, True Peak e loudness range para Spotify, YouTube e Apple Music?" },
 ];
 
 

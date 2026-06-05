@@ -191,7 +191,7 @@ export default function Agenda() {
             className="h-9 active:scale-95 transition-transform"
             onClick={() => { setEditEvent(null); setFormOpen(true); }}
           >
-            <Plus className="h-4 w-4 mr-1" /> Novo
+            <Plus className="h-4 w-4 mr-1" /> Novo Evento
           </Button>
         }
       />
@@ -361,9 +361,13 @@ export default function Agenda() {
                 : "Tente ajustar os filtros acima para encontrar seus eventos."}
             </p>
           </div>
-          {events.length === 0 && (
+          {events.length === 0 ? (
             <Button className="mt-2" onClick={() => { setEditEvent(null); setFormOpen(true); }}>
               <Plus className="h-4 w-4 mr-1" /> {t("agenda.createFirst")}
+            </Button>
+          ) : (
+            <Button variant="outline" size="sm" className="mt-2" onClick={() => { setDateFilter("all"); setTypeFilter("all"); setProjectFilter("all"); }}>
+              Limpar filtros
             </Button>
           )}
         </div>

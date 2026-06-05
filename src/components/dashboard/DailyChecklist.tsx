@@ -237,7 +237,7 @@ export default function DailyChecklist({
         {loading ? (
           <p className="text-xs text-muted-foreground text-center py-3 animate-pulse">{t("misc.loading")}</p>
         ) : activeTasks.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-3">Nenhuma tarefa pendente. 🎉</p>
+          <p className="text-sm text-muted-foreground text-center py-3">Nenhuma tarefa pendente.</p>
         ) : (
           <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
             {SECTION_ORDER.map((section) => {

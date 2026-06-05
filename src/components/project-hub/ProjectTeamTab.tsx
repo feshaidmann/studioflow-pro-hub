@@ -244,7 +244,7 @@ export default function ProjectTeamTab({ projectId }: ProjectTeamTabProps) {
           last_activity_at: new Date().toISOString(),
         },
       }));
-      toast.success("Atualizado! ✅");
+      toast.success("Atualizado!");
     }
     setEditingId(null);
     setSaving(false);

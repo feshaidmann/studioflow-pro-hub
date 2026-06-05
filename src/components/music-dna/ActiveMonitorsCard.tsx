@@ -112,7 +112,7 @@ function MonitorRow({ monitor }: { monitor: PlaylistMonitor }) {
         track_spotify_uri: monitor.track_spotify_uri,
       });
       if (res.found && monitor.status === "monitoring") {
-        toast.success("🎉 Sua faixa entrou na playlist!");
+        toast.success("Sua faixa entrou na playlist!");
       } else if (!res.found) {
         toast("Ainda não encontrada nesta playlist", { description: "Verificada agora." });
       }
@@ -174,7 +174,7 @@ function MonitorRow({ monitor }: { monitor: PlaylistMonitor }) {
         <div className="flex items-center justify-between gap-2 pt-1 flex-wrap">
           {isFound ? (
             <span className="text-xs text-green-700 bg-green-50 border border-green-100 rounded-full px-2 py-0.5">
-              🎉 Faixa adicionada!
+              Faixa adicionada!
             </span>
           ) : isBookmarked ? (
             <span className="text-xs text-muted-foreground inline-flex items-center gap-1">

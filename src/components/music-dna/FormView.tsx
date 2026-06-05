@@ -137,7 +137,7 @@ export function FormView({ onSubmit, isPending, projects, defaultProjectId }: {
         <Card className="animate-slide-up">
           <CardHeader className="pb-2">
             <CardTitle className="text-xs font-mono uppercase tracking-wider text-primary">
-              🎵  Arquivo de áudio
+              Arquivo de áudio
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -202,7 +202,7 @@ export function FormView({ onSubmit, isPending, projects, defaultProjectId }: {
         <Card className="animate-slide-up [animation-delay:0.03s]">
           <CardHeader className="pb-2">
             <CardTitle className="text-xs font-mono uppercase tracking-wider text-primary">
-              📋  Detalhes da faixa
+              Detalhes da faixa
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
