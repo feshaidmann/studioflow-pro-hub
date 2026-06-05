@@ -10,5 +10,4 @@ export const JOURNEY_ORDER: readonly string[] = [
   "/carreira",      // 1º — oportunidades (editais + palcos)
   "/music-dna",     // 2º — entenda a faixa antes de submeter
   "/professionals", // 3º — equipe conforme necessidade
-  "/captadores",    // 4º — bookers e produtores executivos
 ] as const;
