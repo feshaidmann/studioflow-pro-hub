@@ -31,7 +31,7 @@ export function RequestQuoteModal({ open, onOpenChange, provider, projectId, spe
     if (!description.trim() || description.trim().length < 10) return;
     setSaving(true);
     const result = await createRequest({
-      title: title.trim() || `Pedido para ${provider?.display_name ?? "profissional"}`,
+      title: title.trim() || `Pedido para ${provider?.display_name ?? provider?.name ?? "profissional"}`,
       briefing: description.trim(),
       specialty_needed: specialty ?? provider?.specialties?.[0] ?? "",
       desired_deadline: deadlineDate || null,
@@ -50,7 +50,7 @@ export function RequestQuoteModal({ open, onOpenChange, provider, projectId, spe
         <DialogHeader>
           <DialogTitle>Solicitar orçamento</DialogTitle>
           <DialogDescription>
-            {provider ? `Envie um briefing curto para ${provider.display_name}.` : "Descreva o serviço que você precisa."}
+            {provider ? `Envie um briefing curto para ${provider.display_name ?? provider.name}.` : "Descreva o serviço que você precisa."}
             {" "}O profissional responde com valor e prazo.
           </DialogDescription>
         </DialogHeader>
