@@ -25,13 +25,17 @@ export function SubmitProposalModal({ open, onOpenChange, request, onSuccess }: 
   const [days, setDays] = useState("");
   const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
 
   useEffect(() => {
-    if (!open) { setPrice(""); setDays(""); setMessage(""); }
+    if (!open) { setPrice(""); setDays(""); setMessage(""); setSubmitted(false); }
   }, [open]);
 
+  const messageError = submitted && message.trim().length < 10;
+
   const handleSubmit = async () => {
-    if (!message.trim() || message.trim().length < 10) return;
+    setSubmitted(true);
+    if (message.trim().length < 10) return;
     setSaving(true);
     const ok = await submitProposal({
       price: Number(price) || 0,
@@ -98,14 +102,19 @@ export function SubmitProposalModal({ open, onOpenChange, request, onSuccess }: 
               onChange={(e) => setMessage(e.target.value)}
               placeholder="Descreva sua abordagem, experiência e o que você entregará..."
               rows={4}
+              className={messageError ? "border-destructive focus-visible:ring-destructive" : ""}
             />
-            <p className="text-[11px] text-muted-foreground">Mínimo 10 caracteres.</p>
+            {messageError ? (
+              <p className="text-[11px] text-destructive">Mínimo 10 caracteres.</p>
+            ) : (
+              <p className="text-[11px] text-muted-foreground">{message.trim().length}/10 mín.</p>
+            )}
           </div>
         </div>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          <Button onClick={handleSubmit} disabled={saving || message.trim().length < 10}>
+          <Button onClick={handleSubmit} disabled={saving}>
             {saving ? "Enviando..." : "Enviar proposta"}
           </Button>
         </DialogFooter>

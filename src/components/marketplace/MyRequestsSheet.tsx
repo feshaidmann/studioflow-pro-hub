@@ -5,9 +5,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, Inbox, CalendarClock, Loader2 } from "lucide-react";
+import { ArrowLeft, Inbox, CalendarClock, Loader2, FileText } from "lucide-react";
 import { useServiceRequests, useServiceProposals } from "@/hooks/useMarketplace";
 import { ProposalCard } from "./ProposalCard";
+import { RequestQuoteModal } from "./RequestQuoteModal";
 import type { ServiceRequest } from "@/types/marketplace";
 
 const STATUS_LABEL: Record<ServiceRequest["status"], { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
@@ -115,6 +116,7 @@ export function MyRequestsSheet({ open, onOpenChange }: Props) {
   const { requests, loading, cancelRequest, refetch: refetchRequests } = useServiceRequests();
   const [selected, setSelected] = useState<ServiceRequest | null>(null);
   const [cancelling, setCancelling] = useState<string | null>(null);
+  const [newRequestOpen, setNewRequestOpen] = useState(false);
 
   const handleCancel = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
@@ -129,12 +131,25 @@ export function MyRequestsSheet({ open, onOpenChange }: Props) {
   };
 
   return (
-    <Sheet open={open} onOpenChange={(v) => { if (!v) setSelected(null); onOpenChange(v); }}>
+    <>
+      <Sheet open={open} onOpenChange={(v) => { if (!v) setSelected(null); onOpenChange(v); }}>
       <SheetContent side="right" className="w-full sm:max-w-lg overflow-y-auto">
         <SheetHeader>
-          <SheetTitle className="flex items-center gap-2">
-            <Inbox className="h-5 w-5" /> Meus Pedidos
-          </SheetTitle>
+          <div className="flex items-start justify-between">
+            <SheetTitle className="flex items-center gap-2">
+              <Inbox className="h-5 w-5" /> Meus Pedidos
+            </SheetTitle>
+            {!selected && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="gap-1.5 text-muted-foreground -mr-2 -mt-1"
+                onClick={() => setNewRequestOpen(true)}
+              >
+                <FileText className="h-4 w-4" /> Novo pedido
+              </Button>
+            )}
+          </div>
           {!selected && (
             <SheetDescription>
               Pedidos de orçamento que você enviou e as propostas recebidas.
@@ -154,10 +169,19 @@ export function MyRequestsSheet({ open, onOpenChange }: Props) {
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
           ) : requests.length === 0 ? (
-            <div className="py-16 text-center space-y-2 text-muted-foreground">
+            <div className="py-12 text-center space-y-4 text-muted-foreground">
               <Inbox className="h-10 w-10 mx-auto opacity-30" />
-              <p className="text-sm">Você ainda não enviou nenhum pedido.</p>
-              <p className="text-xs">Use o Marketplace para encontrar profissionais e solicitar orçamentos.</p>
+              <div className="space-y-1">
+                <p className="text-sm">Você ainda não enviou nenhum pedido.</p>
+                <p className="text-xs">Crie um pedido aberto e profissionais do marketplace podem responder.</p>
+              </div>
+              <Button
+                variant="outline"
+                className="gap-2 border-dashed"
+                onClick={() => setNewRequestOpen(true)}
+              >
+                <FileText className="h-4 w-4" /> Criar pedido aberto
+              </Button>
             </div>
           ) : (
             <div className="space-y-2">
@@ -200,5 +224,12 @@ export function MyRequestsSheet({ open, onOpenChange }: Props) {
         </div>
       </SheetContent>
     </Sheet>
+
+      <RequestQuoteModal
+        open={newRequestOpen}
+        onOpenChange={setNewRequestOpen}
+        provider={null}
+      />
+    </>
   );
 }
