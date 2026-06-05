@@ -199,9 +199,10 @@ export default function Projects() {
   };
 
   const handleAddProject = async () => {
-    if (!form.genre) { toast.error("Selecione o gênero principal"); return; }
+    if (!form.name.trim()) { toast.error(t("projects.nameRequired")); return; }
+    if (!form.genre) { toast.error(t("projects.genreRequired")); return; }
     if ((form.projectType === "ep" || form.projectType === "album") && (!form.trackCount || Number(form.trackCount) < 1)) {
-      toast.error(t("projects.trackCount") + " é obrigatório para EP/Álbum"); return;
+      toast.error(t("projects.trackCountRequired")); return;
     }
     let uploadDateStr = "";
     if (form.uploadDate) {
@@ -220,7 +221,7 @@ export default function Projects() {
         genre: form.genre || null, audienceSizeAtStart: form.audienceSize || null,
         artistState: (profile as any)?.state ?? null,
       });
-      if (!newProj) { toast.error("Erro ao criar projeto. Verifique sua conexão e tente novamente."); return; }
+      if (!newProj) { toast.error(t("projects.createError")); return; }
       if (projects.length === 0) {
         localStorage.setItem("sfp_recent_onboarding_project", newProj.id);
         window.dispatchEvent(new Event("sfp:recent-onboarding-project-changed"));
@@ -229,9 +230,9 @@ export default function Projects() {
       setDialogOpen(false);
       setSelectedProject(newProj);
       addNotification({ title: "Novo projeto criado", message: `${newProj.name} foi adicionado aos seus projetos`, link: "/projects", type: "stage" });
-      toast.success(`Projeto "${newProj.name}" criado!`);
+      toast.success(t("projects.created"));
     } catch {
-      toast.error("Erro ao criar projeto. Tente novamente.");
+      toast.error(t("projects.createError"));
     }
   };
 
@@ -253,8 +254,9 @@ export default function Projects() {
   };
 
   const handleEditProject = async () => {
+    if (!editForm.name.trim()) return;
     if ((editForm.projectType === "ep" || editForm.projectType === "album") && (!editForm.trackCount || Number(editForm.trackCount) < 1)) {
-      toast.error(t("projects.trackCount") + " é obrigatório para EP/Álbum"); return;
+      toast.error(t("projects.trackCountRequired")); return;
     }
     let uploadDateStr = "";
     if (editForm.uploadDate) {
@@ -277,7 +279,7 @@ export default function Projects() {
     if (isLancado && !wasAlreadyCompleted) {
       await handleLancadoCompletion(editForm.id, editForm.name);
     } else {
-      toast.success("Projeto atualizado! Confira as mudanças na timeline.");
+      toast.success(t("projects.updated"));
     }
   };
 
@@ -289,7 +291,7 @@ export default function Projects() {
     if (selectedProject?.id === deleteTargetId) setSelectedProject(null);
     setDeleteDialogOpen(false);
     setDeleteTargetId(null);
-    toast.success("Projeto removido do seu histórico.");
+    toast.success(t("projects.deleted"));
   };
 
   const deleteTargetProject = projects.find((p) => p.id === deleteTargetId);
@@ -367,7 +369,7 @@ export default function Projects() {
                     </Select>
                   </div>
                   <div className="space-y-1.5">
-                    <Label>Gênero *</Label>
+                    <Label>{t("projects.genreLabel")} *</Label>
                     <Select value={form.genre} onValueChange={(v) => setForm({ ...form, genre: v })}>
                       <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                       <SelectContent>{GENRE_OPTIONS.map((g) => <SelectItem key={g} value={g}>{g}</SelectItem>)}</SelectContent>
@@ -443,7 +445,7 @@ export default function Projects() {
                 )}
               </div>
               <DialogFooter>
-                <DialogClose asChild><Button variant="outline">Cancelar</Button></DialogClose>
+                <DialogClose asChild><Button variant="outline">{t("projects.cancel")}</Button></DialogClose>
                 <Button onClick={handleAddProject} disabled={!form.name || !form.genre} className="active:scale-95 transition-transform">{t("projects.create")}</Button>
               </DialogFooter>
             </DialogContent>
@@ -563,7 +565,7 @@ export default function Projects() {
               <div className="space-y-1.5"><Label>{t("projects.trackCount")}</Label><Input type="number" min="1" value={editForm.trackCount} onChange={(e) => setEditForm({ ...editForm, trackCount: e.target.value })} className="font-mono-nums" /></div>
             )}
             <div className="space-y-1.5">
-              <Label>Gênero principal</Label>
+              <Label>{t("projects.genreMainLabel")}</Label>
               <Select value={editForm.genre} onValueChange={(v) => setEditForm({ ...editForm, genre: v })}>
                 <SelectTrigger><SelectValue placeholder="Selecione o gênero" /></SelectTrigger>
                 <SelectContent>{GENRE_OPTIONS.map((g) => <SelectItem key={g} value={g}>{g}</SelectItem>)}</SelectContent>
@@ -582,7 +584,7 @@ export default function Projects() {
             </div>
           </div>
           <DialogFooter>
-            <Button onClick={handleEditProject} disabled={!editForm.name} className="active:scale-95 transition-transform">Salvar</Button>
+            <Button onClick={handleEditProject} disabled={!editForm.name} className="active:scale-95 transition-transform">{t("projects.save")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -591,12 +593,12 @@ export default function Projects() {
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent className="glass-card">
           <AlertDialogHeader>
-            <AlertDialogTitle>Excluir projeto</AlertDialogTitle>
+            <AlertDialogTitle>{t("projects.deleteTitle")}</AlertDialogTitle>
             <AlertDialogDescription>Tem certeza que deseja excluir <strong>{deleteTargetProject?.name}</strong>? Esta ação não pode ser desfeita.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteProject} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Excluir</AlertDialogAction>
+            <AlertDialogCancel>{t("projects.cancel")}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteProject} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">{t("projects.deleteConfirm")}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
