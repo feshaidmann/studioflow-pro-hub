@@ -103,7 +103,8 @@ export default function Onboarding() {
   const whatsappDigits = whatsapp.replace(/\D/g, "");
   const canStep1 =
     fullName.trim().length >= 2 &&
-    artistName.trim().length >= 1;
+    artistName.trim().length >= 1 &&
+    whatsappDigits.length >= 10;
   const canStep2 = !!primaryGenre && !!stateUf;
 
   const goToStep2 = () => {
@@ -175,9 +176,6 @@ export default function Onboarding() {
     });
   };
 
-  // Fix 6 — suppress unused variable warning for whatsappDigits
-  void whatsappDigits;
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="w-full max-w-lg space-y-5 animate-fade-in">
@@ -241,7 +239,7 @@ export default function Onboarding() {
 
                 <div className="space-y-1.5">
                   <Label htmlFor="whatsapp" className="text-xs text-muted-foreground flex items-center gap-1">
-                    <Phone className="h-3 w-3" /> WhatsApp <span className="text-muted-foreground/60">(opcional)</span>
+                    <Phone className="h-3 w-3" /> WhatsApp *
                   </Label>
                   <Input
                     id="whatsapp"

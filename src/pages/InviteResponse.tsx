@@ -382,13 +382,20 @@ export default function InviteResponse() {
 
           <div className="p-6 space-y-4">
             {emailMismatchWarning && (
-              <div className="rounded-lg border border-warning/40 bg-warning/10 px-3 py-2.5 text-xs text-foreground/90 flex items-start gap-2">
-                <AlertTriangle className="h-4 w-4 text-warning shrink-0 mt-0.5" />
-                <div>
-                  Este convite é para <span className="font-medium">{invitation.professional_email}</span>,
-                  mas você está logado como <span className="font-medium">{loggedEmail}</span>.
-                  Saia e entre com o email correto antes de aceitar.
+              <div className="rounded-lg border border-warning/40 bg-warning/10 px-3 py-2.5 text-xs text-foreground/90 space-y-2">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="h-4 w-4 text-warning shrink-0 mt-0.5" />
+                  <div>
+                    Este convite é para <span className="font-medium">{invitation.professional_email}</span>,
+                    mas você está logado como <span className="font-medium">{loggedEmail}</span>.
+                  </div>
                 </div>
+                <button
+                  onClick={handleSwitchAccount}
+                  className="ml-6 text-xs font-medium text-warning underline underline-offset-2 hover:opacity-80 transition-opacity"
+                >
+                  Sair e entrar com o email correto →
+                </button>
               </div>
             )}
 
@@ -468,7 +475,8 @@ export default function InviteResponse() {
               </Button>
               <Button
                 onClick={() => handleRespond("accepted")}
-                disabled={pageState === "submitting"}
+                disabled={pageState === "submitting" || !!emailMismatchWarning}
+                title={emailMismatchWarning ? "Entre com o email correto para aceitar este convite" : undefined}
               >
                 {pageState === "submitting" && overlayDecision === "accepted"
                   ? <Loader2 className="h-4 w-4 animate-spin" />

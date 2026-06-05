@@ -205,11 +205,15 @@ export default function FreelancerProfile() {
     setTimeout(() => setLinkCopied(false), 2000);
   };
 
+  const handleVisibilityToggle = async (v: boolean) => {
+    setForm((prev) => ({ ...prev, allow_global_listing: v }));
+    await updateProfile({ allow_global_listing: v } as any);
+    toast.success(v ? "Agora visível no Marketplace" : "Removido do Marketplace");
+  };
+
   const handleRemoveFromBank = async () => {
     setRemoveConfirmOpen(false);
-    await updateProfile({ allow_global_listing: false });
-    setForm((prev) => ({ ...prev, allow_global_listing: false }));
-    toast.success("Você foi removido do banco de profissionais");
+    await handleVisibilityToggle(false);
   };
 
   const memberSince = profile?.created_at
@@ -310,7 +314,7 @@ export default function FreelancerProfile() {
             </div>
             <Switch
               checked={form.allow_global_listing}
-              onCheckedChange={(v) => setForm((prev) => ({ ...prev, allow_global_listing: v }))}
+              onCheckedChange={handleVisibilityToggle}
             />
           </div>
           <Separator />
