@@ -526,10 +526,12 @@ export default function Carreira() {
             />
           )}
 
-          {/* 5. Contador */}
-          <div className="text-xs text-muted-foreground">
-            {filtered.length} oportunidade(s){totalActive ? " com filtros aplicados" : ""}
-          </div>
+          {/* 5. Contador — only show when there's something meaningful to count */}
+          {(filtered.length > 0 || totalActive) && (
+            <div className="text-xs text-muted-foreground">
+              {filtered.length} oportunidade(s){totalActive ? " com filtros aplicados" : ""}
+            </div>
+          )}
 
           {/* 6. Grade */}
           {loading ? (

@@ -199,15 +199,17 @@ export default function FinancialTracker() {
         </TabsList>
 
         <TabsContent value="transactions" className="space-y-4 mt-4">
-          <TransactionFilters
-            search={search} onSearchChange={setSearch}
-            filterMonth={filterMonth} onFilterMonthChange={setFilterMonth}
-            filterType={filterType} onFilterTypeChange={setFilterType}
-            filterStatus={filterStatus} onFilterStatusChange={setFilterStatus}
-            filterProject={filterProject} onFilterProjectChange={setFilterProject}
-            projects={projects} months={months}
-            filteredCount={filtered.length} onExport={handleExportCSV}
-          />
+          {transactions.length > 0 && (
+            <TransactionFilters
+              search={search} onSearchChange={setSearch}
+              filterMonth={filterMonth} onFilterMonthChange={setFilterMonth}
+              filterType={filterType} onFilterTypeChange={setFilterType}
+              filterStatus={filterStatus} onFilterStatusChange={setFilterStatus}
+              filterProject={filterProject} onFilterProjectChange={setFilterProject}
+              projects={projects} months={months}
+              filteredCount={filtered.length} onExport={handleExportCSV}
+            />
+          )}
           <TransactionTable
             filtered={filtered} paginated={paginated}
             page={page} totalPages={totalPages} onPageChange={setPage}
