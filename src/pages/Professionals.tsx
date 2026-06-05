@@ -11,6 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { MobileStickyHeader } from "@/components/ui/mobile-sticky-header";
 import { useProfessionalsList } from "@/hooks/useProfessionalsList";
+import { useInboundRequestCount } from "@/hooks/useMarketplace";
 import { ProfessionalsFilters, type StatusFilter } from "@/components/professionals/ProfessionalsFilters";
 import { ProfessionalsTable } from "@/components/professionals/ProfessionalsTable";
 import { ProfessionalsCardList } from "@/components/professionals/ProfessionalsCardList";
@@ -37,6 +38,7 @@ export default function Professionals() {
   const [myRequestsOpen, setMyRequestsOpen] = useState(false);
   const [inboundOpen, setInboundOpen] = useState(false);
   const { profile } = useProfile();
+  const inboundCount = useInboundRequestCount();
   const [searchParams, setSearchParams] = useSearchParams();
 
   useEffect(() => {
@@ -103,8 +105,13 @@ export default function Professionals() {
           <Inbox className="h-3.5 w-3.5" /> Meus Pedidos
         </Button>
         {profile?.allow_global_listing && (
-          <Button variant="outline" size="sm" className="flex-1 gap-1.5 text-xs h-8" onClick={() => setInboundOpen(true)}>
+          <Button variant="outline" size="sm" className="flex-1 gap-1.5 text-xs h-8 relative" onClick={() => setInboundOpen(true)}>
             <BriefcaseBusiness className="h-3.5 w-3.5" /> Recebidos
+            {inboundCount > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 h-4 min-w-4 rounded-full bg-destructive text-destructive-foreground text-[10px] font-semibold flex items-center justify-center px-1">
+                {inboundCount}
+              </span>
+            )}
           </Button>
         )}
         <Button variant="outline" size="sm" className="flex-1 gap-1.5 text-xs h-8" onClick={() => setMarketplaceOpen(true)}>
@@ -121,8 +128,13 @@ export default function Professionals() {
         </div>
         <div className="flex gap-2">
           {profile?.allow_global_listing && (
-            <Button variant="outline" onClick={() => setInboundOpen(true)} className="gap-2">
+            <Button variant="outline" onClick={() => setInboundOpen(true)} className="gap-2 relative">
               <BriefcaseBusiness className="h-4 w-4" /> Pedidos Recebidos
+              {inboundCount > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 h-4 min-w-4 rounded-full bg-destructive text-destructive-foreground text-[10px] font-semibold flex items-center justify-center px-1">
+                  {inboundCount}
+                </span>
+              )}
             </Button>
           )}
           <Button variant="outline" onClick={() => setMyRequestsOpen(true)} className="gap-2">
