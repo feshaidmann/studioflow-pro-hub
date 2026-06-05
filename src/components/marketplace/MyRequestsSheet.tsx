@@ -131,7 +131,8 @@ export function MyRequestsSheet({ open, onOpenChange }: Props) {
   };
 
   return (
-    <Sheet open={open} onOpenChange={(v) => { if (!v) setSelected(null); onOpenChange(v); }}>
+    <>
+      <Sheet open={open} onOpenChange={(v) => { if (!v) setSelected(null); onOpenChange(v); }}>
       <SheetContent side="right" className="w-full sm:max-w-lg overflow-y-auto">
         <SheetHeader>
           <div className="flex items-start justify-between">
@@ -224,10 +225,11 @@ export function MyRequestsSheet({ open, onOpenChange }: Props) {
       </SheetContent>
     </Sheet>
 
-    <RequestQuoteModal
-      open={newRequestOpen}
-      onOpenChange={setNewRequestOpen}
-      provider={null}
-    />
+      <RequestQuoteModal
+        open={newRequestOpen}
+        onOpenChange={setNewRequestOpen}
+        provider={null}
+      />
+    </>
   );
 }
