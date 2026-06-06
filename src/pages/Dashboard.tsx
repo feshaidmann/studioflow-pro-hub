@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo, lazy, Suspense, type ReactNode } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Bot, ChevronDown, FileText, Calendar, Receipt, Users } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Bot, ChevronDown, FileText, Calendar, Receipt, Users, X } from "lucide-react";
 import LazyCardBoundary from "@/components/dashboard/LazyCardBoundary";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useNavigate } from "react-router-dom";
@@ -160,6 +161,15 @@ export default function Dashboard() {
   }, [alerts, activeTasks, projectsWithHealth, projects]);
 
   const isFirstRun = projects.length === 0;
+
+  const [marketplaceNudgeDismissed, setMarketplaceNudgeDismissed] = useState(
+    () => localStorage.getItem("sfp_marketplace_nudge_v1") === "1"
+  );
+  const showMarketplaceNudge =
+    !marketplaceNudgeDismissed &&
+    !!profile?.onboarding_completed &&
+    !(profile as any)?.allow_global_listing;
+
   const journeyPlan = useMemo(() => getJourneyPlan(profile?.main_pain ?? "organization", profile?.current_moment ?? "", profile?.track_view_mode ?? "basic"), [profile]);
 
   // recentOnboardingProject reativo a mudanças de localStorage (StorageEvent + custom event)
@@ -323,6 +333,36 @@ export default function Dashboard() {
         onSelectProject={setSelectedProjectId}
         mainPain={profile?.main_pain}
       />
+
+      {/* Nudge: completar perfil no Marketplace */}
+      {showMarketplaceNudge && (
+        <div className="rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 flex items-center justify-between gap-4 text-sm animate-fade-in">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <Users className="h-4 w-4 text-primary shrink-0" />
+            <span className="truncate">
+              <span className="font-medium">Ative seu perfil no Marketplace</span>
+              <span className="text-muted-foreground ml-1.5 hidden sm:inline">— apareça nas buscas de artistas e receba propostas.</span>
+            </span>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 text-xs border-primary/30 hover:bg-primary/10"
+              onClick={() => navigate("/perfil")}
+            >
+              Completar perfil
+            </Button>
+            <button
+              onClick={() => { setMarketplaceNudgeDismissed(true); localStorage.setItem("sfp_marketplace_nudge_v1", "1"); }}
+              className="text-muted-foreground/50 hover:text-muted-foreground transition-colors"
+              aria-label="Dispensar"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* 1. Alertas críticos primeiro */}
       {dashboardSections.alerts}
