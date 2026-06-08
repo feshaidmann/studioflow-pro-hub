@@ -31,7 +31,8 @@ export function useProjectChat(projectId: string) {
       .from("project_messages")
       .select("id, project_id, user_id, content, created_at, is_pending, is_resolved, linked_task_id, attachment_path, attachment_name")
       .eq("project_id", projectId)
-      .order("created_at", { ascending: true });
+      .order("created_at", { ascending: true })
+      .limit(300);
 
     if (error) { setLoading(false); return; }
 

@@ -83,6 +83,27 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
+    const todayUtc = new Date().toISOString().slice(0, 10);
+    const { count: todayCount } = await adminClient
+      .from("ai_invocations")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .eq("function_name", "edital-ai-assistant")
+      .gte("created_at", todayUtc + "T00:00:00Z");
+    if ((todayCount ?? 0) >= 20) {
+      return new Response(
+        JSON.stringify({
+          error: "rate_limit",
+          limit_type: "daily",
+          limit: 20,
+          used: todayCount,
+          resets_at: todayUtc + "T23:59:59Z",
+          message: "Limite diário de uso da IA atingido. Tente amanhã.",
+        }),
+        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const { data: profileData } = await adminClient
       .from("profiles")
       .select("display_name, city, specialties")

@@ -89,7 +89,8 @@ export function useTasks() {
       .select("*")
       .eq("user_id", user.id)
       .eq("dismissed", false)
-      .order("due_date", { ascending: true, nullsFirst: false });
+      .order("due_date", { ascending: true, nullsFirst: false })
+      .limit(200);
     if (data) setTasks(data.map(dbRowToTask));
     setLoading(false);
   }, [user]);

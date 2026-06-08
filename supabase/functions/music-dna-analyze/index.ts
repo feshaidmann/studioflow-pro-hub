@@ -250,8 +250,23 @@ serve(async (req: Request) => {
       return jsonResponse({ success: true, analysis });
     }
 
-
-
+    const todayUtc = new Date().toISOString().slice(0, 10);
+    const { count: todayCount } = await adminClient
+      .from("ai_invocations")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .eq("function_name", "music-dna-analyze")
+      .gte("created_at", todayUtc + "T00:00:00Z");
+    if ((todayCount ?? 0) >= 20) {
+      return jsonResponse({
+        error: "rate_limit",
+        limit_type: "daily",
+        limit: 20,
+        used: todayCount,
+        resets_at: todayUtc + "T23:59:59Z",
+        message: "Limite diário de uso da IA atingido. Tente amanhã.",
+      }, 429);
+    }
 
     if (!prompt?.trim()) {
       return jsonResponse({ error: "prompt is required" }, 400);
