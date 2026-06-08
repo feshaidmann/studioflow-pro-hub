@@ -130,6 +130,7 @@ export default function InviteResponse() {
   const [mismatchInfo, setMismatchInfo] = useState<{ invited: string; logged: string } | null>(null);
   const [showOverlay, setShowOverlay] = useState(false);
   const [overlayDecision, setOverlayDecision] = useState<"accepted" | "declined">("accepted");
+  const [declineConfirm, setDeclineConfirm] = useState(false);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -334,7 +335,9 @@ export default function InviteResponse() {
               </div>
             </>
           )}
-          <p className="text-xs text-muted-foreground">Você pode fechar esta aba com segurança.</p>
+          {!isLoggedIn && (
+            <p className="text-xs text-muted-foreground">Você pode fechar esta aba com segurança.</p>
+          )}
         </div>
       </StatusScreen>
     );
@@ -463,26 +466,44 @@ export default function InviteResponse() {
             </div>
 
             {/* actions */}
-            <div className="grid grid-cols-2 gap-3 pt-1">
-              <Button
-                variant="outline"
-                onClick={() => handleRespond("declined")}
-                disabled={pageState === "submitting"}
-              >
-                {pageState === "submitting" && overlayDecision === "declined"
-                  ? <Loader2 className="h-4 w-4 animate-spin" />
-                  : <><X className="h-4 w-4" /> Recusar</>}
-              </Button>
-              <Button
-                onClick={() => handleRespond("accepted")}
-                disabled={pageState === "submitting" || !!emailMismatchWarning}
-                title={emailMismatchWarning ? "Entre com o email correto para aceitar este convite" : undefined}
-              >
-                {pageState === "submitting" && overlayDecision === "accepted"
-                  ? <Loader2 className="h-4 w-4 animate-spin" />
-                  : <><Check className="h-4 w-4" /> Aceitar</>}
-              </Button>
-            </div>
+            {declineConfirm ? (
+              <div className="space-y-2 pt-1">
+                <p className="text-xs text-muted-foreground text-center">Tem certeza? Esta ação não pode ser desfeita.</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <Button variant="ghost" onClick={() => setDeclineConfirm(false)} disabled={pageState === "submitting"}>
+                    Voltar
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    onClick={() => handleRespond("declined")}
+                    disabled={pageState === "submitting"}
+                  >
+                    {pageState === "submitting" && overlayDecision === "declined"
+                      ? <Loader2 className="h-4 w-4 animate-spin" />
+                      : <><X className="h-4 w-4" /> Confirmar recusa</>}
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-3 pt-1">
+                <Button
+                  variant="outline"
+                  onClick={() => setDeclineConfirm(true)}
+                  disabled={pageState === "submitting"}
+                >
+                  <X className="h-4 w-4" /> Recusar
+                </Button>
+                <Button
+                  onClick={() => handleRespond("accepted")}
+                  disabled={pageState === "submitting" || !!emailMismatchWarning}
+                  title={emailMismatchWarning ? "Entre com o email correto para aceitar este convite" : undefined}
+                >
+                  {pageState === "submitting" && overlayDecision === "accepted"
+                    ? <Loader2 className="h-4 w-4 animate-spin" />
+                    : <><Check className="h-4 w-4" /> Aceitar</>}
+                </Button>
+              </div>
+            )}
           </div>
         </div>
 

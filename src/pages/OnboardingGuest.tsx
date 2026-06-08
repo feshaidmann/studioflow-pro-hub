@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, Navigate } from "react-router-dom";
-import { Music, ArrowRight, User, Briefcase, Phone, Mail } from "lucide-react";
+import { Music, ArrowRight, User, Briefcase, Phone } from "lucide-react";
 import { useProfile } from "@/contexts/ProfileContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -205,16 +205,15 @@ export default function OnboardingGuest() {
             />
           </div>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="g-email" className="text-xs text-muted-foreground flex items-center gap-1">
-              <Mail className="h-3 w-3" /> Email
-            </Label>
-            <Input id="g-email" value={user.email ?? ""} readOnly disabled className="bg-muted/50" />
-          </div>
+          {user.email && (
+            <p className="text-xs text-muted-foreground/70 text-center -mt-1">
+              Logado como {user.email}
+            </p>
+          )}
 
           <Button onClick={finish} disabled={!canSubmit || submitting} className="w-full gap-2" size="lg">
             {submitting ? "Salvando..." : (
-              <><ArrowRight className="h-4 w-4" />{inviteCtx?.projectId ? "Acessar o projeto" : "Começar"}</>
+              <>{inviteCtx?.projectId ? "Acessar o projeto" : "Começar"} <ArrowRight className="h-4 w-4" /></>
             )}
           </Button>
         </div>

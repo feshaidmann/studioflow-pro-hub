@@ -36,6 +36,7 @@ export default function FreelancerProfile() {
   const [removeConfirmOpen, setRemoveConfirmOpen] = useState(false);
   const [projectStats, setProjectStats] = useState({ total: 0, uniqueArtists: 0 });
   const [newSpecialty, setNewSpecialty] = useState("");
+  const [specialtyKey, setSpecialtyKey] = useState(0);
   const [linkCopied, setLinkCopied] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
@@ -162,6 +163,7 @@ export default function FreelancerProfile() {
     if (!val || form.specialties.includes(val) || form.specialties.length >= 5) return;
     setForm((prev) => ({ ...prev, specialties: [...prev.specialties, val] }));
     setNewSpecialty("");
+    setSpecialtyKey((k) => k + 1);
   };
 
   const handleRemoveSpecialty = (idx: number) => {
@@ -313,7 +315,7 @@ export default function FreelancerProfile() {
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium">Visível no banco de profissionais</p>
+              <p className="text-sm font-medium">Visível no Marketplace</p>
               <p className="text-xs text-muted-foreground">Artistas podem te encontrar e convidar para projetos</p>
             </div>
             <Switch
@@ -390,16 +392,16 @@ export default function FreelancerProfile() {
             </div>
             {form.specialties.length < 5 && (
               <div className="flex gap-2">
-                <select
-                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                  value=""
-                  onChange={(e) => { if (e.target.value) handleAddSpecialty(e.target.value); }}
-                >
-                  <option value="">Selecionar especialidade...</option>
-                  {SPECIALTY_OPTIONS.filter((o) => !form.specialties.includes(o)).map((o) => (
-                    <option key={o} value={o}>{o}</option>
-                  ))}
-                </select>
+                <Select key={specialtyKey} onValueChange={(v) => { if (v) handleAddSpecialty(v); }}>
+                  <SelectTrigger className="flex-1">
+                    <SelectValue placeholder="Selecionar especialidade..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SPECIALTY_OPTIONS.filter((o) => !form.specialties.includes(o)).map((o) => (
+                      <SelectItem key={o} value={o}>{o}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <div className="flex gap-1">
                   <Input
                     placeholder="Outra..."
@@ -589,7 +591,7 @@ export default function FreelancerProfile() {
       {form.allow_global_listing && (
         <div className="flex items-center justify-between px-1 pt-1">
           <div>
-            <p className="text-xs text-muted-foreground/70">Remover do banco de profissionais</p>
+            <p className="text-xs text-muted-foreground/70">Remover do Marketplace</p>
             <p className="text-[11px] text-muted-foreground/50 mt-0.5">Você não será mais encontrado por artistas</p>
           </div>
           <Button
@@ -612,7 +614,7 @@ export default function FreelancerProfile() {
               <Eye className="h-4 w-4 text-primary" />
               Pré-visualização pública
             </DialogTitle>
-            <DialogDescription>Como um artista verá seu perfil no banco de profissionais</DialogDescription>
+            <DialogDescription>Como um artista verá seu perfil no Marketplace</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 pt-2">
             {/* Identity */}
@@ -698,7 +700,7 @@ export default function FreelancerProfile() {
 
             {!form.allow_global_listing && (
               <p className="text-xs text-muted-foreground bg-muted/50 rounded-md px-3 py-2">
-                ⚠️ Perfil não visível — ative "Visível no banco" para aparecer nas buscas
+                ⚠️ Perfil não visível — ative "Visível no Marketplace" para aparecer nas buscas
               </p>
             )}
           </div>
