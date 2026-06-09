@@ -7,12 +7,17 @@ export type AcceptanceSignal =
   | "thumbs_down"
   | "saved"
   | "copied"
-  | "task_created";
+  | "task_created"
+  | "impression";
 
 /**
  * Hook para registrar sinais de aceitação do `diagnostico_resumo` (A/B).
  * Idempotente: a constraint UNIQUE(analysis_id, signal_type) impede duplicatas.
  * Falhas são silenciosas — sinal de telemetria não pode quebrar o fluxo do produtor.
+ *
+ * `metadata` guarda contexto importante para análise longitudinal: stage do projeto,
+ * gênero classificado, confiança da extração, versão do prompt e — no caso de
+ * `thumbs_down` — texto livre opcional do usuário sobre o motivo.
  */
 export function useAcceptanceSignal() {
   const { user } = useAuth();
@@ -22,6 +27,7 @@ export function useAcceptanceSignal() {
       analysisId: string | null | undefined;
       variant: "A" | "B" | string | null | undefined;
       signal: AcceptanceSignal;
+      metadata?: Record<string, unknown>;
     }) => {
       if (!user?.id || !params.analysisId) return;
       const variant = params.variant === "B" ? "B" : "A";
@@ -33,6 +39,7 @@ export function useAcceptanceSignal() {
             analysis_id: params.analysisId,
             summary_variant: variant,
             signal_type: params.signal,
+            metadata: params.metadata ?? {},
           });
         if (error && !/duplicate key|unique/i.test(error.message)) {
           console.warn("[acceptance-signal] insert error:", error.message);
