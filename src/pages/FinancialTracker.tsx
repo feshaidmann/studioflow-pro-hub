@@ -39,7 +39,7 @@ import { PendingTransactionsSummary } from "@/components/finance/PendingTransact
 const PAGE_SIZE = 20;
 
 export default function FinancialTracker() {
-  const { t } = useLanguage();
+  
   const { transactions, projects, deleteTransaction, getProjectFinancials } = useProjects();
   const { user } = useAuth();
   const isMobile = useIsMobile();
