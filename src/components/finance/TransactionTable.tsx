@@ -61,10 +61,7 @@ export function TransactionTable({
     );
   }
 
-  const categoryLabel = (tx: Transaction) =>
-    tx.category === "Outros" && tx.customCategory
-      ? `Outros (${tx.customCategory})`
-      : tx.category;
+  const categoryLabel = (tx: Transaction) => formatCategoryLabel(tx.category, tx.customCategory);
 
   return (
     <Card className="glass-card overflow-hidden">
