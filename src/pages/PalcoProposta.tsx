@@ -96,7 +96,7 @@ export default function PalcoProposta() {
   const [loading, setLoading] = useState(true);
   const [step, setStep] = useState<StepKey>("epk");
 
-  const { proposal, tech, saveProposal, saveTech } = usePalcoProposal(applicationId);
+  
 
   // Editable form state (synced from edital_applications extra fields)
   const [epkContent, setEpkContent] = useState("");
