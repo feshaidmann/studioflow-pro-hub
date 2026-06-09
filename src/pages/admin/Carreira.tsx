@@ -359,28 +359,17 @@ export default function AdminCarreira() {
         </Button>
       </div>
 
-      {tab !== "descobertos" && (
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-          {[
-            { label: "Total", v: kpis.total, c: "text-foreground" },
-            { label: "OK", v: kpis.ok, c: "text-emerald-600" },
-            { label: "Broken", v: kpis.broken, c: "text-destructive" },
-            { label: "Unknown", v: kpis.unknown, c: "text-muted-foreground" },
-            { label: "Sem link", v: kpis.noLink, c: "text-warning" },
-          ].map((k) => (
-            <Card key={k.label}><CardContent className="p-3">
-              <p className={`text-2xl font-bold ${k.c}`}>{k.v}</p>
-              <p className="text-xs text-muted-foreground">{k.label}</p>
-            </CardContent></Card>
-          ))}
-        </div>
+      {tab === "editais" && (
+        <HealthBar onFilter={setHealthFilter} active={healthFilter} refreshKey={refreshKey} />
       )}
 
-      <Tabs value={tab} onValueChange={(v) => { setTab(v as any); setSelected(new Set()); setSearch(""); setFilterStatus("all"); }}>
-        <TabsList>
+      <Tabs value={tab} onValueChange={(v) => { setTab(v as any); setSelected(new Set()); setSearch(""); setFilterStatus("all"); setHealthFilter(null); }}>
+        <TabsList className="flex-wrap h-auto">
           <TabsTrigger value="editais">Editais ({editais.length})</TabsTrigger>
           <TabsTrigger value="palcos">Palcos ({palcos.length})</TabsTrigger>
           <TabsTrigger value="descobertos">Descobertos ({corpus.filter(c => !c.reviewed_at && !c.dismissed_at).length})</TabsTrigger>
+          <TabsTrigger value="fontes">Fontes</TabsTrigger>
+          <TabsTrigger value="reports">Reports</TabsTrigger>
         </TabsList>
 
         {(tab === "editais" || tab === "palcos") && (
@@ -389,16 +378,27 @@ export default function AdminCarreira() {
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input className="pl-8" placeholder="Buscar por título..." value={search} onChange={(e) => setSearch(e.target.value)} />
             </div>
-            <Select value={filterStatus} onValueChange={(v) => setFilterStatus(v as any)}>
-              <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
+            <Select value={sortBy} onValueChange={(v) => setSortBy(v as any)}>
+              <SelectTrigger className="w-[170px]"><Flame className="h-3.5 w-3.5 mr-1" /><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todos status</SelectItem>
+                <SelectItem value="urgency">Precisa de atenção</SelectItem>
+                <SelectItem value="recent">Mais recentes</SelectItem>
+                <SelectItem value="deadline">Prazo mais próximo</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={filterStatus} onValueChange={(v) => setFilterStatus(v as any)}>
+              <SelectTrigger className="w-[150px]"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos links</SelectItem>
                 <SelectItem value="ok">OK</SelectItem>
                 <SelectItem value="broken">Broken</SelectItem>
                 <SelectItem value="unknown">Unknown</SelectItem>
                 <SelectItem value="no-link">Sem link</SelectItem>
               </SelectContent>
             </Select>
+            <Button variant="outline" size="sm" onClick={() => setDedupOpen(true)} className="gap-2">
+              <Combine className="h-4 w-4" /> Duplicados
+            </Button>
             {selected.size > 0 && (
               <Button variant="destructive" size="sm" onClick={() => setConfirmDelete({ ids: [...selected], kind: currentKind })} className="gap-2">
                 <Trash2 className="h-4 w-4" /> Apagar {selected.size}
@@ -410,6 +410,14 @@ export default function AdminCarreira() {
           </div>
         )}
 
+        {healthFilter && (
+          <div className="mt-2">
+            <Badge variant="secondary" className="gap-1 cursor-pointer" onClick={() => setHealthFilter(null)}>
+              Filtro ativo: {healthFilter} ✕
+            </Badge>
+          </div>
+        )}
+
         <TabsContent value="editais" className="mt-4">
           <OpportunitiesTable
             rows={filtered as Edital[]}
@@ -417,7 +425,7 @@ export default function AdminCarreira() {
             selected={selected}
             onToggle={toggleSelect}
             onToggleAll={toggleSelectAll}
-            onEdit={(r) => { setEditing(r); setEditKind("edital"); }}
+            onEdit={(r) => { setEditing(r); setEditKind("edital"); setIsCreating(false); }}
             onRevalidate={(id) => revalidate(id, "edital")}
             onDelete={(id) => setConfirmDelete({ ids: [id], kind: "edital" })}
           />
@@ -430,10 +438,23 @@ export default function AdminCarreira() {
             selected={selected}
             onToggle={toggleSelect}
             onToggleAll={toggleSelectAll}
-            onEdit={(r) => { setEditing(r); setEditKind("palco"); }}
+            onEdit={(r) => { setEditing(r); setEditKind("palco"); setIsCreating(false); }}
             onRevalidate={(id) => revalidate(id, "palco")}
             onDelete={(id) => setConfirmDelete({ ids: [id], kind: "palco" })}
           />
+        </TabsContent>
+
+        <TabsContent value="fontes" className="mt-4">
+          <FontesTab />
+        </TabsContent>
+
+        <TabsContent value="reports" className="mt-4">
+          <ReportsTab onOpenOpportunity={(kind, id) => {
+            const list = kind === "edital" ? editais : palcos;
+            const found = list.find((r: any) => r.id === id);
+            if (found) { setEditKind(kind); setEditing(found as any); setIsCreating(false); }
+            else toast.error("Item não encontrado (talvez tenha sido arquivado)");
+          }} />
         </TabsContent>
 
         <TabsContent value="descobertos" className="mt-4">
