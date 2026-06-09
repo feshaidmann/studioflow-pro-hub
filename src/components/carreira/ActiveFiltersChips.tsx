@@ -15,7 +15,8 @@ interface Props {
 
 export default function ActiveFiltersChips({ filters, onChange, className }: Props) {
   const chips: { key: keyof CarreiraFilters; label: string }[] = [];
-  if (filters.tipo !== "todos") chips.push({ key: "tipo", label: TIPO_LABEL[filters.tipo] || filters.tipo });
+  // tipo é controlado pelas sub-abas — não exibimos como chip.
+  void TIPO_LABEL;
   if (filters.status !== "todos") chips.push({ key: "status", label: filters.status });
   if (filters.estado !== "todos") chips.push({ key: "estado", label: filters.estado });
   if (filters.genero !== "todos") chips.push({ key: "genero", label: `Gênero: ${filters.genero}` });
