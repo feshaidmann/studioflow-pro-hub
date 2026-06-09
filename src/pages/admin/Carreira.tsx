@@ -117,11 +117,6 @@ export default function AdminCarreira() {
 
   useEffect(() => { if (isAdmin) fetchAll(); }, [isAdmin]);
 
-  if (adminLoading) {
-    return <div className="flex items-center justify-center min-h-screen text-muted-foreground animate-pulse">Verificando permissões...</div>;
-  }
-  if (!isAdmin) return <Navigate to="/dashboard" replace />;
-
   const currentList = tab === "editais" ? editais : tab === "palcos" ? palcos : [];
 
   const filtered = useMemo(() => {
@@ -147,6 +142,11 @@ export default function AdminCarreira() {
       noLink: list.filter((r) => !r.link || r.link.trim() === "").length,
     };
   }, [tab, editais, palcos]);
+
+  if (adminLoading) {
+    return <div className="flex items-center justify-center min-h-screen text-muted-foreground animate-pulse">Verificando permissões...</div>;
+  }
+  if (!isAdmin) return <Navigate to="/dashboard" replace />;
 
   async function revalidate(id: string, kind: "edital" | "palco") {
     const table = kind === "edital" ? "editais" : "palcos_curados";
