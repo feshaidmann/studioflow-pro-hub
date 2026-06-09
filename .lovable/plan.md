@@ -1,101 +1,84 @@
+## Objetivo
 
-# Redesenho UX do módulo Carreira
+1. Apagar do banco as oportunidades atualmente quebradas ou sem link.
+2. Entregar uma tela `/admin/carreira` que permita curadoria completa de editais e palcos sem precisar de SQL.
 
-Foco: reduzir ruído visual, separar fluxos diferentes (Editais vs Palcos), tornar "Descobrir vs Acompanhar" inequívoco e permitir excluir candidaturas.
+## Parte 1 — Limpeza pontual (migration)
 
-## Diagnóstico
+Deletar:
+- **Editais:** 2 com `link_status='broken'` + 7 com `link_status='unknown'` e `link` vazio (total 9 linhas).
+- **Palcos:** 1 com `link_status='broken'` (e qualquer outro futuro com link vazio).
 
-Hoje a página `/carreira` carrega num só plano:
-- 2 abas (Descobrir / Minhas Inscrições)
-- Chips de tipo (Todas/Editais/Palcos) + Sheet de filtros avançados (status, UF, gênero, prazo) + chips de filtros ativos + busca textual + busca por IA + recomendações
-- Cards com 3 ações concorrentes (Interesse, Salvar, Detalhes)
-- Editais (fluxo "inscrição com análise IA") e Palcos (fluxo "proposta/EPK") aparecem misturados, mas têm linguagem, prazos e CTAs diferentes
-- Em "Minhas Inscrições" não há como **excluir** uma candidatura criada por engano
+Cascade já remove `edital_applications` e `alertas_editais` relacionados (FKs com ON DELETE CASCADE).
 
-## Nova arquitetura de informação
+## Parte 2 — `/admin/carreira` (tela completa)
+
+Rota nova, protegida por `useAdminRole()` (mesmo padrão de `/admin/reference-tracks`).
+
+### Layout
 
 ```text
-/carreira
-├── Header (Trophy "Carreira") + ação "Documentos"
-│
-├── 🔮 BUSCA IA (hero, sempre visível, colapsável após 1ª busca)
-│      [ Descreva sua busca… ]  [Buscar com IA]
-│      └─ exibe resumo + injeta resultados na lista abaixo
-│
-├── Tabs primárias  ──── Explorar  |  Minhas candidaturas (N)
-│
-└── ── Explorar ─────────────────────────────────────────────
-    ├── Sub-tabs: Editais de fomento  |  Palcos & festivais
-    │     (cada sub-tab traz só os filtros que fazem sentido
-    │      para aquele tipo — palcos não tem "valor", editais
-    │      não tem "gênero")
-    │
-    ├── Barra única compacta:  [busca]  [UF ▾]  [Prazo ▾]  [⚙ Mais]
-    │     · chips de filtros ativos abaixo só se houver algum
-    │
-    ├── ⭐ Recomendados para você (carrossel horizontal, 3-5 itens)
-    │
-    └── Lista de cards (densidade reduzida — ver abaixo)
-
-└── ── Minhas candidaturas ───────────────────────────────────
-    ├── 3 colunas/segmento: Em preparação · Inscrita · Resultado
-    ├── Cada card: título, organizador, prazo, status menu, …
-    └── Menu "⋯" por card: Abrir · Mudar status · **Excluir** (confirmação)
+┌─ Header: "Curadoria de Carreira" + KPIs ────────────────┐
+│  Total | OK | Broken | Unknown | Sem link               │
+├─ Abas: Editais · Palcos · Descobertos (corpus) ─────────┤
+│  Filtros: status do link, fonte, busca por título       │
+│  Tabela paginada com ações por linha                    │
+└─────────────────────────────────────────────────────────┘
 ```
 
-## Mudanças por componente
+### Funcionalidades por aba
 
-### Página `src/pages/Carreira.tsx`
-- Hero de busca IA passa a ser o primeiro bloco (acima das tabs); recolhe-se a 1 linha após primeira busca, com botão "Nova busca IA".
-- Tabs primárias: `Explorar` / `Minhas candidaturas` (badge com contagem).
-- Em Explorar, **sub-tabs** `Editais` / `Palcos` substituem os chips "Todas/Editais/Palcos". Remove a opção "Todas" — usuário escolhe um tipo (cada um tem fluxo próprio).
-- `RecommendedSection` aparece só na sub-tab ativa, filtrado pelo tipo.
-- Filtros: barra compacta com busca + 2 selects principais (UF, Prazo); resto migra para Sheet "Mais filtros" disparado por ícone (já existe `AdvancedFiltersSheet`).
-- Remove `ActiveFiltersChips` quando não houver filtros ativos (hoje já some, mas reduzir verbosidade do header).
+**Editais / Palcos**
+- Tabela: título, link (clicável + status badge colorido), data limite, fonte, última verificação.
+- Ações por linha: **Editar** (sheet com todos os campos), **Revalidar link** (invoca `check-opportunity-links` pontualmente), **Abrir externo**, **Deletar** (com `AlertDialog`).
+- Ações em lote (checkboxes): **Deletar selecionados**, **Revalidar selecionados**.
+- Botão **+ Novo** abre o mesmo sheet de edição em modo criar.
 
-### `src/components/carreira/OpportunityCard.tsx` (refino)
-- Reduzir a 1 CTA primário ("Tenho interesse" → leva direto ao fluxo de inscrição/proposta) + menu "⋯" com "Salvar", "Abrir link", "Ver detalhes".
-- Badge único de status (Aberto / Encerra em Xd / Encerrado) — remover badges duplicados de tipo (já implícito pela sub-tab).
-- Layout em 2 linhas: título + organizador / prazo + UF.
+**Descobertos (corpus)**
+- Lista análises de `edital_analyses_corpus` que **não** têm `edital_id` (= editais que usuários analisaram mas ainda não estão na base).
+- Agrupa por `content_hash` (dedup) e mostra: título informado, resumo, valor, prazo, # de usuários que analisaram.
+- Ação: **Promover a edital** → abre sheet pré-preenchido com a análise; ao salvar, cria linha em `editais` e marca corpus como promovido.
 
-### `src/components/carreira/ApplicationsList` (atual lista em Minhas Inscrições)
-- Adicionar agrupamento por **estágio** (Em preparação | Inscrita | Resultado).
-- Adicionar menu "⋯" no card com ação **Excluir candidatura** (já existe `useDeleteApplication` em `useEditalApplications`, só não está exposto na UI). Confirmação via `AlertDialog`.
+### Mudanças técnicas
 
-### `AISearchPanel`
-- Visual de hero (gradiente sutil, ícone Sparkles, placeholder mais inspirador).
-- Estado pós-busca compacto: 1 linha com "🔮 N resultados para '…'  · Limpar".
+**Migration:**
+- DELETEs descritos acima.
+- Coluna `promoted_edital_id uuid REFERENCES editais(id)` em `edital_analyses_corpus` (para marcar promovidos e não aparecerem mais na fila).
+- Função RPC `admin_revalidate_link(p_table text, p_id uuid)` ou simplesmente invocar `check-opportunity-links` com payload `{ id, table }` (verificar se a function já aceita; se não, adicionar suporte).
 
-### Sub-tabs específicos
-- Editais: filtros relevantes = UF, prazo, valor, modalidade.
-- Palcos: filtros relevantes = UF, gênero, capacidade.
-- (Reaproveita `AdvancedFiltersSheet`, apenas oculta campos não-aplicáveis por tipo.)
+**Edge function `check-opportunity-links`:**
+- Adicionar modo "single item" para revalidação manual sob demanda.
 
-## Banco de dados
-Nenhuma migração necessária. `useDeleteApplication` já existe e a policy de `edital_applications` já permite delete pelo dono.
+**RLS:**
+- `editais` e `palcos_curados` já têm policies de admin? Verificar e, se faltar, adicionar `INSERT/UPDATE/DELETE` para `has_role(auth.uid(),'admin')`.
+- `edital_analyses_corpus` já é admin-only para SELECT; adicionar UPDATE admin para marcar `promoted_edital_id`.
 
-## URLs / deep-links
-Mantém compatibilidade:
-- `?tab=inscricoes` continua válido
-- `?tipo=edital|palco` agora controla **sub-tab** dentro de Explorar
-- `?op=tipo:key` continua abrindo o sheet de detalhe
-- Rotas legadas (`/editais`, `/palcos`) continuam redirecionando
+**Novos arquivos:**
+- `src/pages/admin/Carreira.tsx` — orquestra abas, filtros, KPIs.
+- `src/components/admin/carreira/OpportunityRow.tsx` — linha da tabela.
+- `src/components/admin/carreira/OpportunityEditSheet.tsx` — formulário criar/editar.
+- `src/components/admin/carreira/DiscoveredList.tsx` — aba do corpus.
+- `src/hooks/useAdminOpportunities.ts` — CRUD + revalidação + mutations.
 
-## Detalhes técnicos
+**Roteamento:**
+- Adicionar `/admin/carreira` em `App.tsx` (lazy).
+- Link no `Admin.tsx` (hub) ao lado dos demais painéis.
 
-Arquivos a editar:
-- `src/pages/Carreira.tsx` — reestruturação do JSX e estado de sub-tab
-- `src/components/carreira/OpportunityCard.tsx` — densidade + menu de ações
-- `src/components/carreira/AISearchPanel.tsx` — modo hero/compacto
-- `src/components/carreira/AdvancedFiltersSheet.tsx` — prop `tipo` para ocultar campos
-- `src/components/carreira/OpportunityFilters.tsx` — slim down (barra única)
-- Novo `src/components/carreira/ApplicationsBoard.tsx` — agrupamento por estágio + menu excluir
-- `src/contexts/LanguageContext.tsx` — chaves pt/en novas
+### Não incluído (intencional)
 
-Sem mudanças em hooks/data; reaproveita `useEditais`, `usePalcos`, `useEditalApplications` (createApp, updateApp, **deleteApp**).
+- Importação em massa de CSV — deixar pra depois.
+- Edição inline (dupla-célula) — usar sheet por simplicidade.
+- Histórico de edições/audit log — `updated_at` já registra.
 
-## Resultado esperado
-- 1 hero (IA) + 2 tabs + 2 sub-tabs = hierarquia clara
-- Cards 30-40% mais leves, 1 CTA por card
-- Pipeline em "Minhas candidaturas" com agrupamento e exclusão
-- Editais e Palcos visualmente separados, com filtros pertinentes a cada um
+## Ordem de implementação
+
+1. Migration: deletes + coluna `promoted_edital_id` + policies admin que faltarem.
+2. Atualizar `check-opportunity-links` para aceitar item único.
+3. Hook `useAdminOpportunities`.
+4. Tela `/admin/carreira` com 3 abas, sheet de edição, ações em lote.
+5. Atualizar `mem://navegacao/rotas-descontinuadas` e criar memória da curadoria.
+
+## Riscos / pontos de atenção
+
+- DELETE cascata em `editais` apaga inscrições de usuários — os 9 alvos são links quebrados/vazios, então improvável ter inscrição ativa, mas validar com `SELECT count(*) FROM edital_applications WHERE edital_id IN (...)` antes de rodar (incluir no corpo da migration como NOTICE).
+- Revalidação manual de link precisa respeitar timeout curto (10s) e tratar redirects 3xx como ok.
