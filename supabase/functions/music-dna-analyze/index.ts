@@ -342,6 +342,29 @@ serve(async (req: Request) => {
     const genreLabels     = genreResolution.labels;
     const genreLevel      = genreResolution.level;
     const genreNote       = genreResolution.displayNote;
+    const matchedTokens   = (genreResolution as any).matchedTokens ?? [];
+    const unmatchedTokens = (genreResolution as any).unmatchedTokens ?? [];
+
+    // Telemetria: registra tokens não mapeados para evoluir o GENRE_MAP.
+    if (unmatchedTokens.length > 0 || genreLevel === "absent") {
+      adminClient
+        .from("analytics_events")
+        .insert({
+          event_name: "music_dna_genre_unmatched",
+          user_id: data.claims.sub,
+          properties: {
+            raw_input: targetGenre ?? "",
+            matched_tokens: matchedTokens,
+            unmatched_tokens: unmatchedTokens,
+            resolved_labels: genreLabels,
+            level: genreLevel,
+            strict: useStrictGenre,
+          },
+        })
+        .then(({ error }: { error: unknown }) => {
+          if (error) console.warn("[music-dna-analyze] telemetry insert failed:", (error as any)?.message ?? error);
+        });
+    }
 
     // Validate and coerce MFCC / chroma arrays from the client payload (cosine
     // similarity vectors — must be exact length for the SQL function to use them).
