@@ -515,6 +515,7 @@ export type Database = {
       }
       edital_applications: {
         Row: {
+          analise_ia: Json | null
           contact_channel: string
           contact_recipient: string
           contacted_at: string | null
@@ -538,6 +539,7 @@ export type Database = {
           valor_aprovado: number | null
         }
         Insert: {
+          analise_ia?: Json | null
           contact_channel?: string
           contact_recipient?: string
           contacted_at?: string | null
@@ -561,6 +563,7 @@ export type Database = {
           valor_aprovado?: number | null
         }
         Update: {
+          analise_ia?: Json | null
           contact_channel?: string
           contact_recipient?: string
           contacted_at?: string | null
@@ -2394,54 +2397,6 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
-      }
-      rascunhos_editais: {
-        Row: {
-          campos: Json
-          created_at: string
-          edital_id: string | null
-          id: string
-          progresso: number
-          project_id: string | null
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          campos?: Json
-          created_at?: string
-          edital_id?: string | null
-          id?: string
-          progresso?: number
-          project_id?: string | null
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          campos?: Json
-          created_at?: string
-          edital_id?: string | null
-          id?: string
-          progresso?: number
-          project_id?: string | null
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "rascunhos_editais_edital_id_fkey"
-            columns: ["edital_id"]
-            isOneToOne: false
-            referencedRelation: "editais"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "rascunhos_editais_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "projects"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       release_checklists: {
         Row: {
