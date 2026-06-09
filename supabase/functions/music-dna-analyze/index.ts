@@ -218,6 +218,14 @@ serve(async (req: Request) => {
     const payload = body.payload ?? body;
     const prompt = payload.prompt ?? body.prompt;
 
+    structuredLog("info", "request_received", {
+      action,
+      prompt_length: prompt?.length ?? 0,
+      payload_keys: Object.keys(payload),
+      claims_sub: data.claims.sub,
+      claims_email: data.claims.email,
+    });
+
     if (action === "save_features") {
       const p = payload ?? {};
       const keyNumber = typeof p.key === "number" ? p.key : 0;
