@@ -57,13 +57,7 @@ import { SummaryVariantStatsSection } from "@/components/admin/SummaryVariantSta
 interface PlatformStats {
   totalUsers: number;
   totalProjects: number;
-  totalTasks: number;
   totalTransactions: number;
-  totalProfessionals: number;
-  totalGlobalProfessionals: number;
-  globalPercent: number;
-  totalProjectMembers: number;
-  totalNotifications: number;
 }
 
 interface UserRow {
@@ -71,9 +65,7 @@ interface UserRow {
   email: string;
   created_at: string;
   display_name: string;
-  user_type: string;
   plan: string;
-  is_admin: boolean;
 }
 
 interface DayActivity {
@@ -81,14 +73,6 @@ interface DayActivity {
   tarefas: number;
   projetos: number;
   transacoes: number;
-  notificacoes: number;
-}
-
-interface InfraCost {
-  name: string;
-  value: number;
-  currency: string;
-  note: string;
 }
 
 interface Product {
@@ -111,7 +95,8 @@ interface AdminStatsResponse {
   engagement: {
     loginsLast7Days: number;
     activeUsersLast7Days: number;
-    retentionRate: number;
+    newSignupsLast7Days: number;
+    activeRate: number;
   };
   adoption: {
     onboardingRate: number;
@@ -123,7 +108,6 @@ interface AdminStatsResponse {
     launchRate: number;
     medianTimeToFirstProject: number | null;
     medianTimeToFirstTask: number | null;
-    stuckUsersCount: number;
     usersWithoutProject: number;
     featureRanking: Array<{ name: string; count: number }>;
     screenDropoff: Array<{ path: string; views: number; avgDuration: number; bounceRate: number }>;
@@ -131,24 +115,17 @@ interface AdminStatsResponse {
   users: UserRow[];
   planCounts: Record<string, number>;
   products: Product[];
-  estimatedMonthlyRevenue: number;
-  infraCosts: InfraCost[];
-  edgeFunctions: string[];
+  potentialMonthlyRevenue: number;
   aiUsage: {
-    aiTasksToday: number;
-    aiTasksThisWeek: number;
     aiCalls30d: number;
     aiCallsTotal: number;
-    aiRealCostToday: number;
-    aiRealCost7d: number;
     aiRealCost30d: number;
-    aiRealCostTotal: number;
-    fnBreakdown: Record<string, { calls: number; cost: number }>;
     aiCostTimeline: Array<{ date: string; calls: number; cost: number }>;
   };
   activityTimeline: DayActivity[];
   functionLogs: FunctionLog[];
 }
+
 
 function StatCard({
   label,
