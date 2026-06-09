@@ -38,11 +38,9 @@ export default function EditalInscricao() {
   const { t } = useLanguage();
   const { projects } = useProjects();
   const { profile } = useProfile();
-  const { extracting, extractedFields, extractFields: _extractFields, extractFieldsFromFile, extractFieldsFromText, setExtractedFieldsManual, saving, saveRascunho, loadRascunho, lastError, attemptProgress } = useRascunhoEdital();
+  const { extracting, extractedFields, extractFields: _extractFields, extractFieldsFromFile, setExtractedFieldsManual, saving, saveRascunho, loadRascunho, lastError, attemptProgress } = useRascunhoEdital();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [editalText, setEditalText] = useState("");
-  const [inputMode, setInputMode] = useState<"upload" | "paste">("upload");
   type Step = "docInput" | "filling";
   const [step, setStep] = useState<Step>("docInput");
 
