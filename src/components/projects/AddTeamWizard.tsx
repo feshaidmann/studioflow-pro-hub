@@ -203,7 +203,7 @@ export function AddTeamWizard({
         else addNotification({ title: "Profissional adicionado", message: `${newContact.name} adicionado à equipe`, link: "/projects", type: "general" });
         toast.success(`${newContact.name} adicionado à equipe`);
       } else {
-        const prof = globalProfessionals.find((p) => p.id === selectedExistingProfId) as Professional & { email?: string; phone?: string };
+        const prof = globalProfessionals.find((p) => p.id === selectedExistingProfId);
         if (!prof) { setSaving(false); return; }
         let invId: string | null = null;
         if (prof.email) invId = await createInvite({ projectId: project.id, name: prof.name, email: prof.email, role: prof.specialty || wizardProfType || "", fee, deadline: proposal.deadline, scheduleNotes: proposal.scheduleNotes });
