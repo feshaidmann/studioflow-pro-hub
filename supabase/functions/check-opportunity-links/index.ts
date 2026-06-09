@@ -5,8 +5,9 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 
 // Cron-only function: not invoked from browser, no wildcard CORS needed.
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "https://app.jamsessionproject.com.br",
+  "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -149,6 +150,52 @@ serve(async (req) => {
 
   const admin = createClient(SUPABASE_URL, SERVICE_ROLE);
 
+  // Modo 1: revalidação single-item solicitada por admin autenticado.
+  // Body: { table: "editais" | "palcos_curados", id: "uuid" }
+  let singleBody: { table?: string; id?: string } | null = null;
+  if (req.method === "POST") {
+    try { singleBody = await req.clone().json(); } catch { singleBody = null; }
+  }
+
+  if (singleBody && singleBody.id && singleBody.table) {
+    const authHeader = req.headers.get("Authorization") ?? "";
+    if (!authHeader.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const userClient = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_ANON_KEY")!, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: { user } } = await userClient.auth.getUser();
+    if (!user) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const { data: isAdmin } = await admin.rpc("has_role", { _user_id: user.id, _role: "admin" });
+    if (!isAdmin) {
+      return new Response(JSON.stringify({ error: "Forbidden" }), {
+        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const table = singleBody.table === "palcos_curados" ? "palcos_curados" : "editais";
+    const { data: row } = await admin.from(table).select("id, link").eq("id", singleBody.id).maybeSingle();
+    if (!row?.link) {
+      return new Response(JSON.stringify({ error: "Link vazio" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const status = await checkLinkAlive(row.link as string);
+    const patch: Record<string, unknown> = { link_checked_at: new Date().toISOString() };
+    if (status !== "unknown") patch.link_status = status;
+    await admin.from(table).update(patch).eq("id", row.id);
+    return new Response(JSON.stringify({ ok: true, status }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  // Modo 2 (cron): varredura completa autorizada via verify_cron_token
   const authHeader = req.headers.get("Authorization") ?? "";
   const token = authHeader.startsWith("Bearer ") ? authHeader.slice("Bearer ".length) : "";
   const { data: cronOk } = token
@@ -191,8 +238,6 @@ serve(async (req) => {
     const now = new Date().toISOString();
     const key = table === "editais" ? "editais" : "palcos";
     for (const c of checked) {
-      // Em "unknown" preservamos o link_status anterior (não rebaixa um link que estava ok),
-      // apenas atualizamos o timestamp para evitar reprocessar imediatamente.
       const patch: Record<string, unknown> = { link_checked_at: now };
       if (c.status !== "unknown") patch.link_status = c.status;
 

@@ -455,8 +455,10 @@ export type Database = {
       }
       edital_analyses_corpus: {
         Row: {
+          admin_note: string | null
           content_hash: string
           created_at: string
+          dismissed_at: string | null
           documentos: Json | null
           duration_ms: number | null
           edital_id: string | null
@@ -468,13 +470,16 @@ export type Database = {
           prazos: Json | null
           publico_alvo: string | null
           resumo: string | null
+          reviewed_at: string | null
           source: string
           user_id: string | null
           valor: string | null
         }
         Insert: {
+          admin_note?: string | null
           content_hash: string
           created_at?: string
+          dismissed_at?: string | null
           documentos?: Json | null
           duration_ms?: number | null
           edital_id?: string | null
@@ -486,13 +491,16 @@ export type Database = {
           prazos?: Json | null
           publico_alvo?: string | null
           resumo?: string | null
+          reviewed_at?: string | null
           source: string
           user_id?: string | null
           valor?: string | null
         }
         Update: {
+          admin_note?: string | null
           content_hash?: string
           created_at?: string
+          dismissed_at?: string | null
           documentos?: Json | null
           duration_ms?: number | null
           edital_id?: string | null
@@ -504,6 +512,7 @@ export type Database = {
           prazos?: Json | null
           publico_alvo?: string | null
           resumo?: string | null
+          reviewed_at?: string | null
           source?: string
           user_id?: string | null
           valor?: string | null

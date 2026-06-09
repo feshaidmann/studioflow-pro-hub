@@ -39,6 +39,7 @@ const ReferenceTracks = lazy(() => import("@/pages/admin/ReferenceTracks"));
 const OportunidadesSearchMetrics = lazy(() => import("@/pages/admin/OportunidadesSearchMetrics"));
 const GenreImport = lazy(() => import("@/pages/admin/GenreImport"));
 const AdminMarketplace = lazy(() => import("@/pages/admin/Marketplace"));
+const AdminCarreira = lazy(() => import("@/pages/admin/Carreira"));
 const Agenda = lazy(() => import("@/pages/Agenda"));
 const FreelancerProfile = lazy(() => import("@/pages/FreelancerProfile"));
 const UpgradeScreen = lazy(() => import("@/pages/UpgradeScreen"));
@@ -117,6 +118,7 @@ const AppRoutes = () => (
           <Route path="/admin/oportunidades-search" element={<OportunidadesSearchMetrics />} />
           <Route path="/admin/genre-import" element={<GenreImport />} />
           <Route path="/admin/marketplace" element={<AdminMarketplace />} />
+          <Route path="/admin/carreira" element={<AdminCarreira />} />
           <Route path="/perfil" element={<FreelancerProfile />} />
           <Route path="/upgrade" element={<UpgradeScreen />} />
           <Route path="/music-dna" element={<MusicDNA />} />
