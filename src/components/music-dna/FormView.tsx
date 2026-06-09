@@ -198,7 +198,7 @@ export function FormView({ onSubmit, isPending, projects, defaultProjectId }: {
                     Arraste seu arquivo ou clique para selecionar
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    MP3, WAV, FLAC, M4A, OGG, AIFF — até 50 MB
+                    MP3, FLAC, M4A, OGG, AIFF — até 50 MB · WAV até 120 MB
                   </p>
                 </div>
                 <input
