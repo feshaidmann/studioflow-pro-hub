@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.admin_carreira_health() FROM PUBLIC, anon;
