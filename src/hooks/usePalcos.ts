@@ -83,33 +83,6 @@ export function usePalcos() {
 
   useEffect(() => { fetchCurados(); }, [fetchCurados]);
 
-  // ── Busca via IA ─────────────────────────────────────────────────────────
-  const search = useCallback(async (query: string, projectId?: string | null) => {
-    if (!user) return;
-    setSearching(true);
-    setSearchResult(null);
-    setSearchError(null);
-    setLastQuery(query);
-    setLastProjectId(projectId || null);
-    try {
-      const { data, error } = await supabase.functions.invoke("palco-search", {
-        body: { query, project_id: projectId || null },
-      });
-      if (error) throw error;
-      setSearchResult(data as PalcoSearchResult);
-    } catch (err: any) {
-      console.error("Palco search error:", err);
-      const msg = err?.message || "Não foi possível buscar agora. Tente novamente em instantes.";
-      setSearchError(msg);
-      toast.error("Erro na busca", { description: msg });
-    } finally {
-      setSearching(false);
-    }
-  }, [user]);
-
-  const retryLastSearch = useCallback(() => {
-    if (lastQuery) void search(lastQuery, lastProjectId);
-  }, [lastQuery, lastProjectId, search]);
 
   // ── Salvar resultado de busca no pipeline ────────────────────────────────
   const saveResults = useCallback(async (
