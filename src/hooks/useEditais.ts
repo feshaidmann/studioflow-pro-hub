@@ -89,23 +89,6 @@ export function useEditais(projectId?: string | null) {
     return () => { active = false; };
   }, [user, projectId]);
 
-  const search = useCallback(async (query: string, sources?: string[], linkedProjectId?: string) => {
-    if (!user) return;
-    setSearching(true);
-    setSearchResult(null);
-    try {
-      const { data, error } = await supabase.functions.invoke("edital-search", {
-        body: { query, sources, project_id: linkedProjectId },
-      });
-      if (error) throw error;
-      setSearchResult(data as SearchResult);
-    } catch (err: any) {
-      console.error("Search error:", err);
-      toast.error("Erro na busca", { description: err.message || "Tente novamente." });
-    } finally {
-      setSearching(false);
-    }
-  }, [user]);
 
   const saveResults = useCallback(async (items: Edital[], linkedProjectId?: string | null) => {
     if (!user || items.length === 0) return;
