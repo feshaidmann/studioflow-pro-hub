@@ -424,11 +424,61 @@ function ExecutiveSummary({ diagnosis, proximosPassos, addedItems, onAddStep, an
 
   const stepsCount = proximosPassos.length;
 
+  const extractionConfidence = (diagnosis.realAnalysis as { extraction_confidence?: "preview" | "full" | "external" } | undefined)?.extraction_confidence ?? "preview";
+  const confidenceBadge = {
+    preview: { label: "Análise rápida", tone: "bg-amber-100 text-amber-800 border-amber-300", title: "Métricas físicas confiáveis; perceptuais (energia/valência/dançabilidade) são estimativas heurísticas." },
+    full: { label: "Análise completa", tone: "bg-primary/10 text-primary border-primary/30", title: "Faixa inteira analisada no browser. LUFS, True Peak e DR são medições reais; energia/valência/dançabilidade são estimativas heurísticas espectrais." },
+    external: { label: "Catálogo verificado", tone: "bg-primary/10 text-primary border-primary/30", title: "Features consolidadas com dados externos." },
+  }[extractionConfidence];
+
+  // Snapshot de contexto enviado em todo sinal — permite fatiar A/B por
+  // estágio/gênero/confiança sem precisar voltar para juntar com a análise.
+  const signalContext: Record<string, unknown> = {
+    stage,
+    genre: diagnosis.genero_classificado ?? null,
+    extraction_confidence: extractionConfidence,
+  };
+
+  // — Impression tracking — só conta como impressão depois de 1s no viewport
+  const summaryRef = useRef<HTMLDivElement | null>(null);
+  const impressionSentRef = useRef(false);
+  useEffect(() => {
+    if (!analysisId || impressionSentRef.current) return;
+    const el = summaryRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const observer = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
+          if (timer) continue;
+          timer = setTimeout(() => {
+            if (impressionSentRef.current) return;
+            impressionSentRef.current = true;
+            onSendSignal?.("impression", signalContext);
+            observer.disconnect();
+          }, 1000);
+        } else if (timer) {
+          clearTimeout(timer);
+          timer = null;
+        }
+      }
+    }, { threshold: [0, 0.5, 1] });
+    observer.observe(el);
+    return () => {
+      if (timer) clearTimeout(timer);
+      observer.disconnect();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [analysisId]);
+
+  const [downReason, setDownReason] = useState<string>("");
+  const [showReasonBox, setShowReasonBox] = useState(false);
+
   const handleCopy = () => {
     try {
       navigator.clipboard.writeText(diagnosis.diagnostico_resumo ?? "");
       toast.success("Resumo copiado");
-      onSendSignal?.("copied");
+      onSendSignal?.("copied", signalContext);
     } catch {
       toast.error("Não foi possível copiar");
     }
@@ -437,16 +487,23 @@ function ExecutiveSummary({ diagnosis, proximosPassos, addedItems, onAddStep, an
   const handleVote = (signal: "thumbs_up" | "thumbs_down") => {
     if (voted) return;
     setVoted(signal);
-    onSendSignal?.(signal);
-    toast.success("Obrigado pelo feedback!");
+    if (signal === "thumbs_up") {
+      onSendSignal?.("thumbs_up", signalContext);
+      toast.success("Obrigado pelo feedback!");
+    } else {
+      // thumbs_down: abre caixa pedindo motivo. Sinal vai junto com o motivo
+      // (mesmo se vazio) quando o usuário enviar ou descartar.
+      setShowReasonBox(true);
+    }
   };
 
-  const extractionConfidence = (diagnosis.realAnalysis as { extraction_confidence?: "preview" | "full" | "external" } | undefined)?.extraction_confidence ?? "preview";
-  const confidenceBadge = {
-    preview: { label: "Análise rápida", tone: "bg-amber-100 text-amber-800 border-amber-300", title: "Métricas físicas confiáveis; perceptuais (energia/valência/dançabilidade) são estimativas heurísticas." },
-    full: { label: "Análise completa", tone: "bg-primary/10 text-primary border-primary/30", title: "Faixa inteira analisada no browser. LUFS, True Peak e DR são medições reais; energia/valência/dançabilidade são estimativas heurísticas espectrais." },
-    external: { label: "Catálogo verificado", tone: "bg-primary/10 text-primary border-primary/30", title: "Features consolidadas com dados externos." },
-  }[extractionConfidence];
+  const submitDown = (skip = false) => {
+    const reason = skip ? "" : downReason.trim();
+    onSendSignal?.("thumbs_down", { ...signalContext, reason });
+    setShowReasonBox(false);
+    toast.success(reason ? "Feedback registrado, obrigado!" : "Feedback registrado");
+  };
+
 
   return (
     <section id="dna-resumo" className="scroll-mt-16">
