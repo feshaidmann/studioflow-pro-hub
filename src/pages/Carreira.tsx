@@ -455,6 +455,13 @@ export default function Carreira() {
             Editais de fomento, festivais, showcases e residências num só lugar.
           </p>
         </div>
+        <a
+          href="/carreira/documentos"
+          className="inline-flex items-center gap-1.5 rounded-[0.7rem] border border-border bg-background px-3 py-1.5 text-sm hover:bg-muted transition-colors"
+        >
+          <FolderOpen className="h-4 w-4" />
+          Documentos
+        </a>
       </div>
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)}>
