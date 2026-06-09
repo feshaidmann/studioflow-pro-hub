@@ -92,6 +92,7 @@ export default function AdminCarreira() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [editing, setEditing] = useState<Edital | Palco | null>(null);
   const [editKind, setEditKind] = useState<"edital" | "palco">("edital");
+  const [isCreating, setIsCreating] = useState(false);
   const [viewCorpus, setViewCorpus] = useState<CorpusEntry | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<{ ids: string[]; kind: "edital" | "palco" } | null>(null);
 
