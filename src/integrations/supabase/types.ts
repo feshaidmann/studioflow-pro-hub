@@ -3206,6 +3206,16 @@ export type Database = {
           sample_size: number
         }[]
       }
+      get_genre_taxonomy: {
+        Args: never
+        Returns: {
+          active_count: number
+          canonical: string
+          label: string
+          parent: string
+          quarantined_count: number
+        }[]
+      }
       get_marketplace_providers: {
         Args: {
           p_genre?: string
