@@ -116,15 +116,12 @@ export default function FinancialTracker() {
 
   const handleExportCSV = () => {
     const rows = filtered.map((tx) => ({
-      Data: new Date(tx.date + "T12:00:00").toLocaleDateString("pt-BR"),
+      Data: parseLocalDate(tx.date).toLocaleDateString("pt-BR"),
       Tipo: tx.type === "income" ? "Receita" : "Despesa",
       Descrição: tx.description,
       Valor: tx.amount.toFixed(2),
       Status: tx.paid ? "Pago" : "Pendente",
-      Categoria:
-        tx.category === "Outros" && tx.customCategory
-          ? `Outros (${tx.customCategory})`
-          : tx.category,
+      Categoria: formatCategoryLabel(tx.category, tx.customCategory),
       Projeto: tx.projectId ? (projects.find((p) => p.id === tx.projectId)?.name ?? "") : "",
       Observações: tx.notes ?? "",
     }));
