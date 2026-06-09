@@ -3,6 +3,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
+// NOTA: a busca AI agora é centralizada em `oportunidades-search` (ver AISearchPanel).
+// Este hook foca apenas em CRUD do banco de editais salvos.
+
 export interface Edital {
   id?: string;
   /** "fomento" (edital) ou "palco" (oportunidade de palco salva via IA). */
