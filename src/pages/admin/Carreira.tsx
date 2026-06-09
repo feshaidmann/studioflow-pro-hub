@@ -621,6 +621,30 @@ export default function AdminCarreira() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <DedupDialog
+        open={dedupOpen}
+        onOpenChange={setDedupOpen}
+        rows={(currentKind === "edital" ? editais : palcos) as any}
+        kind={currentKind}
+        onDone={fetchAll}
+      />
+
+      {aiSuggestion && (
+        <AiDiffDialog
+          open={diffOpen}
+          onOpenChange={setDiffOpen}
+          current={editing as any || {}}
+          ai={aiSuggestion}
+          busy={aiBusy}
+          onApply={(patch) => {
+            setEditing({ ...(editing as any), ...patch });
+            setDiffOpen(false);
+            setAiSuggestion(null);
+            toast.success("Sugestões aplicadas ao formulário");
+          }}
+        />
+      )}
     </div>
   );
 }
