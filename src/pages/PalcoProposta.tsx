@@ -19,7 +19,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProjects } from "@/contexts/ProjectContext";
-import { useProfile } from "@/contexts/ProfileContext";
+
 import { useEditalApplications, useUpdateApplication, APPLICATION_STATUS_LABELS, type ApplicationStatus } from "@/hooks/useEditalApplications";
 
 type StepKey = "epk" | "pitch" | "contato";
