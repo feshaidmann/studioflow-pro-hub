@@ -36,6 +36,7 @@ export type Genre =
   | "Lo-Fi Hip Hop"
   // ── Internacional ───────────────────────────────────
   | "Pop Internacional"
+  | "Rock"
   | "Rock Alternativo"
   | "Heavy Metal"
   | "Punk Rock"
@@ -43,6 +44,7 @@ export type Genre =
   | "Grunge"
   | "Hip-Hop"
   | "Jazz"
+  | "Blues"
   | "Synth-Pop"
   | "Eletrônica / House"
   | "Country"
