@@ -450,13 +450,13 @@ export default function AdminCarreira() {
                 : "Atenção: editais são per-usuário; sua edição altera apenas este registro."}
             </SheetDescription>
           </SheetHeader>
-          {editing && isCreating && editKind === "edital" && (
+          {editing && editKind === "edital" && (
             <div className="mt-4 p-3 border rounded-lg bg-muted/30 space-y-2">
               <div className="flex items-center gap-2 text-xs font-semibold">
                 <Sparkles className="h-3.5 w-3.5 text-primary" /> Analisar com IA (opcional)
               </div>
               <p className="text-[11px] text-muted-foreground">
-                Cole o texto do edital ou envie um arquivo (PDF/DOC/DOCX/TXT até 10 MB). A IA preencherá resumo, valor, público-alvo e prazo.
+                {isCreating ? "Cole o texto do edital ou envie um arquivo" : "Reanalise para sobrescrever resumo, valor, público-alvo e prazo deste edital"} (PDF/DOC/DOCX/TXT até 10 MB).
               </p>
               <Textarea
                 rows={4}
