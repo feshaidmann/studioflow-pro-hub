@@ -25,12 +25,21 @@ export function useAcceptanceSignal() {
   const send = useCallback(
     async (params: {
       analysisId: string | null | undefined;
-      variant: "A" | "B" | string | null | undefined;
+      variant: string | null | undefined;
       signal: AcceptanceSignal;
       metadata?: Record<string, unknown>;
     }) => {
       if (!user?.id || !params.analysisId) return;
-      const variant = params.variant === "B" ? "B" : "A";
+      // Aceita rótulo versionado (ex.: "A.v2"). Fallback seguro: "A".
+      const raw = typeof params.variant === "string" ? params.variant : "";
+      const variant = /^[AB](\.v\d+)?$/.test(raw) ? raw : "A";
+      // Extrai e injeta prompt_version no metadata para análise longitudinal,
+      // mesmo que o caller não tenha enviado explicitamente.
+      const [, versionPart] = variant.split(".");
+      const metadata = {
+        prompt_version: versionPart || "v1",
+        ...(params.metadata ?? {}),
+      };
       try {
         const { error } = await supabase
           .from("diagnosis_acceptance_signals")
@@ -39,7 +48,7 @@ export function useAcceptanceSignal() {
             analysis_id: params.analysisId,
             summary_variant: variant,
             signal_type: params.signal,
-            metadata: params.metadata ?? {},
+            metadata,
           });
         if (error && !/duplicate key|unique/i.test(error.message)) {
           console.warn("[acceptance-signal] insert error:", error.message);
