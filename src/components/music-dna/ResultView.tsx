@@ -1199,7 +1199,7 @@ export function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSav
         addedItems={addedItems}
         onAddStep={handleAddToTasks}
         analysisId={savedAnalysisId}
-        onSendSignal={(signal) => ensureSignal(signal)}
+        onSendSignal={(signal, metadata) => ensureSignal(signal, metadata)}
         stage={stage}
       />
 
