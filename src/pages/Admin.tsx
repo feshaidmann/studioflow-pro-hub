@@ -57,13 +57,7 @@ import { SummaryVariantStatsSection } from "@/components/admin/SummaryVariantSta
 interface PlatformStats {
   totalUsers: number;
   totalProjects: number;
-  totalTasks: number;
   totalTransactions: number;
-  totalProfessionals: number;
-  totalGlobalProfessionals: number;
-  globalPercent: number;
-  totalProjectMembers: number;
-  totalNotifications: number;
 }
 
 interface UserRow {
@@ -71,9 +65,7 @@ interface UserRow {
   email: string;
   created_at: string;
   display_name: string;
-  user_type: string;
   plan: string;
-  is_admin: boolean;
 }
 
 interface DayActivity {
@@ -81,14 +73,6 @@ interface DayActivity {
   tarefas: number;
   projetos: number;
   transacoes: number;
-  notificacoes: number;
-}
-
-interface InfraCost {
-  name: string;
-  value: number;
-  currency: string;
-  note: string;
 }
 
 interface Product {
@@ -111,7 +95,8 @@ interface AdminStatsResponse {
   engagement: {
     loginsLast7Days: number;
     activeUsersLast7Days: number;
-    retentionRate: number;
+    newSignupsLast7Days: number;
+    activeRate: number;
   };
   adoption: {
     onboardingRate: number;
@@ -123,7 +108,6 @@ interface AdminStatsResponse {
     launchRate: number;
     medianTimeToFirstProject: number | null;
     medianTimeToFirstTask: number | null;
-    stuckUsersCount: number;
     usersWithoutProject: number;
     featureRanking: Array<{ name: string; count: number }>;
     screenDropoff: Array<{ path: string; views: number; avgDuration: number; bounceRate: number }>;
@@ -131,24 +115,17 @@ interface AdminStatsResponse {
   users: UserRow[];
   planCounts: Record<string, number>;
   products: Product[];
-  estimatedMonthlyRevenue: number;
-  infraCosts: InfraCost[];
-  edgeFunctions: string[];
+  potentialMonthlyRevenue: number;
   aiUsage: {
-    aiTasksToday: number;
-    aiTasksThisWeek: number;
     aiCalls30d: number;
     aiCallsTotal: number;
-    aiRealCostToday: number;
-    aiRealCost7d: number;
     aiRealCost30d: number;
-    aiRealCostTotal: number;
-    fnBreakdown: Record<string, { calls: number; cost: number }>;
     aiCostTimeline: Array<{ date: string; calls: number; cost: number }>;
   };
   activityTimeline: DayActivity[];
   functionLogs: FunctionLog[];
 }
+
 
 function StatCard({
   label,
@@ -328,28 +305,29 @@ export default function Admin() {
             color="text-blue-400"
           />
           <StatCard
-            label="Logins (7 dias)"
-            value={loading ? <Spinner /> : stats?.engagement?.loginsLast7Days ?? 0}
+            label="Novos cadastros (7d)"
+            value={loading ? <Spinner /> : stats?.engagement?.newSignupsLast7Days ?? 0}
             icon={LogIn}
             color="text-warning"
-            sub="Usuários que fizeram login recentemente"
+            sub={loading ? "" : `${stats?.engagement?.loginsLast7Days ?? 0} logins no período`}
           />
           <Card className="border-border bg-card">
             <CardContent className="p-4 flex items-start gap-3">
               <TrendingUp className="h-8 w-8 shrink-0 mt-0.5 text-success" />
               <div>
                 <p className="text-2xl font-bold text-foreground leading-none">
-                  {loading ? <Spinner /> : `${stats?.engagement?.retentionRate ?? 0}%`}
+                  {loading ? <Spinner /> : `${stats?.engagement?.activeRate ?? 0}%`}
                 </p>
-                <p className="text-xs text-muted-foreground mt-0.5">Retenção semanal</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Ativos 7d / Total</p>
                 <p className="text-[10px] text-muted-foreground/60 mt-0.5">
                   {loading
                     ? "—"
-                    : `${stats?.engagement?.activeUsersLast7Days ?? 0} de ${p?.totalUsers ?? 0} ativos`}
+                    : `${stats?.engagement?.activeUsersLast7Days ?? 0} de ${p?.totalUsers ?? 0} usuários`}
                 </p>
               </div>
             </CardContent>
           </Card>
+
         </div>
       </section>
 
@@ -410,12 +388,13 @@ export default function Admin() {
             sub="Nunca criaram projeto"
           />
           <StatCard
-            label="Sem progresso"
-            value={loading ? <Spinner /> : ad?.stuckUsersCount ?? 0}
-            icon={AlertTriangle}
-            color="text-warning"
-            sub="Projeto ativo parado em rascunho"
+            label="Lançamentos"
+            value={loading ? <Spinner /> : ad?.projectsLaunched ?? 0}
+            icon={Rocket}
+            color="text-success"
+            sub={loading ? "" : `de ${ad?.projectsCreatedTotal ?? 0} criados`}
           />
+
         </div>
 
         {/* Feature ranking */}
@@ -514,19 +493,21 @@ export default function Admin() {
 
 
       <section>
-        <SectionTitle icon={DollarSign} label="Receita" />
+        <SectionTitle icon={DollarSign} label="Receita (potencial)" />
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <Card className="border-success/20 bg-success/5">
             <CardHeader className="pb-1 pt-4 px-4">
               <CardTitle className="text-xs text-success/80 font-medium uppercase tracking-wide">
-                Receita Mensal Estimada
+                Receita potencial @ R$ 49,90
               </CardTitle>
             </CardHeader>
             <CardContent className="px-4 pb-4">
               <p className="text-3xl font-bold text-success">
-                {loading ? <Spinner /> : `R$ ${(stats?.estimatedMonthlyRevenue ?? 0).toFixed(2)}`}
+                {loading ? <Spinner /> : `R$ ${(stats?.potentialMonthlyRevenue ?? 0).toFixed(2)}`}
               </p>
-              <p className="text-xs text-muted-foreground mt-1">Baseado em assinaturas Pro ativas</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Beta força Pro para todos — valor não representa pagantes reais
+              </p>
             </CardContent>
           </Card>
 
@@ -558,46 +539,37 @@ export default function Admin() {
         </div>
       </section>
 
-      {/* ── IA & Custos ── */}
+      {/* ── IA & Custos — resumo (detalhes em /admin/ai-invocations) ── */}
       <section>
-        <SectionTitle icon={Bot} label="IA & Custos" />
+        <SectionTitle icon={Bot} label="IA & Custos">
+          <Link to="/admin/ai-invocations" className="text-xs text-primary hover:underline">
+            Ver detalhes →
+          </Link>
+        </SectionTitle>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5">
-          <Card className="border-border bg-card">
-            <CardHeader className="pb-1 pt-4 px-4">
-              <CardTitle className="text-xs text-muted-foreground font-medium uppercase tracking-wide flex items-center gap-1.5">
-                <Bot className="h-3.5 w-3.5" />
-                Últimos 30 dias
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="px-4 pb-4">
+        <Card className="border-border bg-card mb-5">
+          <CardContent className="p-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
               <p className="text-2xl font-bold text-foreground">
-                {loading ? <Spinner /> : ai?.aiCalls30d ?? 0}
-                <span className="text-sm font-normal text-muted-foreground ml-1">chamadas</span>
+                {loading ? <Spinner /> : (ai?.aiCalls30d ?? 0).toLocaleString("pt-BR")}
               </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                {loading ? "…" : fmtUsd(ai?.aiRealCost30d ?? 0)} USD rastreado
+              <p className="text-xs text-muted-foreground mt-0.5">Chamadas (30d)</p>
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-foreground">
+                {loading ? <Spinner /> : fmtUsd(ai?.aiRealCost30d ?? 0)}
               </p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-primary/20 bg-primary/5">
-            <CardHeader className="pb-1 pt-4 px-4">
-              <CardTitle className="text-xs text-primary/80 font-medium uppercase tracking-wide">
-                Total acumulado
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="px-4 pb-4">
+              <p className="text-xs text-muted-foreground mt-0.5">Custo USD (30d)</p>
+            </div>
+            <div>
               <p className="text-2xl font-bold text-primary">
-                {loading ? <Spinner /> : ai?.aiCallsTotal ?? 0}
-                <span className="text-sm font-normal text-muted-foreground ml-1">chamadas</span>
+                {loading ? <Spinner /> : (ai?.aiCallsTotal ?? 0).toLocaleString("pt-BR")}
               </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                {loading ? "…" : fmtUsd(ai?.aiRealCostTotal ?? 0)} USD total
-              </p>
-            </CardContent>
-          </Card>
-        </div>
+              <p className="text-xs text-muted-foreground mt-0.5">Total acumulado</p>
+            </div>
+          </CardContent>
+        </Card>
+
 
         {/* AI cost line chart */}
         <Card className="border-border bg-card">
@@ -782,7 +754,6 @@ export default function Admin() {
                 <TableRow>
                   <TableHead>E-mail</TableHead>
                   <TableHead>Nome</TableHead>
-                  <TableHead>Tipo</TableHead>
                   <TableHead>Plano</TableHead>
                   <TableHead>Cadastro</TableHead>
                 </TableRow>
@@ -791,7 +762,7 @@ export default function Admin() {
                 {loading
                   ? Array.from({ length: 3 }).map((_, i) => (
                       <TableRow key={i}>
-                        {Array.from({ length: 5 }).map((__, j) => (
+                        {Array.from({ length: 4 }).map((__, j) => (
                           <TableCell key={j}>
                             <div className="h-4 w-24 rounded bg-muted animate-pulse" />
                           </TableCell>
@@ -805,14 +776,6 @@ export default function Admin() {
                           {u.display_name || "—"}
                         </TableCell>
                         <TableCell>
-                          <Badge
-                            variant="outline"
-                            className="text-pink-400 border-pink-400/30 bg-pink-400/10 text-xs"
-                          >
-                            Artista
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
                           <Badge variant={u.plan === "pro" ? "default" : "secondary"} className="text-xs">
                             {u.plan === "pro" ? "Pro" : "Free"}
                           </Badge>
@@ -822,6 +785,7 @@ export default function Admin() {
                         </TableCell>
                       </TableRow>
                     ))}
+
               </TableBody>
             </Table>
           </CardContent>
