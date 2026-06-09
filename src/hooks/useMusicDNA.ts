@@ -595,7 +595,7 @@ async function callMusicDNAAnalyze(
     catalogTotal: d?.catalog_total ?? 0,
     catalogGenreCount: d?.catalog_genre_count ?? 0,
     strictGenreUsed: d?.strict_genre_used ?? false,
-    summaryVariant: (d?.summary_variant === "B" ? "B" : "A"),
+    summaryVariant: (typeof d?.summary_variant === "string" && /^[AB](\.v\d+)?$/.test(d.summary_variant)) ? d.summary_variant : "A",
   };
 }
 
