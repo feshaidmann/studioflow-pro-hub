@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Sparkles, Copy, Check, Save, Loader2, FileText, ClipboardList, RefreshCw, BookmarkPlus, User, ExternalLink } from "lucide-react";
+import { ArrowLeft, Sparkles, Copy, Check, Save, Loader2, FileText, ClipboardList, RefreshCw, User, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -18,7 +18,7 @@ import { useProfile } from "@/contexts/ProfileContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { useEditalAI } from "@/hooks/useEditalAI";
+
 import { useEditalApplications, useUpdateApplication, APPLICATION_STATUS_LABELS, APPLICATION_STATUS_COLORS, type ApplicationStatus } from "@/hooks/useEditalApplications";
 import { UploadEditalPanel } from "@/components/editais/UploadEditalPanel";
 
@@ -617,8 +617,6 @@ function FieldInput({
   const [refining, setRefining] = useState(false);
   const [showRefine, setShowRefine] = useState(false);
   const [refineInstruction, setRefineInstruction] = useState("");
-  const [savingToBank, setSavingToBank] = useState(false);
-  const { user } = useAuth();
 
   const wordCount = value.trim() ? value.trim().split(/\s+/).length : 0;
 
@@ -675,23 +673,6 @@ function FieldInput({
     }
   };
 
-  const handleSaveToBank = async () => {
-    if (!value.trim() || !user) return;
-    setSavingToBank(true);
-    try {
-      await supabase.from("edital_documents").insert({
-        user_id: user.id,
-        title: `${campo.nome}${editalTitle ? ` — ${editalTitle}` : ""}`,
-        doc_type: "outro",
-        content: value,
-      });
-      toast.success("Salvo no banco de documentos!");
-    } catch {
-      // ignore
-    } finally {
-      setSavingToBank(false);
-    }
-  };
 
   if (campo.tipo === "select" && campo.opcoes?.length) {
     return (
@@ -758,10 +739,6 @@ function FieldInput({
               <Button size="sm" variant="outline" onClick={handleGenerate} disabled={generating} className="h-7 text-xs">
                 <Sparkles className="h-3 w-3 mr-1" />
                 Regerar
-              </Button>
-              <Button size="sm" variant="ghost" onClick={handleSaveToBank} disabled={savingToBank} className="h-7 text-xs">
-                <BookmarkPlus className="h-3 w-3 mr-1" />
-                Salvar no banco
               </Button>
             </>
           )}
