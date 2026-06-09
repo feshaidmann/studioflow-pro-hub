@@ -37,6 +37,7 @@ const InviteResponse = lazy(() => import("@/pages/InviteResponse"));
 const Admin = lazy(() => import("@/pages/Admin"));
 const ReferenceTracks = lazy(() => import("@/pages/admin/ReferenceTracks"));
 const OportunidadesSearchMetrics = lazy(() => import("@/pages/admin/OportunidadesSearchMetrics"));
+const AIInvocationsMetrics = lazy(() => import("@/pages/admin/AIInvocationsMetrics"));
 const GenreImport = lazy(() => import("@/pages/admin/GenreImport"));
 const AdminMarketplace = lazy(() => import("@/pages/admin/Marketplace"));
 const AdminCarreira = lazy(() => import("@/pages/admin/Carreira"));
@@ -116,6 +117,7 @@ const AppRoutes = () => (
           <Route path="/admin" element={<Admin />} />
           <Route path="/admin/reference-tracks" element={<ReferenceTracks />} />
           <Route path="/admin/oportunidades-search" element={<OportunidadesSearchMetrics />} />
+          <Route path="/admin/ai-invocations" element={<AIInvocationsMetrics />} />
           <Route path="/admin/genre-import" element={<GenreImport />} />
           <Route path="/admin/marketplace" element={<AdminMarketplace />} />
           <Route path="/admin/carreira" element={<AdminCarreira />} />

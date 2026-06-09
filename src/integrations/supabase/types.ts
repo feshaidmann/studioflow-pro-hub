@@ -3228,6 +3228,10 @@ export type Database = {
       }
       genre_canonical: { Args: { p_genre: string }; Returns: string }
       genre_parent: { Args: { p_genero: string }; Returns: string }
+      get_ai_invocations_metrics: {
+        Args: { p_function_name?: string; p_hours?: number }
+        Returns: Json
+      }
       get_auth_email: { Args: never; Returns: string }
       get_benchmark_for_genre: {
         Args: { p_genero: string }
