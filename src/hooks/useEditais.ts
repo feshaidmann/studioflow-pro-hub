@@ -182,9 +182,6 @@ export function useEditais(projectId?: string | null) {
   return {
     editais,
     loading,
-    searching,
-    searchResult,
-    search,
     saveResults,
     deleteEdital,
     updateEdital,
