@@ -586,6 +586,30 @@ function ExecutiveSummary({ diagnosis, proximosPassos, addedItems, onAddStep, an
             </div>
           )}
 
+          {/* Caixa opcional de motivo para 👎 */}
+          {showReasonBox && (
+            <div className="space-y-2 rounded-md border border-border bg-muted/30 p-2">
+              <p className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground">
+                O que faltou? (opcional)
+              </p>
+              <Textarea
+                value={downReason}
+                onChange={(e) => setDownReason(e.target.value.slice(0, 280))}
+                placeholder="Ex.: muito genérico, não citou o gargalo do mix, linguagem confusa…"
+                rows={2}
+                className="text-xs"
+              />
+              <div className="flex items-center justify-end gap-2">
+                <Button type="button" size="sm" variant="ghost" className="h-7 text-xs" onClick={() => submitDown(true)}>
+                  Pular
+                </Button>
+                <Button type="button" size="sm" className="h-7 text-xs" onClick={() => submitDown(false)}>
+                  Enviar
+                </Button>
+              </div>
+            </div>
+          )}
+
           {/* A5 — Quick-jump to próximos passos */}
           {stepsCount > 0 && (
             <div className="pt-1.5 border-t border-border/60">
