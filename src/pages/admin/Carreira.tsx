@@ -3,6 +3,7 @@ import { Navigate, Link } from "react-router-dom";
 import {
   Shield, ArrowLeft, RefreshCw, Trash2, ExternalLink, Search,
   AlertTriangle, CheckCircle2, HelpCircle, Eye, Edit3, Sparkles, Plus,
+  Combine, Flame,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -24,6 +25,12 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAdminRole } from "@/hooks/useAdminRole";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import HealthBar, { type HealthFilter } from "@/components/admin/carreira/HealthBar";
+import DedupDialog from "@/components/admin/carreira/DedupDialog";
+import AiDiffDialog from "@/components/admin/carreira/AiDiffDialog";
+import FontesTab from "@/components/admin/carreira/FontesTab";
+import ReportsTab from "@/components/admin/carreira/ReportsTab";
+import { computeUrgency } from "@/components/admin/carreira/urgencyScore";
 
 type LinkStatus = "ok" | "broken" | "unknown" | null;
 
@@ -40,6 +47,9 @@ interface Edital {
   valor: string | null;
   resumo: string | null;
   status: string | null;
+  created_at?: string | null;
+  publico_alvo?: string | null;
+  documentos_resumo?: string | null;
 }
 
 interface Palco {
@@ -80,21 +90,27 @@ function statusBadge(s: LinkStatus) {
 
 export default function AdminCarreira() {
   const { isAdmin, loading: adminLoading } = useAdminRole();
-  const [tab, setTab] = useState<"editais" | "palcos" | "descobertos">("editais");
+  const [tab, setTab] = useState<"editais" | "palcos" | "descobertos" | "fontes" | "reports">("editais");
 
   const [editais, setEditais] = useState<Edital[]>([]);
   const [palcos, setPalcos] = useState<Palco[]>([]);
   const [corpus, setCorpus] = useState<CorpusEntry[]>([]);
   const [loading, setLoading] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState<"all" | "ok" | "broken" | "unknown" | "no-link">("all");
+  const [healthFilter, setHealthFilter] = useState<HealthFilter>(null);
+  const [sortBy, setSortBy] = useState<"urgency" | "recent" | "deadline">("urgency");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [editing, setEditing] = useState<Edital | Palco | null>(null);
   const [editKind, setEditKind] = useState<"edital" | "palco">("edital");
   const [isCreating, setIsCreating] = useState(false);
   const [aiText, setAiText] = useState("");
   const [aiBusy, setAiBusy] = useState(false);
+  const [aiSuggestion, setAiSuggestion] = useState<any | null>(null);
+  const [diffOpen, setDiffOpen] = useState(false);
+  const [dedupOpen, setDedupOpen] = useState(false);
   const [viewCorpus, setViewCorpus] = useState<CorpusEntry | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<{ ids: string[]; kind: "edital" | "palco" } | null>(null);
 
@@ -102,14 +118,15 @@ export default function AdminCarreira() {
     setLoading(true);
     try {
       const [{ data: ed }, { data: pa }, { data: co }] = await Promise.all([
-        supabase.from("editais").select("id,titulo,orgao,estado,tipo,link,link_status,link_checked_at,prazo,valor,resumo,status").order("created_at", { ascending: false }),
-        supabase.from("palcos_curados").select("id,nome,organizador,estado,tipo_palco,link,link_status,link_checked_at,prazo,ativo,resumo").order("created_at", { ascending: false }),
+        supabase.from("editais").select("id,titulo,orgao,estado,tipo,link,link_status,link_checked_at,prazo,valor,resumo,status,created_at,publico_alvo,documentos_resumo").is("archived_at", null).order("created_at", { ascending: false }),
+        supabase.from("palcos_curados").select("id,nome,organizador,estado,tipo_palco,link,link_status,link_checked_at,prazo,ativo,resumo,created_at").is("archived_at", null).order("created_at", { ascending: false }),
         supabase.from("edital_analyses_corpus").select("id,edital_title,edital_id,resumo,valor,publico_alvo,documentos,prazos,source,created_at,reviewed_at,dismissed_at,input_excerpt").order("created_at", { ascending: false }).limit(200),
       ]);
       setEditais((ed as Edital[]) || []);
       setPalcos((pa as Palco[]) || []);
       setCorpus((co as CorpusEntry[]) || []);
       setSelected(new Set());
+      setRefreshKey((k) => k + 1);
     } catch (e) {
       console.error(e);
       toast.error("Erro ao carregar dados");
@@ -123,9 +140,9 @@ export default function AdminCarreira() {
   const currentList = tab === "editais" ? editais : tab === "palcos" ? palcos : [];
 
   const filtered = useMemo(() => {
-    if (tab === "descobertos") return corpus;
+    if (tab !== "editais" && tab !== "palcos") return [] as (Edital | Palco)[];
     const q = search.trim().toLowerCase();
-    return (currentList as (Edital | Palco)[]).filter((r) => {
+    let list = (currentList as (Edital | Palco)[]).filter((r) => {
       const name = "titulo" in r ? r.titulo : r.nome;
       if (q && !(name?.toLowerCase().includes(q))) return false;
       const ls = r.link_status;
@@ -133,18 +150,40 @@ export default function AdminCarreira() {
       if (filterStatus !== "all" && ls !== filterStatus) return false;
       return true;
     });
-  }, [tab, currentList, corpus, search, filterStatus]);
 
-  const kpis = useMemo(() => {
-    const list = tab === "editais" ? editais : palcos;
-    return {
-      total: list.length,
-      ok: list.filter((r) => r.link_status === "ok").length,
-      broken: list.filter((r) => r.link_status === "broken").length,
-      unknown: list.filter((r) => r.link_status === "unknown").length,
-      noLink: list.filter((r) => !r.link || r.link.trim() === "").length,
-    };
-  }, [tab, editais, palcos]);
+    // health filter chips
+    if (healthFilter && tab === "editais") {
+      list = list.filter((r: any) => {
+        switch (healthFilter) {
+          case "links_broken": return r.link_status === "broken";
+          case "links_unchecked": return !r.link_status || r.link_status === "unknown" || r.link_status === "pending";
+          case "sem_resumo": return !r.resumo || String(r.resumo).trim().length < 20;
+          case "sem_prazo": {
+            if (!r.prazo) return true;
+            return new Date(r.prazo + "T12:00:00-03:00") < new Date();
+          }
+          case "novos_7d": return r.created_at && (Date.now() - new Date(r.created_at).getTime()) < 7 * 86400_000;
+          case "pendente_revisao": return r.status === "pendente_revisao";
+          default: return true;
+        }
+      });
+    }
+
+    // sort
+    if (sortBy === "urgency") {
+      const withScore = list.map((r: any) => ({ r, u: computeUrgency(r) }));
+      withScore.sort((a, b) => b.u.score - a.u.score);
+      return withScore.map((x) => x.r);
+    }
+    if (sortBy === "deadline") {
+      return [...list].sort((a: any, b: any) => {
+        if (!a.prazo) return 1;
+        if (!b.prazo) return -1;
+        return a.prazo.localeCompare(b.prazo);
+      });
+    }
+    return list;
+  }, [tab, currentList, search, filterStatus, healthFilter, sortBy]);
 
   if (adminLoading) {
     return <div className="flex items-center justify-center min-h-screen text-muted-foreground animate-pulse">Verificando permissões...</div>;
@@ -253,7 +292,10 @@ export default function AdminCarreira() {
     setAiBusy(true);
     const t = toast.loading("Analisando com IA...");
     try {
-      let payload: any = { edital_title: (editing as any)?.titulo || undefined };
+      let payload: any = {
+        edital_title: (editing as any)?.titulo || undefined,
+        dry_run: !isCreating, // ao editar, não persiste; abre diff
+      };
       if (file) {
         const base64 = await new Promise<string>((resolve, reject) => {
           const reader = new FileReader();
@@ -271,8 +313,34 @@ export default function AdminCarreira() {
       const { data, error } = await supabase.functions.invoke("analyze-edital", { body: payload });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-      applyAnalysisToForm(data?.analise);
-      toast.success(data?.warning || "Campos preenchidos pela IA", { id: t });
+
+      const analise = data?.analise;
+      // Normaliza prazo
+      let prazoIso: string | null = null;
+      const firstPrazo = Array.isArray(analise?.prazos) ? analise.prazos[0] : null;
+      const rawData: string | undefined = firstPrazo?.data;
+      if (rawData && /^\d{2}\/\d{2}\/\d{4}$/.test(rawData)) {
+        const [d, m, y] = rawData.split("/");
+        prazoIso = `${y}-${m}-${d}`;
+      }
+      const aiFields = {
+        resumo: analise?.resumo ?? null,
+        valor: analise?.valor ?? null,
+        publico_alvo: analise?.publico_alvo ?? null,
+        prazo: prazoIso,
+        documentos_resumo: Array.isArray(analise?.documentos)
+          ? analise.documentos.map((d: any) => typeof d === "string" ? d : d?.nome).filter(Boolean).join(", ")
+          : null,
+      };
+
+      if (isCreating) {
+        applyAnalysisToForm(analise);
+        toast.success(data?.warning || "Campos preenchidos pela IA", { id: t });
+      } else {
+        setAiSuggestion(aiFields);
+        setDiffOpen(true);
+        toast.success("Revise as sugestões", { id: t });
+      }
     } catch (e: any) {
       toast.error(e?.message ?? "Falha ao analisar", { id: t });
     } finally {
@@ -323,28 +391,17 @@ export default function AdminCarreira() {
         </Button>
       </div>
 
-      {tab !== "descobertos" && (
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-          {[
-            { label: "Total", v: kpis.total, c: "text-foreground" },
-            { label: "OK", v: kpis.ok, c: "text-emerald-600" },
-            { label: "Broken", v: kpis.broken, c: "text-destructive" },
-            { label: "Unknown", v: kpis.unknown, c: "text-muted-foreground" },
-            { label: "Sem link", v: kpis.noLink, c: "text-warning" },
-          ].map((k) => (
-            <Card key={k.label}><CardContent className="p-3">
-              <p className={`text-2xl font-bold ${k.c}`}>{k.v}</p>
-              <p className="text-xs text-muted-foreground">{k.label}</p>
-            </CardContent></Card>
-          ))}
-        </div>
+      {tab === "editais" && (
+        <HealthBar onFilter={setHealthFilter} active={healthFilter} refreshKey={refreshKey} />
       )}
 
-      <Tabs value={tab} onValueChange={(v) => { setTab(v as any); setSelected(new Set()); setSearch(""); setFilterStatus("all"); }}>
-        <TabsList>
+      <Tabs value={tab} onValueChange={(v) => { setTab(v as any); setSelected(new Set()); setSearch(""); setFilterStatus("all"); setHealthFilter(null); }}>
+        <TabsList className="flex-wrap h-auto">
           <TabsTrigger value="editais">Editais ({editais.length})</TabsTrigger>
           <TabsTrigger value="palcos">Palcos ({palcos.length})</TabsTrigger>
           <TabsTrigger value="descobertos">Descobertos ({corpus.filter(c => !c.reviewed_at && !c.dismissed_at).length})</TabsTrigger>
+          <TabsTrigger value="fontes">Fontes</TabsTrigger>
+          <TabsTrigger value="reports">Reports</TabsTrigger>
         </TabsList>
 
         {(tab === "editais" || tab === "palcos") && (
@@ -353,16 +410,27 @@ export default function AdminCarreira() {
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input className="pl-8" placeholder="Buscar por título..." value={search} onChange={(e) => setSearch(e.target.value)} />
             </div>
-            <Select value={filterStatus} onValueChange={(v) => setFilterStatus(v as any)}>
-              <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
+            <Select value={sortBy} onValueChange={(v) => setSortBy(v as any)}>
+              <SelectTrigger className="w-[170px]"><Flame className="h-3.5 w-3.5 mr-1" /><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todos status</SelectItem>
+                <SelectItem value="urgency">Precisa de atenção</SelectItem>
+                <SelectItem value="recent">Mais recentes</SelectItem>
+                <SelectItem value="deadline">Prazo mais próximo</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={filterStatus} onValueChange={(v) => setFilterStatus(v as any)}>
+              <SelectTrigger className="w-[150px]"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos links</SelectItem>
                 <SelectItem value="ok">OK</SelectItem>
                 <SelectItem value="broken">Broken</SelectItem>
                 <SelectItem value="unknown">Unknown</SelectItem>
                 <SelectItem value="no-link">Sem link</SelectItem>
               </SelectContent>
             </Select>
+            <Button variant="outline" size="sm" onClick={() => setDedupOpen(true)} className="gap-2">
+              <Combine className="h-4 w-4" /> Duplicados
+            </Button>
             {selected.size > 0 && (
               <Button variant="destructive" size="sm" onClick={() => setConfirmDelete({ ids: [...selected], kind: currentKind })} className="gap-2">
                 <Trash2 className="h-4 w-4" /> Apagar {selected.size}
@@ -374,6 +442,14 @@ export default function AdminCarreira() {
           </div>
         )}
 
+        {healthFilter && (
+          <div className="mt-2">
+            <Badge variant="secondary" className="gap-1 cursor-pointer" onClick={() => setHealthFilter(null)}>
+              Filtro ativo: {healthFilter} ✕
+            </Badge>
+          </div>
+        )}
+
         <TabsContent value="editais" className="mt-4">
           <OpportunitiesTable
             rows={filtered as Edital[]}
@@ -381,7 +457,7 @@ export default function AdminCarreira() {
             selected={selected}
             onToggle={toggleSelect}
             onToggleAll={toggleSelectAll}
-            onEdit={(r) => { setEditing(r); setEditKind("edital"); }}
+            onEdit={(r) => { setEditing(r); setEditKind("edital"); setIsCreating(false); }}
             onRevalidate={(id) => revalidate(id, "edital")}
             onDelete={(id) => setConfirmDelete({ ids: [id], kind: "edital" })}
           />
@@ -394,10 +470,23 @@ export default function AdminCarreira() {
             selected={selected}
             onToggle={toggleSelect}
             onToggleAll={toggleSelectAll}
-            onEdit={(r) => { setEditing(r); setEditKind("palco"); }}
+            onEdit={(r) => { setEditing(r); setEditKind("palco"); setIsCreating(false); }}
             onRevalidate={(id) => revalidate(id, "palco")}
             onDelete={(id) => setConfirmDelete({ ids: [id], kind: "palco" })}
           />
+        </TabsContent>
+
+        <TabsContent value="fontes" className="mt-4">
+          <FontesTab />
+        </TabsContent>
+
+        <TabsContent value="reports" className="mt-4">
+          <ReportsTab onOpenOpportunity={(kind, id) => {
+            const list = kind === "edital" ? editais : palcos;
+            const found = list.find((r: any) => r.id === id);
+            if (found) { setEditKind(kind); setEditing(found as any); setIsCreating(false); }
+            else toast.error("Item não encontrado (talvez tenha sido arquivado)");
+          }} />
         </TabsContent>
 
         <TabsContent value="descobertos" className="mt-4">
@@ -561,6 +650,30 @@ export default function AdminCarreira() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <DedupDialog
+        open={dedupOpen}
+        onOpenChange={setDedupOpen}
+        rows={(currentKind === "edital" ? editais : palcos) as any}
+        kind={currentKind}
+        onDone={fetchAll}
+      />
+
+      {aiSuggestion && (
+        <AiDiffDialog
+          open={diffOpen}
+          onOpenChange={setDiffOpen}
+          current={editing as any || {}}
+          ai={aiSuggestion}
+          busy={aiBusy}
+          onApply={(patch) => {
+            setEditing({ ...(editing as any), ...patch });
+            setDiffOpen(false);
+            setAiSuggestion(null);
+            toast.success("Sugestões aplicadas ao formulário");
+          }}
+        />
+      )}
     </div>
   );
 }

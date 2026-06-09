@@ -105,7 +105,7 @@ Deno.serve(async (req) => {
     if (authErr || !user) return jsonResponse(401, { error: "Não autorizado" });
 
     const body = await req.json().catch(() => ({}));
-    const { file, text, edital_title, edital_id, project_id } = body ?? {};
+    const { file, text, edital_title, edital_id, project_id, dry_run } = body ?? {};
 
     const hasFile = !!file && typeof file === "object" && typeof file.base64 === "string";
     const hasText = typeof text === "string" && text.trim().length > 50;
@@ -238,7 +238,7 @@ Deno.serve(async (req) => {
     }
 
     // Persistência opcional: se edital_id fornecido, salva em edital_applications.analise_ia
-    if (edital_id) {
+    if (edital_id && !dry_run) {
       try {
         const { data: existing } = await supabaseService
           .from("edital_applications")
@@ -258,34 +258,36 @@ Deno.serve(async (req) => {
     }
 
     // Corpus: grava análise pública (sem carta_sugerida) para refino futuro da base
-    try {
-      const corpusText = hasText ? String(text) : "";
-      const encoder = new TextEncoder();
-      const hashSource = corpusText || `${file?.base64 ?? ""}`.slice(0, 4000);
-      const hashBuf = await crypto.subtle.digest("SHA-256", encoder.encode(hashSource));
-      const contentHash = Array.from(new Uint8Array(hashBuf)).map((b) => b.toString(16).padStart(2, "0")).join("");
-      const { carta_sugerida: _omit, ...analisePublica } = parsed ?? {};
-      await supabaseService.from("edital_analyses_corpus").insert({
-        user_id: user.id,
-        edital_id: edital_id ?? null,
-        edital_title: edital_title ?? null,
-        source: hasFile ? "file" : "text",
-        content_hash: contentHash,
-        input_text: corpusText ? corpusText.slice(0, 60_000) : null,
-        input_excerpt: corpusText ? corpusText.slice(0, 500) : null,
-        resumo: analisePublica?.resumo ?? null,
-        prazos: analisePublica?.prazos ?? [],
-        documentos: analisePublica?.documentos ?? [],
-        valor: analisePublica?.valor ?? null,
-        publico_alvo: analisePublica?.publico_alvo ?? null,
-        model: "google/gemini-2.5-flash",
-        duration_ms: Date.now() - startedAt,
-      });
-    } catch (e) {
-      console.warn("corpus insert failed", e);
+    if (!dry_run) {
+      try {
+        const corpusText = hasText ? String(text) : "";
+        const encoder = new TextEncoder();
+        const hashSource = corpusText || `${file?.base64 ?? ""}`.slice(0, 4000);
+        const hashBuf = await crypto.subtle.digest("SHA-256", encoder.encode(hashSource));
+        const contentHash = Array.from(new Uint8Array(hashBuf)).map((b) => b.toString(16).padStart(2, "0")).join("");
+        const { carta_sugerida: _omit, ...analisePublica } = parsed ?? {};
+        await supabaseService.from("edital_analyses_corpus").insert({
+          user_id: user.id,
+          edital_id: edital_id ?? null,
+          edital_title: edital_title ?? null,
+          source: hasFile ? "file" : "text",
+          content_hash: contentHash,
+          input_text: corpusText ? corpusText.slice(0, 60_000) : null,
+          input_excerpt: corpusText ? corpusText.slice(0, 500) : null,
+          resumo: analisePublica?.resumo ?? null,
+          prazos: analisePublica?.prazos ?? [],
+          documentos: analisePublica?.documentos ?? [],
+          valor: analisePublica?.valor ?? null,
+          publico_alvo: analisePublica?.publico_alvo ?? null,
+          model: "google/gemini-2.5-flash",
+          duration_ms: Date.now() - startedAt,
+        });
+      } catch (e) {
+        console.warn("corpus insert failed", e);
+      }
     }
 
-    await logFn("info", "ok", { user_id: user.id, duration_ms: Date.now() - startedAt, source: hasFile ? "file" : "text" });
+    await logFn("info", "ok", { user_id: user.id, duration_ms: Date.now() - startedAt, source: hasFile ? "file" : "text", dry_run: !!dry_run });
     return jsonResponse(200, { analise: parsed });
   } catch (err: any) {
     console.error("analyze-edital error", err);
