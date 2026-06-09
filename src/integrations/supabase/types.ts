@@ -352,6 +352,7 @@ export type Database = {
       editais: {
         Row: {
           abertura: string | null
+          archived_at: string | null
           area: string | null
           created_at: string | null
           documentos_resumo: string
@@ -383,6 +384,7 @@ export type Database = {
         }
         Insert: {
           abertura?: string | null
+          archived_at?: string | null
           area?: string | null
           created_at?: string | null
           documentos_resumo?: string
@@ -414,6 +416,7 @@ export type Database = {
         }
         Update: {
           abertura?: string | null
+          archived_at?: string | null
           area?: string | null
           created_at?: string | null
           documentos_resumo?: string
@@ -1517,6 +1520,48 @@ export type Database = {
         }
         Relationships: []
       }
+      opportunity_reports: {
+        Row: {
+          comment: string | null
+          created_at: string
+          id: string
+          opportunity_id: string
+          opportunity_kind: string
+          reason: string
+          resolved_at: string | null
+          resolved_by: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          comment?: string | null
+          created_at?: string
+          id?: string
+          opportunity_id: string
+          opportunity_kind: string
+          reason: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          comment?: string | null
+          created_at?: string
+          id?: string
+          opportunity_id?: string
+          opportunity_kind?: string
+          reason?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       page_views: {
         Row: {
           created_at: string
@@ -1659,6 +1704,7 @@ export type Database = {
       }
       palcos_curados: {
         Row: {
+          archived_at: string | null
           ativo: boolean | null
           cachet_medio: string | null
           created_at: string | null
@@ -1682,6 +1728,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          archived_at?: string | null
           ativo?: boolean | null
           cachet_medio?: string | null
           created_at?: string | null
@@ -1705,6 +1752,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          archived_at?: string | null
           ativo?: boolean | null
           cachet_medio?: string | null
           created_at?: string | null
@@ -3092,6 +3140,20 @@ export type Database = {
       accept_service_proposal: {
         Args: { p_proposal_id: string }
         Returns: Json
+      }
+      admin_carreira_health: {
+        Args: never
+        Returns: {
+          links_broken: number
+          links_ok: number
+          links_unchecked: number
+          novos_7d: number
+          pendente_revisao: number
+          reports_abertos: number
+          sem_prazo_valido: number
+          sem_resumo: number
+          total_editais: number
+        }[]
       }
       apply_genre_import_2026: {
         Args: { p_drop_staging?: boolean }
