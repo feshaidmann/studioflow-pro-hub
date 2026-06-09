@@ -505,6 +505,8 @@ serve(async (req: Request) => {
       strict_genre_used: useStrictGenre,
       genre_resolution_level: genreLevel,
       genre_resolution_note: genreNote,
+      genre_matched_tokens: matchedTokens,
+      genre_unmatched_tokens: unmatchedTokens,
       summary_variant: summaryVariant,
     });
   } catch (error) {
