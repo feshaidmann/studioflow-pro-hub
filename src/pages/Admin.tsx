@@ -293,6 +293,7 @@ export default function Admin() {
             { label: "Reference Tracks", sub: "Gerenciar faixas referência", icon: Music, to: "/admin/reference-tracks", color: "text-blue-400" },
             { label: "Genre Import", sub: "Importar gêneros musicais", icon: Tag, to: "/admin/genre-import", color: "text-success" },
             { label: "Search Metrics", sub: "Métricas de busca", icon: Search, to: "/admin/oportunidades-search", color: "text-warning" },
+            { label: "IA · Invocações", sub: "Picos e gargalos por função", icon: Activity, to: "/admin/ai-invocations", color: "text-primary" },
           ].map(({ label, sub, icon: Icon, to, color }) => (
             <Link key={to} to={to}>
               <Card className="border-border bg-card hover:bg-muted/50 transition-colors cursor-pointer">
