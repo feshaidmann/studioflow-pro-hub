@@ -150,7 +150,7 @@ export interface DiagnosisResult {
     runnerUp: { genre: string; score: number } | null;
     top3: Array<{ genre: string; score: number }>;
   } | null;
-  summaryVariant?: "A" | "B";
+  summaryVariant?: string;
 }
 
 // Calibração v1: offsets empíricos para alinhar features extraídas pelo navegador
