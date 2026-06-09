@@ -255,7 +255,7 @@ serve(async (req: Request) => {
     const { count: todayCount } = await adminClient
       .from("ai_invocations")
       .select("*", { count: "exact", head: true })
-      .eq("user_id", userId)
+      .eq("user_id", data.claims.sub)
       .eq("function_name", "music-dna-analyze")
       .gte("created_at", todayUtc + "T00:00:00Z");
     if ((todayCount ?? 0) >= 20) {
@@ -319,7 +319,12 @@ serve(async (req: Request) => {
 
     // Estratégia: se há boa cobertura do gênero (>=20 faixas), usa strict_genre.
     // Caso contrário, busca no catálogo inteiro com bônus de gênero (-0.25) ajudando a priorizar.
-    const useStrictGenre = !!targetGenre && catalogGenreCount >= 20;
+    // GENRE_MAP: resolução UI → catálogo com limiar calibrado
+    const genreResolution = resolveGenre(targetGenre ?? "");
+    const useStrictGenre  = genreResolution.strict;
+    const genreLabels     = genreResolution.labels;
+    const genreLevel      = genreResolution.level;
+    const genreNote       = genreResolution.displayNote;
 
     // Validate and coerce MFCC / chroma arrays from the client payload (cosine
     // similarity vectors — must be exact length for the SQL function to use them).
@@ -360,7 +365,7 @@ serve(async (req: Request) => {
       // Metadata
       p_key_name: str(trackFeatures.key_name) ?? str(trackFeatures.key),
       p_mode: str(trackFeatures.mode) ?? str(trackFeatures.mode_name),
-      p_genre: targetGenre ?? null,
+      p_genre_labels: genreLabels,
       p_limit: 6,
       p_strict_genre: useStrictGenre,
     };
@@ -458,6 +463,8 @@ serve(async (req: Request) => {
       catalog_total: catalogTotal,
       catalog_genre_count: catalogGenreCount,
       strict_genre_used: useStrictGenre,
+      genre_resolution_level: genreLevel,
+      genre_resolution_note: genreNote,
       summary_variant: summaryVariant,
     });
   } catch (error) {
