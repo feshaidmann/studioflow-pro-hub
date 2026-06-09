@@ -83,7 +83,7 @@ export default function PalcoProposta() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { projects } = useProjects();
-  const { profile } = useProfile();
+  
   const { data: allApps = [], refetch: refetchApps } = useEditalApplications();
   const updateApp = useUpdateApplication();
 
