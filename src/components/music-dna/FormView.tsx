@@ -122,8 +122,10 @@ export function FormView({ onSubmit, isPending, projects, defaultProjectId }: {
       setFileError("Formato não suportado. Use MP3, WAV, FLAC, M4A, OGG ou AIFF.");
       return;
     }
-    if (file.size > 50 * 1024 * 1024) {
-      setFileError("Arquivo muito grande. Máximo 50 MB.");
+    const isWav = /\.wav$/i.test(file.name) || file.type === "audio/wav" || file.type === "audio/x-wav";
+    const maxSize = isWav ? 120 * 1024 * 1024 : 50 * 1024 * 1024;
+    if (file.size > maxSize) {
+      setFileError(isWav ? "Arquivo WAV muito grande. Máximo 120 MB." : "Arquivo muito grande. Máximo 50 MB (WAV até 120 MB).");
       return;
     }
     setAudioFile(file);
@@ -196,7 +198,7 @@ export function FormView({ onSubmit, isPending, projects, defaultProjectId }: {
                     Arraste seu arquivo ou clique para selecionar
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    MP3, WAV, FLAC, M4A, OGG, AIFF — até 50 MB
+                    MP3, FLAC, M4A, OGG, AIFF — até 50 MB · WAV até 120 MB
                   </p>
                 </div>
                 <input
