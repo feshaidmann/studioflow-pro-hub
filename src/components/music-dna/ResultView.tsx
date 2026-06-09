@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { Textarea } from "@/components/ui/textarea";
 import { FeedbackModal } from "./FeedbackModal";
 import {
   Radar, RadarChart, PolarAngleAxis, PolarGrid, PolarRadiusAxis,
