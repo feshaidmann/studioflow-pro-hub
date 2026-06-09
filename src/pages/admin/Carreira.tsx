@@ -93,6 +93,8 @@ export default function AdminCarreira() {
   const [editing, setEditing] = useState<Edital | Palco | null>(null);
   const [editKind, setEditKind] = useState<"edital" | "palco">("edital");
   const [isCreating, setIsCreating] = useState(false);
+  const [aiText, setAiText] = useState("");
+  const [aiBusy, setAiBusy] = useState(false);
   const [viewCorpus, setViewCorpus] = useState<CorpusEntry | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<{ ids: string[]; kind: "edital" | "palco" } | null>(null);
 
@@ -209,6 +211,7 @@ export default function AdminCarreira() {
   function openCreate(kind: "edital" | "palco") {
     setEditKind(kind);
     setIsCreating(true);
+    setAiText("");
     if (kind === "edital") {
       setEditing({
         id: "", titulo: "", orgao: "", estado: "", tipo: "fomento",
@@ -221,6 +224,59 @@ export default function AdminCarreira() {
         link: "", link_status: "unknown", link_checked_at: null,
         prazo: null, ativo: true, resumo: "",
       } as Palco);
+    }
+  }
+
+  function applyAnalysisToForm(analise: any) {
+    if (!analise || !editing) return;
+    const firstPrazo = Array.isArray(analise.prazos) ? analise.prazos[0] : null;
+    let prazoIso: string | null = null;
+    const rawData: string | undefined = firstPrazo?.data;
+    if (rawData && /^\d{2}\/\d{2}\/\d{4}$/.test(rawData)) {
+      const [d, m, y] = rawData.split("/");
+      prazoIso = `${y}-${m}-${d}`;
+    }
+    setEditing({
+      ...(editing as any),
+      resumo: analise.resumo || (editing as any).resumo || "",
+      valor: analise.valor || (editing as any).valor || "",
+      publico_alvo: analise.publico_alvo || (editing as any).publico_alvo || "",
+      prazo: prazoIso ?? (editing as any).prazo,
+    });
+  }
+
+  async function analyzeWithAI(file?: File) {
+    if (!file && aiText.trim().length < 50) {
+      toast.error("Cole pelo menos 50 caracteres ou envie um arquivo.");
+      return;
+    }
+    setAiBusy(true);
+    const t = toast.loading("Analisando com IA...");
+    try {
+      let payload: any = { edital_title: (editing as any)?.titulo || undefined };
+      if (file) {
+        const base64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            const s = String(reader.result || "");
+            resolve(s.split(",")[1] || "");
+          };
+          reader.onerror = () => reject(reader.error);
+          reader.readAsDataURL(file);
+        });
+        payload.file = { base64, mime_type: file.type, filename: file.name };
+      } else {
+        payload.text = aiText;
+      }
+      const { data, error } = await supabase.functions.invoke("analyze-edital", { body: payload });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      applyAnalysisToForm(data?.analise);
+      toast.success(data?.warning || "Campos preenchidos pela IA", { id: t });
+    } catch (e: any) {
+      toast.error(e?.message ?? "Falha ao analisar", { id: t });
+    } finally {
+      setAiBusy(false);
     }
   }
 
@@ -394,6 +450,44 @@ export default function AdminCarreira() {
                 : "Atenção: editais são per-usuário; sua edição altera apenas este registro."}
             </SheetDescription>
           </SheetHeader>
+          {editing && isCreating && editKind === "edital" && (
+            <div className="mt-4 p-3 border rounded-lg bg-muted/30 space-y-2">
+              <div className="flex items-center gap-2 text-xs font-semibold">
+                <Sparkles className="h-3.5 w-3.5 text-primary" /> Analisar com IA (opcional)
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                Cole o texto do edital ou envie um arquivo (PDF/DOC/DOCX/TXT até 10 MB). A IA preencherá resumo, valor, público-alvo e prazo.
+              </p>
+              <Textarea
+                rows={4}
+                placeholder="Cole aqui o texto integral do edital..."
+                value={aiText}
+                onChange={(e) => setAiText(e.target.value)}
+                disabled={aiBusy}
+              />
+              <div className="flex flex-wrap items-center gap-2">
+                <Button size="sm" onClick={() => analyzeWithAI()} disabled={aiBusy} className="gap-2">
+                  <Sparkles className="h-3.5 w-3.5" /> {aiBusy ? "Analisando..." : "Analisar texto"}
+                </Button>
+                <label className="inline-flex">
+                  <input
+                    type="file"
+                    accept=".pdf,.doc,.docx,.txt,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"
+                    className="hidden"
+                    disabled={aiBusy}
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      e.target.value = "";
+                      if (f) analyzeWithAI(f);
+                    }}
+                  />
+                  <Button size="sm" variant="outline" disabled={aiBusy} asChild>
+                    <span>Enviar arquivo</span>
+                  </Button>
+                </label>
+              </div>
+            </div>
+          )}
           {editing && (
             <div className="space-y-3 mt-4">
               <Field label={editKind === "edital" ? "Título *" : "Nome *"} value={(editing as any)[editKind === "edital" ? "titulo" : "nome"]} onChange={(v) => setEditing({ ...(editing as any), [editKind === "edital" ? "titulo" : "nome"]: v })} />
