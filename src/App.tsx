@@ -117,6 +117,7 @@ const AppRoutes = () => (
           <Route path="/admin" element={<Admin />} />
           <Route path="/admin/reference-tracks" element={<ReferenceTracks />} />
           <Route path="/admin/oportunidades-search" element={<OportunidadesSearchMetrics />} />
+          <Route path="/admin/ai-invocations" element={<AIInvocationsMetrics />} />
           <Route path="/admin/genre-import" element={<GenreImport />} />
           <Route path="/admin/marketplace" element={<AdminMarketplace />} />
           <Route path="/admin/carreira" element={<AdminCarreira />} />
