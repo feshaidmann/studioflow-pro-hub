@@ -189,12 +189,6 @@ export function usePalcos() {
   return {
     palcosCurados,
     loadingCurados,
-    searching,
-    searchResult,
-    searchError,
-    lastQuery,
-    search,
-    retryLastSearch,
     saveResults,
     matchByPerfil,
     refreshCurados: fetchCurados,
