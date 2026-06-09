@@ -85,7 +85,9 @@ describe("SummaryVariantStatsSection — agrupamento por versão do prompt", () 
     await waitFor(() => expect(screen.getByText(/Concluído · vencedora B/i)).toBeInTheDocument());
     expect(screen.getByText(/inconclusivo/i)).toBeInTheDocument();
     // existe exatamente uma badge "Vencedora" (na v2)
-    expect(screen.getAllByText(/Vencedora/i)).toHaveLength(1);
+    // Existe exatamente uma badge de card "Vencedora" (capitalizada). O texto
+    // "vencedora B" no status da seção é minúsculo e fica fora desta contagem.
+    expect(screen.getAllByText(/^\s*Vencedora\s*$/)).toHaveLength(1);
   });
 
   it("não mistura dados de versões diferentes ao calcular vencedora", async () => {
