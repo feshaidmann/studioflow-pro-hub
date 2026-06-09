@@ -170,6 +170,15 @@ async function logInvocation(adminClient: ReturnType<typeof createClient>, userI
   });
 }
 
+function structuredLog(level: "info" | "error", event: string, payload: Record<string, unknown>) {
+  const entry = { timestamp: new Date().toISOString(), function: "music-dna-analyze", level, event, ...payload };
+  if (level === "error") {
+    console.error(JSON.stringify(entry));
+  } else {
+    console.log(JSON.stringify(entry));
+  }
+}
+
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -208,6 +217,14 @@ serve(async (req: Request) => {
     const action = body.action ?? "generate_diagnosis";
     const payload = body.payload ?? body;
     const prompt = payload.prompt ?? body.prompt;
+
+    structuredLog("info", "request_received", {
+      action,
+      prompt_length: prompt?.length ?? 0,
+      payload_keys: Object.keys(payload),
+      claims_sub: data.claims.sub,
+      claims_email: data.claims.email,
+    });
 
     if (action === "save_features") {
       const p = payload ?? {};
@@ -468,7 +485,12 @@ serve(async (req: Request) => {
       summary_variant: summaryVariant,
     });
   } catch (error) {
-    console.error("[music-dna-analyze] Error:", error);
-    return jsonResponse({ error: error instanceof Error ? error.message : "Internal server error" }, 500);
+    const err = error instanceof Error ? error : new Error(String(error));
+    structuredLog("error", "unhandled_exception", {
+      message: err.message,
+      stack: err.stack,
+      name: err.name,
+    });
+    return jsonResponse({ error: err.message }, 500);
   }
 });
