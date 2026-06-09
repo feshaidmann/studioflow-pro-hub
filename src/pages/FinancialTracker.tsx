@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useProjects } from "@/contexts/ProjectContext";
 import { useAuth } from "@/contexts/AuthContext";
-import { useLanguage } from "@/contexts/LanguageContext";
+
 import { type Transaction } from "@/data/mockData";
 import TransactionForm from "@/components/finance/TransactionForm";
 import ProjectAISheet from "@/components/project-hub/ProjectAISheet";
