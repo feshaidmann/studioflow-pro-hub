@@ -120,7 +120,7 @@ export function TransactionTable({
               {paginated.map((tx, i) => (
                 <TableRow key={tx.id} className={`transition-colors ${i % 2 === 1 ? "bg-secondary/10" : ""} hover:bg-primary/5`}>
                   <TableCell className="text-xs text-muted-foreground font-mono-nums whitespace-nowrap">
-                    {new Date(tx.date + "T12:00:00").toLocaleDateString("pt-BR")}
+                    {parseLocalDate(tx.date).toLocaleDateString("pt-BR")}
                   </TableCell>
                   <TableCell className="font-medium max-w-[160px] truncate">{tx.description}</TableCell>
                   <TableCell className="hidden sm:table-cell text-xs text-muted-foreground">
