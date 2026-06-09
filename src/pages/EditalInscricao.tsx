@@ -412,67 +412,16 @@ export default function EditalInscricao() {
               </Select>
             </div>
 
-            {/* Mode toggle */}
-            <div className="flex rounded-lg border border-border overflow-hidden text-sm font-medium">
-              {(["upload", "paste"] as const).map((m) => (
-                <button
-                  key={m}
-                  type="button"
-                  onClick={() => setInputMode(m)}
-                  className={
-                    "flex-1 py-2 transition-colors " +
-                    (inputMode === m
-                      ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground hover:bg-muted")
-                  }
-                >
-                  {m === "upload" ? "📎 Upload PDF/DOC" : "📋 Colar texto"}
-                </button>
-              ))}
-            </div>
-
-            {inputMode === "upload" && (
-              <UploadEditalPanel
-                fileInputRef={fileInputRef}
-                selectedFile={selectedFile}
-                setSelectedFile={setSelectedFile}
-                extracting={extracting}
-                onExtract={() => { if (selectedFile) extractFieldsFromFile(selectedFile, edital.id); }}
-                className="w-full"
-                title=""
-                description="PDF, DOC, DOCX ou TXT — até 10 MB"
-              />
-            )}
-
-            {inputMode === "paste" && (
-              <div className="space-y-2">
-                <Label className="text-xs">Conteúdo do edital</Label>
-                <p className="text-xs text-muted-foreground">
-                  Cole os requisitos, campos obrigatórios e critérios de seleção.
-                </p>
-                <Textarea
-                  value={editalText}
-                  onChange={(e) => setEditalText(e.target.value.slice(0, 50_000))}
-                  rows={8}
-                  placeholder="Cole aqui o texto do edital, os campos do formulário de inscrição ou os critérios de seleção…"
-                  className="resize-none text-sm"
-                  disabled={extracting}
-                />
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground">
-                    {editalText.length.toLocaleString("pt-BR")} / 50.000 caracteres
-                  </span>
-                  <Button
-                    size="sm"
-                    onClick={() => extractFieldsFromText(editalText, edital.id)}
-                    disabled={extracting || editalText.trim().length < 50}
-                  >
-                    <Sparkles className="h-3.5 w-3.5 mr-1.5" />
-                    Analisar e preencher
-                  </Button>
-                </div>
-              </div>
-            )}
+            <UploadEditalPanel
+              fileInputRef={fileInputRef}
+              selectedFile={selectedFile}
+              setSelectedFile={setSelectedFile}
+              extracting={extracting}
+              onExtract={() => { if (selectedFile) extractFieldsFromFile(selectedFile, edital.id); }}
+              className="w-full"
+              title=""
+              description="PDF, DOC, DOCX ou TXT — até 10 MB"
+            />
 
             {/* Extraction loading feedback */}
             {extracting && (
@@ -495,10 +444,6 @@ export default function EditalInscricao() {
             <div className="flex items-center justify-between pt-2 border-t">
               <Button variant="ghost" size="sm" onClick={() => navigate("/carreira")}>
                 <ArrowLeft className="h-3.5 w-3.5 mr-1" /> Voltar
-              </Button>
-              <Button variant="ghost" size="sm" onClick={handleSkip} disabled={extracting}>
-                Pular e preencher manualmente
-                <ChevronRight className="h-3.5 w-3.5 ml-1" />
               </Button>
             </div>
           </CardContent>
