@@ -73,7 +73,7 @@ export function TransactionTable({
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">{tx.description}</p>
                   <p className="text-xs text-muted-foreground">
-                    {new Date(tx.date + "T12:00:00").toLocaleDateString("pt-BR")}
+                    {parseLocalDate(tx.date).toLocaleDateString("pt-BR")}
                     {tx.projectId ? ` · ${projectName(tx.projectId)}` : ""}
                   </p>
                 </div>
