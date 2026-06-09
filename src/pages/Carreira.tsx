@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Trophy, ClipboardList, ListFilter, ExternalLink, Calendar, RotateCcw, Award, Sparkles, X } from "lucide-react";
+import { Trophy, ClipboardList, ListFilter, ExternalLink, Calendar, RotateCcw, Award, Sparkles, X, FolderOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -455,6 +455,13 @@ export default function Carreira() {
             Editais de fomento, festivais, showcases e residências num só lugar.
           </p>
         </div>
+        <a
+          href="/carreira/documentos"
+          className="inline-flex items-center gap-1.5 rounded-[0.7rem] border border-border bg-background px-3 py-1.5 text-sm hover:bg-muted transition-colors"
+        >
+          <FolderOpen className="h-4 w-4" />
+          Documentos
+        </a>
       </div>
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)}>
