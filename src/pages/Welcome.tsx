@@ -1,9 +1,7 @@
 import { lazy, Suspense, useEffect } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { lovable } from "@/integrations/lovable/index";
-import { useAuth } from "@/contexts/AuthContext";
-import { useProfile } from "@/contexts/ProfileContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { WelcomeHero } from "@/components/welcome/WelcomeHero";
 import { WelcomeProductPreview } from "@/components/welcome/WelcomeProductPreview";
@@ -20,8 +18,6 @@ const WelcomeFinalCTA = lazy(() =>
 );
 
 export default function Welcome() {
-  const { user, loading } = useAuth();
-  const { needsProfileSetup } = useProfile();
   const { t } = useLanguage();
   const navigate = useNavigate();
 
