@@ -3,6 +3,7 @@ import { Navigate, Link } from "react-router-dom";
 import {
   Shield, ArrowLeft, RefreshCw, Trash2, ExternalLink, Search,
   AlertTriangle, CheckCircle2, HelpCircle, Eye, Edit3, Sparkles, Plus,
+  Combine, Flame,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -24,6 +25,12 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAdminRole } from "@/hooks/useAdminRole";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import HealthBar, { type HealthFilter } from "@/components/admin/carreira/HealthBar";
+import DedupDialog from "@/components/admin/carreira/DedupDialog";
+import AiDiffDialog from "@/components/admin/carreira/AiDiffDialog";
+import FontesTab from "@/components/admin/carreira/FontesTab";
+import ReportsTab from "@/components/admin/carreira/ReportsTab";
+import { computeUrgency } from "@/components/admin/carreira/urgencyScore";
 
 type LinkStatus = "ok" | "broken" | "unknown" | null;
 
