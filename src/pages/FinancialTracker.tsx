@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import Papa from "papaparse";
-import { Plus, Sparkles } from "lucide-react";
+import { Plus, Sparkles, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -28,13 +28,13 @@ import {
 } from "@/hooks/useFinancialData";
 import { FinancialKpiCards } from "@/components/finance/FinancialKpiCards";
 import { ActiveProjectsCarousel } from "@/components/finance/ActiveProjectsCarousel";
-import { PendingFeesCard } from "@/components/finance/PendingFeesCard";
 import { TransactionFilters } from "@/components/finance/TransactionFilters";
 import { TransactionTable } from "@/components/finance/TransactionTable";
 import { EvolutionChart } from "@/components/finance/EvolutionChart";
 import { CashFlowTable } from "@/components/finance/CashFlowTable";
 import { CategoryBreakdownCharts } from "@/components/finance/CategoryBreakdownCharts";
-import { PendingTransactionsSummary } from "@/components/finance/PendingTransactionsSummary";
+import { PendingDrawer } from "@/components/finance/PendingDrawer";
+import { Badge } from "@/components/ui/badge";
 
 const PAGE_SIZE = 20;
 
@@ -49,6 +49,7 @@ export default function FinancialTracker() {
   const [editTx, setEditTx] = useState<Transaction | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [finAiOpen, setFinAiOpen] = useState(false);
+  const [pendingOpen, setPendingOpen] = useState(false);
 
   // Filters — `filterMonth` é exclusivo da aba Transações; Relatórios usa `reportMonth`
   // para evitar contaminação cruzada entre abas.
@@ -168,34 +169,77 @@ export default function FinancialTracker() {
         }
       />
 
-      <div className="hidden md:flex items-center justify-between flex-wrap gap-3">
-        <h1 className="text-3xl font-bold">Financeiro</h1>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setFinAiOpen(true)}>
-            <Sparkles className="h-3.5 w-3.5" /> IA
+      {(() => {
+        const pendingCount =
+          pendingFees.length +
+          transactions.filter((t) => !t.paid).length;
+        const PendingBtn = (
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5"
+            onClick={() => setPendingOpen(true)}
+            disabled={pendingCount === 0}
+            title="Ver pendências financeiras"
+          >
+            <Clock className="h-3.5 w-3.5" /> Pendências
+            {pendingCount > 0 && (
+              <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-[10px]">
+                {pendingCount}
+              </Badge>
+            )}
           </Button>
-          <Button onClick={openNew}>
-            <Plus className="h-4 w-4 mr-1" /> Nova Transação
-          </Button>
-        </div>
-      </div>
+        );
+        return (
+          <>
+            <div className="hidden md:flex items-center justify-between flex-wrap gap-3">
+              <h1 className="text-3xl font-bold">Financeiro</h1>
+              <div className="flex items-center gap-2">
+                {PendingBtn}
+                <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setFinAiOpen(true)}>
+                  <Sparkles className="h-3.5 w-3.5" /> IA
+                </Button>
+                <Button onClick={openNew}>
+                  <Plus className="h-4 w-4 mr-1" /> Nova Transação
+                </Button>
+              </div>
+            </div>
 
-      <div className="md:hidden -mt-2">
-        <Button variant="outline" size="sm" className="gap-1.5 w-full" onClick={() => setFinAiOpen(true)}>
-          <Sparkles className="h-3.5 w-3.5" /> Pergunte à IA financeira
-        </Button>
-      </div>
+            <div className="md:hidden -mt-2 grid grid-cols-2 gap-2">
+              {PendingBtn}
+              <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setFinAiOpen(true)}>
+                <Sparkles className="h-3.5 w-3.5" /> IA financeira
+              </Button>
+            </div>
+          </>
+        );
+      })()}
 
       <FinancialKpiCards kpis={kpis} />
       <ActiveProjectsCarousel projects={projects} getProjectFinancials={getProjectFinancials} />
-      <PendingFeesCard fees={pendingFees} />
 
-      <Tabs defaultValue="transactions">
+      <Tabs defaultValue="overview">
         <TabsList className="flex-wrap h-auto gap-1">
+          <TabsTrigger value="overview">Visão geral</TabsTrigger>
           <TabsTrigger value="transactions">Transações</TabsTrigger>
-          <TabsTrigger value="evolution">Evolução</TabsTrigger>
-          <TabsTrigger value="reports">Relatórios</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="overview" className="mt-4 space-y-6">
+          <div className="flex items-center gap-3 flex-wrap">
+            <span className="text-sm text-muted-foreground">Período dos relatórios:</span>
+            <Select value={reportMonth} onValueChange={setReportMonth}>
+              <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="current">Mês atual</SelectItem>
+                <SelectItem value="all">Todo o período</SelectItem>
+                {months.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <EvolutionChart data={evolutionData} />
+          <CashFlowTable data={cashflowData} />
+          <CategoryBreakdownCharts categoryIncome={categoryIncome} categoryExpense={categoryExpense} />
+        </TabsContent>
 
         <TabsContent value="transactions" className="space-y-4 mt-4">
           {transactions.length > 0 && (
@@ -220,28 +264,16 @@ export default function FinancialTracker() {
             onEdit={openEdit} onDelete={setDeleteId} onNew={openNew}
           />
         </TabsContent>
-
-        <TabsContent value="evolution" className="mt-4">
-          <EvolutionChart data={evolutionData} />
-        </TabsContent>
-
-        <TabsContent value="reports" className="mt-4 space-y-6">
-          <div className="flex items-center gap-3 flex-wrap">
-            <span className="text-sm text-muted-foreground">Período:</span>
-            <Select value={reportMonth} onValueChange={setReportMonth}>
-              <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="current">Mês atual</SelectItem>
-                <SelectItem value="all">Todo o período</SelectItem>
-                {months.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-          <CashFlowTable data={cashflowData} />
-          <CategoryBreakdownCharts categoryIncome={categoryIncome} categoryExpense={categoryExpense} />
-          <PendingTransactionsSummary transactions={transactions} />
-        </TabsContent>
       </Tabs>
+
+      <PendingDrawer
+        open={pendingOpen}
+        onOpenChange={setPendingOpen}
+        fees={pendingFees}
+        transactions={transactions}
+        pendingIncome={kpis.pendingIncome}
+        pendingExpense={kpis.pendingExpense}
+      />
 
       <TransactionForm open={formOpen} onOpenChange={setFormOpen} editTransaction={editTx} />
 
