@@ -125,6 +125,8 @@ export default function EditalInscricao() {
     }
     setFormValues(vals);
     if (filled > 0) toast.success(`${filled} campo${filled > 1 ? "s" : ""} preenchido${filled > 1 ? "s" : ""} com seu perfil`);
+  }, [extractedFields, profile, formValues]);
+
   // Batch fill: top textarea fields with AI, em paralelo (até 4 simultâneas para não estourar quota)
   const handleBatchFill = useCallback(async () => {
     if (!extractedFields?.campos || !edital) return;
