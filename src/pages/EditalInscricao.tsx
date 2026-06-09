@@ -741,10 +741,6 @@ function FieldInput({
                 <Sparkles className="h-3 w-3 mr-1" />
                 Regerar
               </Button>
-              <Button size="sm" variant="ghost" onClick={handleSaveToBank} disabled={savingToBank} className="h-7 text-xs">
-                <BookmarkPlus className="h-3 w-3 mr-1" />
-                Salvar no banco
-              </Button>
             </>
           )}
         </div>
