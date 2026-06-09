@@ -70,6 +70,22 @@ const LazyFallback = () => {
   );
 };
 
+function RootRoute() {
+  const { user, loading } = useAuth();
+  const { needsProfileSetup, loading: profileLoading } = useProfile();
+  const { t } = useLanguage();
+  if (loading || profileLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-pulse text-muted-foreground">{t("misc.loading")}</div>
+      </div>
+    );
+  }
+  if (user && needsProfileSetup) return <Navigate to="/onboarding" replace />;
+  if (user) return <Navigate to="/dashboard" replace />;
+  return <Welcome />;
+}
+
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   const { needsProfileSetup, loading: profileLoading } = useProfile();
@@ -141,7 +157,7 @@ const App = () => (
                 <RateLimitDialogProvider>
                   <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><div className="animate-pulse text-muted-foreground">Carregando…</div></div>}>
                     <Routes>
-                      <Route path="/" element={<Welcome />} />
+                      <Route path="/" element={<RootRoute />} />
                       <Route path="/auth" element={<Auth />} />
                       <Route path="/auth/reset-password" element={<ResetPassword />} />
                       <Route path="/onboarding" element={<OnboardingRouter />} />
