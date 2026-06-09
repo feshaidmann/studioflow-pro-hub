@@ -754,7 +754,6 @@ export default function Admin() {
                 <TableRow>
                   <TableHead>E-mail</TableHead>
                   <TableHead>Nome</TableHead>
-                  <TableHead>Tipo</TableHead>
                   <TableHead>Plano</TableHead>
                   <TableHead>Cadastro</TableHead>
                 </TableRow>
@@ -763,7 +762,7 @@ export default function Admin() {
                 {loading
                   ? Array.from({ length: 3 }).map((_, i) => (
                       <TableRow key={i}>
-                        {Array.from({ length: 5 }).map((__, j) => (
+                        {Array.from({ length: 4 }).map((__, j) => (
                           <TableCell key={j}>
                             <div className="h-4 w-24 rounded bg-muted animate-pulse" />
                           </TableCell>
@@ -777,14 +776,6 @@ export default function Admin() {
                           {u.display_name || "—"}
                         </TableCell>
                         <TableCell>
-                          <Badge
-                            variant="outline"
-                            className="text-pink-400 border-pink-400/30 bg-pink-400/10 text-xs"
-                          >
-                            Artista
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
                           <Badge variant={u.plan === "pro" ? "default" : "secondary"} className="text-xs">
                             {u.plan === "pro" ? "Pro" : "Free"}
                           </Badge>
@@ -794,6 +785,7 @@ export default function Admin() {
                         </TableCell>
                       </TableRow>
                     ))}
+
               </TableBody>
             </Table>
           </CardContent>
