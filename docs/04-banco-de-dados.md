@@ -23,12 +23,13 @@ Todas as tabelas têm **RLS ativada**. As políticas estão detalhadas em [05-se
 |--------|-----------|
 | `editais` | Editais encontrados; inclui `link`, `link_status`, `link_checked_at` |
 | `palcos_curados` | Palcos curados; mesmo padrão de `link_status` |
-| `edital_applications` | Inscrições com status, projeto vinculado, valor aprovado, resultado |
-| `edital_application_docs` | Documentos individuais da inscrição (ver `DocType` em `src/types/editais.ts`) |
+| `edital_applications` | Inscrições com status, projeto vinculado, valor aprovado, resultado; coluna `analise_ia` (JSONB) guarda a última análise gerada pela IA (resumo, prazos, documentos, carta sugerida) |
+| `edital_application_docs` | Documentos individuais da inscrição |
 | `edital_documents` | Banco de documentos reutilizáveis (bio, currículo, portfólio…) |
-| `rascunhos_editais` | Rascunhos com campos JSON e progresso |
 | `alertas_editais` | Alertas de novos editais compatíveis |
 | `fontes_editais` | Fontes de busca configuráveis |
+
+> **Removido:** `rascunhos_editais` (preenchimento campo-a-campo descontinuado). A análise agora vive em `edital_applications.analise_ia` via edge function `analyze-edital`.
 
 ## Direção Visual
 
