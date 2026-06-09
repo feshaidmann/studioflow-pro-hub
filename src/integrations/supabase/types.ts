@@ -2488,9 +2488,7 @@ export type Database = {
           id: string
           message: string
           price: number
-          provider_avatar: string
           provider_curated_id: string | null
-          provider_name: string
           provider_professional_id: string | null
           provider_user_id: string | null
           request_id: string
@@ -2504,9 +2502,7 @@ export type Database = {
           id?: string
           message?: string
           price?: number
-          provider_avatar?: string
           provider_curated_id?: string | null
-          provider_name?: string
           provider_professional_id?: string | null
           provider_user_id?: string | null
           request_id: string
@@ -2520,9 +2516,7 @@ export type Database = {
           id?: string
           message?: string
           price?: number
-          provider_avatar?: string
           provider_curated_id?: string | null
-          provider_name?: string
           provider_professional_id?: string | null
           provider_user_id?: string | null
           request_id?: string
@@ -2560,8 +2554,6 @@ export type Database = {
           requester_user_id: string
           specialty_needed: string
           status: string
-          target_provider_name: string | null
-          target_provider_ref: string | null
           title: string
           updated_at: string
         }
@@ -2577,8 +2569,6 @@ export type Database = {
           requester_user_id: string
           specialty_needed?: string
           status?: string
-          target_provider_name?: string | null
-          target_provider_ref?: string | null
           title?: string
           updated_at?: string
         }
@@ -2594,8 +2584,6 @@ export type Database = {
           requester_user_id?: string
           specialty_needed?: string
           status?: string
-          target_provider_name?: string | null
-          target_provider_ref?: string | null
           title?: string
           updated_at?: string
         }
@@ -3018,23 +3006,6 @@ export type Database = {
       }
     }
     Views: {
-      service_requests_inbound: {
-        Row: {
-          briefing: string | null
-          budget_hint: string | null
-          created_at: string | null
-          desired_deadline: string | null
-          id: string | null
-          reference_url: string | null
-          specialty_needed: string | null
-          status: string | null
-          target_provider_name: string | null
-          target_provider_ref: string | null
-          title: string | null
-          updated_at: string | null
-        }
-        Relationships: []
-      }
       analytics_funnel_daily: {
         Row: {
           day: string | null
