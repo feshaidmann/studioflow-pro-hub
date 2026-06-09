@@ -91,7 +91,7 @@ export function FinancialKpiCards({ kpis }: { kpis: Kpis }) {
     <>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <KpiCard
-          label="Saldo atual (pagas)"
+          label="Saldo realizado (acumulado)"
           value={formatCurrency(kpis.balanceAll)}
           icon={DollarSign}
           colorClass={kpis.balanceAll >= 0 ? "text-success" : "text-destructive"}
@@ -111,7 +111,8 @@ export function FinancialKpiCards({ kpis }: { kpis: Kpis }) {
           icon={TrendingDown}
           colorClass="text-destructive"
           trend={kpis.expenseMonthTrend}
-          tooltip="Despesas pagas neste mês corrente. A variação compara com o mês anterior, ignorando o filtro abaixo."
+          inverseTrend
+          tooltip="Despesas pagas neste mês corrente. Aumento (vermelho) indica gasto maior que o mês anterior; queda (verde) indica economia."
         />
         <KpiCard
           label={`Resultado — ${monthLabel}`}
