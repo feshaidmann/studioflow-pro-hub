@@ -105,7 +105,7 @@ Deno.serve(async (req) => {
     if (authErr || !user) return jsonResponse(401, { error: "Não autorizado" });
 
     const body = await req.json().catch(() => ({}));
-    const { file, text, edital_title, edital_id, project_id } = body ?? {};
+    const { file, text, edital_title, edital_id, project_id, dry_run } = body ?? {};
 
     const hasFile = !!file && typeof file === "object" && typeof file.base64 === "string";
     const hasText = typeof text === "string" && text.trim().length > 50;
