@@ -423,5 +423,5 @@ export function useRascunhoEdital() {
     }
   }, [user]);
 
-  return { extracting, extractedFields, extractFields, extractFieldsFromFile, extractFieldsFromText, setExtractedFieldsManual, saving, saveRascunho, loadRascunho, lastError, attemptProgress };
+  return { extracting, extractedFields, extractFields, extractFieldsFromFile, setExtractedFieldsManual, saving, saveRascunho, loadRascunho, lastError, attemptProgress };
 }
