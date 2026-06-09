@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Sparkles, Copy, Check, Save, Loader2, FileText, ClipboardList, RefreshCw, BookmarkPlus, ChevronRight, User, ExternalLink } from "lucide-react";
+import { ArrowLeft, Sparkles, Copy, Check, Save, Loader2, FileText, ClipboardList, RefreshCw, BookmarkPlus, User, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -38,11 +38,9 @@ export default function EditalInscricao() {
   const { t } = useLanguage();
   const { projects } = useProjects();
   const { profile } = useProfile();
-  const { extracting, extractedFields, extractFields: _extractFields, extractFieldsFromFile, extractFieldsFromText, setExtractedFieldsManual, saving, saveRascunho, loadRascunho, lastError, attemptProgress } = useRascunhoEdital();
+  const { extracting, extractedFields, extractFields: _extractFields, extractFieldsFromFile, setExtractedFieldsManual, saving, saveRascunho, loadRascunho, lastError, attemptProgress } = useRascunhoEdital();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [editalText, setEditalText] = useState("");
-  const [inputMode, setInputMode] = useState<"upload" | "paste">("upload");
   type Step = "docInput" | "filling";
   const [step, setStep] = useState<Step>("docInput");
 
@@ -129,56 +127,34 @@ export default function EditalInscricao() {
     if (filled > 0) toast.success(`${filled} campo${filled > 1 ? "s" : ""} preenchido${filled > 1 ? "s" : ""} com seu perfil`);
   }, [extractedFields, profile, formValues]);
 
-  const DEFAULT_CAMPOS: EditalField[] = [
-    { nome: "Nome do projeto", tipo: "text", obrigatorio: true, descricao: "", opcoes: null },
-    { nome: "Artista / Grupo responsável", tipo: "text", obrigatorio: true, descricao: "", opcoes: null },
-    { nome: "Área artística", tipo: "text", obrigatorio: true, descricao: "Ex: Música, Teatro, Dança, Circo…", opcoes: null },
-    { nome: "Resumo do projeto", tipo: "textarea", obrigatorio: true, descricao: "Breve descrição do projeto (até 300 palavras)", opcoes: null },
-    { nome: "Memória descritiva", tipo: "textarea", obrigatorio: false, descricao: "Histórico, justificativa e objetivos do projeto", opcoes: null },
-    { nome: "Público-alvo", tipo: "textarea", obrigatorio: false, descricao: "A quem o projeto se destina", opcoes: null },
-    { nome: "Justificativa cultural", tipo: "textarea", obrigatorio: false, descricao: "Relevância cultural e social do projeto", opcoes: null },
-    { nome: "Cronograma de execução", tipo: "textarea", obrigatorio: false, descricao: "Etapas de produção com datas estimadas", opcoes: null },
-    { nome: "Planilha de orçamento", tipo: "textarea", obrigatorio: false, descricao: "Custos previstos e fontes de financiamento", opcoes: null },
-    { nome: "Biografia do proponente", tipo: "textarea", obrigatorio: false, descricao: "Trajetória artística resumida", opcoes: null },
-  ];
-
-  const handleSkip = useCallback(() => {
-    const preFilled: Record<string, string> = {};
-    if (profile) {
-      preFilled["Artista / Grupo responsável"] = profile.display_name || "";
-      preFilled["Área artística"] = profile.specialties?.join(", ") || "";
-      preFilled["Biografia do proponente"] = profile.bio || "";
-    }
-    setExtractedFieldsManual({ campos: DEFAULT_CAMPOS, resumo_edital: "", documentos_exigidos: [] });
-    setFormValues(preFilled);
-    setStep("filling");
-  }, [profile, setExtractedFieldsManual]);
-
-  // Batch fill all textarea fields with AI
+  // Batch fill: top textarea fields with AI, em paralelo (até 4 simultâneas para não estourar quota)
   const handleBatchFill = useCallback(async () => {
     if (!extractedFields?.campos || !edital) return;
 
-    // First fill profile fields
+    // Preenche campos simples de perfil primeiro
     preFillProfile();
 
-    const textareaFields = extractedFields.campos.filter(
+    // Prioriza campos vazios mais importantes (memorial / justificativa / público / resumo / biografia)
+    const PRIORITY_KEYWORDS = ["memori", "justificativ", "público", "publico", "resumo", "biograf", "objetiv", "descri"];
+    const emptyTextareas = extractedFields.campos.filter(
       (c) => c.tipo === "textarea" && !formValues[c.nome]?.trim()
     );
+    const prioritized = [
+      ...emptyTextareas.filter((c) => PRIORITY_KEYWORDS.some((k) => c.nome.toLowerCase().includes(k))),
+      ...emptyTextareas.filter((c) => !PRIORITY_KEYWORDS.some((k) => c.nome.toLowerCase().includes(k))),
+    ].slice(0, 4); // limite duro para o MVP
 
-    if (textareaFields.length === 0) {
+    if (prioritized.length === 0) {
       toast("Todos os campos já estão preenchidos");
       return;
     }
 
     setBatchFilling(true);
-    setBatchProgress({ current: 0, total: textareaFields.length });
+    setBatchProgress({ current: 0, total: prioritized.length });
 
-    for (let i = 0; i < textareaFields.length; i++) {
-      const campo = textareaFields[i];
-      setBatchProgress({ current: i + 1, total: textareaFields.length });
-
-      try {
-        const { data } = await supabase.functions.invoke("edital-ai-assistant", {
+    const results = await Promise.allSettled(
+      prioritized.map((campo) =>
+        supabase.functions.invoke("edital-ai-assistant", {
           body: {
             action: "fill_field",
             payload: {
@@ -190,20 +166,42 @@ export default function EditalInscricao() {
               project_id: selectedProject && selectedProject !== "none" ? selectedProject : undefined,
             },
           },
-        });
+        })
+      )
+    );
 
-        if (data?.response) {
-          setFormValues((prev) => ({ ...prev, [campo.nome]: data.response }));
-          setAiGeneratedFields((prev) => new Set(prev).add(campo.nome));
-        }
-      } catch {
-        // Continue with next field
+    const updates: Record<string, string> = {};
+    const aiKeys: string[] = [];
+    let successCount = 0;
+    results.forEach((res, idx) => {
+      if (res.status === "fulfilled" && res.value?.data?.response) {
+        updates[prioritized[idx].nome] = res.value.data.response;
+        aiKeys.push(prioritized[idx].nome);
+        successCount++;
       }
+    });
+
+    if (successCount > 0) {
+      setFormValues((prev) => ({ ...prev, ...updates }));
+      setAiGeneratedFields((prev) => {
+        const next = new Set(prev);
+        aiKeys.forEach((k) => next.add(k));
+        return next;
+      });
     }
 
     setBatchFilling(false);
-    toast.success(`${textareaFields.length} campos gerados com IA`);
+    setBatchProgress({ current: 0, total: 0 });
+
+    if (successCount === prioritized.length) {
+      toast.success(`${successCount} campos gerados com IA`);
+    } else if (successCount > 0) {
+      toast.success(`${successCount} de ${prioritized.length} campos gerados (alguns falharam)`);
+    } else {
+      toast.error("Nenhum campo foi gerado. Tente novamente em alguns instantes.");
+    }
   }, [extractedFields, edital, formValues, selectedProject, preFillProfile]);
+
 
   // Calculate progress
   const progress = useMemo(() => {
@@ -414,67 +412,16 @@ export default function EditalInscricao() {
               </Select>
             </div>
 
-            {/* Mode toggle */}
-            <div className="flex rounded-lg border border-border overflow-hidden text-sm font-medium">
-              {(["upload", "paste"] as const).map((m) => (
-                <button
-                  key={m}
-                  type="button"
-                  onClick={() => setInputMode(m)}
-                  className={
-                    "flex-1 py-2 transition-colors " +
-                    (inputMode === m
-                      ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground hover:bg-muted")
-                  }
-                >
-                  {m === "upload" ? "📎 Upload PDF/DOC" : "📋 Colar texto"}
-                </button>
-              ))}
-            </div>
-
-            {inputMode === "upload" && (
-              <UploadEditalPanel
-                fileInputRef={fileInputRef}
-                selectedFile={selectedFile}
-                setSelectedFile={setSelectedFile}
-                extracting={extracting}
-                onExtract={() => { if (selectedFile) extractFieldsFromFile(selectedFile, edital.id); }}
-                className="w-full"
-                title=""
-                description="PDF, DOC, DOCX ou TXT — até 10 MB"
-              />
-            )}
-
-            {inputMode === "paste" && (
-              <div className="space-y-2">
-                <Label className="text-xs">Conteúdo do edital</Label>
-                <p className="text-xs text-muted-foreground">
-                  Cole os requisitos, campos obrigatórios e critérios de seleção.
-                </p>
-                <Textarea
-                  value={editalText}
-                  onChange={(e) => setEditalText(e.target.value.slice(0, 50_000))}
-                  rows={8}
-                  placeholder="Cole aqui o texto do edital, os campos do formulário de inscrição ou os critérios de seleção…"
-                  className="resize-none text-sm"
-                  disabled={extracting}
-                />
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground">
-                    {editalText.length.toLocaleString("pt-BR")} / 50.000 caracteres
-                  </span>
-                  <Button
-                    size="sm"
-                    onClick={() => extractFieldsFromText(editalText, edital.id)}
-                    disabled={extracting || editalText.trim().length < 50}
-                  >
-                    <Sparkles className="h-3.5 w-3.5 mr-1.5" />
-                    Analisar e preencher
-                  </Button>
-                </div>
-              </div>
-            )}
+            <UploadEditalPanel
+              fileInputRef={fileInputRef}
+              selectedFile={selectedFile}
+              setSelectedFile={setSelectedFile}
+              extracting={extracting}
+              onExtract={() => { if (selectedFile) extractFieldsFromFile(selectedFile, edital.id); }}
+              className="w-full"
+              title=""
+              description="PDF, DOC, DOCX ou TXT — até 10 MB"
+            />
 
             {/* Extraction loading feedback */}
             {extracting && (
@@ -497,10 +444,6 @@ export default function EditalInscricao() {
             <div className="flex items-center justify-between pt-2 border-t">
               <Button variant="ghost" size="sm" onClick={() => navigate("/carreira")}>
                 <ArrowLeft className="h-3.5 w-3.5 mr-1" /> Voltar
-              </Button>
-              <Button variant="ghost" size="sm" onClick={handleSkip} disabled={extracting}>
-                Pular e preencher manualmente
-                <ChevronRight className="h-3.5 w-3.5 ml-1" />
               </Button>
             </div>
           </CardContent>

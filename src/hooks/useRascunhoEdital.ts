@@ -315,22 +315,6 @@ export function useRascunhoEdital() {
     );
   }, [user, runExtract]);
 
-  const extractFieldsFromText = useCallback(async (text: string, editalId?: string) => {
-    if (!user) return;
-    if (!text.trim()) {
-      toast.error("Cole o conteúdo do edital", {
-        description: "O campo de texto está vazio. Cole o regulamento antes de continuar.",
-      });
-      return;
-    }
-    const key = `text:${editalId || "manual"}`;
-    await runExtract(
-      key,
-      "file",
-      { text },
-      { editalId, has_url: false, has_titulo: false },
-    );
-  }, [user, runExtract]);
 
   const setExtractedFieldsManual = useCallback((fields: ExtractedFields) => {
     setExtractedFields(fields);
@@ -439,5 +423,5 @@ export function useRascunhoEdital() {
     }
   }, [user]);
 
-  return { extracting, extractedFields, extractFields, extractFieldsFromFile, extractFieldsFromText, setExtractedFieldsManual, saving, saveRascunho, loadRascunho, lastError, attemptProgress };
+  return { extracting, extractedFields, extractFields, extractFieldsFromFile, setExtractedFieldsManual, saving, saveRascunho, loadRascunho, lastError, attemptProgress };
 }
