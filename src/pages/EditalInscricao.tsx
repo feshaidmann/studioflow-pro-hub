@@ -674,23 +674,6 @@ function FieldInput({
     }
   };
 
-  const handleSaveToBank = async () => {
-    if (!value.trim() || !user) return;
-    setSavingToBank(true);
-    try {
-      await supabase.from("edital_documents").insert({
-        user_id: user.id,
-        title: `${campo.nome}${editalTitle ? ` — ${editalTitle}` : ""}`,
-        doc_type: "outro",
-        content: value,
-      });
-      toast.success("Salvo no banco de documentos!");
-    } catch {
-      // ignore
-    } finally {
-      setSavingToBank(false);
-    }
-  };
 
   if (campo.tipo === "select" && campo.opcoes?.length) {
     return (
