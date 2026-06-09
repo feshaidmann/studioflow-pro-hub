@@ -98,7 +98,9 @@ ${hint.runnerUp ? `- top2: ${hint.runnerUp.genre} (${Math.round((hint.runnerUp.s
 Use isso APENAS para enriquecer a análise. Se o classificador divergir do declarado com confiança alta (≥75%), você pode mencionar a proximidade técnica com ${hint.detected} no diagnostico_resumo, mas NÃO contradiga o gênero declarado pelo usuário no campo genero_classificado.`
     : "";
 
-  const variant = (payload.summary_variant === "B" ? "B" : "A") as "A" | "B";
+  // Aceita tanto a forma versionada ("A.v2") quanto a base ("A"/"B") para escolher o bloco de estilo.
+  const rawVariant = typeof payload.summary_variant === "string" ? payload.summary_variant : "A";
+  const variant = (rawVariant.startsWith("B") ? "B" : "A") as "A" | "B";
   const variantBlock = variant === "B"
     ? `
 
