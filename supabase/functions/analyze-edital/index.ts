@@ -74,9 +74,19 @@ function buildUserPrompt(opts: {
 }
 
 function parseJsonOutput(raw: string) {
-  const match = raw.match(/\{[\s\S]*\}/);
-  if (!match) throw new Error("no_json_match");
-  return JSON.parse(match[0]);
+  // Remove cercas markdown ```json ... ``` (ou ``` ... ```)
+  let cleaned = raw.trim();
+  cleaned = cleaned.replace(/^```(?:json|JSON)?\s*/m, "").replace(/```\s*$/m, "").trim();
+  // 1ª tentativa: parse direto
+  try {
+    return JSON.parse(cleaned);
+  } catch {
+    // 2ª tentativa: extrai do primeiro { ao último }
+    const first = cleaned.indexOf("{");
+    const last = cleaned.lastIndexOf("}");
+    if (first === -1 || last === -1 || last <= first) throw new Error("no_json_match");
+    return JSON.parse(cleaned.slice(first, last + 1));
+  }
 }
 
 Deno.serve(async (req) => {
@@ -181,6 +191,7 @@ Deno.serve(async (req) => {
           model: "google/gemini-2.5-flash",
           messages,
           max_tokens: 2500,
+          response_format: { type: "json_object" },
         }),
         signal: controller.signal,
       });
