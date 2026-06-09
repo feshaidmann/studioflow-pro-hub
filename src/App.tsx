@@ -39,6 +39,7 @@ const ReferenceTracks = lazy(() => import("@/pages/admin/ReferenceTracks"));
 const OportunidadesSearchMetrics = lazy(() => import("@/pages/admin/OportunidadesSearchMetrics"));
 const GenreImport = lazy(() => import("@/pages/admin/GenreImport"));
 const AdminMarketplace = lazy(() => import("@/pages/admin/Marketplace"));
+const AdminCarreira = lazy(() => import("@/pages/admin/Carreira"));
 const Agenda = lazy(() => import("@/pages/Agenda"));
 const FreelancerProfile = lazy(() => import("@/pages/FreelancerProfile"));
 const UpgradeScreen = lazy(() => import("@/pages/UpgradeScreen"));
