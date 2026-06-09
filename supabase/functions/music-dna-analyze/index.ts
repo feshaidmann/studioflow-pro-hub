@@ -170,6 +170,15 @@ async function logInvocation(adminClient: ReturnType<typeof createClient>, userI
   });
 }
 
+function structuredLog(level: "info" | "error", event: string, payload: Record<string, unknown>) {
+  const entry = { timestamp: new Date().toISOString(), function: "music-dna-analyze", level, event, ...payload };
+  if (level === "error") {
+    console.error(JSON.stringify(entry));
+  } else {
+    console.log(JSON.stringify(entry));
+  }
+}
+
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
