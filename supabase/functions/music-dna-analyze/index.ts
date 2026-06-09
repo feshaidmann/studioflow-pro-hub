@@ -485,7 +485,12 @@ serve(async (req: Request) => {
       summary_variant: summaryVariant,
     });
   } catch (error) {
-    console.error("[music-dna-analyze] Error:", error);
-    return jsonResponse({ error: error instanceof Error ? error.message : "Internal server error" }, 500);
+    const err = error instanceof Error ? error : new Error(String(error));
+    structuredLog("error", "unhandled_exception", {
+      message: err.message,
+      stack: err.stack,
+      name: err.name,
+    });
+    return jsonResponse({ error: err.message }, 500);
   }
 });
