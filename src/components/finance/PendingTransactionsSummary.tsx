@@ -39,7 +39,7 @@ function PendingList({
               {items.map((t) => (
                 <TableRow key={t.id}>
                   <TableCell className="text-xs text-muted-foreground">
-                    {new Date(t.date + "T12:00:00").toLocaleDateString("pt-BR")}
+                    {parseLocalDate(t.date).toLocaleDateString("pt-BR")}
                   </TableCell>
                   <TableCell className="text-sm">{t.description}</TableCell>
                   <TableCell className={`text-right font-mono-nums font-semibold ${colorClass}`}>
