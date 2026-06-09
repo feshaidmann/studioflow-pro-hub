@@ -387,7 +387,7 @@ export default function PalcoProposta() {
 
       {/* Stepper */}
       <Tabs value={step} onValueChange={(v) => setStep(v as StepKey)}>
-        <TabsList className="w-full grid grid-cols-3 sm:grid-cols-6 h-auto">
+        <TabsList className="w-full grid grid-cols-3 h-auto">
           {STEPS.map((s, i) => (
             <TabsTrigger key={s.key} value={s.key} className="flex flex-col py-2 text-[11px] gap-0.5">
               <span className="text-[10px] text-muted-foreground">Etapa {i + 1}</span>
