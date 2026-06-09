@@ -244,7 +244,7 @@ export function useInboundRequests() {
     if (!user) { setRequests([]); setMyProposals([]); setLoading(false); return; }
     setLoading(true);
     const [reqRes, propRes] = await Promise.all([
-      supabase
+      (supabase as any)
         .from("service_requests_inbound")
         .select("*")
         .eq("target_provider_ref", user.id)
