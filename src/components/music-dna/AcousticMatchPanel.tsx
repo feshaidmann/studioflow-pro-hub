@@ -81,7 +81,7 @@ function toQuery(a: RealAudioAnalysis): QueryFeatures {
   return {
     bpm: a.bpm,
     lufs_integrated: a.lufs_integrated,
-    dynamic_range_lu: a.dynamic_range_lu,
+    dynamic_range_lu: a.crest_factor_db ?? a.dynamic_range_lu,
     spectral_centroid_hz: a.spectral_centroid_hz,
     spectral_rolloff_hz: a.spectral_rolloff_hz,
     spectral_flatness: a.spectral_flatness,
