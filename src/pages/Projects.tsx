@@ -505,7 +505,7 @@ export default function Projects() {
           onMasterAnalyze={() => setMasterAnalyzerModalOpen(true)}
           onLancadoCompleted={handleLancadoCompletion}
           setProject={setSelectedProject}
-          globalProfessionals={globalProfessionals as unknown as React.ComponentProps<typeof ProjectHub>["globalProfessionals"]}
+          globalProfessionals={globalProfessionals as unknown as React.ComponentProps<typeof ProjectDetailCard>["globalProfessionals"]}
           globalsLoading={globalsLoading}
           addProfessional={addProfessional}
           addProfessionalToGlobal={addProfessionalToGlobal}
