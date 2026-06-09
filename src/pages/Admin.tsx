@@ -388,12 +388,13 @@ export default function Admin() {
             sub="Nunca criaram projeto"
           />
           <StatCard
-            label="Sem progresso"
-            value={loading ? <Spinner /> : ad?.stuckUsersCount ?? 0}
-            icon={AlertTriangle}
-            color="text-warning"
-            sub="Projeto ativo parado em rascunho"
+            label="Lançamentos"
+            value={loading ? <Spinner /> : ad?.projectsLaunched ?? 0}
+            icon={Rocket}
+            color="text-success"
+            sub={loading ? "" : `de ${ad?.projectsCreatedTotal ?? 0} criados`}
           />
+
         </div>
 
         {/* Feature ranking */}
