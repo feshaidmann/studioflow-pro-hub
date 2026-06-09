@@ -57,7 +57,7 @@ export interface PalcoCurado {
 // Este hook foca em listar palcos curados e calcular match por perfil.
 
 export function usePalcos() {
-  const { user: _user } = useAuth();
+  const { user } = useAuth();
 
   const [palcosCurados, setPalcosCurados] = useState<PalcoCurado[]>([]);
   const [loadingCurados, setLoadingCurados] = useState(true);
