@@ -293,9 +293,12 @@ serve(async (req: Request) => {
     }
 
     // A/B do `diagnostico_resumo`: 50/50 aleatório por chamada.
-    // Persistido junto da análise quando o usuário salvar, para reanálises
-    // (visualização posterior) usarem sempre a mesma variante.
-    const summaryVariant: "A" | "B" = Math.random() < 0.5 ? "A" : "B";
+    // Versão do prompt fica no próprio rótulo (ex.: "A.v2") para que dados de
+    // versões diferentes do prompt NÃO se misturem nas estatísticas do experimento.
+    // Bump aqui sempre que o conteúdo de `variantBlock` mudar de forma material.
+    const PROMPT_VERSION = "v2";
+    const baseVariant: "A" | "B" = Math.random() < 0.5 ? "A" : "B";
+    const summaryVariant = `${baseVariant}.${PROMPT_VERSION}`;
     const enrichedPayload = { ...payload, summary_variant: summaryVariant };
 
     let benchmark: unknown = null;
