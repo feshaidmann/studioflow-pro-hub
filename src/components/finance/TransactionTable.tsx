@@ -7,7 +7,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
-import { formatCurrency } from "@/lib/financeUtils";
+import { formatCurrency, parseLocalDate, formatCategoryLabel } from "@/lib/financeUtils";
 import type { Transaction } from "@/data/mockData";
 
 interface Props {
