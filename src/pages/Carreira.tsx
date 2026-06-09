@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Trophy, ClipboardList, ListFilter, ExternalLink, Calendar, RotateCcw, Award, Sparkles, X } from "lucide-react";
+import { Trophy, ClipboardList, ListFilter, ExternalLink, Calendar, RotateCcw, Award, Sparkles, X, FolderOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
