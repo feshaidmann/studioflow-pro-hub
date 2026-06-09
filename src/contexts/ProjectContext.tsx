@@ -283,66 +283,78 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   const addProject = useCallback(
     async (data: { name: string; artist: string; bpm: number; key: string; stage: Project["stage"]; projectType?: ProjectType; trackCount?: number | null; totalContractValue?: number | null; amountPaid?: number | null; estimatedMonths?: number | null; uploadDate?: string; templateTracks?: string[] | null; genre?: string | null; audienceSizeAtStart?: string | null; artistState?: string | null }): Promise<Project | null> => {
       if (!user) {
-        console.error("addProject: user not authenticated");
-        return null;
+        console.error("[addProject] user not authenticated");
+        throw new Error("Usuário não autenticado. Faça login novamente.");
       }
-      const { data: row, error } = await supabase.from("projects").insert({
-        user_id: user.id,
-        name: data.name,
-        artist: data.artist,
-        bpm: data.bpm,
-        key: data.key,
-        stage: data.stage,
-        project_type: data.projectType ?? "single",
-        track_count: data.trackCount ?? null,
-        total_contract_value: data.totalContractValue ?? null,
-        amount_paid: data.amountPaid ?? null,
-        estimated_months: data.estimatedMonths ?? null,
-        upload_date: data.uploadDate ?? "",
-        genre: data.genre ?? null,
-        audience_size_at_start: data.audienceSizeAtStart ?? null,
-        artist_state: data.artistState ?? null,
-        production_start_date: new Date().toISOString(),
-      }).select().single();
-      if (error || !row) {
-        console.error("addProject DB error:", error);
-        return null;
-      }
-      const newProj = dbRowToProject(row);
+      try {
+        const { data: row, error } = await supabase.from("projects").insert({
+          user_id: user.id,
+          name: data.name,
+          artist: data.artist,
+          bpm: data.bpm,
+          key: data.key,
+          stage: data.stage,
+          project_type: data.projectType ?? "single",
+          track_count: data.trackCount ?? null,
+          total_contract_value: data.totalContractValue ?? null,
+          amount_paid: data.amountPaid ?? null,
+          estimated_months: data.estimatedMonths ?? null,
+          upload_date: data.uploadDate ?? "",
+          genre: data.genre ?? null,
+          audience_size_at_start: data.audienceSizeAtStart ?? null,
+          artist_state: data.artistState ?? null,
+          production_start_date: new Date().toISOString(),
+        }).select().single();
+        if (error || !row) {
+          console.error("[addProject] DB error:", error);
+          throw new Error(error?.message ?? "Falha ao inserir projeto no banco.");
+        }
+        const newProj = dbRowToProject(row);
 
-      // Use template tracks if provided, otherwise defaults
-      let initialTracks: MixTrack[];
-      if (data.templateTracks && data.templateTracks.length > 0) {
-        initialTracks = data.templateTracks.map((name, i) => ({
-          id: `t${Date.now()}-${i}`,
-          name,
-          highPassHz: 80,
-          eqNotes: "",
-          compGrDb: 0,
-          sidechainTrigger: "—",
-          gainDbfs: 0,
-          done: false,
-          trackSource: "" as const,
-          musicianId: "",
-          musicianFee: 0,
-          feePaid: false,
-        }));
-      } else {
-        initialTracks = createDefaultTracks();
-      }
-      const trackRows = initialTracks.map((t, i) => trackToDbRow(user.id, newProj.id, t, i));
-      await supabase.from("mix_tracks").insert(trackRows);
+        // Use template tracks if provided, otherwise defaults
+        let initialTracks: MixTrack[];
+        if (data.templateTracks && data.templateTracks.length > 0) {
+          initialTracks = data.templateTracks.map((name, i) => ({
+            id: `t${Date.now()}-${i}`,
+            name,
+            highPassHz: 80,
+            eqNotes: "",
+            compGrDb: 0,
+            sidechainTrigger: "—",
+            gainDbfs: 0,
+            done: false,
+            trackSource: "" as const,
+            musicianId: "",
+            musicianFee: 0,
+            feePaid: false,
+          }));
+        } else {
+          initialTracks = createDefaultTracks();
+        }
+        const trackRows = initialTracks.map((t, i) => trackToDbRow(user.id, newProj.id, t, i));
+        const { error: tracksError } = await supabase.from("mix_tracks").insert(trackRows);
+        if (tracksError) {
+          console.warn("[addProject] mix_tracks insert failed (project created):", tracksError);
+        }
 
-      setProjects((prev) => [newProj, ...prev]);
-      setTracks((prev) => ({ ...prev, [newProj.id]: initialTracks }));
-      trackAppEvent("project_created", {
-        project_id: newProj.id,
-        project_type: newProj.projectType,
-        stage: newProj.stage,
-        genre: data.genre ?? null,
-        track_count: initialTracks.length,
-      });
-      return newProj;
+        setProjects((prev) => [newProj, ...prev]);
+        setTracks((prev) => ({ ...prev, [newProj.id]: initialTracks }));
+        try {
+          trackAppEvent("project_created", {
+            project_id: newProj.id,
+            project_type: newProj.projectType,
+            stage: newProj.stage,
+            genre: data.genre ?? null,
+            track_count: initialTracks.length,
+          });
+        } catch (e) {
+          console.warn("[addProject] analytics event failed:", e);
+        }
+        return newProj;
+      } catch (err) {
+        console.error("[addProject] unexpected failure:", err);
+        throw err;
+      }
     },
     [user],
   );
