@@ -312,6 +312,9 @@ export default function AdminCarreira() {
                 <Trash2 className="h-4 w-4" /> Apagar {selected.size}
               </Button>
             )}
+            <Button size="sm" onClick={() => openCreate(currentKind)} className="gap-2 ml-auto">
+              <Plus className="h-4 w-4" /> Novo {currentKind === "edital" ? "edital" : "palco"}
+            </Button>
           </div>
         )}
 
