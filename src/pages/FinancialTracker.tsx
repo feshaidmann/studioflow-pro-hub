@@ -50,10 +50,12 @@ export default function FinancialTracker() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [finAiOpen, setFinAiOpen] = useState(false);
 
-  // Filters
+  // Filters — `filterMonth` é exclusivo da aba Transações; Relatórios usa `reportMonth`
+  // para evitar contaminação cruzada entre abas.
   const [filterProject, setFilterProject] = useState("all");
   const [filterType, setFilterType] = useState("all");
   const [filterMonth, setFilterMonth] = useState("current");
+  const [reportMonth, setReportMonth] = useState("current");
   const [filterStatus, setFilterStatus] = useState("all");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
