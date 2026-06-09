@@ -30,6 +30,40 @@ export const ACCEPTED_AUDIO = [
 
 export const GENRE_ENUM_VALUES = Object.keys(GENRE_PRESETS) as [Genre, ...Genre[]];
 
+/**
+ * Subconjunto dos GENRE_PRESETS alinhado à taxonomia canônica do
+ * `supabase/functions/music-dna-analyze/genre-map.ts` (genre_canonical()).
+ * Mantém apenas gêneros com pool real no catálogo (level strong/usable/proxy)
+ * e ordena por contagem real em `music_reference_tracks`.
+ *
+ * Removidos por não terem pool no catálogo refatorado:
+ *   Forró / Piseiro, Axé / Pop Bahia, Trap BR, Rap BR, Synth-Pop,
+ *   Lo-Fi Hip Hop, Sertanejo Universitário, Rock Alternativo BR,
+ *   Grunge (coberto por Rock), Reggae BR (coberto por Reggae),
+ *   Funk (coberto por Funk Carioca), Ambient (coberto por Eletrônica / House).
+ */
+export const GENRE_DROPDOWN_OPTIONS: Genre[] = [
+  "Bossa Nova",
+  "Samba",
+  "MPB Contemporânea",
+  "Rock Alternativo",
+  "Folk Rock",
+  "Reggae",
+  "Hip-Hop",
+  "Jazz",
+  "Sertanejo Raiz",
+  "Heavy Metal",
+  "Pagode",
+  "Eletrônica / House",
+  "R&B / Soul",
+  "Pop Brasileiro",
+  "Pop Internacional",
+  "Country",
+  "Indie BR",
+  "Punk Rock",
+  "Funk Carioca",
+];
+
 export const formSchema = z.object({
   name: z.string().trim().min(1, "Nome da faixa é obrigatório").max(200),
   references: z.array(z.string()).max(5),
@@ -255,7 +289,7 @@ export function FormView({ onSubmit, isPending, projects, defaultProjectId }: {
                   </FormControl>
                   <SelectContent>
                     <SelectItem value="__none__">Não informar</SelectItem>
-                    {GENRE_ENUM_VALUES.map((g) => (
+                    {GENRE_DROPDOWN_OPTIONS.map((g) => (
                       <SelectItem key={g} value={g}>{g}</SelectItem>
                     ))}
                   </SelectContent>
