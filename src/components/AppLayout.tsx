@@ -107,7 +107,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   ];
 
   // Drawer "Mais" — ordem fixa pela jornada do artista (ver JOURNEY_ORDER).
-  const drawerPool = [gestaoItems[2], gestaoItems[3], gestaoItems[4], gestaoItems[5]];
+  const drawerPool = [gestaoItems[2], gestaoItems[3], gestaoItems[4]].filter(Boolean);
   const toolDrawerItems = JOURNEY_ORDER
     .map((path) => drawerPool.find((it) => it.path === path))
     .filter((it): it is NonNullable<typeof it> => Boolean(it));
