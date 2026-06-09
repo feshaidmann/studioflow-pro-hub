@@ -289,6 +289,7 @@ export default function Admin() {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
             { label: "Marketplace", sub: "Curadoria de profissionais", icon: Store, to: "/admin/marketplace", color: "text-primary" },
+            { label: "Carreira", sub: "Editais, palcos e descobertos", icon: FileWarning, to: "/admin/carreira", color: "text-amber-500" },
             { label: "Reference Tracks", sub: "Gerenciar faixas referência", icon: Music, to: "/admin/reference-tracks", color: "text-blue-400" },
             { label: "Genre Import", sub: "Importar gêneros musicais", icon: Tag, to: "/admin/genre-import", color: "text-success" },
             { label: "Search Metrics", sub: "Métricas de busca", icon: Search, to: "/admin/oportunidades-search", color: "text-warning" },
