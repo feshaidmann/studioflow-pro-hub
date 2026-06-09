@@ -450,6 +450,44 @@ export default function AdminCarreira() {
                 : "Atenção: editais são per-usuário; sua edição altera apenas este registro."}
             </SheetDescription>
           </SheetHeader>
+          {editing && isCreating && editKind === "edital" && (
+            <div className="mt-4 p-3 border rounded-lg bg-muted/30 space-y-2">
+              <div className="flex items-center gap-2 text-xs font-semibold">
+                <Sparkles className="h-3.5 w-3.5 text-primary" /> Analisar com IA (opcional)
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                Cole o texto do edital ou envie um arquivo (PDF/DOC/DOCX/TXT até 10 MB). A IA preencherá resumo, valor, público-alvo e prazo.
+              </p>
+              <Textarea
+                rows={4}
+                placeholder="Cole aqui o texto integral do edital..."
+                value={aiText}
+                onChange={(e) => setAiText(e.target.value)}
+                disabled={aiBusy}
+              />
+              <div className="flex flex-wrap items-center gap-2">
+                <Button size="sm" onClick={() => analyzeWithAI()} disabled={aiBusy} className="gap-2">
+                  <Sparkles className="h-3.5 w-3.5" /> {aiBusy ? "Analisando..." : "Analisar texto"}
+                </Button>
+                <label className="inline-flex">
+                  <input
+                    type="file"
+                    accept=".pdf,.doc,.docx,.txt,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"
+                    className="hidden"
+                    disabled={aiBusy}
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      e.target.value = "";
+                      if (f) analyzeWithAI(f);
+                    }}
+                  />
+                  <Button size="sm" variant="outline" disabled={aiBusy} asChild>
+                    <span>Enviar arquivo</span>
+                  </Button>
+                </label>
+              </div>
+            </div>
+          )}
           {editing && (
             <div className="space-y-3 mt-4">
               <Field label={editKind === "edital" ? "Título *" : "Nome *"} value={(editing as any)[editKind === "edital" ? "titulo" : "nome"]} onChange={(v) => setEditing({ ...(editing as any), [editKind === "edital" ? "titulo" : "nome"]: v })} />
