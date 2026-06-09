@@ -85,11 +85,24 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
 
   const updateProfile = async (updates: Partial<Omit<Profile, "id" | "created_at">>) => {
     if (!user) return;
-    // Optimistic update antes do upsert para UX imediata
-    setProfile((prev) => prev ? { ...prev, ...updates } : null);
-    await supabase
+    // Optimistic update — se não havia profile carregado (race com o trigger
+    // handle_new_user em signups recentes), cria um esqueleto local com os
+    // updates para evitar que needsProfileSetup permaneça true após o upsert
+    // e cause loop de onboarding ao navegar de volta.
+    setProfile((prev) => {
+      if (prev) return { ...prev, ...updates };
+      return { id: user.id, ...(updates as Partial<Profile>) } as Profile;
+    });
+    const { error } = await supabase
       .from("profiles")
       .upsert({ id: user.id, ...updates });
+    if (error) {
+      console.error("[ProfileContext] upsert failed", error);
+      throw error;
+    }
+    // Refetch para que o estado local reflita a verdade do banco e fecha o ciclo
+    // do onboarding (sem isso, um erro RLS silencioso devolveria o usuário ao /onboarding).
+    await fetchProfile();
   };
 
   const userType: UserType = profile?.user_type ?? "artist";
