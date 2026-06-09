@@ -66,47 +66,92 @@ const JAZZ_LABELS = ["Jazz", "Jazz/Swing"];
 const FOLK_LABELS = ["Folk", "Folk Rock"];
 
 // ───────────────────────────── Mapa ──────────────────────────────
-// Contagens espelham o catálogo atual. Se o catálogo crescer ≥10% num
-// gênero, regenerar via RPC public.get_genre_taxonomy().
-export const GENRE_MAP: Record<string, GenreEntry> = {
-  // ── Strong (massa ≥ 300) ──────────────────────────────────────
-  "Bossa Nova": { catalogLabels: ["Bossa Nova"], root: "Bossa Nova", rootLabels: ["Bossa Nova", "MPB Contemporânea"], count: 11519, rootCount: 18304, level: 'strong' },
-  "Samba": { catalogLabels: ["Samba"], root: "Samba", rootLabels: SAMBA_LABELS, count: 8206, rootCount: 8241, level: 'strong' },
-  "MPB": { catalogLabels: MPB_LABELS, root: "MPB", rootLabels: MPB_LABELS, count: 6791, rootCount: 6791, level: 'strong' },
-  "Rock": { catalogLabels: ROCK_LABELS, root: "Rock", rootLabels: ROCK_LABELS, count: 4158, rootCount: 4158, level: 'strong' },
-  "Reggae": { catalogLabels: REGGAE_LABELS, root: "Reggae", rootLabels: REGGAE_LABELS, count: 1049, rootCount: 1049, level: 'strong' },
-  "R&B/Soul": { catalogLabels: RB_SOUL_LABELS, root: "R&B/Soul", rootLabels: RB_SOUL_LABELS, count: 734, rootCount: 734, level: 'strong' },
-  "Blues": { catalogLabels: ["Blues"], root: "Blues", rootLabels: ["Blues"], count: 578, rootCount: 578, level: 'strong' },
-  "Hip-Hop": { catalogLabels: HIP_HOP_LABELS, root: "Hip-Hop", rootLabels: HIP_HOP_LABELS, count: 478, rootCount: 478, level: 'strong' },
-  "Jazz": { catalogLabels: JAZZ_LABELS, root: "Jazz", rootLabels: JAZZ_LABELS, count: 401, rootCount: 401, level: 'strong' },
-  "Folk": { catalogLabels: FOLK_LABELS, root: "Folk", rootLabels: FOLK_LABELS, count: 2712, rootCount: 2712, level: 'strong' },
+// As contagens (`count` / `rootCount`) e o `level` são DERIVADOS em runtime
+// a partir de `GENERATED_COUNTS` (snapshot real do catálogo via RPC).
+// Para regenerar o snapshot rode: `bun scripts/regenerate-genre-map.ts`.
+import { GENERATED_COUNTS } from "./genre-counts.generated.ts";
 
-  // ── Usable (50 ≤ massa < 300) ─────────────────────────────────
-  "Sertanejo": { catalogLabels: ["Sertanejo Raiz"], root: "Sertanejo", rootLabels: ["Sertanejo Raiz"], count: 164, rootCount: 164, level: 'usable', displayNote: "amostra de 164 faixas (somente Sertanejo Raiz)" },
-  "Eletrônico": { catalogLabels: ELETRO_LABELS, root: "Eletrônico", rootLabels: ELETRO_LABELS, count: 191, rootCount: 191, level: 'usable' },
-  "Metal": { catalogLabels: ["Heavy Metal"], root: "Rock", rootLabels: ROCK_LABELS, count: 129, rootCount: 4158, level: 'usable' },
-  "Pop": { catalogLabels: ["Pop"], root: "Pop", rootLabels: ["Pop"], count: 61, rootCount: 61, level: 'usable', displayNote: "amostra pequena (61 faixas) — pool Pop é raso no catálogo" },
-  "Country": { catalogLabels: ["Country"], root: "Country", rootLabels: ["Country"], count: 60, rootCount: 60, level: 'usable' },
+interface GenreDefinition {
+  catalogLabels: string[];
+  root: string;
+  rootLabels: string[];
+  /** força um nível específico ignorando os thresholds (usar com parcimônia). */
+  forceLevel?: GenreLevel;
+  displayNote?: string;
+}
 
-  // ── Weak (massa < 50 mas existe) ──────────────────────────────
-  "Pagode": { catalogLabels: ["Pagode", "Samba"], root: "Samba", rootLabels: SAMBA_LABELS, count: 8241, rootCount: 8241, level: 'strong', displayNote: "Pagode específico tem 35 faixas — comparado contra pool Samba" },
-  "Funk": { catalogLabels: FUNK_LABELS, root: "Funk", rootLabels: FUNK_LABELS, count: 26, rootCount: 26, level: 'weak', displayNote: "amostra muito pequena (26 faixas) — interpretar com cautela" },
-  "Punk": { catalogLabels: ["Punk"], root: "Rock", rootLabels: ROCK_LABELS, count: 20, rootCount: 4158, level: 'usable', displayNote: "comparado contra pool Rock" },
+const DEFINITIONS: Record<string, GenreDefinition> = {
+  // ── Pools principais ─────────────────────────────────────────
+  "Bossa Nova": { catalogLabels: ["Bossa Nova"], root: "Bossa Nova", rootLabels: ["Bossa Nova", "MPB Contemporânea"] },
+  "Samba": { catalogLabels: ["Samba"], root: "Samba", rootLabels: SAMBA_LABELS },
+  "MPB": { catalogLabels: MPB_LABELS, root: "MPB", rootLabels: MPB_LABELS },
+  "Rock": { catalogLabels: ROCK_LABELS, root: "Rock", rootLabels: ROCK_LABELS },
+  "Reggae": { catalogLabels: REGGAE_LABELS, root: "Reggae", rootLabels: REGGAE_LABELS },
+  "R&B/Soul": { catalogLabels: RB_SOUL_LABELS, root: "R&B/Soul", rootLabels: RB_SOUL_LABELS },
+  "Blues": { catalogLabels: ["Blues"], root: "Blues", rootLabels: ["Blues"] },
+  "Hip-Hop": { catalogLabels: HIP_HOP_LABELS, root: "Hip-Hop", rootLabels: HIP_HOP_LABELS },
+  "Jazz": { catalogLabels: JAZZ_LABELS, root: "Jazz", rootLabels: JAZZ_LABELS },
+  "Folk": { catalogLabels: FOLK_LABELS, root: "Folk", rootLabels: FOLK_LABELS },
 
-  // ── Aliases e variações comuns ────────────────────────────────
-  "Soul": { catalogLabels: ["Soul", "Soul/Funk"], root: "R&B/Soul", rootLabels: RB_SOUL_LABELS, count: 699, rootCount: 734, level: 'strong' },
-  "Rock Brasileiro": { catalogLabels: ["Rock Alternativo"], root: "Rock", rootLabels: ROCK_LABELS, count: 226, rootCount: 4158, level: 'usable', displayNote: "BR específico ausente — usando pool Rock Alternativo" },
-  "Indie/Alternativo": { catalogLabels: ["Rock Alternativo"], root: "Rock", rootLabels: ROCK_LABELS, count: 226, rootCount: 4158, level: 'usable' },
-  "Pop Nacional": { catalogLabels: ["Pop"], root: "Pop", rootLabels: ["Pop", "MPB Contemporânea"], count: 61, rootCount: 6846, level: 'proxy', displayNote: "Pop brasileiro ausente — comparando com MPB Contemporânea" },
-  "Instrumental": { catalogLabels: ["Ambient", "Jazz", "Folk Rock"], root: "Eletrônico", rootLabels: [...ELETRO_LABELS, ...JAZZ_LABELS, ...FOLK_LABELS], count: 3164, rootCount: 3164, level: 'strong', displayNote: "instrumental puro ausente — comparando com Ambient + Jazz + Folk Rock" },
+  // ── Médios ───────────────────────────────────────────────────
+  "Sertanejo": { catalogLabels: ["Sertanejo Raiz"], root: "Sertanejo", rootLabels: ["Sertanejo Raiz"], displayNote: "somente Sertanejo Raiz no catálogo" },
+  "Eletrônico": { catalogLabels: ELETRO_LABELS, root: "Eletrônico", rootLabels: ELETRO_LABELS },
+  "Metal": { catalogLabels: ["Heavy Metal"], root: "Rock", rootLabels: ROCK_LABELS },
+  "Pop": { catalogLabels: ["Pop"], root: "Pop", rootLabels: ["Pop"], displayNote: "pool Pop é raso no catálogo" },
+  "Country": { catalogLabels: ["Country"], root: "Country", rootLabels: ["Country"] },
 
-  // ── Ausentes de verdade no catálogo ───────────────────────────
-  "Forró": { catalogLabels: [], root: "", rootLabels: [], count: 0, rootCount: 0, level: 'absent', displayNote: "Forró ausente no catálogo — posicionamento desabilitado" },
-  "Axé": { catalogLabels: [], root: "", rootLabels: [], count: 0, rootCount: 0, level: 'absent', displayNote: "Axé ausente no catálogo — posicionamento desabilitado" },
-  "Gospel": { catalogLabels: [], root: "", rootLabels: [], count: 0, rootCount: 0, level: 'absent', displayNote: "Gospel ausente no catálogo — posicionamento desabilitado" },
-  "Clássico": { catalogLabels: [], root: "", rootLabels: [], count: 0, rootCount: 0, level: 'absent', displayNote: "Clássico ausente no catálogo — posicionamento desabilitado" },
-  "Outros": { catalogLabels: [], root: "", rootLabels: [], count: 0, rootCount: 0, level: 'absent', displayNote: "gênero amplo demais — Módulo 02 desabilitado" },
+  // ── Específicos com pool herdado ─────────────────────────────
+  "Pagode": { catalogLabels: ["Pagode", "Samba"], root: "Samba", rootLabels: SAMBA_LABELS, displayNote: "Pagode específico tem poucas faixas — comparado contra pool Samba" },
+  "Funk": { catalogLabels: FUNK_LABELS, root: "Funk", rootLabels: FUNK_LABELS, displayNote: "amostra muito pequena — interpretar com cautela" },
+  "Punk": { catalogLabels: ["Punk"], root: "Rock", rootLabels: ROCK_LABELS, displayNote: "comparado contra pool Rock" },
+
+  // ── Aliases e variações comuns ───────────────────────────────
+  "Soul": { catalogLabels: ["Soul", "Soul/Funk"], root: "R&B/Soul", rootLabels: RB_SOUL_LABELS },
+  "Rock Brasileiro": { catalogLabels: ["Rock Alternativo"], root: "Rock", rootLabels: ROCK_LABELS, displayNote: "BR específico ausente — usando pool Rock Alternativo" },
+  "Indie/Alternativo": { catalogLabels: ["Rock Alternativo"], root: "Rock", rootLabels: ROCK_LABELS },
+  "Pop Nacional": { catalogLabels: ["Pop"], root: "Pop", rootLabels: ["Pop", "MPB Contemporânea"], forceLevel: 'proxy', displayNote: "Pop brasileiro ausente — comparando com MPB Contemporânea" },
+  "Instrumental": { catalogLabels: ["Ambient", "Jazz", "Folk Rock"], root: "Eletrônico", rootLabels: [...ELETRO_LABELS, ...JAZZ_LABELS, ...FOLK_LABELS], displayNote: "instrumental puro ausente — comparando com Ambient + Jazz + Folk Rock" },
+
+  // ── Ausentes de verdade no catálogo ──────────────────────────
+  "Forró": { catalogLabels: [], root: "", rootLabels: [], forceLevel: 'absent', displayNote: "Forró ausente no catálogo — posicionamento desabilitado" },
+  "Axé": { catalogLabels: [], root: "", rootLabels: [], forceLevel: 'absent', displayNote: "Axé ausente no catálogo — posicionamento desabilitado" },
+  "Gospel": { catalogLabels: [], root: "", rootLabels: [], forceLevel: 'absent', displayNote: "Gospel ausente no catálogo — posicionamento desabilitado" },
+  "Clássico": { catalogLabels: [], root: "", rootLabels: [], forceLevel: 'absent', displayNote: "Clássico ausente no catálogo — posicionamento desabilitado" },
+  "Outros": { catalogLabels: [], root: "", rootLabels: [], forceLevel: 'absent', displayNote: "gênero amplo demais — Módulo 02 desabilitado" },
 };
+
+function countLabels(labels: string[]): number {
+  let total = 0;
+  for (const lbl of labels) total += GENERATED_COUNTS[lbl] ?? 0;
+  return total;
+}
+
+function deriveLevel(count: number, force?: GenreLevel): GenreLevel {
+  if (force) return force;
+  if (count >= THRESHOLD_STRONG) return 'strong';
+  if (count >= THRESHOLD_USABLE) return 'usable';
+  if (count > 0) return 'weak';
+  return 'absent';
+}
+
+export const GENRE_MAP: Record<string, GenreEntry> = Object.fromEntries(
+  Object.entries(DEFINITIONS).map(([key, def]) => {
+    const count = countLabels(def.catalogLabels);
+    const rootCount = countLabels(def.rootLabels);
+    const level = deriveLevel(count > 0 ? count : rootCount, def.forceLevel);
+    const note = def.displayNote
+      ? (count > 0 ? `${def.displayNote} (${count} faixas)` : def.displayNote)
+      : undefined;
+    return [key, {
+      catalogLabels: def.catalogLabels,
+      root: def.root,
+      rootLabels: def.rootLabels,
+      count, rootCount, level,
+      displayNote: note,
+    } satisfies GenreEntry];
+  }),
+);
+
 
 // ────────────────────── Normalização de tokens ───────────────────
 // Espelha public.genre_canonical() em SQL — quando o usuário digitar
