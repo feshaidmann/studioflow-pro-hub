@@ -292,7 +292,10 @@ export default function AdminCarreira() {
     setAiBusy(true);
     const t = toast.loading("Analisando com IA...");
     try {
-      let payload: any = { edital_title: (editing as any)?.titulo || undefined };
+      let payload: any = {
+        edital_title: (editing as any)?.titulo || undefined,
+        dry_run: !isCreating, // ao editar, não persiste; abre diff
+      };
       if (file) {
         const base64 = await new Promise<string>((resolve, reject) => {
           const reader = new FileReader();
@@ -310,8 +313,34 @@ export default function AdminCarreira() {
       const { data, error } = await supabase.functions.invoke("analyze-edital", { body: payload });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-      applyAnalysisToForm(data?.analise);
-      toast.success(data?.warning || "Campos preenchidos pela IA", { id: t });
+
+      const analise = data?.analise;
+      // Normaliza prazo
+      let prazoIso: string | null = null;
+      const firstPrazo = Array.isArray(analise?.prazos) ? analise.prazos[0] : null;
+      const rawData: string | undefined = firstPrazo?.data;
+      if (rawData && /^\d{2}\/\d{2}\/\d{4}$/.test(rawData)) {
+        const [d, m, y] = rawData.split("/");
+        prazoIso = `${y}-${m}-${d}`;
+      }
+      const aiFields = {
+        resumo: analise?.resumo ?? null,
+        valor: analise?.valor ?? null,
+        publico_alvo: analise?.publico_alvo ?? null,
+        prazo: prazoIso,
+        documentos_resumo: Array.isArray(analise?.documentos)
+          ? analise.documentos.map((d: any) => typeof d === "string" ? d : d?.nome).filter(Boolean).join(", ")
+          : null,
+      };
+
+      if (isCreating) {
+        applyAnalysisToForm(analise);
+        toast.success(data?.warning || "Campos preenchidos pela IA", { id: t });
+      } else {
+        setAiSuggestion(aiFields);
+        setDiffOpen(true);
+        toast.success("Revise as sugestões", { id: t });
+      }
     } catch (e: any) {
       toast.error(e?.message ?? "Falha ao analisar", { id: t });
     } finally {
