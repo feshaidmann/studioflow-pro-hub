@@ -593,104 +593,95 @@ export default function PalcoProposta() {
               />
             </div>
 
-            <div className="flex justify-end">
-              <Button size="sm" variant="ghost" onClick={() => setStep("follow")}>
-                Próximo: Acompanhamento →
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {step === "follow" && (
-        <Card>
-          <CardContent className="p-4 space-y-4">
-            <div className="flex items-center justify-between flex-wrap gap-2">
-              <div>
-                <h2 className="font-semibold inline-flex items-center gap-1.5"><ClipboardList className="h-4 w-4" /> Acompanhamento</h2>
-                <p className="text-xs text-muted-foreground">Registre cada interação. Sem isso, ninguém lembra de fazer follow-up.</p>
-              </div>
-              {daysSinceContact !== null && daysSinceContact >= 7 && application.status !== "resultado" && (
-                <Badge variant="outline" className="bg-warning/15 text-warning-foreground border-warning/40">
-                  <AlertCircle className="h-3 w-3 mr-1" /> Hora de fazer follow-up ({daysSinceContact}d)
-                </Badge>
-              )}
-            </div>
-
-            {/* Quick status buttons */}
-            <div className="flex flex-wrap gap-1.5">
-              {(["interesse", "preparando", "inscrito", "resultado"] as ApplicationStatus[]).map((s) => (
-                <Button
-                  key={s}
-                  size="sm"
-                  variant={application.status === s ? "default" : "outline"}
-                  onClick={() => changeStatus(s)}
-                >
-                  {APPLICATION_STATUS_LABELS[s]}
-                </Button>
-              ))}
-            </div>
-
-            {/* Quick win — quando o palco é confirmado */}
-            {application.status === "resultado" && (
-              <div className="rounded-lg border border-success/30 bg-success/5 p-3 space-y-2">
-                <div className="text-sm font-medium inline-flex items-center gap-1">
-                  <CheckCircle2 className="h-4 w-4 text-success" /> Palco confirmado?
+            {/* ----- Follow-up section ----- */}
+            <div className="border-t border-border pt-4 mt-2 space-y-4">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div>
+                  <h3 className="font-semibold inline-flex items-center gap-1.5"><ClipboardList className="h-4 w-4" /> Acompanhamento</h3>
+                  <p className="text-xs text-muted-foreground">Registre cada interação para não perder o follow-up.</p>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  <Button size="sm" variant="outline" onClick={() => navigate("/agenda")}>
-                    <CalendarIcon className="h-3.5 w-3.5 mr-1" /> Criar evento na Agenda
-                  </Button>
-                  <Button size="sm" variant="outline" onClick={() => navigate("/finance")}>
-                    <DollarSign className="h-3.5 w-3.5 mr-1" /> Registrar cachet
-                  </Button>
-                </div>
+                {daysSinceContact !== null && daysSinceContact >= 7 && application.status !== "resultado" && (
+                  <Badge variant="outline" className="bg-warning/15 text-warning-foreground border-warning/40">
+                    <AlertCircle className="h-3 w-3 mr-1" /> Hora de fazer follow-up ({daysSinceContact}d)
+                  </Badge>
+                )}
               </div>
-            )}
 
-            {/* Add log */}
-            <div className="border border-border rounded-lg p-3 space-y-2">
-              <Label className="text-xs">Nova interação / nota</Label>
-              <div className="flex gap-2">
-                <Select value={newLogChannel} onValueChange={setNewLogChannel}>
-                  <SelectTrigger className="w-32 h-8 text-xs"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="note">Nota</SelectItem>
-                    {CHANNELS.map((c) => <SelectItem key={c.v} value={c.v}>{c.label}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-                <Input
-                  value={newLogSummary}
-                  onChange={(e) => setNewLogSummary(e.target.value)}
-                  placeholder='Ex.: "Curador respondeu pedindo demo"'
-                  className="h-8 text-xs"
-                />
-                <Button size="sm" onClick={addOutreachLog} disabled={loggingOutreach || !newLogSummary.trim()}>
-                  {loggingOutreach ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
-                </Button>
+              {/* Quick status buttons */}
+              <div className="flex flex-wrap gap-1.5">
+                {(["interesse", "preparando", "inscrito", "resultado"] as ApplicationStatus[]).map((s) => (
+                  <Button
+                    key={s}
+                    size="sm"
+                    variant={application.status === s ? "default" : "outline"}
+                    onClick={() => changeStatus(s)}
+                  >
+                    {APPLICATION_STATUS_LABELS[s]}
+                  </Button>
+                ))}
               </div>
-            </div>
 
-            {/* Timeline */}
-            <div className="space-y-2">
-              {outreach.length === 0 ? (
-                <p className="text-xs text-muted-foreground text-center py-4">
-                  Sem interações registradas ainda. Marque "enviado" na etapa de contato ou adicione uma nota acima.
-                </p>
-              ) : (
-                outreach.map((log) => (
-                  <div key={log.id} className="flex gap-2 text-xs border-l-2 border-primary/30 pl-3 py-1">
-                    <div className="flex-1">
-                      <div className="text-muted-foreground">
-                        {new Date(log.created_at).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
-                        {" · "}
-                        <span className="capitalize">{log.channel}</span>
-                      </div>
-                      <div>{log.summary}</div>
-                    </div>
+              {/* Quick win — quando o palco é confirmado */}
+              {application.status === "resultado" && (
+                <div className="rounded-lg border border-success/30 bg-success/5 p-3 space-y-2">
+                  <div className="text-sm font-medium inline-flex items-center gap-1">
+                    <CheckCircle2 className="h-4 w-4 text-success" /> Palco confirmado?
                   </div>
-                ))
+                  <div className="flex flex-wrap gap-2">
+                    <Button size="sm" variant="outline" onClick={() => navigate("/agenda")}>
+                      <CalendarIcon className="h-3.5 w-3.5 mr-1" /> Criar evento na Agenda
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => navigate("/finance")}>
+                      <DollarSign className="h-3.5 w-3.5 mr-1" /> Registrar cachet
+                    </Button>
+                  </div>
+                </div>
               )}
+
+              {/* Add log */}
+              <div className="border border-border rounded-lg p-3 space-y-2">
+                <Label className="text-xs">Nova interação / nota</Label>
+                <div className="flex gap-2">
+                  <Select value={newLogChannel} onValueChange={setNewLogChannel}>
+                    <SelectTrigger className="w-32 h-8 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="note">Nota</SelectItem>
+                      {CHANNELS.map((c) => <SelectItem key={c.v} value={c.v}>{c.label}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    value={newLogSummary}
+                    onChange={(e) => setNewLogSummary(e.target.value)}
+                    placeholder='Ex.: "Curador respondeu pedindo demo"'
+                    className="h-8 text-xs"
+                  />
+                  <Button size="sm" onClick={addOutreachLog} disabled={loggingOutreach || !newLogSummary.trim()}>
+                    {loggingOutreach ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
+                  </Button>
+                </div>
+              </div>
+
+              {/* Timeline */}
+              <div className="space-y-2">
+                {outreach.length === 0 ? (
+                  <p className="text-xs text-muted-foreground text-center py-4">
+                    Sem interações registradas ainda. Marque "enviado" acima ou adicione uma nota.
+                  </p>
+                ) : (
+                  outreach.map((log) => (
+                    <div key={log.id} className="flex gap-2 text-xs border-l-2 border-primary/30 pl-3 py-1">
+                      <div className="flex-1">
+                        <div className="text-muted-foreground">
+                          {new Date(log.created_at).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                          {" · "}
+                          <span className="capitalize">{log.channel}</span>
+                        </div>
+                        <div>{log.summary}</div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
           </CardContent>
         </Card>
