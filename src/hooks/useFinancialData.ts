@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Transaction } from "@/data/mockData";
-import { monthKey, pctChange } from "@/lib/financeUtils";
+import { monthKey, pctChange, formatCategoryLabel } from "@/lib/financeUtils";
 
 export interface PendingFee {
   name: string;
