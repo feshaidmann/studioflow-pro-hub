@@ -44,3 +44,4 @@
 - [Studio Module Deprecated](mem://funcionalidades/modulo-de-estudio-depreciado) — Rationale for removing /studio and keeping MasterAnalyzerModal
 - [Contextual AI](mem://funcionalidades/ia-contextual-modulos) — ProjectAISheet reusable component + project-ai-assistant edge function with project/finance/suggestions modes
 - [Marketplace de Profissionais](mem://funcionalidades/marketplace-de-profissionais) — Vitrine + briefing/orçamento contextual; usuários opt-in + contatos opt-in + curados admin; quota 10 req/7d
+- [Corpus de análises de editais](mem://funcionalidades/corpus-de-analises-de-editais) — Tabela edital_analyses_corpus grava cada análise (sem carta personalizada) para refino futuro da base; admin-only
