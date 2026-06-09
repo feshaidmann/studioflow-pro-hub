@@ -97,7 +97,7 @@ export default function FinancialTracker() {
   const pendingFees = usePendingFees(user?.id, transactions);
   const kpis = useFinancialKpis(transactions);
   const evolutionData = useEvolutionData(transactions);
-  const { categoryIncome, categoryExpense } = useCategoryData(transactions, filterMonth, kpis.currentMonth);
+  const { categoryIncome, categoryExpense } = useCategoryData(transactions, reportMonth, kpis.currentMonth);
   const cashflowData = useCashFlowData(transactions, months);
 
   // Helpers
