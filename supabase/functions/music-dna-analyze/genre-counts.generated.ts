@@ -2,13 +2,12 @@
 // genre-counts.generated.ts — AUTO-GERADO. NÃO EDITAR À MÃO.
 // ----------------------------------------------------------------------------
 // Origem: RPC `public.get_genre_taxonomy()` sobre `music_reference_tracks`.
-// Para regenerar: `bun scripts/regenerate-genre-map.ts` (precisa PG* envs
-// ou DATABASE_URL apontando para o banco de produção).
+// Para regenerar: `bun scripts/regenerate-genre-map.ts`.
 // ============================================================================
 
-export const GENERATED_AT = "2026-06-09T12:30:00Z";
+export const GENERATED_AT = "2026-06-09T12:23:24.831Z";
 
-/** Contagens reais de faixas ATIVAS (quarentined=false) por label exato em
+/** Contagens reais de faixas ATIVAS (quarantined=false) por label exato em
  *  `music_reference_tracks.genre`. As chaves são as strings literais do banco. */
 export const GENERATED_COUNTS: Record<string, number> = {
   "Bossa Nova": 11519,
