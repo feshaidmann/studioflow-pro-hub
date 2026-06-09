@@ -218,9 +218,8 @@ Deno.serve(async (req) => {
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error("import-spotify-catalog error:", msg);
-    return new Response(JSON.stringify({ error: msg }), {
+    console.error("import-spotify-catalog error:", err);
+    return new Response(JSON.stringify({ error: "Erro interno. Tente novamente." }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

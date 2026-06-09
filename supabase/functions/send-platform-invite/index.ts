@@ -147,7 +147,7 @@ Deno.serve(async (req) => {
     if (!emailRes.ok) {
       const errBody = await emailRes.text();
       console.error("Resend error:", errBody);
-      return new Response(JSON.stringify({ error: "Failed to send email", detail: errBody }), {
+      return new Response(JSON.stringify({ error: "Failed to send email" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -161,7 +161,7 @@ Deno.serve(async (req) => {
     });
   } catch (err) {
     console.error("send-platform-invite error:", err);
-    return new Response(JSON.stringify({ error: String(err) }), {
+    return new Response(JSON.stringify({ error: "Erro interno. Tente novamente." }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
