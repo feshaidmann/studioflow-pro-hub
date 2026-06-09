@@ -305,28 +305,29 @@ export default function Admin() {
             color="text-blue-400"
           />
           <StatCard
-            label="Logins (7 dias)"
-            value={loading ? <Spinner /> : stats?.engagement?.loginsLast7Days ?? 0}
+            label="Novos cadastros (7d)"
+            value={loading ? <Spinner /> : stats?.engagement?.newSignupsLast7Days ?? 0}
             icon={LogIn}
             color="text-warning"
-            sub="Usuários que fizeram login recentemente"
+            sub={loading ? "" : `${stats?.engagement?.loginsLast7Days ?? 0} logins no período`}
           />
           <Card className="border-border bg-card">
             <CardContent className="p-4 flex items-start gap-3">
               <TrendingUp className="h-8 w-8 shrink-0 mt-0.5 text-success" />
               <div>
                 <p className="text-2xl font-bold text-foreground leading-none">
-                  {loading ? <Spinner /> : `${stats?.engagement?.retentionRate ?? 0}%`}
+                  {loading ? <Spinner /> : `${stats?.engagement?.activeRate ?? 0}%`}
                 </p>
-                <p className="text-xs text-muted-foreground mt-0.5">Retenção semanal</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Ativos 7d / Total</p>
                 <p className="text-[10px] text-muted-foreground/60 mt-0.5">
                   {loading
                     ? "—"
-                    : `${stats?.engagement?.activeUsersLast7Days ?? 0} de ${p?.totalUsers ?? 0} ativos`}
+                    : `${stats?.engagement?.activeUsersLast7Days ?? 0} de ${p?.totalUsers ?? 0} usuários`}
                 </p>
               </div>
             </CardContent>
           </Card>
+
         </div>
       </section>
 
