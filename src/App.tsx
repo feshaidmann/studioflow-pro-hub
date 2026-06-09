@@ -46,6 +46,7 @@ const PublicProfile = lazy(() => import("@/pages/PublicProfile"));
 const Legal = lazy(() => import("@/pages/Legal"));
 const MusicDNA = lazy(() => import("@/pages/MusicDNA"));
 const Carreira = lazy(() => import("@/pages/Carreira"));
+const EditalDocumentos = lazy(() => import("@/pages/EditalDocumentos"));
 const EditalInscricao = lazy(() => import("@/pages/EditalInscricao"));
 const PalcoProposta = lazy(() => import("@/pages/PalcoProposta"));
 const VisualDirection = lazy(() => import("@/pages/VisualDirection"));
@@ -120,6 +121,7 @@ const AppRoutes = () => (
           <Route path="/upgrade" element={<UpgradeScreen />} />
           <Route path="/music-dna" element={<MusicDNA />} />
           <Route path="/carreira" element={<Carreira />} />
+          <Route path="/carreira/documentos" element={<EditalDocumentos />} />
           {/* Redirects legados — mantidos apenas como compat. de URLs antigas. */}
           {/* A rota mais específica /editais/inscricao/:id vem ANTES do catch-all. */}
           <Route path="/editais/inscricao/:id" element={<EditalInscricao />} />
