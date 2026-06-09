@@ -177,12 +177,51 @@ export default function AdminCarreira() {
   async function saveEdit() {
     if (!editing) return;
     const table = editKind === "edital" ? "editais" : "palcos_curados";
-    const { id, ...patch } = editing as any;
-    const { error } = await supabase.from(table).update(patch).eq("id", id);
-    if (error) { toast.error(error.message); return; }
-    toast.success("Salvo");
+    if (isCreating) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { toast.error("Sessão expirada"); return; }
+      const { id: _omit, ...rest } = editing as any;
+      const payload: any = { ...rest };
+      if (editKind === "edital") {
+        if (!payload.titulo?.trim()) { toast.error("Título é obrigatório"); return; }
+        payload.user_id = user.id;
+        payload.tipo = payload.tipo || "fomento";
+        payload.status = payload.status || "Indefinido";
+      } else {
+        if (!payload.nome?.trim() || !payload.organizador?.trim() || !payload.tipo_palco?.trim()) {
+          toast.error("Nome, organizador e tipo de palco são obrigatórios"); return;
+        }
+      }
+      const { error } = await supabase.from(table).insert(payload);
+      if (error) { toast.error(error.message); return; }
+      toast.success("Criado");
+    } else {
+      const { id, ...patch } = editing as any;
+      const { error } = await supabase.from(table).update(patch).eq("id", id);
+      if (error) { toast.error(error.message); return; }
+      toast.success("Salvo");
+    }
     setEditing(null);
+    setIsCreating(false);
     await fetchAll();
+  }
+
+  function openCreate(kind: "edital" | "palco") {
+    setEditKind(kind);
+    setIsCreating(true);
+    if (kind === "edital") {
+      setEditing({
+        id: "", titulo: "", orgao: "", estado: "", tipo: "fomento",
+        link: "", link_status: "unknown", link_checked_at: null,
+        prazo: null, valor: "", resumo: "", status: "Indefinido",
+      } as Edital);
+    } else {
+      setEditing({
+        id: "", nome: "", organizador: "", estado: "", tipo_palco: "",
+        link: "", link_status: "unknown", link_checked_at: null,
+        prazo: null, ativo: true, resumo: "",
+      } as Palco);
+    }
   }
 
   async function dismissCorpus(id: string) {
