@@ -21,7 +21,7 @@ import ProjectAISheet from "@/components/project-hub/ProjectAISheet";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MobileStickyHeader } from "@/components/ui/mobile-sticky-header";
-import { monthKey, formatCurrency, parseLocalDate, formatCategoryLabel } from "@/lib/financeUtils";
+import { monthKey, parseLocalDate, formatCategoryLabel } from "@/lib/financeUtils";
 import {
   usePendingFees, useFinancialKpis, useEvolutionData,
   useCategoryData, useCashFlowData,
