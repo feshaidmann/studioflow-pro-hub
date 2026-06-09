@@ -104,7 +104,7 @@ export function ReferenceTrackIngestor({ onInserted }: { onInserted?: () => void
       key_name,
       mode,
       lufs_integrated: analysis.lufs_integrated ?? null,
-      dynamic_range_db: analysis.dynamic_range_lu ?? null,
+      dynamic_range_db: analysis.crest_factor_db ?? null,
       spectral_centroid: analysis.spectral_centroid_hz ?? null,
       spectral_rolloff: analysis.spectral_rolloff_hz ?? null,
       spectral_flatness: analysis.spectral_flatness ?? null,

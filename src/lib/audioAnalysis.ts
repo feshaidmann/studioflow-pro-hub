@@ -58,6 +58,8 @@ export interface RealAudioAnalysis {
   lufs_short_term: number;
   true_peak_dbtp: number;
   dynamic_range_lu: number;
+  /** Crest factor (sample peak dBFS − RMS dBFS). Métrica do catálogo de referência. */
+  crest_factor_db: number;
   bpm: number;
   key: string;
   duration_sec: number;
@@ -158,6 +160,28 @@ function computeRmsDbfs(mono: Float32Array): number {
   const rms = Math.sqrt(sum / mono.length);
   return rms > 0 ? 20 * Math.log10(rms) : -100;
 }
+
+/**
+ * Crest factor in dB = sample peak (dBFS) − RMS (dBFS).
+ * Esta é a métrica de "dynamic range" usada pelo catálogo de referência
+ * (importado do CSV Sonara como `alcance_dinamico_db`), distinta do
+ * `dynamic_range_lu` perceptual (P95−P10 do LUFS short-term).
+ * Clamp em [0, 40] dB para evitar outliers em sinais quase-silenciosos.
+ */
+export function computeCrestFactorDb(mono: Float32Array, rmsDbfs?: number): number {
+  let peak = 0;
+  for (let i = 0; i < mono.length; i++) {
+    const a = Math.abs(mono[i]);
+    if (a > peak) peak = a;
+  }
+  if (peak <= 0) return 0;
+  const peakDb = 20 * Math.log10(peak);
+  const rmsDb = rmsDbfs ?? computeRmsDbfs(mono);
+  const crest = peakDb - rmsDb;
+  if (!Number.isFinite(crest)) return 0;
+  return Math.max(0, Math.min(40, crest));
+}
+
 
 // ── K-weighting (ITU-R BS.1770 / EBU R128) ──────────────────────────────────
 // Dois estágios biquad: pre-filter (high-shelf ~1681Hz, +4dB) + RLB (HP ~38Hz).
@@ -1152,6 +1176,7 @@ export async function analyzeAudioFull(file: File): Promise<{
   const lufsIntegrated = lufs.integrated;
   const lufsShortTerm = lufs.shortTerm;
   const dynamicRange = computeDynamicRange(blockEnergies);
+  const crestFactorDb = computeCrestFactorDb(mono, rmsDb);
 
   // Spectral
   const spectral = computeSpectralMetrics(mono, sampleRate);
@@ -1179,6 +1204,7 @@ export async function analyzeAudioFull(file: File): Promise<{
     lufs_short_term: r(lufsShortTerm),
     true_peak_dbtp: r(truePeak),
     dynamic_range_lu: r(dynamicRange),
+    crest_factor_db: r(crestFactorDb),
     bpm,
     key,
     duration_sec: Math.round(duration * 10) / 10,

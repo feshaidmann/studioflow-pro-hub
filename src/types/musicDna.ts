@@ -138,7 +138,7 @@ export function musicDnaColumnsFromDiagnosis(diagnosis: DiagnosisResult) {
     duration_ms: sourceFeatures.duration_ms || features.duration_ms,
     time_signature: sourceFeatures.time_signature ?? features.time_signature,
     lufs_integrated: diagnosis.realAnalysis.lufs_integrated,
-    dynamic_range_db: diagnosis.realAnalysis.dynamic_range_lu,
+    dynamic_range_db: diagnosis.realAnalysis.crest_factor_db,
     fonte_analise: external?.fonte ?? "web_audio",
     
     deezer_id: external?.deezerId,

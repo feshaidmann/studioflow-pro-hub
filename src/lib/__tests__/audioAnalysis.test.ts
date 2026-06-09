@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   evaluateTruePeak,
+  computeCrestFactorDb,
   TRUE_PEAK_TARGET_DBTP,
   TRUE_PEAK_MAX_DBTP,
 } from "../audioAnalysis";
@@ -36,5 +37,38 @@ describe("evaluateTruePeak", () => {
 
   it("constants have correct relationship: target < max", () => {
     expect(TRUE_PEAK_TARGET_DBTP).toBeLessThan(TRUE_PEAK_MAX_DBTP);
+  });
+});
+
+describe("computeCrestFactorDb", () => {
+  it("returns ~3 dB for a full-cycle sine (peak − RMS = 20·log10(√2) ≈ 3.01)", () => {
+    const sr = 48000;
+    const freq = 440;
+    const n = sr;
+    const buf = new Float32Array(n);
+    for (let i = 0; i < n; i++) buf[i] = 0.5 * Math.sin((2 * Math.PI * freq * i) / sr);
+    const crest = computeCrestFactorDb(buf);
+    expect(crest).toBeGreaterThan(2.5);
+    expect(crest).toBeLessThan(3.5);
+  });
+
+  it("clamps to 40 dB for an extreme impulse signal", () => {
+    const buf = new Float32Array(10000);
+    buf[0] = 1;
+    const crest = computeCrestFactorDb(buf);
+    expect(crest).toBe(40);
+  });
+
+  it("returns 0 for silence", () => {
+    const buf = new Float32Array(1000);
+    expect(computeCrestFactorDb(buf)).toBe(0);
+  });
+
+  it("uses provided RMS when given", () => {
+    const buf = new Float32Array(1000);
+    for (let i = 0; i < buf.length; i++) buf[i] = 0.25;
+    const crest = computeCrestFactorDb(buf, -20);
+    expect(crest).toBeGreaterThan(7);
+    expect(crest).toBeLessThan(9);
   });
 });
