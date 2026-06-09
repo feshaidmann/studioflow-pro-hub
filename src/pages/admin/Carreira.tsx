@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Navigate, Link } from "react-router-dom";
 import {
   Shield, ArrowLeft, RefreshCw, Trash2, ExternalLink, Search,
-  AlertTriangle, CheckCircle2, HelpCircle, Eye, Edit3, Sparkles,
+  AlertTriangle, CheckCircle2, HelpCircle, Eye, Edit3, Sparkles, Plus,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
