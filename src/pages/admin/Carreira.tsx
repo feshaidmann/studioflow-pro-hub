@@ -87,21 +87,27 @@ function statusBadge(s: LinkStatus) {
 
 export default function AdminCarreira() {
   const { isAdmin, loading: adminLoading } = useAdminRole();
-  const [tab, setTab] = useState<"editais" | "palcos" | "descobertos">("editais");
+  const [tab, setTab] = useState<"editais" | "palcos" | "descobertos" | "fontes" | "reports">("editais");
 
   const [editais, setEditais] = useState<Edital[]>([]);
   const [palcos, setPalcos] = useState<Palco[]>([]);
   const [corpus, setCorpus] = useState<CorpusEntry[]>([]);
   const [loading, setLoading] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState<"all" | "ok" | "broken" | "unknown" | "no-link">("all");
+  const [healthFilter, setHealthFilter] = useState<HealthFilter>(null);
+  const [sortBy, setSortBy] = useState<"urgency" | "recent" | "deadline">("urgency");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [editing, setEditing] = useState<Edital | Palco | null>(null);
   const [editKind, setEditKind] = useState<"edital" | "palco">("edital");
   const [isCreating, setIsCreating] = useState(false);
   const [aiText, setAiText] = useState("");
   const [aiBusy, setAiBusy] = useState(false);
+  const [aiSuggestion, setAiSuggestion] = useState<any | null>(null);
+  const [diffOpen, setDiffOpen] = useState(false);
+  const [dedupOpen, setDedupOpen] = useState(false);
   const [viewCorpus, setViewCorpus] = useState<CorpusEntry | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<{ ids: string[]; kind: "edital" | "palco" } | null>(null);
 
@@ -109,14 +115,15 @@ export default function AdminCarreira() {
     setLoading(true);
     try {
       const [{ data: ed }, { data: pa }, { data: co }] = await Promise.all([
-        supabase.from("editais").select("id,titulo,orgao,estado,tipo,link,link_status,link_checked_at,prazo,valor,resumo,status").order("created_at", { ascending: false }),
-        supabase.from("palcos_curados").select("id,nome,organizador,estado,tipo_palco,link,link_status,link_checked_at,prazo,ativo,resumo").order("created_at", { ascending: false }),
+        supabase.from("editais").select("id,titulo,orgao,estado,tipo,link,link_status,link_checked_at,prazo,valor,resumo,status,created_at,publico_alvo,documentos_resumo").is("archived_at", null).order("created_at", { ascending: false }),
+        supabase.from("palcos_curados").select("id,nome,organizador,estado,tipo_palco,link,link_status,link_checked_at,prazo,ativo,resumo,created_at").is("archived_at", null).order("created_at", { ascending: false }),
         supabase.from("edital_analyses_corpus").select("id,edital_title,edital_id,resumo,valor,publico_alvo,documentos,prazos,source,created_at,reviewed_at,dismissed_at,input_excerpt").order("created_at", { ascending: false }).limit(200),
       ]);
       setEditais((ed as Edital[]) || []);
       setPalcos((pa as Palco[]) || []);
       setCorpus((co as CorpusEntry[]) || []);
       setSelected(new Set());
+      setRefreshKey((k) => k + 1);
     } catch (e) {
       console.error(e);
       toast.error("Erro ao carregar dados");
@@ -130,9 +137,9 @@ export default function AdminCarreira() {
   const currentList = tab === "editais" ? editais : tab === "palcos" ? palcos : [];
 
   const filtered = useMemo(() => {
-    if (tab === "descobertos") return corpus;
+    if (tab !== "editais" && tab !== "palcos") return [] as (Edital | Palco)[];
     const q = search.trim().toLowerCase();
-    return (currentList as (Edital | Palco)[]).filter((r) => {
+    let list = (currentList as (Edital | Palco)[]).filter((r) => {
       const name = "titulo" in r ? r.titulo : r.nome;
       if (q && !(name?.toLowerCase().includes(q))) return false;
       const ls = r.link_status;
@@ -140,18 +147,40 @@ export default function AdminCarreira() {
       if (filterStatus !== "all" && ls !== filterStatus) return false;
       return true;
     });
-  }, [tab, currentList, corpus, search, filterStatus]);
 
-  const kpis = useMemo(() => {
-    const list = tab === "editais" ? editais : palcos;
-    return {
-      total: list.length,
-      ok: list.filter((r) => r.link_status === "ok").length,
-      broken: list.filter((r) => r.link_status === "broken").length,
-      unknown: list.filter((r) => r.link_status === "unknown").length,
-      noLink: list.filter((r) => !r.link || r.link.trim() === "").length,
-    };
-  }, [tab, editais, palcos]);
+    // health filter chips
+    if (healthFilter && tab === "editais") {
+      list = list.filter((r: any) => {
+        switch (healthFilter) {
+          case "links_broken": return r.link_status === "broken";
+          case "links_unchecked": return !r.link_status || r.link_status === "unknown" || r.link_status === "pending";
+          case "sem_resumo": return !r.resumo || String(r.resumo).trim().length < 20;
+          case "sem_prazo": {
+            if (!r.prazo) return true;
+            return new Date(r.prazo + "T12:00:00-03:00") < new Date();
+          }
+          case "novos_7d": return r.created_at && (Date.now() - new Date(r.created_at).getTime()) < 7 * 86400_000;
+          case "pendente_revisao": return r.status === "pendente_revisao";
+          default: return true;
+        }
+      });
+    }
+
+    // sort
+    if (sortBy === "urgency") {
+      const withScore = list.map((r: any) => ({ r, u: computeUrgency(r) }));
+      withScore.sort((a, b) => b.u.score - a.u.score);
+      return withScore.map((x) => x.r);
+    }
+    if (sortBy === "deadline") {
+      return [...list].sort((a: any, b: any) => {
+        if (!a.prazo) return 1;
+        if (!b.prazo) return -1;
+        return a.prazo.localeCompare(b.prazo);
+      });
+    }
+    return list;
+  }, [tab, currentList, search, filterStatus, healthFilter, sortBy]);
 
   if (adminLoading) {
     return <div className="flex items-center justify-center min-h-screen text-muted-foreground animate-pulse">Verificando permissões...</div>;
