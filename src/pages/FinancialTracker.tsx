@@ -228,7 +228,7 @@ export default function FinancialTracker() {
         <TabsContent value="reports" className="mt-4 space-y-6">
           <div className="flex items-center gap-3 flex-wrap">
             <span className="text-sm text-muted-foreground">Período:</span>
-            <Select value={filterMonth} onValueChange={setFilterMonth}>
+            <Select value={reportMonth} onValueChange={setReportMonth}>
               <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="current">Mês atual</SelectItem>
