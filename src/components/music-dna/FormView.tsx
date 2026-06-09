@@ -289,7 +289,7 @@ export function FormView({ onSubmit, isPending, projects, defaultProjectId }: {
                   </FormControl>
                   <SelectContent>
                     <SelectItem value="__none__">Não informar</SelectItem>
-                    {GENRE_ENUM_VALUES.map((g) => (
+                    {GENRE_DROPDOWN_OPTIONS.map((g) => (
                       <SelectItem key={g} value={g}>{g}</SelectItem>
                     ))}
                   </SelectContent>
