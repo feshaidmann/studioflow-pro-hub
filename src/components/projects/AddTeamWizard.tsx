@@ -21,6 +21,7 @@ import {
 import { DatePickerField } from "@/components/ui/date-picker-field";
 import { cn } from "@/lib/utils";
 import type { Project, Professional } from "@/data/mockData";
+import type { Professional as GlobalProfessional } from "@/components/professionals/types";
 
 type WizardSource = "new" | "existing";
 type WizardProfType =
