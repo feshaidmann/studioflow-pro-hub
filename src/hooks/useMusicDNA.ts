@@ -572,7 +572,7 @@ async function callMusicDNAAnalyze(
   catalogTotal: number;
   catalogGenreCount: number;
   strictGenreUsed: boolean;
-  summaryVariant: "A" | "B";
+  summaryVariant: string;
 }> {
   const { data, error } = await supabase.functions.invoke("music-dna-analyze", {
     body: { action: "generate_diagnosis", payload: { prompt, ...payload } },
