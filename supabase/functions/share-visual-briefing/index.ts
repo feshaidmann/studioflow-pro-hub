@@ -80,7 +80,7 @@ serve(async (req) => {
     });
   } catch (e: any) {
     console.error("share-visual-briefing error", e);
-    return new Response(JSON.stringify({ error: e?.message ?? "Erro" }), {
+    return new Response(JSON.stringify({ error: "Erro interno. Tente novamente." }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }

@@ -131,6 +131,14 @@ serve(async (req) => {
   const source = req.headers.get("x-invocation-source") || (req.headers.get("user-agent") || "").slice(0, 120);
   const userId = await resolveUserId(authHeader);
 
+  // Auth gate: bloqueia chamadas anônimas para não consumir LOVABLE_API_KEY (classifyIntent)
+  if (!userId) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
   await logEvent(userId, "oportunidades_search_invoked", { run_id, source });
 
   let classification: string | undefined;
@@ -290,7 +298,7 @@ serve(async (req) => {
       run_id, duration_ms, classification, cause: message, source,
     });
     return new Response(
-      JSON.stringify({ error: message, run_id }),
+      JSON.stringify({ error: "Erro interno. Tente novamente.", run_id }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }

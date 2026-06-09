@@ -369,7 +369,7 @@ Deno.serve(async (req) => {
   } catch (err: any) {
     console.error("generate-daily-tasks error:", err);
     return new Response(
-      JSON.stringify({ ok: false, error: err.message }),
+      JSON.stringify({ ok: false, error: "Erro interno. Tente novamente." }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

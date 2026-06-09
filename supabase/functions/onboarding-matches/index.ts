@@ -119,7 +119,7 @@ Deno.serve(async (req) => {
   } catch (err) {
     console.error("onboarding-matches fatal:", err);
     return new Response(
-      JSON.stringify({ editais: [], professionals: [], error: String(err) }),
+      JSON.stringify({ editais: [], professionals: [], error: "Erro interno. Tente novamente." }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,

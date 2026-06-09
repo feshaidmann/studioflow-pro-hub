@@ -398,6 +398,6 @@ ${userPromptForFields}`;
     return await finish(200, "ok", { ...parsed, fields_count: fieldsCount });
   } catch (err: any) {
     console.error("extract-edital-fields error:", err);
-    return await finish(500, "unknown_error", { error: err?.message ?? "Erro desconhecido" });
+    return await finish(500, "unknown_error", { error: "Erro interno. Tente novamente." });
   }
 });
