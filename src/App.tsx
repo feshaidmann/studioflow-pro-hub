@@ -70,6 +70,22 @@ const LazyFallback = () => {
   );
 };
 
+function RootRoute() {
+  const { user, loading } = useAuth();
+  const { needsProfileSetup, loading: profileLoading } = useProfile();
+  const { t } = useLanguage();
+  if (loading || profileLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-pulse text-muted-foreground">{t("misc.loading")}</div>
+      </div>
+    );
+  }
+  if (user && needsProfileSetup) return <Navigate to="/onboarding" replace />;
+  if (user) return <Navigate to="/dashboard" replace />;
+  return <Welcome />;
+}
+
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   const { needsProfileSetup, loading: profileLoading } = useProfile();
