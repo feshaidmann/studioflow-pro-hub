@@ -453,6 +453,71 @@ export type Database = {
           },
         ]
       }
+      edital_analyses_corpus: {
+        Row: {
+          content_hash: string
+          created_at: string
+          documentos: Json | null
+          duration_ms: number | null
+          edital_id: string | null
+          edital_title: string | null
+          id: string
+          input_excerpt: string | null
+          input_text: string | null
+          model: string | null
+          prazos: Json | null
+          publico_alvo: string | null
+          resumo: string | null
+          source: string
+          user_id: string | null
+          valor: string | null
+        }
+        Insert: {
+          content_hash: string
+          created_at?: string
+          documentos?: Json | null
+          duration_ms?: number | null
+          edital_id?: string | null
+          edital_title?: string | null
+          id?: string
+          input_excerpt?: string | null
+          input_text?: string | null
+          model?: string | null
+          prazos?: Json | null
+          publico_alvo?: string | null
+          resumo?: string | null
+          source: string
+          user_id?: string | null
+          valor?: string | null
+        }
+        Update: {
+          content_hash?: string
+          created_at?: string
+          documentos?: Json | null
+          duration_ms?: number | null
+          edital_id?: string | null
+          edital_title?: string | null
+          id?: string
+          input_excerpt?: string | null
+          input_text?: string | null
+          model?: string | null
+          prazos?: Json | null
+          publico_alvo?: string | null
+          resumo?: string | null
+          source?: string
+          user_id?: string | null
+          valor?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "edital_analyses_corpus_edital_id_fkey"
+            columns: ["edital_id"]
+            isOneToOne: false
+            referencedRelation: "editais"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       edital_application_docs: {
         Row: {
           application_id: string
