@@ -150,7 +150,7 @@ export interface DiagnosisResult {
     runnerUp: { genre: string; score: number } | null;
     top3: Array<{ genre: string; score: number }>;
   } | null;
-  summaryVariant?: "A" | "B";
+  summaryVariant?: string;
 }
 
 // Calibração v1: offsets empíricos para alinhar features extraídas pelo navegador
@@ -572,7 +572,7 @@ async function callMusicDNAAnalyze(
   catalogTotal: number;
   catalogGenreCount: number;
   strictGenreUsed: boolean;
-  summaryVariant: "A" | "B";
+  summaryVariant: string;
 }> {
   const { data, error } = await supabase.functions.invoke("music-dna-analyze", {
     body: { action: "generate_diagnosis", payload: { prompt, ...payload } },
@@ -595,7 +595,7 @@ async function callMusicDNAAnalyze(
     catalogTotal: d?.catalog_total ?? 0,
     catalogGenreCount: d?.catalog_genre_count ?? 0,
     strictGenreUsed: d?.strict_genre_used ?? false,
-    summaryVariant: (d?.summary_variant === "B" ? "B" : "A"),
+    summaryVariant: (typeof d?.summary_variant === "string" && /^[AB](\.v\d+)?$/.test(d.summary_variant)) ? d.summary_variant : "A",
   };
 }
 

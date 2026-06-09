@@ -86,7 +86,7 @@ export function useSavedAnalyses() {
       input: { name: string; notes?: string; references: string[]; projectId?: string; stage?: "demo" | "mix" | "master" };
       diagnosis: DiagnosisResult;
       silent?: boolean;
-    }): Promise<{ id: string; trackVersionId: string; versionNumber: number; summaryVariant: "A" | "B" }> => {
+    }): Promise<{ id: string; trackVersionId: string; versionNumber: number; summaryVariant: string }> => {
       try {
         // Agrupa por slug do nome → versão Nx automática.
         const { id: trackVersionId, nextVersionNumber } = await ensureTrackVersion({
@@ -95,7 +95,9 @@ export function useSavedAnalyses() {
           projectId: input.projectId ?? null,
         });
 
-        const summaryVariant = (diagnosis.summaryVariant === "B" ? "B" : "A") as "A" | "B";
+        // Aceita rótulo versionado ("A.v2") vindo da edge function; fallback "A".
+        const rawVariant = diagnosis.summaryVariant;
+        const summaryVariant = (typeof rawVariant === "string" && /^[AB](\.v\d+)?$/.test(rawVariant)) ? rawVariant : "A";
 
         let derivedColumns: Record<string, unknown> = {};
         try {

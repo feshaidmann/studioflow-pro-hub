@@ -1095,7 +1095,9 @@ export function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSav
   };
 
   const { send: sendSignal } = useAcceptanceSignal();
-  const summaryVariant = (diagnosis.summaryVariant === "B" ? "B" : "A") as "A" | "B";
+  const summaryVariant: string = typeof diagnosis.summaryVariant === "string" && /^[AB](\.v\d+)?$/.test(diagnosis.summaryVariant)
+    ? diagnosis.summaryVariant
+    : "A";
 
   const ensureSignal = async (
     signal: "thumbs_up" | "thumbs_down" | "copied" | "task_created" | "impression",

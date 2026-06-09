@@ -98,7 +98,9 @@ ${hint.runnerUp ? `- top2: ${hint.runnerUp.genre} (${Math.round((hint.runnerUp.s
 Use isso APENAS para enriquecer a análise. Se o classificador divergir do declarado com confiança alta (≥75%), você pode mencionar a proximidade técnica com ${hint.detected} no diagnostico_resumo, mas NÃO contradiga o gênero declarado pelo usuário no campo genero_classificado.`
     : "";
 
-  const variant = (payload.summary_variant === "B" ? "B" : "A") as "A" | "B";
+  // Aceita tanto a forma versionada ("A.v2") quanto a base ("A"/"B") para escolher o bloco de estilo.
+  const rawVariant = typeof payload.summary_variant === "string" ? payload.summary_variant : "A";
+  const variant = (rawVariant.startsWith("B") ? "B" : "A") as "A" | "B";
   const variantBlock = variant === "B"
     ? `
 
@@ -291,9 +293,12 @@ serve(async (req: Request) => {
     }
 
     // A/B do `diagnostico_resumo`: 50/50 aleatório por chamada.
-    // Persistido junto da análise quando o usuário salvar, para reanálises
-    // (visualização posterior) usarem sempre a mesma variante.
-    const summaryVariant: "A" | "B" = Math.random() < 0.5 ? "A" : "B";
+    // Versão do prompt fica no próprio rótulo (ex.: "A.v2") para que dados de
+    // versões diferentes do prompt NÃO se misturem nas estatísticas do experimento.
+    // Bump aqui sempre que o conteúdo de `variantBlock` mudar de forma material.
+    const PROMPT_VERSION = "v2";
+    const baseVariant: "A" | "B" = Math.random() < 0.5 ? "A" : "B";
+    const summaryVariant = `${baseVariant}.${PROMPT_VERSION}`;
     const enrichedPayload = { ...payload, summary_variant: summaryVariant };
 
     let benchmark: unknown = null;
