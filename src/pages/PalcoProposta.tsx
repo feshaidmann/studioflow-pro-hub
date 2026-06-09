@@ -507,44 +507,14 @@ export default function PalcoProposta() {
             </div>
 
             <div className="flex justify-end">
-              <Button size="sm" variant="ghost" onClick={() => setStep("proposta")}>
-                Próximo: Proposta Comercial →
+              <Button size="sm" variant="ghost" onClick={() => setStep("contato")}>
+                Próximo: Contato →
               </Button>
             </div>
           </CardContent>
         </Card>
       )}
 
-      {step === "proposta" && proposal && (
-        <CommercialProposalStep
-          proposal={proposal}
-          palco={{ titulo: palco.titulo, orgao: palco.orgao, estado: palco.estado, resumo: palco.resumo }}
-          cachetMedioPalco={palco.cachet_medio || null}
-          projectId={projectId || null}
-          artistName={profile?.full_name || profile?.display_name || "Artista"}
-          onChange={saveProposal}
-          onNext={() => setStep("tecnico")}
-        />
-      )}
-
-      {step === "tecnico" && tech && proposal && (
-        <>
-          <TechPackageStep
-            tech={tech}
-            cacheBruto={proposal.cache_bruto || 0}
-            numMusicos={proposal.condicoes.num_musicos || 1}
-            formacaoDescricao={proposal.condicoes.formacao_descricao || ""}
-            projectId={projectId || null}
-            palcoTitulo={palco.titulo}
-            onChange={saveTech}
-          />
-          <div className="flex justify-end">
-            <Button size="sm" variant="ghost" onClick={() => setStep("contato")}>
-              Próximo: Contato →
-            </Button>
-          </div>
-        </>
-      )}
 
       {step === "contato" && (
         <Card>
