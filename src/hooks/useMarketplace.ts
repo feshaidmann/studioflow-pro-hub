@@ -183,7 +183,7 @@ export function useInboundRequestCount() {
 
   useEffect(() => {
     if (!user) { setCount(0); return; }
-    supabase
+    (supabase as unknown as { from: (t: string) => { select: (c: string, o: { count: "exact"; head: boolean }) => { eq: (k: string, v: string) => { eq: (k: string, v: string) => Promise<{ count: number | null }> } } } })
       .from("service_requests_inbound")
       .select("id", { count: "exact", head: true })
       .eq("target_provider_ref", user.id)
