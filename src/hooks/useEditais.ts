@@ -49,8 +49,6 @@ export function useEditais(projectId?: string | null) {
   const { user } = useAuth();
   const [editais, setEditais] = useState<Edital[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searching, setSearching] = useState(false);
-  const [searchResult, setSearchResult] = useState<SearchResult | null>(null);
 
   // Fetch saved editais
   const fetchEditais = useCallback(async () => {
