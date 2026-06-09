@@ -231,8 +231,10 @@ export default function Projects() {
       setSelectedProject(newProj);
       addNotification({ title: "Novo projeto criado", message: `${newProj.name} foi adicionado aos seus projetos`, link: "/projects", type: "stage" });
       toast.success(t("projects.created"));
-    } catch {
-      toast.error(t("projects.createError"));
+    } catch (err) {
+      console.error("[handleAddProject] failure:", err);
+      const msg = err instanceof Error ? err.message : String(err);
+      toast.error(`${t("projects.createError")} — ${msg}`);
     }
   };
 
