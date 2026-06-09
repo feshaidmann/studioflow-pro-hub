@@ -222,42 +222,9 @@ serve(async (req) => {
     }
 
     const aiData = await aiResponse.json();
-    let responseText =
+    const responseText =
       aiData.choices?.[0]?.message?.content || "Sem resposta da IA";
 
-    // Format JSON-returning actions into human-friendly markdown so the chat
-    // doesn't render raw JSON to the user.
-    const tryParseJson = (txt: string): any | null => {
-      const cleaned = txt.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
-      try { return JSON.parse(cleaned); } catch {}
-      const match = cleaned.match(/\{[\s\S]*\}/);
-      if (match) { try { return JSON.parse(match[0]); } catch {} }
-      return null;
-    };
-
-    if (action === "generate_checklist") {
-      const parsed = tryParseJson(responseText);
-      if (parsed && (Array.isArray(parsed.required) || Array.isArray(parsed.optional))) {
-        const fmt = (items: any[]) => items.map((it: any) =>
-          `- **${it.label}**${it.notes ? ` — ${it.notes}` : ""}`
-        ).join("\n");
-        const required = Array.isArray(parsed.required) && parsed.required.length
-          ? `### 📌 Documentos obrigatórios\n${fmt(parsed.required)}`
-          : "";
-        const optional = Array.isArray(parsed.optional) && parsed.optional.length
-          ? `\n\n### 📎 Documentos opcionais\n${fmt(parsed.optional)}`
-          : "";
-        responseText = `${required}${optional}`.trim() || responseText;
-      }
-    } else if (action === "suggest_project_fit") {
-      const parsed = tryParseJson(responseText);
-      if (parsed && Array.isArray(parsed.ranked)) {
-        const lines = parsed.ranked.map((p: any, i: number) =>
-          `${i + 1}. **${p.project_name || "Projeto"}** — Fit: **${p.fit_score ?? 0}%**\n   ${p.justification || ""}`
-        ).join("\n\n");
-        responseText = `### 🎯 Projetos rankeados por aderência\n\n${lines}`.trim() || responseText;
-      }
-    }
 
     const tokens_input = aiData.usage?.prompt_tokens || 0;
     const tokens_output = aiData.usage?.completion_tokens || 0;
