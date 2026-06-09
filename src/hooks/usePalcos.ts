@@ -52,24 +52,15 @@ export interface PalcoCurado {
   match_reason?: string | null;
 }
 
-export interface PalcoSearchResult {
-  message: string;
-  palcos: PalcoCurado[];
-  citations: string[];
-}
-
 // ── Hook principal ───────────────────────────────────────────────────────────
+// NOTA: a busca AI agora vive em `oportunidades-search` (ver AISearchPanel).
+// Este hook foca em listar palcos curados e calcular match por perfil.
 
 export function usePalcos() {
   const { user } = useAuth();
 
   const [palcosCurados, setPalcosCurados] = useState<PalcoCurado[]>([]);
   const [loadingCurados, setLoadingCurados] = useState(true);
-  const [searching, setSearching] = useState(false);
-  const [searchResult, setSearchResult] = useState<PalcoSearchResult | null>(null);
-  const [searchError, setSearchError] = useState<string | null>(null);
-  const [lastQuery, setLastQuery] = useState<string | null>(null);
-  const [lastProjectId, setLastProjectId] = useState<string | null>(null);
 
   // ── Banco curado ─────────────────────────────────────────────────────────
   const fetchCurados = useCallback(async () => {
@@ -92,33 +83,6 @@ export function usePalcos() {
 
   useEffect(() => { fetchCurados(); }, [fetchCurados]);
 
-  // ── Busca via IA ─────────────────────────────────────────────────────────
-  const search = useCallback(async (query: string, projectId?: string | null) => {
-    if (!user) return;
-    setSearching(true);
-    setSearchResult(null);
-    setSearchError(null);
-    setLastQuery(query);
-    setLastProjectId(projectId || null);
-    try {
-      const { data, error } = await supabase.functions.invoke("palco-search", {
-        body: { query, project_id: projectId || null },
-      });
-      if (error) throw error;
-      setSearchResult(data as PalcoSearchResult);
-    } catch (err: any) {
-      console.error("Palco search error:", err);
-      const msg = err?.message || "Não foi possível buscar agora. Tente novamente em instantes.";
-      setSearchError(msg);
-      toast.error("Erro na busca", { description: msg });
-    } finally {
-      setSearching(false);
-    }
-  }, [user]);
-
-  const retryLastSearch = useCallback(() => {
-    if (lastQuery) void search(lastQuery, lastProjectId);
-  }, [lastQuery, lastProjectId, search]);
 
   // ── Salvar resultado de busca no pipeline ────────────────────────────────
   const saveResults = useCallback(async (
@@ -225,12 +189,6 @@ export function usePalcos() {
   return {
     palcosCurados,
     loadingCurados,
-    searching,
-    searchResult,
-    searchError,
-    lastQuery,
-    search,
-    retryLastSearch,
     saveResults,
     matchByPerfil,
     refreshCurados: fetchCurados,

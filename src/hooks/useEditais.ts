@@ -3,6 +3,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
+// NOTA: a busca AI agora é centralizada em `oportunidades-search` (ver AISearchPanel).
+// Este hook foca apenas em CRUD do banco de editais salvos.
+
 export interface Edital {
   id?: string;
   /** "fomento" (edital) ou "palco" (oportunidade de palco salva via IA). */
@@ -46,8 +49,6 @@ export function useEditais(projectId?: string | null) {
   const { user } = useAuth();
   const [editais, setEditais] = useState<Edital[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searching, setSearching] = useState(false);
-  const [searchResult, setSearchResult] = useState<SearchResult | null>(null);
 
   // Fetch saved editais
   const fetchEditais = useCallback(async () => {
@@ -88,23 +89,6 @@ export function useEditais(projectId?: string | null) {
     return () => { active = false; };
   }, [user, projectId]);
 
-  const search = useCallback(async (query: string, sources?: string[], linkedProjectId?: string) => {
-    if (!user) return;
-    setSearching(true);
-    setSearchResult(null);
-    try {
-      const { data, error } = await supabase.functions.invoke("edital-search", {
-        body: { query, sources, project_id: linkedProjectId },
-      });
-      if (error) throw error;
-      setSearchResult(data as SearchResult);
-    } catch (err: any) {
-      console.error("Search error:", err);
-      toast.error("Erro na busca", { description: err.message || "Tente novamente." });
-    } finally {
-      setSearching(false);
-    }
-  }, [user]);
 
   const saveResults = useCallback(async (items: Edital[], linkedProjectId?: string | null) => {
     if (!user || items.length === 0) return;
@@ -198,9 +182,6 @@ export function useEditais(projectId?: string | null) {
   return {
     editais,
     loading,
-    searching,
-    searchResult,
-    search,
     saveResults,
     deleteEdital,
     updateEdital,
