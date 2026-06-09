@@ -1097,9 +1097,12 @@ export function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSav
   const { send: sendSignal } = useAcceptanceSignal();
   const summaryVariant = (diagnosis.summaryVariant === "B" ? "B" : "A") as "A" | "B";
 
-  const ensureSignal = async (signal: "thumbs_up" | "thumbs_down" | "copied" | "task_created") => {
+  const ensureSignal = async (
+    signal: "thumbs_up" | "thumbs_down" | "copied" | "task_created" | "impression",
+    metadata?: Record<string, unknown>,
+  ) => {
     const id = savedAnalysisId ?? (await onEnsureSaved?.());
-    if (id) sendSignal({ analysisId: id, variant: summaryVariant, signal });
+    if (id) sendSignal({ analysisId: id, variant: summaryVariant, signal, metadata });
   };
 
 
