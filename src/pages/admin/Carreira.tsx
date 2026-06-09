@@ -381,22 +381,34 @@ export default function AdminCarreira() {
         </TabsContent>
       </Tabs>
 
-      {/* Sheet de edição */}
-      <Sheet open={!!editing} onOpenChange={(o) => !o && setEditing(null)}>
+      {/* Sheet de edição/criação */}
+      <Sheet open={!!editing} onOpenChange={(o) => { if (!o) { setEditing(null); setIsCreating(false); } }}>
         <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
           <SheetHeader>
-            <SheetTitle>Editar {editKind === "edital" ? "edital" : "palco"}</SheetTitle>
-            <SheetDescription>Atenção: editais são per-usuário; sua edição altera apenas este registro.</SheetDescription>
+            <SheetTitle>{isCreating ? "Novo" : "Editar"} {editKind === "edital" ? "edital" : "palco"}</SheetTitle>
+            <SheetDescription>
+              {isCreating
+                ? (editKind === "edital"
+                    ? "O edital será criado vinculado à sua conta admin. Demais usuários verão via descoberta/sincronização."
+                    : "Palcos são globais — visíveis a todos os usuários após ativação.")
+                : "Atenção: editais são per-usuário; sua edição altera apenas este registro."}
+            </SheetDescription>
           </SheetHeader>
           {editing && (
             <div className="space-y-3 mt-4">
-              <Field label={editKind === "edital" ? "Título" : "Nome"} value={(editing as any)[editKind === "edital" ? "titulo" : "nome"]} onChange={(v) => setEditing({ ...(editing as any), [editKind === "edital" ? "titulo" : "nome"]: v })} />
-              <Field label={editKind === "edital" ? "Órgão" : "Organizador"} value={(editing as any)[editKind === "edital" ? "orgao" : "organizador"] ?? ""} onChange={(v) => setEditing({ ...(editing as any), [editKind === "edital" ? "orgao" : "organizador"]: v })} />
+              <Field label={editKind === "edital" ? "Título *" : "Nome *"} value={(editing as any)[editKind === "edital" ? "titulo" : "nome"]} onChange={(v) => setEditing({ ...(editing as any), [editKind === "edital" ? "titulo" : "nome"]: v })} />
+              <Field label={editKind === "edital" ? "Órgão" : "Organizador *"} value={(editing as any)[editKind === "edital" ? "orgao" : "organizador"] ?? ""} onChange={(v) => setEditing({ ...(editing as any), [editKind === "edital" ? "orgao" : "organizador"]: v })} />
+              {editKind === "palco" && (
+                <Field label="Tipo de palco *" value={(editing as any).tipo_palco ?? ""} onChange={(v) => setEditing({ ...(editing as any), tipo_palco: v })} />
+              )}
               <Field label="Link" value={(editing as any).link ?? ""} onChange={(v) => setEditing({ ...(editing as any), link: v })} />
               <Field label="Estado (UF)" value={(editing as any).estado ?? ""} onChange={(v) => setEditing({ ...(editing as any), estado: v })} />
               <Field label="Prazo (YYYY-MM-DD)" value={(editing as any).prazo ?? ""} onChange={(v) => setEditing({ ...(editing as any), prazo: v || null })} />
               {editKind === "edital" && (
-                <Field label="Valor" value={(editing as any).valor ?? ""} onChange={(v) => setEditing({ ...(editing as any), valor: v })} />
+                <>
+                  <Field label="Tipo" value={(editing as any).tipo ?? ""} onChange={(v) => setEditing({ ...(editing as any), tipo: v })} />
+                  <Field label="Valor" value={(editing as any).valor ?? ""} onChange={(v) => setEditing({ ...(editing as any), valor: v })} />
+                </>
               )}
               <div className="space-y-1">
                 <Label className="text-xs">Resumo</Label>
@@ -405,8 +417,8 @@ export default function AdminCarreira() {
             </div>
           )}
           <SheetFooter className="mt-4 gap-2">
-            <Button variant="outline" onClick={() => setEditing(null)}>Cancelar</Button>
-            <Button onClick={saveEdit}>Salvar</Button>
+            <Button variant="outline" onClick={() => { setEditing(null); setIsCreating(false); }}>Cancelar</Button>
+            <Button onClick={saveEdit}>{isCreating ? "Criar" : "Salvar"}</Button>
           </SheetFooter>
         </SheetContent>
       </Sheet>
