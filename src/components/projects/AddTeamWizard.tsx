@@ -183,7 +183,7 @@ export function AddTeamWizard({
   const hasDeadlineWarning = !!(proposal.deadline && project.estimatedMonths && deadlineExceedsProject(proposal.deadline));
   const selectedEmail = wizardSource === "new"
     ? newContact.email
-    : ((globalProfessionals.find((x) => x.id === selectedExistingProfId) as Professional & { email?: string })?.email ?? "");
+    : (globalProfessionals.find((x) => x.id === selectedExistingProfId)?.email ?? "");
   const canSubmit = !!wizardProfType && (wizardSource === "new" ? !!newContact.name : !!selectedExistingProfId);
 
   const handleSubmit = async () => {
