@@ -7,7 +7,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
-import { formatCurrency } from "@/lib/financeUtils";
+import { formatCurrency, parseLocalDate, formatCategoryLabel } from "@/lib/financeUtils";
 import type { Transaction } from "@/data/mockData";
 
 interface Props {
@@ -61,10 +61,7 @@ export function TransactionTable({
     );
   }
 
-  const categoryLabel = (tx: Transaction) =>
-    tx.category === "Outros" && tx.customCategory
-      ? `Outros (${tx.customCategory})`
-      : tx.category;
+  const categoryLabel = (tx: Transaction) => formatCategoryLabel(tx.category, tx.customCategory);
 
   return (
     <Card className="glass-card overflow-hidden">
@@ -76,7 +73,7 @@ export function TransactionTable({
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">{tx.description}</p>
                   <p className="text-xs text-muted-foreground">
-                    {new Date(tx.date + "T12:00:00").toLocaleDateString("pt-BR")}
+                    {parseLocalDate(tx.date).toLocaleDateString("pt-BR")}
                     {tx.projectId ? ` · ${projectName(tx.projectId)}` : ""}
                   </p>
                 </div>
@@ -123,7 +120,7 @@ export function TransactionTable({
               {paginated.map((tx, i) => (
                 <TableRow key={tx.id} className={`transition-colors ${i % 2 === 1 ? "bg-secondary/10" : ""} hover:bg-primary/5`}>
                   <TableCell className="text-xs text-muted-foreground font-mono-nums whitespace-nowrap">
-                    {new Date(tx.date + "T12:00:00").toLocaleDateString("pt-BR")}
+                    {parseLocalDate(tx.date).toLocaleDateString("pt-BR")}
                   </TableCell>
                   <TableCell className="font-medium max-w-[160px] truncate">{tx.description}</TableCell>
                   <TableCell className="hidden sm:table-cell text-xs text-muted-foreground">

@@ -1,7 +1,7 @@
 import { Clock } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
-import { formatCurrency } from "@/lib/financeUtils";
+import { formatCurrency, parseLocalDate } from "@/lib/financeUtils";
 import type { Transaction } from "@/data/mockData";
 
 function PendingList({
@@ -39,7 +39,7 @@ function PendingList({
               {items.map((t) => (
                 <TableRow key={t.id}>
                   <TableCell className="text-xs text-muted-foreground">
-                    {new Date(t.date + "T12:00:00").toLocaleDateString("pt-BR")}
+                    {parseLocalDate(t.date).toLocaleDateString("pt-BR")}
                   </TableCell>
                   <TableCell className="text-sm">{t.description}</TableCell>
                   <TableCell className={`text-right font-mono-nums font-semibold ${colorClass}`}>

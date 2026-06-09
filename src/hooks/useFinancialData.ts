@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Transaction } from "@/data/mockData";
-import { monthKey, pctChange } from "@/lib/financeUtils";
+import { monthKey, pctChange, formatCategoryLabel } from "@/lib/financeUtils";
 
 export interface PendingFee {
   name: string;
@@ -114,10 +114,7 @@ export function useCategoryData(
 
     const catMap: Record<string, { name: string; total: number; type: string }> = {};
     for (const t of reportTxs.filter((t) => t.paid)) {
-      const cat =
-        t.category === "Outros" && t.customCategory
-          ? `Outros (${t.customCategory})`
-          : t.category;
+      const cat = formatCategoryLabel(t.category, t.customCategory);
       if (!catMap[cat]) catMap[cat] = { name: cat, total: 0, type: t.type };
       catMap[cat].total += t.amount;
     }

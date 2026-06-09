@@ -14,14 +14,14 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useProjects } from "@/contexts/ProjectContext";
 import { useAuth } from "@/contexts/AuthContext";
-import { useLanguage } from "@/contexts/LanguageContext";
+
 import { type Transaction } from "@/data/mockData";
 import TransactionForm from "@/components/finance/TransactionForm";
 import ProjectAISheet from "@/components/project-hub/ProjectAISheet";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MobileStickyHeader } from "@/components/ui/mobile-sticky-header";
-import { monthKey, formatCurrency } from "@/lib/financeUtils";
+import { monthKey, formatCurrency, parseLocalDate, formatCategoryLabel } from "@/lib/financeUtils";
 import {
   usePendingFees, useFinancialKpis, useEvolutionData,
   useCategoryData, useCashFlowData,
@@ -39,7 +39,7 @@ import { PendingTransactionsSummary } from "@/components/finance/PendingTransact
 const PAGE_SIZE = 20;
 
 export default function FinancialTracker() {
-  const { t } = useLanguage();
+  
   const { transactions, projects, deleteTransaction, getProjectFinancials } = useProjects();
   const { user } = useAuth();
   const isMobile = useIsMobile();
@@ -50,10 +50,12 @@ export default function FinancialTracker() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [finAiOpen, setFinAiOpen] = useState(false);
 
-  // Filters
+  // Filters — `filterMonth` é exclusivo da aba Transações; Relatórios usa `reportMonth`
+  // para evitar contaminação cruzada entre abas.
   const [filterProject, setFilterProject] = useState("all");
   const [filterType, setFilterType] = useState("all");
   const [filterMonth, setFilterMonth] = useState("current");
+  const [reportMonth, setReportMonth] = useState("current");
   const [filterStatus, setFilterStatus] = useState("all");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -95,7 +97,7 @@ export default function FinancialTracker() {
   const pendingFees = usePendingFees(user?.id, transactions);
   const kpis = useFinancialKpis(transactions);
   const evolutionData = useEvolutionData(transactions);
-  const { categoryIncome, categoryExpense } = useCategoryData(transactions, filterMonth, kpis.currentMonth);
+  const { categoryIncome, categoryExpense } = useCategoryData(transactions, reportMonth, kpis.currentMonth);
   const cashflowData = useCashFlowData(transactions, months);
 
   // Helpers
@@ -114,15 +116,12 @@ export default function FinancialTracker() {
 
   const handleExportCSV = () => {
     const rows = filtered.map((tx) => ({
-      Data: new Date(tx.date + "T12:00:00").toLocaleDateString("pt-BR"),
+      Data: parseLocalDate(tx.date).toLocaleDateString("pt-BR"),
       Tipo: tx.type === "income" ? "Receita" : "Despesa",
       Descrição: tx.description,
       Valor: tx.amount.toFixed(2),
       Status: tx.paid ? "Pago" : "Pendente",
-      Categoria:
-        tx.category === "Outros" && tx.customCategory
-          ? `Outros (${tx.customCategory})`
-          : tx.category,
+      Categoria: formatCategoryLabel(tx.category, tx.customCategory),
       Projeto: tx.projectId ? (projects.find((p) => p.id === tx.projectId)?.name ?? "") : "",
       Observações: tx.notes ?? "",
     }));
@@ -141,7 +140,7 @@ export default function FinancialTracker() {
   const openEdit = (tx: Transaction) => { setEditTx(tx); setFormOpen(true); };
 
   const aiContext = [
-    `Saldo total (pagas): R$${kpis.balanceAll.toFixed(2)}`,
+    `Saldo realizado acumulado: R$${kpis.balanceAll.toFixed(2)}`,
     `Receitas do mês: R$${kpis.incomeMonth.toFixed(2)}`,
     `Despesas do mês: R$${kpis.expenseMonth.toFixed(2)}`,
     `Resultado do mês: R$${kpis.resultMonth.toFixed(2)}`,
@@ -156,7 +155,7 @@ export default function FinancialTracker() {
     `\nEvolução últimos 6 meses:\n` + evolutionData.map((d) => `- ${d.mes}: Receita R$${d.receitas.toFixed(0)} | Despesa R$${d.despesas.toFixed(0)} | Saldo R$${d.saldo.toFixed(0)}`).join("\n"),
   ].filter(Boolean).join("\n");
 
-  void t; // used via context for i18n; suppress unused-var lint
+
 
   return (
     <div className="p-4 md:p-6 space-y-6 pb-12 max-w-6xl mx-auto">
@@ -229,7 +228,7 @@ export default function FinancialTracker() {
         <TabsContent value="reports" className="mt-4 space-y-6">
           <div className="flex items-center gap-3 flex-wrap">
             <span className="text-sm text-muted-foreground">Período:</span>
-            <Select value={filterMonth} onValueChange={setFilterMonth}>
+            <Select value={reportMonth} onValueChange={setReportMonth}>
               <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="current">Mês atual</SelectItem>
