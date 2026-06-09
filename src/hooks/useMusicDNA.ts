@@ -763,9 +763,10 @@ export function useMusicDNA(): UseMusicDNAReturn {
           // ── Reliable scalar features (high weight in SQL) ─────────────────
           tempo_bpm: realAnalysis.bpm,
           lufs_integrated: calibrated.lufs_integrated,
-          // dynamic_range_db omitido: escala do browser (LU percentil p95/p10, ~2–14 LU)
-          // não é compatível com o catálogo (crest factor peak-RMS, ~8–30 dB).
-          // Passar NULL evita ruído na distância de similaridade.
+          // Crest factor (peak − RMS, dB) — métrica equivalente à coluna
+          // `dynamic_range_db` do catálogo. O `dynamic_range_lu` perceptual
+          // continua sendo usado na UI e no prompt, mas não no matching.
+          dynamic_range_db: realAnalysis.crest_factor_db,
           spectral_centroid_hz: calibrated.spectral_centroid_hz,
           spectral_rolloff: calibrated.spectral_rolloff,
           spectral_flatness: calibrated.spectral_flatness,
