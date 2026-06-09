@@ -365,7 +365,10 @@ function ExecutiveSummary({ diagnosis, proximosPassos, addedItems, onAddStep, an
   addedItems: Set<string>;
   onAddStep: (acao: string, key: string) => void;
   analysisId?: string;
-  onSendSignal?: (signal: "thumbs_up" | "thumbs_down" | "copied") => void;
+  onSendSignal?: (
+    signal: "thumbs_up" | "thumbs_down" | "copied" | "impression",
+    metadata?: Record<string, unknown>,
+  ) => void;
   stage?: AudioStage;
 }) {
   const [voted, setVoted] = useState<"thumbs_up" | "thumbs_down" | null>(null);
