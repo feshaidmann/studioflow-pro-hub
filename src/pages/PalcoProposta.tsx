@@ -24,7 +24,6 @@ import { useEditalApplications, useUpdateApplication, APPLICATION_STATUS_LABELS,
 import { usePalcoProposal } from "@/hooks/usePalcoProposal";
 import CommercialProposalStep from "@/components/palco/CommercialProposalStep";
 import TechPackageStep from "@/components/palco/TechPackageStep";
-import RecommendedCaptadores from "@/components/palco/RecommendedCaptadores";
 
 type StepKey = "epk" | "pitch" | "proposta" | "tecnico" | "contato" | "follow";
 
@@ -596,17 +595,6 @@ export default function PalcoProposta() {
               />
             </div>
 
-            <div className="border-t border-border pt-3">
-              <RecommendedCaptadores
-                applicationId={applicationId!}
-                onUseContact={(recipient, channel) => {
-                  setContactRecipient(recipient);
-                  setContactChannel(channel);
-                  saveExtras({ contact_recipient: recipient, contact_channel: channel });
-                  toast.success("Contato preenchido");
-                }}
-              />
-            </div>
 
 
             <div className="flex flex-wrap gap-2">

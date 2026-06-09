@@ -76,7 +76,7 @@ Deno.serve(async (req) => {
     }
 
     // Build invite URL — use the published app URL or fallback
-    const appUrl = Deno.env.get("APP_URL") || "https://jsp-flux.lovable.app";
+    const appUrl = Deno.env.get("APP_URL") || "https://musicos-ai.com";
     const inviteUrl = `${appUrl}/invite/${inv.token}`;
 
     const projectName = (inv.project as any)?.name ?? "Projeto";
@@ -172,7 +172,7 @@ Deno.serve(async (req) => {
     });
   } catch (err) {
     console.error("send-project-invite error:", err);
-    return new Response(JSON.stringify({ error: String(err) }), {
+    return new Response(JSON.stringify({ error: "Erro interno. Tente novamente." }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

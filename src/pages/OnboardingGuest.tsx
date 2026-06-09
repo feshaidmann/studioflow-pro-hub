@@ -1,22 +1,17 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, Navigate } from "react-router-dom";
-import { Music, ArrowRight, User, Mic2, Phone, Mail, Briefcase } from "lucide-react";
+import { Music, ArrowRight, User, Briefcase, Phone } from "lucide-react";
 import { useProfile } from "@/contexts/ProfileContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { trackAppEvent } from "@/lib/analytics";
+import { maskWhatsapp } from "@/lib/masks";
 import { readInviteCtx, clearInviteCtx, type InviteCtx } from "@/lib/inviteCtx";
-
-function maskWhatsapp(value: string) {
-  const digits = value.replace(/\D/g, "").slice(0, 11);
-  if (digits.length <= 2) return digits;
-  if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
-  if (digits.length <= 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
-  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
-}
+import { SPECIALTY_OPTIONS, isPresetSpecialty } from "@/constants/specialtyOptions";
 
 export default function OnboardingGuest() {
   const { updateProfile, loading: profileLoading, profile } = useProfile();
@@ -28,6 +23,7 @@ export default function OnboardingGuest() {
   const [artistName, setArtistName] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
   const [specialty, setSpecialty] = useState("");
+  const [specialtyCustom, setSpecialtyCustom] = useState(false);
   const [inviteCtx, setInviteCtx] = useState<InviteCtx | null>(null);
   const fullNameRef = useRef<HTMLInputElement>(null);
 
@@ -35,7 +31,10 @@ export default function OnboardingGuest() {
     const ctx = readInviteCtx();
     if (ctx) {
       setInviteCtx(ctx);
-      if (ctx.role) setSpecialty(ctx.role);
+      if (ctx.role) {
+        setSpecialty(ctx.role);
+        if (!isPresetSpecialty(ctx.role)) setSpecialtyCustom(true);
+      }
     }
     setTimeout(() => fullNameRef.current?.focus(), 200);
   }, []);
@@ -140,28 +139,56 @@ export default function OnboardingGuest() {
 
           <div className="space-y-1.5">
             <Label htmlFor="g-artistName" className="text-xs text-muted-foreground flex items-center gap-1">
-              <Mic2 className="h-3 w-3" /> Nome artístico *
+              <Briefcase className="h-3 w-3" /> Nome profissional *
             </Label>
             <Input
               id="g-artistName"
               value={artistName}
               onChange={(e) => setArtistName(e.target.value)}
-              placeholder="Ex: Mc João, Ana Castela…"
+              placeholder="Ex: João Silva, Mc João…"
               maxLength={60}
             />
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="g-specialty" className="text-xs text-muted-foreground flex items-center gap-1">
+            <Label className="text-xs text-muted-foreground flex items-center gap-1">
               <Briefcase className="h-3 w-3" /> Especialidade
             </Label>
-            <Input
-              id="g-specialty"
-              value={specialty}
-              onChange={(e) => setSpecialty(e.target.value)}
-              placeholder="Ex: Guitarrista, Produtor, Engenheiro de Som…"
-              maxLength={80}
-            />
+            {specialtyCustom ? (
+              <div className="space-y-1.5">
+                <Input
+                  value={specialty}
+                  onChange={(e) => setSpecialty(e.target.value)}
+                  placeholder="Ex: Fotógrafo de shows, Coreógrafo…"
+                  maxLength={80}
+                  autoFocus
+                />
+                <button
+                  type="button"
+                  className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors"
+                  onClick={() => { setSpecialtyCustom(false); setSpecialty(""); }}
+                >
+                  ← Escolher da lista
+                </button>
+              </div>
+            ) : (
+              <Select
+                value={specialty || "__none__"}
+                onValueChange={(v) => {
+                  if (v === "__other__") { setSpecialtyCustom(true); setSpecialty(""); }
+                  else { setSpecialty(v === "__none__" ? "" : v); }
+                }}
+              >
+                <SelectTrigger><SelectValue placeholder="Selecionar especialidade..." /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">Nenhuma</SelectItem>
+                  {SPECIALTY_OPTIONS.map((o) => (
+                    <SelectItem key={o} value={o}>{o}</SelectItem>
+                  ))}
+                  <SelectItem value="__other__">Outra…</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
           </div>
 
           <div className="space-y-1.5">
@@ -178,16 +205,15 @@ export default function OnboardingGuest() {
             />
           </div>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="g-email" className="text-xs text-muted-foreground flex items-center gap-1">
-              <Mail className="h-3 w-3" /> Email
-            </Label>
-            <Input id="g-email" value={user.email ?? ""} readOnly disabled className="bg-muted/50" />
-          </div>
+          {user.email && (
+            <p className="text-xs text-muted-foreground/70 text-center -mt-1">
+              Logado como {user.email}
+            </p>
+          )}
 
           <Button onClick={finish} disabled={!canSubmit || submitting} className="w-full gap-2" size="lg">
             {submitting ? "Salvando..." : (
-              <><ArrowRight className="h-4 w-4" />{inviteCtx?.projectId ? "Acessar o projeto" : "Começar"}</>
+              <>{inviteCtx?.projectId ? "Acessar o projeto" : "Começar"} <ArrowRight className="h-4 w-4" /></>
             )}
           </Button>
         </div>

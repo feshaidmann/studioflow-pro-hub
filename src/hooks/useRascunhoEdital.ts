@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { trackAppEvent } from "@/lib/analytics";
 
 export interface EditalField {
@@ -64,7 +64,7 @@ const CAUSE_PT: Record<ExtractCause, string> = {
   empty_response: "A IA não retornou conteúdo sobre este edital",
   invalid_json: "A IA respondeu, mas não em formato de formulário",
   no_fields_extracted: "Não identificamos campos obrigatórios na página",
-  lovable_ai_error: "A IA falhou ao analisar o arquivo enviado",
+  lovable_ai_error: "A IA falhou ao processar o conteúdo",
   file_too_large: "Arquivo excede o limite de 10 MB",
   unsupported_file_type: "Tipo de arquivo não suportado",
   unknown_error: "Erro inesperado ao consultar a IA",
@@ -88,7 +88,7 @@ export const CAUSE_GUIDANCE: Record<ExtractCause, string> = {
   no_fields_extracted:
     "A página provavelmente não contém o formulário em si. Procure o link do regulamento (geralmente PDF) e envie pelo upload manual abaixo.",
   lovable_ai_error:
-    "Tente reenviar o arquivo. Se persistir, converta para PDF e envie novamente.",
+    "Tente novamente. Se persistir, envie o PDF do regulamento pelo upload manual abaixo.",
   file_too_large:
     "Compacte o PDF (ex.: ilovepdf.com/compress_pdf) ou envie apenas as páginas do formulário e dos documentos exigidos.",
   unsupported_file_type:
@@ -107,7 +107,7 @@ const CAUSE_LABEL_SHORT: Record<ExtractCause, string> = {
   empty_response: "Resposta vazia",
   invalid_json: "Formato inválido",
   no_fields_extracted: "Sem campos",
-  lovable_ai_error: "Falha no arquivo",
+  lovable_ai_error: "Falha na IA",
   file_too_large: "Arquivo grande",
   unsupported_file_type: "Formato inválido",
   unknown_error: "Erro",
@@ -147,7 +147,6 @@ export interface Rascunho {
 
 export function useRascunhoEdital() {
   const { user } = useAuth();
-  const { toast } = useToast();
   const [extracting, setExtracting] = useState(false);
   const [extractedFields, setExtractedFields] = useState<ExtractedFields | null>(null);
   const [saving, setSaving] = useState(false);
@@ -196,8 +195,14 @@ export function useRascunhoEdital() {
             body: invokeBody,
           });
           if (error) {
-            cause = "unknown_error";
-            httpStatus = (error as any)?.status;
+            try {
+              const body = await (error as any).context?.json?.();
+              cause = (body?.cause as ExtractCause) ?? "unknown_error";
+              httpStatus = body?.http_status ?? (error as any)?.status;
+            } catch {
+              cause = "unknown_error";
+              httpStatus = (error as any)?.status;
+            }
             extra = { error_message: error.message };
           } else {
             const p = (data ?? {}) as Partial<ExtractedFields> & {
@@ -251,8 +256,7 @@ export function useRascunhoEdital() {
         if (!canRetry) break;
 
         // Toast leve de retry para dar feedback ao usuário
-        toast({
-          title: `Tentando de novo (${attempt + 1}/${MAX_EXTRACT_ATTEMPTS})`,
+        toast.info(`Tentando de novo (${attempt + 1}/${MAX_EXTRACT_ATTEMPTS})`, {
           description: `${CAUSE_PT[cause]}. Reenviando em alguns segundos…`,
         });
         await sleep(RETRY_BACKOFF_MS[attempt - 1] ?? 3000);
@@ -265,19 +269,16 @@ export function useRascunhoEdital() {
         const guidance = CAUSE_GUIDANCE[cause];
         const exhausted = TRANSIENT_CAUSES.has(cause) && attempt >= MAX_EXTRACT_ATTEMPTS;
         setLastError({ cause, message, attempt, http_status: httpStatus, exhausted });
-        toast({
-          title: exhausted
-            ? `Falhou após ${MAX_EXTRACT_ATTEMPTS} tentativas`
-            : "Não foi possível ler o edital",
-          description: guidance ? `${message}. ${guidance}` : message,
-          variant: "destructive",
-        });
+        toast.error(
+          exhausted ? `Falhou após ${MAX_EXTRACT_ATTEMPTS} tentativas` : "Não foi possível ler o edital",
+          { description: guidance ? `${message}. ${guidance}` : message }
+        );
       }
     } finally {
       setExtracting(false);
       setAttemptProgress(null);
     }
-  }, [toast]);
+  }, []);
 
 
   const extractFields = useCallback(async (url?: string, titulo?: string, editalId?: string) => {
@@ -288,11 +289,7 @@ export function useRascunhoEdital() {
     if (!cleanUrl && !cleanTitulo) {
       const cause: ExtractCause = "bad_request";
       setLastError({ cause, message: CAUSE_PT[cause], attempt: 0 });
-      toast({
-        title: "Faltou o link ou título do edital",
-        description: CAUSE_GUIDANCE[cause],
-        variant: "destructive",
-      });
+      toast.error("Faltou o link ou título do edital", { description: CAUSE_GUIDANCE[cause] });
       return;
     }
 
@@ -304,11 +301,7 @@ export function useRascunhoEdital() {
         const cause: ExtractCause = "bad_request";
         const message = "Link inválido — use uma URL começando com https://";
         setLastError({ cause, message, attempt: 0 });
-        toast({
-          title: "Link inválido",
-          description: `${message}. ${CAUSE_GUIDANCE[cause]}`,
-          variant: "destructive",
-        });
+        toast.error("Link inválido", { description: `${message}. ${CAUSE_GUIDANCE[cause]}` });
         return;
       }
     }
@@ -320,7 +313,28 @@ export function useRascunhoEdital() {
       { url: cleanUrl || undefined, titulo: cleanTitulo || undefined },
       { editalId, has_url: !!cleanUrl, has_titulo: !!cleanTitulo },
     );
-  }, [user, toast, runExtract]);
+  }, [user, runExtract]);
+
+  const extractFieldsFromText = useCallback(async (text: string, editalId?: string) => {
+    if (!user) return;
+    if (!text.trim()) {
+      toast.error("Cole o conteúdo do edital", {
+        description: "O campo de texto está vazio. Cole o regulamento antes de continuar.",
+      });
+      return;
+    }
+    const key = `text:${editalId || "manual"}`;
+    await runExtract(
+      key,
+      "file",
+      { text },
+      { editalId, has_url: false, has_titulo: false },
+    );
+  }, [user, runExtract]);
+
+  const setExtractedFieldsManual = useCallback((fields: ExtractedFields) => {
+    setExtractedFields(fields);
+  }, []);
 
   const extractFieldsFromFile = useCallback(async (file: File, editalId?: string) => {
     if (!user) return;
@@ -328,11 +342,7 @@ export function useRascunhoEdital() {
     if (!file) {
       const cause: ExtractCause = "bad_request";
       setLastError({ cause, message: "Nenhum arquivo selecionado", attempt: 0 });
-      toast({
-        title: "Selecione um arquivo",
-        description: "Escolha o PDF/DOC do regulamento antes de clicar em extrair.",
-        variant: "destructive",
-      });
+      toast.error("Selecione um arquivo", { description: "Escolha o PDF/DOC do regulamento antes de clicar em extrair." });
       return;
     }
 
@@ -340,21 +350,13 @@ export function useRascunhoEdital() {
     if (!ALLOWED_FILE_MIME.has(file.type)) {
       const cause: ExtractCause = "unsupported_file_type";
       setLastError({ cause, message: CAUSE_PT[cause], attempt: 0 });
-      toast({
-        title: "Formato não suportado",
-        description: `${CAUSE_PT[cause]}. ${CAUSE_GUIDANCE[cause]}`,
-        variant: "destructive",
-      });
+      toast.error("Formato não suportado", { description: `${CAUSE_PT[cause]}. ${CAUSE_GUIDANCE[cause]}` });
       return;
     }
     if (file.size > MAX_FILE_BYTES) {
       const cause: ExtractCause = "file_too_large";
       setLastError({ cause, message: CAUSE_PT[cause], attempt: 0 });
-      toast({
-        title: "Arquivo muito grande",
-        description: `${CAUSE_PT[cause]}. ${CAUSE_GUIDANCE[cause]}`,
-        variant: "destructive",
-      });
+      toast.error("Arquivo muito grande", { description: `${CAUSE_PT[cause]}. ${CAUSE_GUIDANCE[cause]}` });
       return;
     }
 
@@ -362,10 +364,8 @@ export function useRascunhoEdital() {
     try {
       base64 = await fileToBase64(file);
     } catch (err: any) {
-      toast({
-        title: "Não conseguimos ler o arquivo",
+      toast.error("Não conseguimos ler o arquivo", {
         description: `${err?.message ?? "Falha desconhecida"}. Verifique se ele não está corrompido e tente novamente.`,
-        variant: "destructive",
       });
       return;
     }
@@ -377,7 +377,7 @@ export function useRascunhoEdital() {
       { file: { name: file.name, mime_type: file.type, base64 } },
       { editalId, file_mime: file.type, file_size: file.size },
     );
-  }, [user, toast, runExtract]);
+  }, [user, runExtract]);
 
 
 
@@ -414,12 +414,12 @@ export function useRascunhoEdital() {
         return (data as any)?.id || null;
       }
     } catch (err: any) {
-      toast({ title: "Erro ao salvar rascunho", description: err.message, variant: "destructive" });
+      toast.error("Erro ao salvar rascunho", { description: err.message });
       return null;
     } finally {
       setSaving(false);
     }
-  }, [user, toast]);
+  }, [user]);
 
   const loadRascunho = useCallback(async (editalId: string): Promise<Rascunho | null> => {
     if (!user) return null;
@@ -439,5 +439,5 @@ export function useRascunhoEdital() {
     }
   }, [user]);
 
-  return { extracting, extractedFields, extractFields, extractFieldsFromFile, saving, saveRascunho, loadRascunho, lastError, attemptProgress };
+  return { extracting, extractedFields, extractFields, extractFieldsFromFile, extractFieldsFromText, setExtractedFieldsManual, saving, saveRascunho, loadRascunho, lastError, attemptProgress };
 }

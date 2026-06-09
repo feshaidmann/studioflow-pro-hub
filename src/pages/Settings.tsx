@@ -16,7 +16,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { User, Save, ListChecks, DollarSign, CalendarClock, Clock, Mail, Disc3, Megaphone, Loader2, FlaskConical, Activity, Users, UserCircle, ChevronRight, MapPin, Globe, Palette, Sun, Bell, BellOff } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import CaptadorOptInSection from "@/components/captadores/CaptadorOptInSection";
 import PublicProfileSection from "@/components/profile/PublicProfileSection";
 
 
@@ -220,7 +219,7 @@ export default function Settings() {
     if (profCreated === 0 && ratingsCreated === 0) {
       toast.info(t("settings.contactsExist"));
     } else {
-      toast.success("🎉");
+      toast.success(t("settings.contactsCreated"));
     }
   };
 
@@ -285,8 +284,6 @@ export default function Settings() {
           </Button>
         </CardContent>
       </Card>
-
-      <CaptadorOptInSection />
 
       <PublicProfileSection />
 

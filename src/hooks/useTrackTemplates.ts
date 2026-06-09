@@ -57,7 +57,46 @@ export function useTrackTemplates() {
     setLoading(false);
   }, [user]);
 
-  useEffect(() => { fetchTemplates(); }, [fetchTemplates]);
+  useEffect(() => {
+    let active = true;
+    const run = async () => {
+      if (!user) { setTemplates([]); return; }
+      setLoading(true);
+      const { data: tpls } = await supabase
+        .from("track_templates")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: true });
+      if (!active) return;
+      if (tpls && tpls.length > 0) {
+        const ids = tpls.map((t: any) => t.id);
+        const { data: trkRows } = await supabase
+          .from("template_tracks")
+          .select("*")
+          .in("template_id", ids)
+          .order("position", { ascending: true });
+        if (!active) return;
+        const tracksByTemplate: Record<string, TemplateTrack[]> = {};
+        (trkRows || []).forEach((r: any) => {
+          if (!tracksByTemplate[r.template_id]) tracksByTemplate[r.template_id] = [];
+          tracksByTemplate[r.template_id].push({ id: r.id, templateId: r.template_id, name: r.name, position: r.position });
+        });
+        setTemplates(tpls.map((t: any) => ({
+          id: t.id,
+          userId: t.user_id,
+          name: t.name,
+          isDefault: t.is_default,
+          createdAt: t.created_at,
+          tracks: tracksByTemplate[t.id] || [],
+        })));
+      } else {
+        setTemplates([]);
+      }
+      setLoading(false);
+    };
+    run();
+    return () => { active = false; };
+  }, [user]);
 
   const createTemplate = useCallback(async (name: string, trackNames: string[], setAsDefault = false) => {
     if (!user) return null;

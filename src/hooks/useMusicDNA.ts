@@ -16,27 +16,40 @@ export type { RealAudioAnalysis, AudioSection } from "@/lib/audioAnalysis";
 // ── TYPES ────────────────────────────────────────────────────────────────────
 
 export type Genre =
+  // ── BR ──────────────────────────────────────────────
   | "Indie Folk"
   | "Pop Brasileiro"
-  | "Sertanejo Raiz"
-  | "Sertanejo Universitário"
+  | "Bossa Nova"
   | "MPB Contemporânea"
   | "Samba"
   | "Pagode"
-  | "Funk Carioca"
+  | "Sertanejo Raiz"
+  | "Sertanejo Universitário"
   | "Forró / Piseiro"
+  | "Funk Carioca"
+  | "Trap BR"
+  | "Rap BR"
   | "Indie BR"
   | "Rock Alternativo BR"
-  | "Rap BR"
-  | "R&B / Soul"
   | "Reggae BR"
   | "Axé / Pop Bahia"
-  | "Eletrônica / House"
-  | "Pop Internacional"
   | "Lo-Fi Hip Hop"
-  | "Trap BR"
-  | "Bossa Nova"
-  | "Rock Alternativo";
+  // ── Internacional ───────────────────────────────────
+  | "Pop Internacional"
+  | "Rock Alternativo"
+  | "Heavy Metal"
+  | "Punk Rock"
+  | "Folk Rock"
+  | "Grunge"
+  | "Hip-Hop"
+  | "Jazz"
+  | "Synth-Pop"
+  | "Eletrônica / House"
+  | "Country"
+  | "Reggae"
+  | "Ambient"
+  | "R&B / Soul"
+  | "Funk";
 
 
 export interface AudioFeatures {
@@ -98,8 +111,6 @@ export interface CatalogNeighbor {
   instrumentalness: number | null;
   dynamic_range_db: number | null;
   spectral_centroid: number | null;
-  dims_used?: number | null;
-  dims_total?: number | null;
 }
 
 export interface DiagnosisResult {
@@ -141,26 +152,46 @@ export interface DiagnosisResult {
 }
 
 // Calibração v1: offsets empíricos para alinhar features extraídas pelo navegador
-// (Web Audio API) com o pipeline Python/Librosa do catálogo. Stub conservador.
-// Atualizar conforme dados de calibração reais forem coletados.
-export const BROWSER_CALIBRATION = {
+// (Web Audio API) com o pipeline Python/Librosa do catálogo.
+//
+// Como medir offsets reais:
+//   1. Exportar 20+ faixas do catálogo (referências com features Python conhecidas).
+//   2. Rodá-las por analyzeAudioFull() no browser, coletar as mesmas features.
+//   3. Calcular mean(browser_value − python_value) por feature.
+//   4. Chamar updateBrowserCalibration({ lufs_offset_db: média, ... }) na inicialização.
+//
+// Defaults conservadores (zero/um) são matematicamente neutros e não degradam
+// a similaridade com o catálogo enquanto dados reais não estiverem disponíveis.
+export const BROWSER_CALIBRATION: {
+  lufs_offset_db: number;
+  centroid_scale: number;
+  rolloff_scale: number;
+  flatness_offset: number;
+} = {
   lufs_offset_db: 0,
   centroid_scale: 1,
   rolloff_scale: 1,
   flatness_offset: 0,
-} as const;
+};
 
-function calibrateForCatalog(features: {
+/** Atualiza os offsets de calibração em runtime (e.g., após carregar de Supabase). */
+export function updateBrowserCalibration(updates: Partial<typeof BROWSER_CALIBRATION>): void {
+  Object.assign(BROWSER_CALIBRATION, updates);
+}
+
+export function calibrateForCatalog(features: {
   lufs_integrated: number | null;
   spectral_centroid_hz: number | null;
   spectral_rolloff: number | null;
   spectral_flatness: number | null;
+  spectral_bandwidth_hz: number | null;
 }) {
   return {
     lufs_integrated: features.lufs_integrated == null ? null : features.lufs_integrated + BROWSER_CALIBRATION.lufs_offset_db,
     spectral_centroid_hz: features.spectral_centroid_hz == null ? null : features.spectral_centroid_hz * BROWSER_CALIBRATION.centroid_scale,
     spectral_rolloff: features.spectral_rolloff == null ? null : features.spectral_rolloff * BROWSER_CALIBRATION.rolloff_scale,
     spectral_flatness: features.spectral_flatness == null ? null : features.spectral_flatness + BROWSER_CALIBRATION.flatness_offset,
+    spectral_bandwidth_hz: features.spectral_bandwidth_hz,
   };
 }
 
@@ -188,6 +219,18 @@ export const GENRE_PRESETS: Record<Genre, AudioFeatures> = {
   "Trap BR":           { energy: 0.80, danceability: 0.76, acousticness: 0.06, valence: 0.35, instrumentalness: 0.05, liveness: 0.12 },
   "Bossa Nova":        { energy: 0.28, danceability: 0.52, acousticness: 0.82, valence: 0.58, instrumentalness: 0.20, liveness: 0.12 },
   "Rock Alternativo":  { energy: 0.78, danceability: 0.52, acousticness: 0.15, valence: 0.42, instrumentalness: 0.18, liveness: 0.25 },
+  // ── Internacional (alinhados com HARDCODED_GENRE_PROFILES) ──────
+  "Heavy Metal":       { energy: 0.92, danceability: 0.40, acousticness: 0.04, valence: 0.40, instrumentalness: 0.18, liveness: 0.20 },
+  "Punk Rock":         { energy: 0.88, danceability: 0.48, acousticness: 0.06, valence: 0.55, instrumentalness: 0.06, liveness: 0.25 },
+  "Folk Rock":         { energy: 0.45, danceability: 0.50, acousticness: 0.65, valence: 0.55, instrumentalness: 0.08, liveness: 0.18 },
+  "Grunge":            { energy: 0.75, danceability: 0.45, acousticness: 0.15, valence: 0.38, instrumentalness: 0.10, liveness: 0.22 },
+  "Hip-Hop":           { energy: 0.65, danceability: 0.78, acousticness: 0.18, valence: 0.50, instrumentalness: 0.05, liveness: 0.10 },
+  "Jazz":              { energy: 0.35, danceability: 0.45, acousticness: 0.75, valence: 0.50, instrumentalness: 0.55, liveness: 0.28 },
+  "Synth-Pop":         { energy: 0.70, danceability: 0.72, acousticness: 0.10, valence: 0.62, instrumentalness: 0.20, liveness: 0.10 },
+  "Country":           { energy: 0.55, danceability: 0.58, acousticness: 0.55, valence: 0.62, instrumentalness: 0.04, liveness: 0.22 },
+  "Reggae":            { energy: 0.55, danceability: 0.72, acousticness: 0.32, valence: 0.68, instrumentalness: 0.10, liveness: 0.22 },
+  "Ambient":           { energy: 0.18, danceability: 0.20, acousticness: 0.85, valence: 0.45, instrumentalness: 0.80, liveness: 0.05 },
+  "Funk":              { energy: 0.72, danceability: 0.80, acousticness: 0.15, valence: 0.68, instrumentalness: 0.08, liveness: 0.18 },
 };
 
 export const REFERENCE_ARTISTS: string[] = ALL_REFERENCE_ARTISTS;
@@ -233,6 +276,27 @@ export function toRadarData(track: AudioFeatures, ref: AudioFeatures) {
     Referência: Math.round(ref[k] * 100),
     fullMark: 100,
   }));
+}
+
+// ── PRODUCTION TIER ──────────────────────────────────────────────────────────
+
+export type ProductionTier = "bedroom" | "mid" | "pro-leaning";
+
+export function detectProductionTier(analysis: {
+  lufs_integrated: number;
+  dynamic_range_lu: number;
+  true_peak_dbtp: number;
+  liveness?: number | null;
+  spectral_centroid_hz: number;
+}): ProductionTier {
+  const { lufs_integrated: lufs, dynamic_range_lu: dr, true_peak_dbtp: tp, spectral_centroid_hz: centroid } = analysis;
+  const liveness = analysis.liveness ?? 0;
+  if (lufs >= -10 && dr < 7) return "pro-leaning";
+  if (lufs >= -11 && tp >= -2 && dr < 9 && centroid > 2000) return "pro-leaning";
+  if (lufs < -18) return "bedroom";
+  if (lufs < -16 && (dr > 11 || liveness > 0.3 || tp < -3)) return "bedroom";
+  if (dr > 14 && centroid < 2000 && lufs < -14) return "bedroom";
+  return "mid";
 }
 
 // ── PROMPT ────────────────────────────────────────────────────────────────────
@@ -349,28 +413,7 @@ function buildPrompt(
 
   const genreStreamingNote = input.genre ? (GENRE_STREAMING_CONTEXT[input.genre] || "") : "";
 
-  // Auto-detecta nível de produção a partir das próprias métricas — define o tom
-  // das sugestões (bedroom → DIY puro / mid → meio-termo / pro-leaning → master comercial).
-  const productionTier: "bedroom" | "mid" | "pro-leaning" = (() => {
-    const lufs = analysis.lufs_integrated;
-    const dr = analysis.dynamic_range_lu;
-    const tp = analysis.true_peak_dbtp;
-    const liveness = analysis.liveness ?? 0;
-    const centroid = analysis.spectral_centroid_hz;
-
-    // Pro-leaning: loudness agressivo + hiperlimitado (DR < 7 é sinal de limiter pesado)
-    if (lufs >= -10 && dr < 7) return "pro-leaning";
-    // Pro-leaning: loud + tight peak + espectro aberto (centroid alto = hi-fi tratado)
-    if (lufs >= -11 && tp >= -2 && dr < 9 && centroid > 2000) return "pro-leaning";
-
-    // Bedroom: muito quieto OU múltiplos sinais de gravação caseira sem tratamento
-    if (lufs < -18) return "bedroom";
-    if (lufs < -16 && (dr > 11 || liveness > 0.3 || tp < -3)) return "bedroom";
-    // Bedroom: dinâmica altíssima + centroid baixo (acústico não tratado)
-    if (dr > 14 && centroid < 2000 && lufs < -14) return "bedroom";
-
-    return "mid";
-  })();
+  const productionTier = detectProductionTier(analysis);
 
   const tierBlock = (() => {
     if (productionTier === "bedroom") {
@@ -552,6 +595,42 @@ async function callMusicDNAAnalyze(
   };
 }
 
+export function filterValidReferences(
+  rawRefs: ReferenceMatch[],
+  neighbors: CatalogNeighbor[],
+  floor = 0.55,
+): ReferenceMatch[] {
+  const validBands = new Set<string>(
+    neighbors
+      .filter((n) => typeof n.similarity_score === "number" && n.similarity_score >= floor)
+      .map((n) => (n.band ?? "").toLowerCase().trim())
+      .filter((s) => s.length > 0),
+  );
+  return rawRefs.filter((r) => {
+    const name = (r.artista ?? "").toLowerCase().trim();
+    return name.length > 0 && validBands.has(name);
+  });
+}
+
+export function repairJsonString(raw: string): string {
+  // Split on already-quoted string literals so the key-quoting regex never
+  // touches content inside string values (e.g. "tempo: parecido, label: x").
+  const strLiteral = /"(?:[^"\\]|\\.)*"/g;
+  const strings = raw.match(strLiteral) ?? [];
+  const parts = raw.split(strLiteral);
+  const fixedParts = parts.map((part) =>
+    part
+      .replace(/([{,]\s*)([a-zA-Z_$][a-zA-Z0-9_$]*)(\s*:)/g, '$1"$2"$3')
+      .replace(/,(\s*[}\]])/g, "$1"),
+  );
+  let result = "";
+  for (let i = 0; i < fixedParts.length; i++) {
+    result += fixedParts[i];
+    if (i < strings.length) result += strings[i];
+  }
+  return result;
+}
+
 // ── HOOK ─────────────────────────────────────────────────────────────────────
 
 type AnalysisStep = "idle" | "extracting" | "profiling" | "computing" | "generating" | "done";
@@ -633,6 +712,7 @@ export function useMusicDNA(): UseMusicDNAReturn {
         spectral_centroid_hz: realAnalysis.spectral_centroid_hz,
         spectral_rolloff: realAnalysis.spectral_rolloff_hz,
         spectral_flatness: realAnalysis.spectral_flatness,
+        spectral_bandwidth_hz: realAnalysis.spectral_bandwidth_hz,
       });
 
       // Classificação independente por features (cosine similarity sobre perfis hardcoded + benchmarks BR)
@@ -673,16 +753,19 @@ export function useMusicDNA(): UseMusicDNAReturn {
         classifier_hint: classifierHint,
         track_features: {
           // ── Acoustic fingerprint — primary similarity signal ──────────────
-          mfcc: (realAnalysis as any).mfcc,
-          chroma_cens: (realAnalysis as any).chroma_cens,
-          zero_crossing_rate: (realAnalysis as any).zcr ?? (realAnalysis as any).zero_crossing_rate,
+          mfcc: realAnalysis.mfcc,
+          chroma_cens: realAnalysis.chroma_cens,
+          zero_crossing_rate: realAnalysis.zero_crossing_rate,
           // ── Reliable scalar features (high weight in SQL) ─────────────────
           tempo_bpm: realAnalysis.bpm,
           lufs_integrated: calibrated.lufs_integrated,
-          dynamic_range_db: realAnalysis.dynamic_range_lu,
+          // dynamic_range_db omitido: escala do browser (LU percentil p95/p10, ~2–14 LU)
+          // não é compatível com o catálogo (crest factor peak-RMS, ~8–30 dB).
+          // Passar NULL evita ruído na distância de similaridade.
           spectral_centroid_hz: calibrated.spectral_centroid_hz,
           spectral_rolloff: calibrated.spectral_rolloff,
           spectral_flatness: calibrated.spectral_flatness,
+          spectral_bandwidth_hz: calibrated.spectral_bandwidth_hz,
           // ── Unreliable Spotify-style features (low weight in SQL) ─────────
           energy: realAnalysis.energy,
           danceability: realAnalysis.danceability,
@@ -697,33 +780,15 @@ export function useMusicDNA(): UseMusicDNAReturn {
         },
       });
       const clean = rawText.replace(/```json\n?|```/g, "").trim();
-      let parsed: any;
+      let parsed: Partial<DiagnosisResult>;
       try {
-        parsed = JSON.parse(clean);
+        parsed = JSON.parse(clean) as Partial<DiagnosisResult>;
       } catch {
-        // IA ocasionalmente retorna JSON com chaves sem aspas (estilo JS) ou vírgulas
-        // sobressalentes. Tentamos corrigi-las antes de desistir.
-        const repaired = clean
-          .replace(/([{,]\s*)([a-zA-Z_$][a-zA-Z0-9_$]*)(\s*:)/g, '$1"$2"$3')
-          .replace(/,(\s*[}\]])/g, "$1");
-        parsed = JSON.parse(repaired);
+        parsed = JSON.parse(repairJsonString(clean)) as Partial<DiagnosisResult>;
       }
 
-      // Validação client-side: `referencias_proximas` deve conter APENAS bandas dos
-      // vizinhos reais do catálogo com `similarity_score >= 0.70`. Curadoria estática
-      // (ALL_REFERENCE_ARTISTS) NÃO é fonte válida de proximidade técnica.
-      const SIMILARITY_FLOOR = 0.7;
-      const validNeighborBands = new Set<string>(
-        catalogNeighbors
-          .filter((n) => typeof n.similarity_score === "number" && n.similarity_score >= SIMILARITY_FLOOR)
-          .map((n) => (n.band ?? "").toLowerCase().trim())
-          .filter((s) => s.length > 0),
-      );
       const rawReferences: ReferenceMatch[] = Array.isArray(parsed.referencias_proximas) ? parsed.referencias_proximas : [];
-      const validatedReferences = rawReferences.filter((r) => {
-        const name = (r.artista ?? "").toLowerCase().trim();
-        return name.length > 0 && validNeighborBands.has(name);
-      });
+      const validatedReferences = filterValidReferences(rawReferences, catalogNeighbors);
       if (rawReferences.length !== validatedReferences.length) {
         const dropped = rawReferences.filter((r) => !validatedReferences.includes(r));
         console.warn("[music-dna] referências IA descartadas (fora dos vizinhos reais com score >= 0.70):", dropped.map((r) => r.artista));
@@ -735,7 +800,7 @@ export function useMusicDNA(): UseMusicDNAReturn {
       appendLog(catalogNeighbors.length ? `🎯  ${catalogNeighbors.length} faixas próximas encontradas no catálogo.` : "✅  Diagnóstico concluído.");
 
       return {
-        ...parsed,
+        ...(parsed as DiagnosisResult),
         distance,
         trackFeatures: tFeatures,
         refFeatures: rFeatures,

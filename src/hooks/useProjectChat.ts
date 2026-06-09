@@ -31,12 +31,13 @@ export function useProjectChat(projectId: string) {
       .from("project_messages")
       .select("id, project_id, user_id, content, created_at, is_pending, is_resolved, linked_task_id, attachment_path, attachment_name")
       .eq("project_id", projectId)
-      .order("created_at", { ascending: true });
+      .order("created_at", { ascending: true })
+      .limit(300);
 
     if (error) { setLoading(false); return; }
 
     const userIds = [...new Set((data ?? []).map((m) => m.user_id))];
-    let profileMap: Record<string, { display_name: string; avatar_url: string | null }> = {};
+    const profileMap: Record<string, { display_name: string; avatar_url: string | null }> = {};
 
     if (userIds.length > 0) {
       const { data: profiles } = await supabase
@@ -172,18 +173,24 @@ export function useProjectChat(projectId: string) {
   );
 
   const togglePending = useCallback(async (messageId: string, isPending: boolean) => {
-    await supabase.from("project_messages").update({ is_pending: isPending, is_resolved: false }).eq("id", messageId);
-    setMessages((prev) => prev.map((m) => m.id === messageId ? { ...m, is_pending: isPending, is_resolved: false } : m));
+    const { error } = await supabase.from("project_messages").update({ is_pending: isPending, is_resolved: false }).eq("id", messageId);
+    if (!error) {
+      setMessages((prev) => prev.map((m) => m.id === messageId ? { ...m, is_pending: isPending, is_resolved: false } : m));
+    }
   }, []);
 
   const toggleResolved = useCallback(async (messageId: string, isResolved: boolean) => {
-    await supabase.from("project_messages").update({ is_resolved: isResolved }).eq("id", messageId);
-    setMessages((prev) => prev.map((m) => m.id === messageId ? { ...m, is_resolved: isResolved } : m));
+    const { error } = await supabase.from("project_messages").update({ is_resolved: isResolved }).eq("id", messageId);
+    if (!error) {
+      setMessages((prev) => prev.map((m) => m.id === messageId ? { ...m, is_resolved: isResolved } : m));
+    }
   }, []);
 
   const linkTask = useCallback(async (messageId: string, taskId: string) => {
-    await supabase.from("project_messages").update({ linked_task_id: taskId }).eq("id", messageId);
-    setMessages((prev) => prev.map((m) => m.id === messageId ? { ...m, linked_task_id: taskId } : m));
+    const { error } = await supabase.from("project_messages").update({ linked_task_id: taskId }).eq("id", messageId);
+    if (!error) {
+      setMessages((prev) => prev.map((m) => m.id === messageId ? { ...m, linked_task_id: taskId } : m));
+    }
   }, []);
 
   return {

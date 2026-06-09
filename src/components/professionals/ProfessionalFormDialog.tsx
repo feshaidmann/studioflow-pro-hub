@@ -25,10 +25,11 @@ import { maskPhone, isValidPhone, type Professional } from "./types";
 const CUSTOM_SPECIALTY_MAX = 60;
 
 const schema = z.object({
-  name: z.string().trim().min(2, "Nome obrigatório").max(100),
+  name: z.string().trim().min(1, "Nome é obrigatório").min(2, "Nome deve ter pelo menos 2 caracteres").max(100),
   email: z.string().trim().email("E-mail inválido").max(255),
   phone: z.string().trim().max(20).default("").refine(isValidPhone, "Telefone deve ter 10 ou 11 dígitos"),
   specialty: z.string().trim().max(100).default(""),
+  genres_raw: z.string().trim().max(300).default(""),
   bio: z.string().trim().max(500).default(""),
   active: z.boolean().default(true),
   allow_global_listing: z.boolean().default(false),
@@ -55,7 +56,7 @@ export function ProfessionalFormDialog({ open, onOpenChange, editTarget, existin
 
   const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { name: "", email: "", phone: "", specialty: "", bio: "", active: true, allow_global_listing: false },
+    defaultValues: { name: "", email: "", phone: "", specialty: "", genres_raw: "", bio: "", active: true, allow_global_listing: false },
   });
 
   const activeValue = watch("active");
@@ -80,6 +81,7 @@ export function ProfessionalFormDialog({ open, onOpenChange, editTarget, existin
         email: editTarget.email,
         phone: editTarget.phone || "",
         specialty: stored,
+        genres_raw: (editTarget.genres ?? []).join(", "),
         bio: editTarget.bio || "",
         active: editTarget.active,
         allow_global_listing: editTarget.allow_global_listing,
@@ -95,7 +97,7 @@ export function ProfessionalFormDialog({ open, onOpenChange, editTarget, existin
         setCustomSpecialty(stored.slice(0, CUSTOM_SPECIALTY_MAX));
       }
     } else {
-      reset({ name: "", email: "", phone: "", specialty: "", bio: "", active: true, allow_global_listing: false });
+      reset({ name: "", email: "", phone: "", specialty: "", genres_raw: "", bio: "", active: true, allow_global_listing: false });
       setSpecialtyMode(SPECIALTY_NONE);
       setCustomSpecialty("");
     }
@@ -121,7 +123,12 @@ export function ProfessionalFormDialog({ open, onOpenChange, editTarget, existin
     }
 
     setSubmitting(true);
-    const payload = { ...values, specialty: finalSpecialty };
+    const genres = values.genres_raw
+      .split(",")
+      .map((g) => g.trim())
+      .filter(Boolean);
+    const { genres_raw: _gr, ...rest } = values;
+    const payload = { ...rest, specialty: finalSpecialty, genres };
 
     if (editTarget) {
       const { error } = await supabase.from("professionals").update(payload).eq("id", editTarget.id);
@@ -225,6 +232,12 @@ export function ProfessionalFormDialog({ open, onOpenChange, editTarget, existin
                 </>
               )}
             </div>
+          </div>
+
+          <div className="space-y-1">
+            <Label htmlFor="genres_raw">Gêneros musicais</Label>
+            <Input id="genres_raw" {...register("genres_raw")} placeholder="Ex: MPB, Rock, Jazz" />
+            <p className="text-[10px] text-muted-foreground">Separe por vírgula. Usado para filtros no marketplace.</p>
           </div>
 
           <div className="space-y-1">

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 export interface Edital {
   id?: string;
@@ -44,7 +44,6 @@ export interface SearchResult {
 
 export function useEditais(projectId?: string | null) {
   const { user } = useAuth();
-  const { toast } = useToast();
   const [editais, setEditais] = useState<Edital[]>([]);
   const [loading, setLoading] = useState(true);
   const [searching, setSearching] = useState(false);
@@ -59,7 +58,7 @@ export function useEditais(projectId?: string | null) {
       if (projectId) q = q.eq("project_id", projectId);
       const { data, error } = await q;
       if (error) throw error;
-      setEditais((data as any[]) || []);
+      setEditais((data as unknown as Edital[]) || []);
     } catch (err) {
       console.error("Error fetching editais:", err);
     } finally {
@@ -67,7 +66,27 @@ export function useEditais(projectId?: string | null) {
     }
   }, [user, projectId]);
 
-  useEffect(() => { fetchEditais(); }, [fetchEditais]);
+  useEffect(() => {
+    let active = true;
+    const run = async () => {
+      if (!user) { setEditais([]); setLoading(false); return; }
+      setLoading(true);
+      try {
+        let q = supabase.from("editais").select("*").order("created_at", { ascending: false });
+        if (projectId) q = q.eq("project_id", projectId);
+        const { data, error } = await q;
+        if (!active) return;
+        if (error) throw error;
+        setEditais((data as unknown as Edital[]) || []);
+      } catch (err) {
+        if (active) console.error("Error fetching editais:", err);
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
+    run();
+    return () => { active = false; };
+  }, [user, projectId]);
 
   const search = useCallback(async (query: string, sources?: string[], linkedProjectId?: string) => {
     if (!user) return;
@@ -81,11 +100,11 @@ export function useEditais(projectId?: string | null) {
       setSearchResult(data as SearchResult);
     } catch (err: any) {
       console.error("Search error:", err);
-      toast({ title: "Erro na busca", description: err.message || "Tente novamente.", variant: "destructive" });
+      toast.error("Erro na busca", { description: err.message || "Tente novamente." });
     } finally {
       setSearching(false);
     }
-  }, [user, toast]);
+  }, [user]);
 
   const saveResults = useCallback(async (items: Edital[], linkedProjectId?: string | null) => {
     if (!user || items.length === 0) return;
@@ -124,40 +143,40 @@ export function useEditais(projectId?: string | null) {
       const newCount = inserted?.length ?? 0;
       const dupCount = rows.length - newCount;
       if (newCount === 0) {
-        toast({ title: "Editais já salvos", description: "Todos os editais já estão na sua lista." });
+        toast.success("Editais já salvos", { description: "Todos os editais já estão na sua lista." });
       } else if (dupCount > 0) {
-        toast({ title: "Editais salvos!", description: `${newCount} novo(s), ${dupCount} já existia(m).` });
+        toast.success("Editais salvos!", { description: `${newCount} novo(s), ${dupCount} já existia(m).` });
       } else {
-        toast({ title: "Editais salvos!", description: `${newCount} edital(is) salvo(s).` });
+        toast.success("Editais salvos!", { description: `${newCount} edital(is) salvo(s).` });
       }
       await fetchEditais();
     } catch (err: any) {
       console.error("Save error:", err);
-      toast({ title: "Erro ao salvar", description: err.message, variant: "destructive" });
+      toast.error("Erro ao salvar", { description: err.message });
     }
-  }, [user, toast, fetchEditais]);
+  }, [user, fetchEditais]);
 
   const deleteEdital = useCallback(async (id: string) => {
     try {
       const { error } = await supabase.from("editais").delete().eq("id", id);
       if (error) throw error;
       setEditais((prev) => prev.filter((e) => e.id !== id));
-      toast({ title: "Edital removido" });
+      toast.success("Edital removido");
     } catch (err: any) {
-      toast({ title: "Erro ao remover", description: err.message, variant: "destructive" });
+      toast.error("Erro ao remover", { description: err.message });
     }
-  }, [toast]);
+  }, []);
 
   const updateEdital = useCallback(async (id: string, fields: Partial<Edital>) => {
     try {
       const { error } = await supabase.from("editais").update(fields as any).eq("id", id);
       if (error) throw error;
       setEditais((prev) => prev.map((e) => (e.id === id ? { ...e, ...fields } : e)));
-      toast({ title: "Edital atualizado" });
+      toast.success("Edital atualizado");
     } catch (err: any) {
-      toast({ title: "Erro ao atualizar", description: err.message, variant: "destructive" });
+      toast.error("Erro ao atualizar", { description: err.message });
     }
-  }, [toast]);
+  }, []);
 
   const exportCSV = useCallback((items: Edital[]) => {
     const header = "Título;Estado;Órgão;Abertura;Prazo;Status;Área;Valor;Público-alvo;Resumo;Link";

@@ -158,11 +158,11 @@ export default function ProjectDetail() {
   };
 
   const aiChips = isOwner ? [
-    { label: "📋 O que fazer agora?", msg: "Com base no estado atual deste projeto, o que devo priorizar agora? Me dá ações concretas." },
-    { label: "⚠️ Problemas?", msg: "Identifique problemas, gargalos ou riscos neste projeto. O que pode dar errado?" },
-    { label: "🚀 Próximo estágio", msg: "O que preciso finalizar para avançar para o próximo estágio deste projeto?" },
+    { label: "O que fazer agora?", msg: "Com base no estado atual deste projeto, o que devo priorizar agora? Me dá ações concretas." },
+    { label: "Problemas?", msg: "Identifique problemas, gargalos ou riscos neste projeto. O que pode dar errado?" },
+    { label: "Próximo estágio", msg: "O que preciso finalizar para avançar para o próximo estágio deste projeto?" },
   ] : [
-    { label: "📋 Minhas tarefas", msg: "Quais são minhas responsabilidades neste projeto? O que devo entregar?" },
+    { label: "Minhas tarefas", msg: "Quais são minhas responsabilidades neste projeto? O que devo entregar?" },
   ];
 
   return (

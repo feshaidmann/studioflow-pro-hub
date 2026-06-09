@@ -30,7 +30,6 @@ const ProjectDetail = lazy(() => import("@/pages/ProjectDetail"));
 const FinancialTracker = lazy(() => import("@/pages/FinancialTracker"));
 const Tutorial = lazy(() => import("@/pages/Tutorial"));
 const Professionals = lazy(() => import("@/pages/Professionals"));
-const Captadores = lazy(() => import("@/pages/Captadores"));
 const Settings = lazy(() => import("@/pages/Settings"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
 const InviteResponse = lazy(() => import("@/pages/InviteResponse"));
@@ -39,6 +38,7 @@ const Admin = lazy(() => import("@/pages/Admin"));
 const ReferenceTracks = lazy(() => import("@/pages/admin/ReferenceTracks"));
 const OportunidadesSearchMetrics = lazy(() => import("@/pages/admin/OportunidadesSearchMetrics"));
 const GenreImport = lazy(() => import("@/pages/admin/GenreImport"));
+const AdminMarketplace = lazy(() => import("@/pages/admin/Marketplace"));
 const Agenda = lazy(() => import("@/pages/Agenda"));
 const FreelancerProfile = lazy(() => import("@/pages/FreelancerProfile"));
 const UpgradeScreen = lazy(() => import("@/pages/UpgradeScreen"));
@@ -94,12 +94,12 @@ const AppRoutes = () => (
           <Route path="/agenda" element={<Agenda />} />
           <Route path="/tutorial" element={<Tutorial />} />
           <Route path="/professionals" element={<Professionals />} />
-          <Route path="/captadores" element={<Captadores />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="/admin/reference-tracks" element={<ReferenceTracks />} />
           <Route path="/admin/oportunidades-search" element={<OportunidadesSearchMetrics />} />
           <Route path="/admin/genre-import" element={<GenreImport />} />
+          <Route path="/admin/marketplace" element={<AdminMarketplace />} />
           <Route path="/perfil" element={<FreelancerProfile />} />
           <Route path="/upgrade" element={<UpgradeScreen />} />
           <Route path="/music-dna" element={<MusicDNA />} />

@@ -1,42 +1,42 @@
-import { CheckCircle2 } from "lucide-react";
 import { PAIN_POINTS } from "./welcome.data";
+
+const TONES = [
+  { iconBg: "bg-orange-500/20", iconText: "text-orange-400" },
+  { iconBg: "bg-pink-500/20",   iconText: "text-pink-400" },
+  { iconBg: "bg-purple-500/20", iconText: "text-purple-400" },
+] as const;
 
 export function WelcomePainPoints() {
   return (
     <section
-      className="welcome-fade mt-10 w-full"
+      className="welcome-fade pt-4"
       style={{ "--delay": "240ms" } as React.CSSProperties}
+      aria-label="Dores comuns"
     >
-      <p className="mb-4 text-center text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60">
+      <p className="mb-4 text-center text-xs font-bold uppercase tracking-widest text-white/40">
         Já passou por isso?
       </p>
 
-      <div className="space-y-2">
-        {PAIN_POINTS.map((item, i) => (
-          <article
-            key={i}
-            className="rounded-[var(--radius)] border border-border/50 bg-card/60 backdrop-blur-sm overflow-hidden"
-          >
-            <div className="flex gap-3 p-3.5">
-              <div className="shrink-0 mt-0.5">
-                <div className="h-8 w-8 rounded-lg bg-destructive/10 flex items-center justify-center">
-                  <item.icon className="h-4 w-4 text-destructive/70" />
-                </div>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        {PAIN_POINTS.map((item, i) => {
+          const tone = TONES[i % TONES.length];
+          const Icon = item.icon;
+          return (
+            <article
+              key={i}
+              className="rounded-3xl border border-white/10 bg-white/5 p-8"
+            >
+              <div className={`mb-6 flex h-10 w-10 items-center justify-center rounded-xl ${tone.iconBg} ${tone.iconText}`}>
+                <Icon className="h-6 w-6" />
               </div>
-              <div className="space-y-2 min-w-0">
-                <p className="text-xs text-muted-foreground leading-relaxed italic">
-                  &ldquo;{item.pain}&rdquo;
-                </p>
-                <div className="flex items-start gap-1.5">
-                  <CheckCircle2 className="h-3.5 w-3.5 text-success shrink-0 mt-0.5" />
-                  <p className="text-xs font-medium text-foreground leading-snug">
-                    {item.solve}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </article>
-        ))}
+              <p className="mb-4 italic text-white/60">&ldquo;{item.pain}&rdquo;</p>
+              <p className="flex items-center gap-2 text-sm font-semibold text-green-400">
+                <span className="h-2 w-2 rounded-full bg-green-400" />
+                {item.solve}
+              </p>
+            </article>
+          );
+        })}
       </div>
     </section>
   );

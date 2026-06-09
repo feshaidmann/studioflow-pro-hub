@@ -70,6 +70,8 @@ export interface RealAudioAnalysis {
   spectral_centroid_hz: number;
   spectral_rolloff_hz: number;
   spectral_flatness: number;
+  spectral_bandwidth_hz: number;
+  zero_crossing_rate: number;
   rms_dbfs: number;
 
   // Spotify-style features
@@ -294,10 +296,7 @@ interface SpectralResult {
   freqPerBin: number;
 }
 
-// Carregamento dinâmico de fft.js (CommonJS via Vite)
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type FFTCtor = new (size: number) => { createComplexArray(): number[]; realTransform(out: number[], data: ArrayLike<number>): void; completeSpectrum(out: number[]): void };
-// eslint-disable-next-line @typescript-eslint/no-require-imports
 import FFTImport from "fft.js";
 const FFT: FFTCtor = FFTImport as unknown as FFTCtor;
 
@@ -525,18 +524,10 @@ function computeMfccChromaMultiframe(
 
   const N = allMfcc.length;
 
-  // Cepstral Mean Subtraction (CMS)
-  const meanCoef = new Float64Array(NUM_COEFS);
-  for (const m of allMfcc) {
-    for (let c = 0; c < NUM_COEFS; c++) meanCoef[c] += m[c];
-  }
-  for (let c = 0; c < NUM_COEFS; c++) meanCoef[c] /= N;
-
-  const cmsVectors = allMfcc.map(m => m.map((v, c) => v - meanCoef[c]));
-
+  // Média direta dos frames — alinha com np.mean(mfcc, axis=1) do librosa/catálogo
   const globalMfcc = new Float64Array(NUM_COEFS);
-  for (const v of cmsVectors) {
-    for (let c = 0; c < NUM_COEFS; c++) globalMfcc[c] += v[c];
+  for (const m of allMfcc) {
+    for (let c = 0; c < NUM_COEFS; c++) globalMfcc[c] += m[c];
   }
   for (let c = 0; c < NUM_COEFS; c++) globalMfcc[c] /= N;
 
@@ -874,7 +865,31 @@ function detectSections(mono: Float32Array, sampleRate: number): AudioSection[] 
 
   // First pass: rank each section by energy to identify candidate chorus regions.
   const energySorted = [...sectionData].sort((a, b) => b.energy - a.energy);
-  const topEnergyThreshold = energySorted[Math.floor(totalSections * 0.25)]?.energy ?? avgEnergy * 1.2;
+  // Math.floor(N * 0.25) = 0 quando N < 4, tornando o threshold o máximo
+  // absoluto e impedindo chorus em faixas curtas. Clampar para mínimo 1
+  // garante que pelo menos a 2ª seção mais energética seja o limiar.
+  const topEnergyThreshold = energySorted[Math.max(1, Math.floor(totalSections * 0.25))]?.energy ?? avgEnergy * 1.2;
+
+  // Adaptive thresholds scale with the actual distribution spread, so that
+  // heavily compressed tracks (Funk Carioca, Trap BR at DR < 5 LU) still get
+  // meaningful intro/outro/chorus labels instead of "verse" for everything.
+  // Fixed multipliers like 0.85×avg silently fail when all sections are within
+  // ±2% of each other. Using mean ± k×std adapts automatically to both
+  // dynamic and flat mixes.
+  const energyStd = Math.sqrt(sectionData.reduce((a, s) => a + (s.energy - avgEnergy) ** 2, 0) / sectionData.length);
+  const centroidStd = Math.sqrt(sectionData.reduce((a, s) => a + (s.centroid - avgCentroid) ** 2, 0) / sectionData.length);
+  // Floors prevent collapse on perfectly uniform tracks
+  const eSpread = Math.max(energyStd, avgEnergy * 0.04);
+  const cSpread = Math.max(centroidStd, avgCentroid * 0.02);
+  // Named thresholds (k values calibrated to match original behavior on typical tracks)
+  const T_INTRO     = avgEnergy  - 0.75 * eSpread; // ≈ avg * 0.85 at energyCV = 0.20
+  const T_INTRO2    = avgEnergy  - 1.00 * eSpread; // second section extends intro
+  const T_OUTRO     = avgEnergy  - 0.80 * eSpread; // ≈ avg * 0.80
+  const T_OUTRO2    = avgEnergy  - 1.25 * eSpread; // earlier second-to-last outro
+  const T_BRIDGE_E  = avgEnergy  - 0.50 * eSpread; // bridge: slightly below avg
+  const T_PRECHORUS = avgEnergy  - 0.25 * eSpread; // pre-chorus: near avg
+  const T_CHORUS_C  = avgCentroid + 0.15 * cSpread; // chorus: noticeably brighter
+  const T_BRIDGE_C  = avgCentroid + 0.80 * cSpread; // bridge: distinctly brighter
 
   const sections: AudioSection[] = sectionData.map((sd, i) => {
     let label: string;
@@ -885,34 +900,34 @@ function detectSections(mono: Float32Array, sampleRate: number): AudioSection[] 
     const relPos = i / Math.max(totalSections - 1, 1); // 0..1 relative position in song
 
     // Intro: leading section(s) with below-average energy
-    if (isFirst && sd.energy < avgEnergy * 0.85) {
+    if (isFirst && sd.energy < T_INTRO) {
       label = "intro";
     }
     // Extend intro to second section if still quiet AND song has >= 5 sections
-    else if (i === 1 && totalSections >= 5 && sd.energy < avgEnergy * 0.80 && sectionData[0].energy < avgEnergy * 0.85) {
+    else if (i === 1 && totalSections >= 5 && sd.energy < T_INTRO2 && sectionData[0].energy < T_INTRO) {
       label = "intro";
     }
     // Outro: trailing section(s) with below-average energy in last 15% of song
-    else if (isLast && sd.energy < avgEnergy * 0.80) {
+    else if (isLast && sd.energy < T_OUTRO) {
       label = "outro";
     }
-    else if (isSecondToLast && totalSections >= 6 && sd.energy < avgEnergy * 0.75) {
+    else if (isSecondToLast && totalSections >= 6 && sd.energy < T_OUTRO2) {
       label = "outro";
     }
-    // Chorus: high energy + high centroid (bright, loud) — occurs in top 25% energy sections
+    // Chorus: high energy + brighter than average centroid — occurs in top 25% energy sections
     // Bias toward mid-to-late positions (chorus rarely in first 20% of song)
-    else if (sd.energy >= topEnergyThreshold && sd.centroid > avgCentroid * 1.02 && relPos > 0.15) {
+    else if (sd.energy >= topEnergyThreshold && sd.centroid > T_CHORUS_C && relPos > 0.15) {
       label = "chorus";
     }
     // Bridge: mid-to-late section with distinctly different character (high centroid but lower energy)
     // Appears after first chorus and before outro
-    else if (relPos > 0.5 && relPos < 0.85 && sd.energy < avgEnergy * 0.90 && sd.centroid > avgCentroid * 1.12) {
+    else if (relPos > 0.5 && relPos < 0.85 && sd.energy < T_BRIDGE_E && sd.centroid > T_BRIDGE_C) {
       label = "bridge";
     }
     // Pre-chorus: section just before a chorus — rising energy, above-average centroid
     else if (
       i < totalSections - 1 &&
-      sd.energy > avgEnergy * 0.95 &&
+      sd.energy > T_PRECHORUS &&
       sd.centroid > avgCentroid &&
       sectionData[i + 1].energy >= topEnergyThreshold
     ) {
@@ -1038,11 +1053,14 @@ function computeSpotifyFeatures(
     (1 - rmsNorm) * 0.15
   );
 
-  // ── VALENCE (mode-aware) ──────────────────────────────────────────────────
-  // +0.15 se modo maior, −0.15 se menor; combinado com brilho e contraste
+  // ── VALENCE (mode + rhythm + brightness) ──────────────────────────────────
+  // Mode shift reduced from ±0.15 to ±0.08: the major=happy / minor=sad
+  // heuristic is acoustically weak for Brazilian music where minor-key sambas,
+  // bossas, and forró are typically joyful. Rhythm (onsetNorm) is added as a
+  // positive valence signal — percussive, high-onset tracks (samba, forró,
+  // baile funk) express positive affect regardless of harmonic mode.
   const isMinor = /m$/.test(keyName ?? "");
-  const modeShift = isMinor ? -0.15 : 0.15;
-  // Contraste de RMS entre seções (faixas alegres variam)
+  const modeShift = isMinor ? -0.08 : 0.08;
   let sectionContrast = 0;
   if (sections.length >= 2) {
     const rmsList = sections.map(s => s.rms_dbfs);
@@ -1052,12 +1070,15 @@ function computeSpotifyFeatures(
   const valence = clamp(
     0.5 + modeShift +
     (centroidNorm - 0.5) * 0.25 +
-    (energy - 0.5) * 0.20 +
-    sectionContrast * 0.15
+    (energy - 0.5) * 0.25 +
+    (onsetNorm - 0.3) * 0.10 +
+    sectionContrast * 0.10
   );
 
   // ── SPEECHINESS (banda vocal + ZCR) ──────────────────────────────────────
-  // Reaproveita ZCR já calculado em spectral
+  // spectral.zcr é taxa por amostra (crossings / blockSize). Multiplicar por
+  // sampleRate converte para crossings/seg; divisor 8000 normaliza para 0-1.
+  // Divisor < 8000 satura para SR ≥ 32 kHz (0.05 * 44100 / 2000 = 1.1 > 1).
   const zcrNorm = clamp(spectral.zcr * sampleRate / 8000);
   const speechiness = clamp(
     vocalBandRatio * 0.45 +
@@ -1076,7 +1097,9 @@ function computeSpotifyFeatures(
   );
 
   // ── LIVENESS (variação de RMS por seção + high-band) ─────────────────────
-  // Gravações ao vivo têm mais variação dinâmica e ar (high-band)
+  // Gravações ao vivo têm mais variação dinâmica inter-seção e mais "ar" em
+  // high-band (ambience de sala, microfone ambiente). O termo anterior
+  // (1 − rmsNorm) penalizava tracks mais altos arbitrariamente — removido.
   let rmsVariation = 0;
   if (sections.length >= 3) {
     const rmsList = sections.map(s => s.rms_dbfs);
@@ -1085,9 +1108,8 @@ function computeSpotifyFeatures(
     rmsVariation = clamp(Math.sqrt(variance) / 6);
   }
   const liveness = clamp(
-    rmsVariation * 0.50 +
-    highBandRatio * 0.30 +
-    (1 - rmsNorm) * 0.20
+    rmsVariation * 0.60 +
+    highBandRatio * 0.40
   );
 
   return { energy, danceability, acousticness, valence, instrumentalness, liveness, speechiness };
@@ -1163,6 +1185,8 @@ export async function analyzeAudioFull(file: File): Promise<{
     spectral_centroid_hz: Math.round(spectral.centroid),
     spectral_rolloff_hz: Math.round(spectral.rolloff),
     spectral_flatness: Math.round(spectral.flatness * 1000) / 1000,
+    spectral_bandwidth_hz: Math.round(spectral.bandwidth),
+    zero_crossing_rate: Math.round(spectral.zcr * 10000) / 10000,
     rms_dbfs: r(rmsDb),
     energy: Math.round(features.energy * 100) / 100,
     danceability: Math.round(features.danceability * 100) / 100,
@@ -1201,14 +1225,18 @@ export async function analyzeAudio(file: File): Promise<AnalysisResult> {
 
   // Detect mobile/low-memory devices to apply stricter limits and avoid tab kills
   const isMobile = typeof navigator !== "undefined" && /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
-  const lowMem = typeof navigator !== "undefined" && (navigator as any).deviceMemory && (navigator as any).deviceMemory <= 4;
+  const navExt = typeof navigator !== "undefined" ? (navigator as Navigator & { deviceMemory?: number }) : null;
+  const lowMem = (navExt?.deviceMemory ?? Infinity) <= 4;
   // Analyze at most ~120s on mobile (representative window for LUFS/TP/DR), full track on desktop
   const MAX_DURATION_SEC = isMobile || lowMem ? 120 : 600;
 
   let arrayBuffer: ArrayBuffer | null = await file.arrayBuffer();
 
   // Step 1 — decode at original rate using a temporary AudioContext
-  const probeCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+  const WebkitAudioCtx = (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+  const AudioCtx = window.AudioContext ?? WebkitAudioCtx;
+  if (!AudioCtx) throw new Error("Web Audio API não disponível neste navegador.");
+  const probeCtx = new AudioCtx();
   let decoded: AudioBuffer;
   try {
     decoded = await probeCtx.decodeAudioData(arrayBuffer.slice(0));

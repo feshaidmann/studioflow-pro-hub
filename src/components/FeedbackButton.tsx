@@ -19,11 +19,11 @@ import { trackEvent } from "@/lib/analytics";
 type FeedbackSource = "floating_button" | "beta_banner" | "event";
 
 const CATEGORIES = [
-  { value: "bug", label: "🐛 Bug / Erro" },
-  { value: "sugestao", label: "💡 Sugestão" },
-  { value: "elogio", label: "🎉 Elogio" },
-  { value: "duvida", label: "❓ Dúvida" },
-  { value: "geral", label: "💬 Geral" },
+  { value: "bug", label: "Bug / Erro" },
+  { value: "sugestao", label: "Sugestão" },
+  { value: "elogio", label: "Elogio" },
+  { value: "duvida", label: "Dúvida" },
+  { value: "geral", label: "Geral" },
 ];
 
 export default function FeedbackButton() {
@@ -76,7 +76,7 @@ export default function FeedbackButton() {
       toast.error("Erro ao enviar feedback. Tente novamente.");
       return;
     }
-    toast.success("Obrigado pelo feedback! Cada opinião conta muito 🙏");
+    toast.success("Obrigado pelo feedback! Cada opinião conta muito.");
     setOpen(false);
     setMessage("");
     setCategory("geral");

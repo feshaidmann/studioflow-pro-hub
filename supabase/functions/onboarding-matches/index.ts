@@ -1,9 +1,35 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
+const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
+  }
+
+  // Require authentication — this is called from the onboarding wizard after
+  // sign-up, so the user always has a valid JWT. Without this check the endpoint
+  // exposed all users' editais to unauthenticated callers.
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader?.startsWith("Bearer ")) {
+    return new Response(
+      JSON.stringify({ editais: [], professionals: [], error: "Unauthorized" }),
+      { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
+  }
+
+  const userClient = createClient(SUPABASE_URL, ANON_KEY, {
+    global: { headers: { Authorization: authHeader } },
+  });
+  const { data: { user }, error: authErr } = await userClient.auth.getUser();
+  if (authErr || !user) {
+    return new Response(
+      JSON.stringify({ editais: [], professionals: [], error: "Unauthorized" }),
+      { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
   }
 
   try {
@@ -20,15 +46,13 @@ Deno.serve(async (req) => {
       genre = (url.searchParams.get("genre") ?? "").trim();
     }
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-    );
-
+    // Use service role only for the professionals query (public listing).
+    // Editais are user-owned — filter by the authenticated user's own records.
+    const admin = createClient(SUPABASE_URL, SERVICE_ROLE);
     const nowIso = new Date().toISOString();
 
     const editaisPromise = (async () => {
-      let q = supabase
+      let q = userClient
         .from("editais")
         .select("id, titulo, orgao, estado, prazo, valor")
         .eq("status", "Aberto")
@@ -47,14 +71,13 @@ Deno.serve(async (req) => {
     })();
 
     const proPromise = (async () => {
-      const base = supabase
+      const { data, error } = await admin
         .from("professionals")
         .select("id, name, specialty, bio")
         .eq("active", true)
         .eq("allow_global_listing", true)
         .limit(3);
 
-      const { data, error } = await base;
       if (error) throw error;
       return (data ?? []).map((p) => ({
         id: p.id,
@@ -88,7 +111,7 @@ Deno.serve(async (req) => {
         headers: {
           ...corsHeaders,
           "Content-Type": "application/json",
-          "Cache-Control": "public, max-age=600",
+          "Cache-Control": "private, max-age=300",
         },
         status: 200,
       },

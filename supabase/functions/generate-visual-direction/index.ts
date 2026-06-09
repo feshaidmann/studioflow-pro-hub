@@ -212,7 +212,28 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, serviceKey);
 
-    // Verifica ownership do projeto
+    // Per-user daily quota: max 10 visual generations per day (image model is expensive).
+    const todayUtc = new Date().toISOString().slice(0, 10);
+    const { count: todayCount } = await supabase
+      .from("ai_invocations")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .eq("function_name", "generate-visual-direction")
+      .gte("created_at", todayUtc + "T00:00:00Z");
+
+    if ((todayCount ?? 0) >= 10) {
+      return new Response(
+        JSON.stringify({
+          error: "rate_limit",
+          limit_type: "daily",
+          limit: 10,
+          used: todayCount,
+          resets_at: todayUtc + "T23:59:59Z",
+          message: "Limite diário de gerações visuais atingido. Tente amanhã.",
+        }),
+        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
     const { data: proj, error: projErr } = await supabase
       .from("projects")
       .select("id, user_id")
@@ -319,6 +340,15 @@ serve(async (req) => {
       if (error) throw error;
       row = data;
     }
+
+    // Log invocation for cost tracking (best-effort)
+    supabase.from("ai_invocations").insert({
+      function_name: "generate-visual-direction",
+      model: IMAGE_MODEL,
+      user_id: user.id,
+      cost_usd: 0.04,
+      status: "success",
+    }).catch(() => {});
 
     return new Response(JSON.stringify({ briefing: row }), {
       status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },

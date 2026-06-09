@@ -2,6 +2,10 @@
 import type { Edital } from "@/hooks/useEditais";
 import type { PalcoCurado } from "@/hooks/usePalcos";
 
+export function normalize(s: string) {
+  return (s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+}
+
 export type TipoOportunidade = "edital" | "palco";
 
 export interface Opportunity {
@@ -98,9 +102,9 @@ export function palcoToOpportunity(p: PalcoCurado, origem: "curated" | "ai" = "c
     porteOuTipo: p.tipo_palco,
     editalId: p.id || null,
     origem,
-    linkStatus: (p as any).link_status as Opportunity["linkStatus"],
-    linkCheckedAt: (p as any).link_checked_at ?? null,
-    matchReason: (p as any).match_reason ?? null,
+    linkStatus: p.link_status as Opportunity["linkStatus"],
+    linkCheckedAt: p.link_checked_at ?? null,
+    matchReason: p.match_reason ?? null,
     raw: p,
   };
 }

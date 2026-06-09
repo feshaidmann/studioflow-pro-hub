@@ -28,7 +28,7 @@ interface ProjectOverviewTabProps {
   onSwitchTab?: (tab: string) => void;
 }
 
-function formatDueDate(d: string | null) {
+export function formatDueDate(d: string | null): { label: string; color: string; urgent: boolean } | null {
   if (!d) return null;
   const date = new Date(d + "T12:00:00");
   const today = new Date(); today.setHours(0, 0, 0, 0);
@@ -38,6 +38,26 @@ function formatDueDate(d: string | null) {
   if (diff === 1) return { label: "Amanhã", color: "text-warning", urgent: true };
   if (diff <= 7) return { label: `em ${diff}d`, color: "text-warning/80", urgent: false };
   return { label: `em ${diff}d`, color: "text-muted-foreground", urgent: false };
+}
+
+export type NextActionSeverity = "critical" | "warning" | "info";
+export interface NextAction { label: string; severity: NextActionSeverity; tab: string | null; }
+
+export function deriveNextAction(
+  overdueTasks: Array<unknown>,
+  pendingTxs: Array<unknown>,
+  projectTasks: Array<{ description: string }>,
+  stage: string,
+): NextAction {
+  if (overdueTasks.length > 0)
+    return { label: `Resolver ${overdueTasks.length} tarefa${overdueTasks.length > 1 ? "s" : ""} vencida${overdueTasks.length > 1 ? "s" : ""}`, severity: "critical", tab: "tasks" };
+  if (pendingTxs.length > 0)
+    return { label: `${pendingTxs.length} pagamento${pendingTxs.length > 1 ? "s" : ""} pendente${pendingTxs.length > 1 ? "s" : ""}`, severity: "warning", tab: "finance" };
+  if (projectTasks.length > 0)
+    return { label: projectTasks[0].description, severity: "info", tab: "tasks" };
+  if (stage === "upload" || stage === "master")
+    return { label: "Preparar lançamento", severity: "info", tab: "release" };
+  return { label: "Avançar para próxima etapa", severity: "info", tab: null };
 }
 
 export default function ProjectOverviewTab({ project, progress, isOwner, onSwitchTab }: ProjectOverviewTabProps) {
@@ -56,14 +76,7 @@ export default function ProjectOverviewTab({ project, progress, isOwner, onSwitc
   const unpaidFees = isOwner ? team.filter((p) => p.fee > 0).reduce((acc, p) => acc + p.fee, 0) : 0;
   const pendingTxs = projectTxs.filter((t) => !t.paid);
 
-  type NextActionSeverity = "critical" | "warning" | "info";
-  const nextAction: { label: string; severity: NextActionSeverity; tab: string | null } = (() => {
-    if (overdueTasks.length > 0) return { label: `Resolver ${overdueTasks.length} tarefa${overdueTasks.length > 1 ? "s" : ""} vencida${overdueTasks.length > 1 ? "s" : ""}`, severity: "critical", tab: "tasks" };
-    if (pendingTxs.length > 0) return { label: `${pendingTxs.length} pagamento${pendingTxs.length > 1 ? "s" : ""} pendente${pendingTxs.length > 1 ? "s" : ""}`, severity: "warning", tab: "finance" };
-    if (projectTasks.length > 0) return { label: projectTasks[0].description, severity: "info", tab: "tasks" };
-    if (project.stage === "upload" || project.stage === "master") return { label: "Preparar lançamento", severity: "info", tab: "release" };
-    return { label: "Avançar para próxima etapa", severity: "info", tab: null };
-  })();
+  const nextAction = deriveNextAction(overdueTasks, pendingTxs, projectTasks, project.stage);
 
   const fmt = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
 

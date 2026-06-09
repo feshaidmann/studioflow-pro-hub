@@ -2,8 +2,9 @@
 // Roda diariamente via pg_cron (ver README) ou pode ser invocado manualmente.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
+// Cron-only function: not invoked from browser, no wildcard CORS needed.
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": "https://app.jamsessionproject.com.br",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
@@ -114,7 +115,7 @@ Deno.serve(async (req) => {
     });
   } catch (err: any) {
     console.error("notify-edital-deadlines error:", err);
-    return new Response(JSON.stringify({ error: err.message }), {
+    return new Response(JSON.stringify({ error: "Erro interno. Tente novamente." }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useProjectFiles, FOLDERS, type FolderKey } from "@/hooks/useProjectFiles";
 import AudioPlayer from "@/components/ui/audio-player";
+import { toast } from "sonner";
 
 const ICON_MAP: Record<string, React.FC<{ className?: string }>> = {
   Music, Mic, Layers, Sliders, Disc, Image, Film, Megaphone, FileText,
@@ -61,7 +62,10 @@ export default function ProjectFilesTab({ projectId, isOwner = true }: ProjectFi
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 50 * 1024 * 1024) return;
+    if (file.size > 50 * 1024 * 1024) {
+      toast.error("Arquivo muito grande. O limite é 50 MB.");
+      return;
+    }
     await uploadFile(file, uploadFolder);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };

@@ -2,22 +2,34 @@ import { useMemo, useState } from "react";
 import { Sparkles, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import OpportunityCard from "./OpportunityCard";
-import { editalToOpportunity, palcoToOpportunity, type Opportunity } from "./types";
+import { editalToOpportunity, palcoToOpportunity, normalize, type Opportunity } from "./types";
 import type { Edital } from "@/hooks/useEditais";
 import type { PalcoCurado } from "@/hooks/usePalcos";
 
 interface ScoredEdital extends Edital { __score: number }
 interface ScoredPalco extends PalcoCurado { score: number }
 
-function normalize(s: string) {
-  return (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+// +4 if closing in ≤ 7 days, +2 if ≤ 30 days, 0 otherwise
+function urgencyBonus(prazo: string | null | undefined): number {
+  if (!prazo) return 0;
+  try {
+    const days = Math.round(
+      (new Date(prazo + "T12:00:00-03:00").getTime() - Date.now()) / 86_400_000,
+    );
+    if (days < 0) return 0;
+    if (days <= 7) return 4;
+    if (days <= 30) return 2;
+    return 0;
+  } catch { return 0; }
 }
 
-function scoreEdital(e: Edital, perfil: { estado?: string | null; specialties?: string[]; query?: string }): number {
+function scoreEdital(e: Edital, perfil: { estado?: string | null; specialties?: string[] }): number {
   let s = 0;
   if (e.status === "Aberto") s += 5;
   else if (e.status === "Previsto") s += 2;
   else if (e.status === "Encerrado") return 0;
+
+  s += urgencyBonus(e.prazo);
 
   const estado = (e.estado || "").toLowerCase();
   if (perfil.estado) {
@@ -27,14 +39,12 @@ function scoreEdital(e: Edital, perfil: { estado?: string | null; specialties?: 
     s += 2;
   }
 
-  const text = normalize(`${e.titulo} ${e.orgao} ${e.area || ""} ${e.resumo || ""} ${e.publico_alvo || ""}`);
   if (perfil.specialties?.length) {
+    const text = normalize(`${e.titulo} ${e.orgao} ${e.area || ""} ${e.resumo || ""} ${e.publico_alvo || ""}`);
     for (const sp of perfil.specialties) {
       if (text.includes(normalize(sp))) s += 2;
     }
   }
-  // Música é o domínio padrão
-  if (text.includes("musica") || text.includes("musical") || text.includes("som")) s += 1;
   return s;
 }
 
@@ -65,6 +75,8 @@ export default function RecommendedSection({ editais, palcos, perfil, onOpen, on
         else if (p.status === "Previsto") score += 2;
         else return { ...p, score: 0 };
 
+        score += urgencyBonus(p.prazo);
+
         if (perfil.generos?.length) {
           const hits = p.generos.filter((g) => perfil.generos!.some((pg) => normalize(pg) === normalize(g))).length;
           score += hits * 8;
@@ -73,6 +85,12 @@ export default function RecommendedSection({ editais, palcos, perfil, onOpen, on
         if (perfil.estado) {
           if (estado === "nacional" || !estado) score += 3;
           else if (estado.includes(perfil.estado.toLowerCase())) score += 6;
+        }
+        if (perfil.specialties?.length) {
+          const text = normalize(`${p.nome} ${p.organizador || ""} ${p.resumo || ""}`);
+          for (const sp of perfil.specialties) {
+            if (text.includes(normalize(sp))) score += 2;
+          }
         }
         return { ...p, score };
       })

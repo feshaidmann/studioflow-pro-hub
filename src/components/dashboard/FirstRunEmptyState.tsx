@@ -3,7 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   Plus, ArrowRight, Sparkles, CheckCircle2, Circle,
-  FolderPlus, ListMusic, UserPlus,
+  FolderPlus, ListMusic, UserPlus, X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Project } from "@/data/mockData";
@@ -15,7 +15,7 @@ const ONBOARDING_STEPS = [
     id: "create_project",
     icon: FolderPlus,
     label: "Criar seu primeiro projeto",
-    desc: "Registre nome, artista, BPM e etapa atual",
+    desc: "Escolha um nome, tipo e gênero para sua música",
     action: "/projects?new=1",
   },
   {
@@ -33,6 +33,11 @@ const ONBOARDING_STEPS = [
     action: "/professionals",
   },
 ];
+
+function clearRecentOnboardingProject() {
+  localStorage.removeItem("sfp_recent_onboarding_project");
+  window.dispatchEvent(new Event("sfp:recent-onboarding-project-changed"));
+}
 
 export default function FirstRunEmptyState({ onNavigate, recentProject, profile }: { onNavigate: (path: string) => void; recentProject?: Project | null; profile?: Profile | null }) {
   const STORAGE_KEY = "sfp_onboarding_done";
@@ -57,25 +62,32 @@ export default function FirstRunEmptyState({ onNavigate, recentProject, profile 
     return (
       <div className="col-span-full animate-fade-in">
         <Card className="glass-card border-primary/20 relative overflow-hidden">
+          <button
+            onClick={clearRecentOnboardingProject}
+            className="absolute top-3 right-3 z-20 p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
+            aria-label="Fechar"
+          >
+            <X className="h-4 w-4" />
+          </button>
           <CardContent className="p-6 md:p-8 relative z-10 space-y-5">
             <div className="flex items-start gap-3">
               <div className="p-2 rounded-lg bg-primary/10 text-primary shrink-0">
                 <Sparkles className="h-5 w-5" />
               </div>
               <div className="min-w-0">
-                <p className="text-xs font-semibold uppercase text-primary">Projeto criado pelo onboarding</p>
-                <h2 className="text-2xl md:text-3xl font-bold text-foreground mt-1">{recentProject.name} já está pronto para avançar</h2>
+                <p className="text-xs font-semibold uppercase text-primary">Primeiro projeto criado</p>
+                <h2 className="text-2xl md:text-3xl font-bold text-foreground mt-1">{recentProject.name} está pronto para avançar</h2>
                 <p className="text-muted-foreground text-sm leading-relaxed mt-2 max-w-md">
-                  Agora vamos transformar suas respostas em progresso real: checklist, análise técnica e próximas ações.
+                  Adicione faixas, convide colaboradores e acompanhe o progresso até o lançamento.
                 </p>
               </div>
             </div>
             <div className="flex flex-col sm:flex-row gap-2">
-              <Button className="gap-2" size="lg" onClick={() => onNavigate(`/projects/${recentProject.id}`)}>
-                Ver projeto <ArrowRight className="h-4 w-4" />
+              <Button className="gap-2" size="lg" onClick={() => { clearRecentOnboardingProject(); onNavigate(`/projects/${recentProject.id}`); }}>
+                Abrir projeto <ArrowRight className="h-4 w-4" />
               </Button>
-              <Button variant="outline" size="lg" onClick={() => onNavigate(plan.primaryPath)}>{plan.primaryLabel}</Button>
-              <Button variant="secondary" size="lg" onClick={() => onNavigate("/music-dna")}>Analisar faixa</Button>
+              <Button variant="outline" size="lg" onClick={() => { clearRecentOnboardingProject(); onNavigate(plan.primaryPath); }}>{plan.primaryLabel}</Button>
+              <Button variant="ghost" size="lg" onClick={() => { clearRecentOnboardingProject(); onNavigate("/music-dna"); }}>Analisar faixa</Button>
             </div>
           </CardContent>
         </Card>
@@ -177,7 +189,7 @@ export default function FirstRunEmptyState({ onNavigate, recentProject, profile 
               </div>
               {allDone && (
                 <p className="text-xs text-success font-medium text-center mt-3 animate-fade-in">
-                  🎉 Tudo pronto! Agora é só criar música.
+                  Tudo pronto! Agora é só criar música.
                 </p>
               )}
             </div>

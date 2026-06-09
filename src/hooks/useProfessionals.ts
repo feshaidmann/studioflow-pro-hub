@@ -18,16 +18,19 @@ export function useProfessionals() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let active = true;
     supabase
       .from("professionals")
       .select("id, name, specialty, email, phone, bio, allow_global_listing")
       .eq("active", true)
       .order("name")
       .then(({ data, error }) => {
+        if (!active) return;
         if (error) console.error("useProfessionals fetch error:", error);
         if (data) setProfessionals(data as ProfessionalOption[]);
         setLoading(false);
       });
+    return () => { active = false; };
   }, []);
 
   return { professionals, loading };

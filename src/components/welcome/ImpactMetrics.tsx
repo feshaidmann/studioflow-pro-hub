@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { Music, Trophy, Rocket, Users, type LucideIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -17,12 +16,32 @@ const CACHE_KEY = "sf_impact_stats_v1";
 const TTL_MS = 60 * 60 * 1000;
 const nf = new Intl.NumberFormat("pt-BR");
 
-const CARDS: ReadonlyArray<{ key: keyof Omit<Stats, "generatedAt">; icon: LucideIcon; label: string }> = [
-  { key: "artistsActive", icon: Music, label: "artistas ativos" },
-  { key: "editaisAtivos", icon: Trophy, label: "editais abertos" },
-  { key: "projectsPublished", icon: Rocket, label: "projetos publicados" },
-  { key: "professionalsAvailable", icon: Users, label: "profissionais cadastrados" },
+type Tone = "orange" | "pink" | "purple" | "neutral";
+
+const CARDS: ReadonlyArray<{
+  key: keyof Omit<Stats, "generatedAt">;
+  label: string;
+  tone: Tone;
+}> = [
+  { key: "artistsActive",          label: "Artistas ativos",          tone: "orange" },
+  { key: "editaisAtivos",          label: "Editais abertos",          tone: "pink" },
+  { key: "projectsPublished",      label: "Projetos publicados",      tone: "purple" },
+  { key: "professionalsAvailable", label: "Profissionais cadastrados", tone: "neutral" },
 ];
+
+const TONE_BG: Record<Tone, string> = {
+  orange: "bg-orange-600",
+  pink: "bg-pink-700",
+  purple: "bg-purple-900/40 border border-white/5",
+  neutral: "bg-white/5 border border-white/5",
+};
+
+const TONE_LABEL: Record<Tone, string> = {
+  orange: "text-orange-200",
+  pink: "text-pink-200",
+  purple: "text-white/50",
+  neutral: "text-white/40",
+};
 
 function readCache(): Stats | null {
   try {
@@ -77,29 +96,28 @@ export function ImpactMetrics() {
 
   return (
     <section
-      className="welcome-fade mt-7 w-full"
-      style={{ "--delay": "90ms" } as React.CSSProperties}
+      className="welcome-fade"
+      style={{ "--delay": "200ms" } as React.CSSProperties}
       aria-label="Impacto da plataforma"
     >
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {CARDS.map(({ key, icon: Icon, label }) => (
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+        {CARDS.map(({ key, label, tone }) => (
           <div
             key={key}
             role="group"
             aria-label={label}
-            className="rounded-[var(--radius)] border border-border/50 bg-card/60 backdrop-blur-sm p-3 flex flex-col gap-2"
+            className={`flex flex-col items-center justify-center rounded-3xl p-6 text-center ${TONE_BG[tone]}`}
           >
-            <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center">
-              <Icon className="h-3.5 w-3.5 text-primary" />
-            </div>
             {status === "loading" || !stats ? (
-              <Skeleton className="h-7 w-16" />
+              <Skeleton className="h-8 w-12 bg-white/10" />
             ) : (
-              <p className="text-2xl font-semibold leading-none text-foreground">
+              <span className="font-display text-4xl text-white">
                 {nf.format(stats[key] ?? 0)}
-              </p>
+              </span>
             )}
-            <p className="text-[10px] text-muted-foreground leading-snug">{label}</p>
+            <span className={`mt-1 text-[10px] font-bold uppercase tracking-tight ${TONE_LABEL[tone]}`}>
+              {label}
+            </span>
           </div>
         ))}
       </div>

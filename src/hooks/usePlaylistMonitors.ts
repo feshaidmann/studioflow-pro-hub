@@ -26,7 +26,8 @@ export function useActiveMonitors() {
       const { data, error } = await supabase
         .from("playlist_monitors")
         .select("*")
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .limit(200);
       if (error) throw error;
       return (data ?? []) as PlaylistMonitor[];
     },

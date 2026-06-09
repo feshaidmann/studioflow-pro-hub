@@ -22,22 +22,24 @@ export default function DashboardHeader({ displayName, projects, selectedProject
       <div>
         <h1 id="dashboard-title" className="text-2xl md:text-3xl font-bold text-foreground">Dashboard</h1>
         <p className="text-muted-foreground text-sm mt-1">
-          Olá, {displayName} 👋{focus ? ` Seu foco hoje é ${focus}.` : ""}
+          Olá, {displayName}{focus ? ` — Seu foco hoje é ${focus}.` : ""}
         </p>
       </div>
       <div className="flex items-center gap-2 flex-wrap">
-        <Select value={selectedProjectId} onValueChange={onSelectProject}>
-          <SelectTrigger className="w-full sm:w-[180px] bg-card/60" aria-label="Filtrar projeto exibido no dashboard">
-            <Filter className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" aria-hidden="true" />
-            <SelectValue placeholder="Filtrar projeto" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos os projetos</SelectItem>
-            {projects.map((p) => (
-              <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        {projects.length > 0 && (
+          <Select value={selectedProjectId} onValueChange={onSelectProject}>
+            <SelectTrigger className="w-full sm:w-[180px] bg-card/60" aria-label="Filtrar projeto exibido no dashboard">
+              <Filter className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" aria-hidden="true" />
+              <SelectValue placeholder="Filtrar projeto" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os projetos</SelectItem>
+              {projects.map((p) => (
+                <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
         <Button onClick={() => navigate("/projects")} className="active:scale-95 transition-transform w-full sm:w-auto">
           <Plus className="h-4 w-4 mr-1" /> <span>Novo Projeto</span>
         </Button>

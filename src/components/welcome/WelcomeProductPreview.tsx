@@ -11,112 +11,109 @@ export function WelcomeProductPreview() {
     return { spentPct, doneTasks, totalTasks, remaining };
   }, []);
 
+  const upcoming = MOCK_PROJECT.tasks.slice(0, 4);
+
   return (
     <section
-      className="welcome-fade mt-10 w-full"
-      style={{ "--delay": "180ms" } as React.CSSProperties}
+      className="welcome-fade"
+      style={{ "--delay": "150ms" } as React.CSSProperties}
+      aria-label="Veja como fica na prática"
     >
-      <p className="mb-3 text-center text-[11px] font-medium uppercase tracking-wider text-muted-foreground/60">
-        Veja como fica na prática
-      </p>
-
-      <div className="rounded-[var(--radius)] glass-card overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center justify-between gap-2 border-b border-border/40 px-4 py-3">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-              <Music2 className="h-4 w-4 text-primary" />
-            </div>
+      {/* Border gradiente envolvendo o card */}
+      <div className="rounded-[2.5rem] bg-gradient-to-r from-orange-500 to-purple-500 p-px">
+        <div className="h-full rounded-[calc(2.5rem-1px)] bg-welcome-surface p-6 md:p-8">
+          {/* Header */}
+          <div className="mb-10 flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <p className="text-sm font-semibold leading-tight truncate">{MOCK_PROJECT.name}</p>
-              <p className="text-[11px] text-muted-foreground truncate">
-                {MOCK_PROJECT.artist} · lança {MOCK_PROJECT.releaseDate}
+              <div className="mb-1 flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-orange-500/20 text-orange-400">
+                  <Music2 className="h-5 w-5" />
+                </div>
+                <h3 className="text-2xl font-bold text-white">{MOCK_PROJECT.name}</h3>
+              </div>
+              <p className="text-sm text-white/40">
+                {MOCK_PROJECT.artist} · lançamento {MOCK_PROJECT.releaseDate}
               </p>
             </div>
-          </div>
-          <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
-            {MOCK_PROJECT.stage}
-          </span>
-        </div>
-
-        {/* KPIs row */}
-        <div className="grid grid-cols-3 divide-x divide-border/40 border-b border-border/40">
-          <Kpi label="Saúde" value={`${MOCK_PROJECT.health}%`} tone="primary" />
-          <Kpi label="Tarefas" value={`${doneTasks}/${totalTasks}`} tone="default" />
-          <Kpi label="Saldo" value={`R$ ${remaining.toLocaleString("pt-BR")}`} tone="default" />
-        </div>
-
-        {/* Orçamento bar */}
-        <div className="px-4 pt-3 pb-2 space-y-1.5">
-          <div className="flex items-center justify-between text-[11px]">
-            <span className="text-muted-foreground">
-              Orçamento · R$ {MOCK_PROJECT.budget.spent.toLocaleString("pt-BR")} de R${" "}
-              {MOCK_PROJECT.budget.total.toLocaleString("pt-BR")}
+            <span className="shrink-0 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-white/80">
+              {MOCK_PROJECT.stage}
             </span>
-            <span className="font-medium text-warning">{spentPct}%</span>
           </div>
-          <div className="h-1.5 w-full rounded-full bg-secondary overflow-hidden">
-            <div
-              className="h-full rounded-full bg-warning transition-all"
-              style={{ width: `${spentPct}%` }}
-            />
-          </div>
-        </div>
 
-        {/* Alertas (estilo Dashboard) */}
-        <div className="px-4 py-2 space-y-1.5 border-t border-border/40">
-          <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground/60">
-            Alertas do projeto
-          </p>
-          {MOCK_PROJECT.alerts.map((a, i) => (
-            <div key={i} className="flex items-start gap-2">
-              {a.tone === "warning" ? (
-                <AlertTriangle className="h-3.5 w-3.5 text-warning shrink-0 mt-0.5" />
-              ) : (
-                <Sparkles className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" />
-              )}
-              <p className="text-[11px] text-foreground leading-snug">{a.label}</p>
+          {/* KPIs */}
+          <div className="mb-10 grid grid-cols-3 gap-6">
+            <Kpi label="Saúde" value={`${MOCK_PROJECT.health}%`} tone="green" />
+            <Kpi label="Tarefas" value={`${doneTasks}/${totalTasks}`} tone="orange" />
+            <Kpi label="Saldo" value={`R$ ${remaining.toLocaleString("pt-BR")}`} tone="white" />
+          </div>
+
+          {/* Orçamento */}
+          <div className="mb-8 space-y-2">
+            <div className="flex justify-between text-xs font-bold uppercase">
+              <span className="text-white/60">
+                Orçamento · R$ {MOCK_PROJECT.budget.spent.toLocaleString("pt-BR")} de R${" "}
+                {MOCK_PROJECT.budget.total.toLocaleString("pt-BR")}
+              </span>
+              <span className="text-orange-400">{spentPct}%</span>
             </div>
-          ))}
-        </div>
+            <div className="h-3 w-full overflow-hidden rounded-full bg-white/5">
+              <div
+                className="h-full bg-gradient-to-r from-orange-500 to-pink-500 transition-all"
+                style={{ width: `${spentPct}%` }}
+              />
+            </div>
+          </div>
 
-        {/* Próximas tarefas */}
-        <div className="px-4 py-3 border-t border-border/40">
-          <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground/60 mb-2">
-            Próximas tarefas
-          </p>
-          <ul className="space-y-1.5">
-            {MOCK_PROJECT.tasks.slice(0, 4).map((task, i) => (
-              <li key={i} className="flex items-center gap-2">
-                <div
-                  className={`h-3.5 w-3.5 rounded-full flex items-center justify-center shrink-0 ${
-                    task.done ? "bg-success/20" : task.urgent ? "bg-warning/20" : "bg-secondary"
-                  }`}
-                >
-                  {task.done && <CheckCircle2 className="h-3 w-3 text-success" />}
-                  {!task.done && task.urgent && (
-                    <span className="h-1.5 w-1.5 rounded-full bg-warning" />
-                  )}
-                </div>
-                <span
-                  className={`text-[11px] leading-tight ${
-                    task.done
-                      ? "line-through text-muted-foreground/50"
-                      : task.urgent
-                      ? "text-foreground font-medium"
-                      : "text-muted-foreground"
-                  }`}
-                >
-                  {task.label}
-                </span>
-                {!task.done && task.urgent && (
-                  <span className="ml-auto text-[9px] rounded-full bg-warning/25 text-foreground font-semibold px-1.5 py-0.5">
-                    urgente
-                  </span>
-                )}
-              </li>
-            ))}
-          </ul>
+          {/* Alertas + Próximas tarefas */}
+          <div className="grid gap-8 md:grid-cols-2">
+            <div className="space-y-4">
+              <p className="text-xs font-bold uppercase tracking-widest text-white/40">Alertas</p>
+              <div className="space-y-3">
+                {MOCK_PROJECT.alerts.map((a, i) => (
+                  <div key={i} className="flex items-start gap-3 text-sm text-white/90">
+                    {a.tone === "warning" ? (
+                      <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-orange-400" />
+                    ) : (
+                      <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-purple-400" />
+                    )}
+                    <p className="leading-snug">{a.label}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <p className="text-xs font-bold uppercase tracking-widest text-white/40">
+                Próximas tarefas
+              </p>
+              <div className="space-y-2">
+                {upcoming.map((task, i) => (
+                  <div
+                    key={i}
+                    className={`flex items-center gap-2 text-xs ${
+                      task.done ? "text-white/40 line-through" : "text-white/90"
+                    }`}
+                  >
+                    {task.done ? (
+                      <CheckCircle2 className="h-4 w-4 shrink-0 text-white/30" />
+                    ) : (
+                      <div
+                        className={`h-4 w-4 shrink-0 rounded border ${
+                          task.urgent ? "border-orange-500/60" : "border-white/20"
+                        }`}
+                      />
+                    )}
+                    <span className="truncate">{task.label}</span>
+                    {!task.done && task.urgent && (
+                      <span className="ml-auto rounded bg-orange-600 px-2 py-0.5 text-[10px] font-bold uppercase text-white">
+                        urgente
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </section>
@@ -130,20 +127,14 @@ function Kpi({
 }: {
   label: string;
   value: string;
-  tone: "primary" | "default";
+  tone: "green" | "orange" | "white";
 }) {
+  const color =
+    tone === "green" ? "text-green-400" : tone === "orange" ? "text-orange-400" : "text-white";
   return (
-    <div className="px-3 py-2.5 text-center">
-      <p className="text-[9px] font-medium uppercase tracking-wider text-muted-foreground/60">
-        {label}
-      </p>
-      <p
-        className={`text-sm font-semibold tabular-nums mt-0.5 ${
-          tone === "primary" ? "text-primary" : "text-foreground"
-        }`}
-      >
-        {value}
-      </p>
+    <div className="space-y-1">
+      <p className="text-[10px] uppercase tracking-widest text-white/40">{label}</p>
+      <p className={`font-display text-3xl ${color}`}>{value}</p>
     </div>
   );
 }

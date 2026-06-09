@@ -1,9 +1,15 @@
+import { useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { Lock, Zap, BarChart2, CalendarDays, Sparkles, ArrowLeft } from "lucide-react";
+import { Lock, Zap, BarChart2, CalendarDays, Sparkles, ArrowLeft, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { useProfile } from "@/contexts/ProfileContext";
+import { supabase } from "@/integrations/supabase/client";
 
 const featureDetails: Record<string, { title: string; description: string; icon: React.ReactNode; perks: string[] }> = {
   finance: {
@@ -35,13 +41,34 @@ const featureDetails: Record<string, { title: string; description: string; icon:
 export default function UpgradeScreen() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { profile, updateProfile } = useProfile();
   const feature = searchParams.get("feature") ?? "projects";
   const details = featureDetails[feature] ?? featureDetails.projects;
 
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [whatsapp, setWhatsapp] = useState(profile?.whatsapp ?? "");
+  const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
+
   const handleUpgrade = () => {
-    toast.info("Upgrade em breve! 🚀", {
-      description: "A funcionalidade de upgrade estará disponível em breve.",
-    });
+    setWhatsapp(profile?.whatsapp ?? "");
+    setSubmitted(false);
+    setDialogOpen(true);
+  };
+
+  const handleSubmitInterest = async () => {
+    setLoading(true);
+    try {
+      if (whatsapp && whatsapp !== profile?.whatsapp) {
+        await updateProfile({ whatsapp });
+      }
+      await supabase.from("profiles").update({ plan: "pro" } as never).eq("id", profile?.id ?? "").throwOnError();
+      setSubmitted(true);
+    } catch {
+      toast.error("Erro ao registrar interesse. Tente novamente.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -96,6 +123,58 @@ export default function UpgradeScreen() {
           </p>
         </div>
       </div>
+
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="max-w-sm">
+          {submitted ? (
+            <div className="flex flex-col items-center text-center gap-4 py-4">
+              <CheckCircle2 className="h-12 w-12 text-primary" />
+              <DialogHeader>
+                <DialogTitle>Interesse registrado!</DialogTitle>
+                <DialogDescription>
+                  Entraremos em contato pelo WhatsApp para finalizar o seu upgrade para o plano Pro.
+                </DialogDescription>
+              </DialogHeader>
+              <Button className="w-full" onClick={() => { setDialogOpen(false); navigate(-1); }}>
+                Voltar
+              </Button>
+            </div>
+          ) : (
+            <>
+              <DialogHeader>
+                <DialogTitle>Upgrade para o plano Pro</DialogTitle>
+                <DialogDescription>
+                  Confirme seu WhatsApp para que nossa equipe entre em contato e finalize o upgrade.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 pt-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor="upgrade-whatsapp">WhatsApp</Label>
+                  <Input
+                    id="upgrade-whatsapp"
+                    type="tel"
+                    placeholder="(11) 99999-9999"
+                    value={whatsapp}
+                    onChange={(e) => setWhatsapp(e.target.value)}
+                  />
+                </div>
+                <Button
+                  className="w-full gap-2"
+                  onClick={handleSubmitInterest}
+                  disabled={loading || !whatsapp.trim()}
+                >
+                  {loading ? "Enviando..." : (
+                    <>
+                      <Sparkles className="h-4 w-4" />
+                      Confirmar interesse
+                    </>
+                  )}
+                </Button>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

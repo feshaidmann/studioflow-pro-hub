@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 // ── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -47,6 +47,9 @@ export interface PalcoCurado {
   publico_estimado: string | null;
   resumo: string | null;
   ativo: boolean;
+  link_status?: string | null;
+  link_checked_at?: string | null;
+  match_reason?: string | null;
 }
 
 export interface PalcoSearchResult {
@@ -59,7 +62,6 @@ export interface PalcoSearchResult {
 
 export function usePalcos() {
   const { user } = useAuth();
-  const { toast } = useToast();
 
   const [palcosCurados, setPalcosCurados] = useState<PalcoCurado[]>([]);
   const [loadingCurados, setLoadingCurados] = useState(true);
@@ -108,15 +110,11 @@ export function usePalcos() {
       console.error("Palco search error:", err);
       const msg = err?.message || "Não foi possível buscar agora. Tente novamente em instantes.";
       setSearchError(msg);
-      toast({
-        title: "Erro na busca",
-        description: msg,
-        variant: "destructive",
-      });
+      toast.error("Erro na busca", { description: msg });
     } finally {
       setSearching(false);
     }
-  }, [user, toast]);
+  }, [user]);
 
   const retryLastSearch = useCallback(() => {
     if (lastQuery) void search(lastQuery, lastProjectId);
@@ -171,16 +169,16 @@ export function usePalcos() {
       const newCount = inserted?.length ?? 0;
       const dupCount = rows.length - newCount;
       if (newCount === 0) {
-        toast({ title: "Oportunidades já salvas", description: "Todos os itens já estão na sua lista." });
+        toast.success("Oportunidades já salvas", { description: "Todos os itens já estão na sua lista." });
       } else if (dupCount > 0) {
-        toast({ title: `${newCount} oportunidade(s) salva(s)!`, description: `${dupCount} já existia(m).` });
+        toast.success(`${newCount} oportunidade(s) salva(s)!`, { description: `${dupCount} já existia(m).` });
       } else {
-        toast({ title: `${newCount} oportunidade(s) salva(s)!` });
+        toast.success(`${newCount} oportunidade(s) salva(s)!`);
       }
     } catch (err: any) {
-      toast({ title: "Erro ao salvar", description: err.message, variant: "destructive" });
+      toast.error("Erro ao salvar", { description: err.message });
     }
-  }, [user, toast]);
+  }, [user]);
 
   // ── Match por perfil cultural (mesmo algoritmo de match-editais) ─────────
   const matchByPerfil = useCallback((

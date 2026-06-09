@@ -175,8 +175,8 @@ export default function PublicProfile() {
       <div className="max-w-lg mx-auto px-4 py-8 space-y-6">
         {/* Identity card */}
         <div className="flex items-start gap-4">
-          <div className="h-20 w-20 rounded-full bg-primary/15 border-2 border-primary/25 flex items-center justify-center text-3xl shrink-0">
-            🎵
+          <div className="h-20 w-20 rounded-full bg-primary/15 border-2 border-primary/25 flex items-center justify-center text-2xl font-bold text-primary shrink-0 select-none">
+            {(profile.display_name || "?").charAt(0).toUpperCase()}
           </div>
           <div className="flex-1 min-w-0 pt-1">
             <h1 className="text-2xl font-bold leading-tight truncate">{profile.display_name}</h1>
@@ -356,7 +356,7 @@ export default function PublicProfile() {
             size="lg"
             onClick={() => {
               if (!user) {
-                navigate(`/auth?return_to=/u/${username}`);
+                navigate(`/auth?redirect=/u/${username}`);
                 return;
               }
               setQuoteOpen(true);
@@ -371,7 +371,7 @@ export default function PublicProfile() {
               className="gap-2 h-10"
               onClick={() => {
                 if (!user) {
-                  navigate(`/auth?return_to=/u/${username}`);
+                  navigate(`/auth?redirect=/u/${username}`);
                   return;
                 }
                 navigate(`/?invite=${profile.username}`);
@@ -428,7 +428,7 @@ export default function PublicProfile() {
           projects_completed: profile.projects_completed,
           accept_invites: profile.accept_invites,
           is_user: true,
-        } satisfies MarketplaceProvider) : null}
+        } as unknown as MarketplaceProvider) : null}
       />
     </div>
   );

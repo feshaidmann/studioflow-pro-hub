@@ -29,9 +29,9 @@ import { MarketplaceSheet } from "@/components/marketplace/MarketplaceSheet";
 import { Store } from "lucide-react";
 
 /* ── Types ── */
-type DeliveryStatus = "convidado" | "ativo" | "aguardando" | "atrasado" | "entregou" | "concluido";
+export type DeliveryStatus = "convidado" | "ativo" | "aguardando" | "atrasado" | "entregou" | "concluido";
 
-interface MemberExtra {
+export interface MemberExtra {
   delivery_status: DeliveryStatus;
   delivery_due_date: string | null;
   expected_deliverable: string;
@@ -52,6 +52,34 @@ const STAGE_LABELS: Record<string, string> = {
   rough: "Projeto Iniciado", inicio: "Início", gravacao: "Gravação",
   mix: "Mix", master: "Master", upload: "Upload", lancado: "Lançado",
 };
+
+/* ── Pure helpers (exported for testing) ── */
+
+export function computeEffectiveStatus(
+  extra: MemberExtra | undefined,
+  inviteStatus: string | null,
+): DeliveryStatus {
+  if (!extra) return inviteStatus === "pending" ? "convidado" : "ativo";
+  if (
+    extra.delivery_status === "ativo" &&
+    extra.delivery_due_date &&
+    isPast(new Date(extra.delivery_due_date)) &&
+    !isToday(new Date(extra.delivery_due_date))
+  ) return "atrasado";
+  return extra.delivery_status;
+}
+
+export function computeMissingRoles(
+  teamRoles: string[],
+  dismissedHints: Set<string>,
+): string[] {
+  const needs: string[] = [];
+  const has = (kw: string) => teamRoles.some((r) => r.includes(kw));
+  if (!has("mix"))                        needs.push("Mix Engineer");
+  if (!has("master"))                     needs.push("Mastering Engineer");
+  if (!has("design") && !has("capa"))     needs.push("Designer Gráfico");
+  return needs.filter((r) => !dismissedHints.has(r)).slice(0, 2);
+}
 
 interface ProjectTeamTabProps {
   projectId: string;
@@ -80,14 +108,10 @@ export default function ProjectTeamTab({ projectId }: ProjectTeamTabProps) {
   // Sugestões de papéis ausentes (filtrando dismissals do usuário)
   const { dismissed: dismissedHints, dismiss: dismissHint } = useDismissedHints(projectId);
   const teamRoles = useMemo(() => team.map((m) => (m.role || "").toLowerCase()), [team]);
-  const missingRoles = useMemo(() => {
-    const needs: string[] = [];
-    const has = (kw: string) => teamRoles.some((r) => r.includes(kw));
-    if (!has("mix")) needs.push("Mix Engineer");
-    if (!has("master")) needs.push("Mastering Engineer");
-    if (!has("design") && !has("capa")) needs.push("Designer Gráfico");
-    return needs.filter((r) => !dismissedHints.has(r)).slice(0, 2);
-  }, [teamRoles, dismissedHints]);
+  const missingRoles = useMemo(
+    () => computeMissingRoles(teamRoles, dismissedHints),
+    [teamRoles, dismissedHints],
+  );
 
 
   // Fetch invitations + member extras
@@ -129,19 +153,11 @@ export default function ProjectTeamTab({ projectId }: ProjectTeamTabProps) {
     fetchData();
   }, [projectId]);
 
-  // Compute effective status (auto-detect late)
-  const getEffectiveStatus = (prof: Professional): DeliveryStatus => {
-    const extra = memberExtras[prof.id];
-    if (!extra) {
-      const invStatus = prof.email ? inviteStatuses[prof.email] : null;
-      if (invStatus === "pending") return "convidado";
-      return "ativo";
-    }
-    if (extra.delivery_status === "ativo" && extra.delivery_due_date && isPast(new Date(extra.delivery_due_date)) && !isToday(new Date(extra.delivery_due_date))) {
-      return "atrasado";
-    }
-    return extra.delivery_status;
-  };
+  const getEffectiveStatus = (prof: Professional): DeliveryStatus =>
+    computeEffectiveStatus(
+      memberExtras[prof.id],
+      prof.email ? (inviteStatuses[prof.email] ?? null) : null,
+    );
 
   // Filter
   const filteredTeam = useMemo(() => {
@@ -228,7 +244,7 @@ export default function ProjectTeamTab({ projectId }: ProjectTeamTabProps) {
           last_activity_at: new Date().toISOString(),
         },
       }));
-      toast.success("Atualizado! ✅");
+      toast.success("Atualizado!");
     }
     setEditingId(null);
     setSaving(false);

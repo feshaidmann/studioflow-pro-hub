@@ -39,15 +39,26 @@ export function useAIConversations() {
   }, [user]);
 
   useEffect(() => {
-    loadConversations();
-  }, [loadConversations]);
+    let active = true;
+    const run = async () => {
+      if (!user) return;
+      const { data } = await supabase
+        .from("ai_conversations")
+        .select("id, title, created_at, updated_at")
+        .eq("user_id", user.id)
+        .order("updated_at", { ascending: false })
+        .limit(20);
+      if (!active) return;
+      if (data) setConversations(data as AIConversation[]);
+    };
+    run();
+    return () => { active = false; };
+  }, [user]);
 
   // Load messages for active conversation
   useEffect(() => {
-    if (!activeConversationId) {
-      setMessages([]);
-      return;
-    }
+    if (!activeConversationId) { setMessages([]); return; }
+    let active = true;
     setLoadingMessages(true);
     supabase
       .from("ai_messages")
@@ -55,9 +66,11 @@ export function useAIConversations() {
       .eq("conversation_id", activeConversationId)
       .order("created_at", { ascending: true })
       .then(({ data }) => {
+        if (!active) return;
         setMessages((data ?? []).map((m) => ({ ...m, role: m.role as "user" | "assistant" })));
         setLoadingMessages(false);
       });
+    return () => { active = false; };
   }, [activeConversationId]);
 
   const createConversation = useCallback(async (firstMessage: string): Promise<string | null> => {

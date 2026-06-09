@@ -13,6 +13,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { useProjects } from "@/contexts/ProjectContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { EVENT_TYPES, EVENT_STATUSES } from "@/lib/eventTypes";
 import type { CalendarEvent, NewEvent } from "@/hooks/useEvents";
 import { DateTimePickerField } from "@/components/ui/date-time-picker-field";
@@ -51,7 +52,9 @@ const EMPTY: NewEvent = {
 
 export default function EventForm({ open, onOpenChange, editEvent, onSave, prefill, existingEvents = [] }: EventFormProps) {
   const { projects } = useProjects();
+  const { t } = useLanguage();
   const [saving, setSaving] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
   const [confirmConflict, setConfirmConflict] = useState(false);
 
   const [title, setTitle] = useState("");
@@ -66,6 +69,7 @@ export default function EventForm({ open, onOpenChange, editEvent, onSave, prefi
 
   useEffect(() => {
     if (!open) return;
+    setSubmitted(false);
     if (editEvent) {
       setTitle(editEvent.title);
       setDescription(editEvent.description);
@@ -119,6 +123,7 @@ export default function EventForm({ open, onOpenChange, editEvent, onSave, prefi
   const hasConflict = conflicts.length > 0;
 
   const handleSave = async () => {
+    setSubmitted(true);
     if (!isValid || endBeforeStart) return;
     // If there are conflicts and user hasn't confirmed yet, show warning first
     if (hasConflict && !confirmConflict) {
@@ -147,16 +152,16 @@ export default function EventForm({ open, onOpenChange, editEvent, onSave, prefi
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="glass-card border-border max-w-lg">
         <DialogHeader>
-          <DialogTitle>{editEvent ? "Editar Evento" : "Novo Evento"}</DialogTitle>
+          <DialogTitle>{editEvent ? t("agenda.editEvent") : t("agenda.newEvent")}</DialogTitle>
           <DialogDescription>
-            {editEvent ? "Atualize os dados do evento." : "Preencha os dados para adicionar um evento à sua agenda."}
+            {editEvent ? t("agenda.formEditDesc") : t("agenda.formDesc")}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-1">
           {/* Title */}
           <div className="space-y-1.5">
-            <Label htmlFor="ev-title">Título do Evento *</Label>
+            <Label htmlFor="ev-title">{t("agenda.titleLabel")} *</Label>
             <Input
               id="ev-title"
               placeholder="Ex: Show no Sesc"
@@ -164,6 +169,9 @@ export default function EventForm({ open, onOpenChange, editEvent, onSave, prefi
               onChange={(e) => setTitle(e.target.value.slice(0, 120))}
               maxLength={120}
             />
+            {submitted && !title.trim() && (
+              <p className="text-xs text-destructive">{t("agenda.titleRequired")}</p>
+            )}
           </div>
 
           {/* Type */}
@@ -209,7 +217,7 @@ export default function EventForm({ open, onOpenChange, editEvent, onSave, prefi
                   placeholder="Selecionar término"
                 />
                 {endBeforeStart && (
-                  <p className="text-[10px] text-destructive">Término deve ser após o início</p>
+                  <p className="text-[10px] text-destructive">{t("agenda.endBeforeStart")}</p>
                 )}
               </div>
             </div>
@@ -247,9 +255,9 @@ export default function EventForm({ open, onOpenChange, editEvent, onSave, prefi
             <div className="space-y-1.5">
               <Label>Projeto</Label>
               <Select value={projectId || "none"} onValueChange={(v) => setProjectId(v === "none" ? "" : v)}>
-                <SelectTrigger><SelectValue placeholder="Nenhum" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder={t("agenda.noProject")} /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">Nenhum</SelectItem>
+                  <SelectItem value="none">{t("agenda.noProject")}</SelectItem>
                   {projects.map((p) => (
                     <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                   ))}
@@ -282,7 +290,7 @@ export default function EventForm({ open, onOpenChange, editEvent, onSave, prefi
                 <AlertTriangle className={`h-4 w-4 shrink-0 ${confirmConflict ? "text-amber-400" : "text-destructive"}`} />
                 <p className={`text-sm font-medium ${confirmConflict ? "text-amber-300" : "text-destructive"}`}>
                   {confirmConflict
-                    ? "Conflito confirmado — clique em Salvar para continuar"
+                    ? t("agenda.conflictConfirmed")
                     : `${conflicts.length} conflito${conflicts.length > 1 ? "s" : ""} de agenda detectado${conflicts.length > 1 ? "s" : ""}`}
                 </p>
               </div>
@@ -304,7 +312,7 @@ export default function EventForm({ open, onOpenChange, editEvent, onSave, prefi
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>{t("agenda.cancel")}</Button>
           {hasConflict && !confirmConflict ? (
             <>
               <Button
@@ -312,16 +320,16 @@ export default function EventForm({ open, onOpenChange, editEvent, onSave, prefi
                 className="border-destructive/50 text-destructive hover:bg-destructive/10"
                 onClick={() => setConfirmConflict(true)}
               >
-                Salvar mesmo assim
+                {t("agenda.saveAnyway")}
               </Button>
             </>
           ) : (
             <Button
               onClick={handleSave}
-              disabled={!isValid || saving || endBeforeStart}
+              disabled={saving || endBeforeStart}
               className="neon-glow active:scale-95 transition-transform"
             >
-              {saving ? "Salvando..." : "Salvar Evento"}
+              {saving ? t("agenda.saving") : t("agenda.saveEvent")}
             </Button>
           )}
         </DialogFooter>

@@ -1,6 +1,7 @@
-import { useState, useEffect, useRef, useMemo, lazy, type ReactNode } from "react";
+import { useState, useEffect, useRef, useMemo, lazy, Suspense, type ReactNode } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Bot, ChevronDown, FileText, Calendar, Receipt, Users } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Bot, ChevronDown, FileText, Calendar, Receipt, Users, X } from "lucide-react";
 import LazyCardBoundary from "@/components/dashboard/LazyCardBoundary";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useNavigate } from "react-router-dom";
@@ -12,7 +13,7 @@ import { cn } from "@/lib/utils";
 import { scrollToAnchor } from "@/lib/scrollToAnchor";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { toast } from "sonner";
-import { AITaskAssistant, type AITaskAssistantHandle } from "@/components/AITaskAssistant";
+import type { AITaskAssistantHandle } from "@/components/AITaskAssistant";
 import { useProfessionals } from "@/hooks/useProfessionals";
 import { useAIConversations } from "@/hooks/useAIConversations";
 import { useProjectAlerts } from "@/hooks/useProjectAlerts";
@@ -32,6 +33,9 @@ import PendingTeamCard from "@/components/dashboard/PendingTeamCard";
 import { getJourneyPlan } from "@/lib/journeyPersonalization";
 
 // Lazy-loaded — não bloqueiam o first render do Dashboard
+const AITaskAssistant = lazy(() =>
+  import("@/components/AITaskAssistant").then((m) => ({ default: m.AITaskAssistant }))
+);
 const RecentTransactions = lazy(() => import("@/components/dashboard/RecentTransactions"));
 const UpcomingReleases = lazy(() => import("@/components/dashboard/UpcomingReleases"));
 const GuestProjectsList = lazy(() => import("@/components/dashboard/GuestProjectsList"));
@@ -126,31 +130,30 @@ export default function Dashboard() {
     }
 
     const urgentTasks = activeTasks.filter((t) => t.source === "deadline" || t.source === "payment");
-    if (urgentTasks.length > 0) chips.push({ label: `⚠️ ${urgentTasks.length} urgente${urgentTasks.length > 1 ? "s" : ""}`, msg: "Quais são minhas pendências mais urgentes agora? Liste com prazo e contexto.", highlight: true });
+    if (urgentTasks.length > 0) chips.push({ label: `${urgentTasks.length} urgente${urgentTasks.length > 1 ? "s" : ""}`, msg: "Quais são minhas pendências mais urgentes agora? Liste com prazo e contexto.", highlight: true });
 
     if (activeTasks.length > 0) {
-      chips.push({ label: "📋 O que fazer hoje", msg: "Com base nas minhas tarefas e projetos, o que devo priorizar hoje? Me dá um plano de ação claro." });
+      chips.push({ label: "O que fazer hoje", msg: "Com base nas minhas tarefas e projetos, o que devo priorizar hoje? Me dá um plano de ação claro." });
     }
 
     const stalledProjects = projectsWithHealth.filter((p) => p.alerts.some((a) => a.category === "stalled"));
     if (stalledProjects.length > 0) {
       chips.push({
-        label: `⏸️ ${stalledProjects.length} parado${stalledProjects.length > 1 ? "s" : ""}`,
+        label: `${stalledProjects.length} parado${stalledProjects.length > 1 ? "s" : ""}`,
         msg: `Tenho ${stalledProjects.length} projeto(s) parado(s): ${stalledProjects.map((p) => p.project.name).join(", ")}. Como posso destravar?`,
       });
     }
 
     if (projects.length === 0) {
       chips.length = 0;
-      chips.push({ label: "🎵 Criar projeto", msg: "Como devo organizar meu primeiro projeto musical? Quais informações são essenciais?" });
-      chips.push({ label: "🎙️ Dicas de gravação", msg: "Sou um artista independente. Me dá dicas fundamentais para começar a gravar com qualidade em casa." });
+      chips.push({ label: "Criar projeto", msg: "Como devo organizar meu primeiro projeto musical? Quais informações são essenciais?" });
+      chips.push({ label: "Dicas de gravação", msg: "Sou um artista independente. Me dá dicas fundamentais para começar a gravar com qualidade em casa." });
     } else {
-      // Proactive chips
-      chips.push({ label: "🔍 Revisão geral", msg: "Faça uma revisão geral de todos os meus projetos. O que está indo bem e o que precisa de atenção? Me dê um resumo executivo com ações." });
-      chips.push({ label: "🎛️ Dúvida técnica", msg: "Sou artista independente e tenho uma dúvida técnica sobre produção musical. Me ajude como se fosse um engenheiro de áudio experiente. Posso descrever minha dúvida a seguir." });
+      chips.push({ label: "Revisão geral", msg: "Faça uma revisão geral de todos os meus projetos. O que está indo bem e o que precisa de atenção? Me dê um resumo executivo com ações." });
+      chips.push({ label: "Dúvida técnica", msg: "Sou artista independente e tenho uma dúvida técnica sobre produção musical. Me ajude como se fosse um engenheiro de áudio experiente. Posso descrever minha dúvida a seguir." });
       const nearRelease = projects.find((p) => p.stage === "upload" || p.stage === "master");
       if (nearRelease) {
-        chips.push({ label: `🚀 ${nearRelease.name} quase lá`, msg: `Meu projeto "${nearRelease.name}" está no estágio ${nearRelease.stage}. O que falta para lançar? Revise o checklist de lançamento.` });
+        chips.push({ label: `${nearRelease.name} quase lá`, msg: `Meu projeto "${nearRelease.name}" está no estágio ${nearRelease.stage}. O que falta para lançar? Revise o checklist de lançamento.` });
       }
     }
 
@@ -158,6 +161,15 @@ export default function Dashboard() {
   }, [alerts, activeTasks, projectsWithHealth, projects]);
 
   const isFirstRun = projects.length === 0;
+
+  const [marketplaceNudgeDismissed, setMarketplaceNudgeDismissed] = useState(
+    () => localStorage.getItem("sfp_marketplace_nudge_v1") === "1"
+  );
+  const showMarketplaceNudge =
+    !marketplaceNudgeDismissed &&
+    !!profile?.onboarding_completed &&
+    !(profile as any)?.allow_global_listing;
+
   const journeyPlan = useMemo(() => getJourneyPlan(profile?.main_pain ?? "organization", profile?.current_moment ?? "", profile?.track_view_mode ?? "basic"), [profile]);
 
   // recentOnboardingProject reativo a mudanças de localStorage (StorageEvent + custom event)
@@ -249,27 +261,29 @@ export default function Dashboard() {
         </CollapsibleTrigger>
         <CollapsibleContent>
           <CardContent className="pt-0">
-            <AITaskAssistant
-              ref={aiRef}
-              alwaysOpen
-              contextChips={aiChips}
-              context={aiContext}
-              onAddTask={async (description, projectId) => {
-                const validProjectId = projectId && projects.some((p) => p.id === projectId) ? projectId : null;
-                const result = await addTask({ description, projectId: validProjectId, source: "manual" });
-                if (!result) await addTask({ description, projectId: null, source: "manual" });
-              }}
-              conversations={conversations}
-              activeConversationId={activeConversationId}
-              savedMessages={savedMessages}
-              loadingMessages={loadingMessages}
-              onCreateConversation={createConversation}
-              onSaveMessage={saveMessage}
-              onSelectConversation={setActiveConversationId}
-              onNewConversation={startNewConversation}
-              onDeleteConversation={deleteConversation}
-              onRenameConversation={renameConversation}
-            />
+            <Suspense fallback={<Skeleton className="h-32 w-full" />}>
+              <AITaskAssistant
+                ref={aiRef}
+                alwaysOpen
+                contextChips={aiChips}
+                context={aiContext}
+                onAddTask={async (description, projectId) => {
+                  const validProjectId = projectId && projects.some((p) => p.id === projectId) ? projectId : null;
+                  const result = await addTask({ description, projectId: validProjectId, source: "manual" });
+                  if (!result) await addTask({ description, projectId: null, source: "manual" });
+                }}
+                conversations={conversations}
+                activeConversationId={activeConversationId}
+                savedMessages={savedMessages}
+                loadingMessages={loadingMessages}
+                onCreateConversation={createConversation}
+                onSaveMessage={saveMessage}
+                onSelectConversation={setActiveConversationId}
+                onNewConversation={startNewConversation}
+                onDeleteConversation={deleteConversation}
+                onRenameConversation={renameConversation}
+              />
+            </Suspense>
           </CardContent>
         </CollapsibleContent>
       </Card>
@@ -279,7 +293,7 @@ export default function Dashboard() {
   const dashboardSections: Record<string, ReactNode> = {
     checklist: (
       <div id="checklist-section" className="grid grid-cols-1 gap-3">
-        {isFirstRun && <FirstRunEmptyState onNavigate={navigate} recentProject={recentOnboardingProject} profile={profile} />}
+        {(isFirstRun || !!recentOnboardingProject) && <FirstRunEmptyState onNavigate={navigate} recentProject={recentOnboardingProject} profile={profile} />}
         <DailyChecklist
           activeTasks={activeTasks}
           completedTasks={completedTasks}
@@ -320,15 +334,44 @@ export default function Dashboard() {
         mainPain={profile?.main_pain}
       />
 
+      {/* Nudge: completar perfil no Marketplace */}
+      {showMarketplaceNudge && (
+        <div className="rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 flex items-center justify-between gap-4 text-sm animate-fade-in">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <Users className="h-4 w-4 text-primary shrink-0" />
+            <span className="truncate">
+              <span className="font-medium">Ative seu perfil no Marketplace</span>
+              <span className="text-muted-foreground ml-1.5 hidden sm:inline">— apareça nas buscas de artistas e receba propostas.</span>
+            </span>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 text-xs border-primary/30 hover:bg-primary/10"
+              onClick={() => navigate("/perfil")}
+            >
+              Completar perfil
+            </Button>
+            <button
+              onClick={() => { setMarketplaceNudgeDismissed(true); localStorage.setItem("sfp_marketplace_nudge_v1", "1"); }}
+              className="text-muted-foreground/50 hover:text-muted-foreground transition-colors"
+              aria-label="Dispensar"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* 1. Alertas críticos primeiro */}
       {dashboardSections.alerts}
 
       {/* 2. Checklist do dia */}
       {dashboardSections.checklist}
 
-      {/* 3. Assistente IA — desktop: aqui; mobile: depois do checklist (já é o caso) */}
-      {!isMobile && aiAssistantCard}
-      {isMobile && aiAssistantCard}
+      {/* 3. Assistente IA */}
+      {aiAssistantCard}
 
       {/* 4. Demais seções na ordem do journeyPlan, exceto as já renderizadas acima */}
       {journeyPlan.sections
@@ -337,10 +380,12 @@ export default function Dashboard() {
           <div key={section}>{dashboardSections[section]}</div>
         ))}
 
-      {/* Projetos como parceiro */}
-      <LazyCardBoundary title="Projetos como parceiro" icon={Users} minHeight="8rem">
-        <GuestProjectsList projects={guestProjects} loading={loadingGuestProjects} />
-      </LazyCardBoundary>
+      {/* Projetos como parceiro — só renderiza quando há projetos ou estão carregando */}
+      {(loadingGuestProjects || guestProjects.length > 0) && (
+        <LazyCardBoundary title="Projetos como parceiro" icon={Users} minHeight="8rem">
+          <GuestProjectsList projects={guestProjects} loading={loadingGuestProjects} />
+        </LazyCardBoundary>
+      )}
     </div>
   );
 }

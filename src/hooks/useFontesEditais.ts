@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 export interface FonteEdital {
   id: string;
@@ -20,7 +20,6 @@ export type FonteEditalInsert = Omit<FonteEdital, "id" | "user_id" | "created_at
 
 export function useFontesEditais() {
   const { user } = useAuth();
-  const { toast } = useToast();
   const [fontes, setFontes] = useState<FonteEdital[]>([]);
   const [loading, setLoading] = useState(true);
   const [testing, setTesting] = useState<string | null>(null);
@@ -57,34 +56,34 @@ export function useFontesEditais() {
         frequencia_horas: fonte.frequencia_horas,
       } as any);
       if (error) throw error;
-      toast({ title: "Fonte adicionada" });
+      toast.success("Fonte adicionada");
       await fetchFontes();
     } catch (err: any) {
-      toast({ title: "Erro ao adicionar fonte", description: err.message, variant: "destructive" });
+      toast.error("Erro ao adicionar fonte", { description: err.message });
     }
-  }, [user, toast, fetchFontes]);
+  }, [user, fetchFontes]);
 
   const updateFonte = useCallback(async (id: string, fields: Partial<FonteEditalInsert>) => {
     try {
       const { error } = await supabase.from("fontes_editais").update(fields as any).eq("id", id);
       if (error) throw error;
       setFontes((prev) => prev.map((f) => (f.id === id ? { ...f, ...fields } : f)));
-      toast({ title: "Fonte atualizada" });
+      toast.success("Fonte atualizada");
     } catch (err: any) {
-      toast({ title: "Erro ao atualizar", description: err.message, variant: "destructive" });
+      toast.error("Erro ao atualizar", { description: err.message });
     }
-  }, [toast]);
+  }, []);
 
   const deleteFonte = useCallback(async (id: string) => {
     try {
       const { error } = await supabase.from("fontes_editais").delete().eq("id", id);
       if (error) throw error;
       setFontes((prev) => prev.filter((f) => f.id !== id));
-      toast({ title: "Fonte removida" });
+      toast.success("Fonte removida");
     } catch (err: any) {
-      toast({ title: "Erro ao remover", description: err.message, variant: "destructive" });
+      toast.error("Erro ao remover", { description: err.message });
     }
-  }, [toast]);
+  }, []);
 
   const toggleAtivo = useCallback(async (id: string, ativo: boolean) => {
     await updateFonte(id, { ativo } as any);
@@ -97,17 +96,14 @@ export function useFontesEditais() {
         body: { fonte_id: id },
       });
       if (error) throw error;
-      toast({
-        title: "Teste concluído",
-        description: `${data?.newEditais || 0} novo(s) edital(is) encontrado(s)`,
-      });
+      toast.success("Teste concluído", { description: `${data?.newEditais || 0} novo(s) edital(is) encontrado(s)` });
       await fetchFontes();
     } catch (err: any) {
-      toast({ title: "Erro no teste", description: err.message, variant: "destructive" });
+      toast.error("Erro no teste", { description: err.message });
     } finally {
       setTesting(null);
     }
-  }, [toast, fetchFontes]);
+  }, [fetchFontes]);
 
   return { fontes, loading, testing, addFonte, updateFonte, deleteFonte, toggleAtivo, testFonte };
 }

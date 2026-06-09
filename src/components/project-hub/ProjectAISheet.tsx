@@ -48,6 +48,7 @@ export default function ProjectAISheet({
       initialSent.current = true;
       sendMessage(initialPrompt);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, initialPrompt]);
 
   // Reset when closed

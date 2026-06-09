@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, useEffect, useRef, type ReactNode } from "react";
+import { createContext, useContext, useState, useCallback, useEffect, useRef, useMemo, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import type { AnalysisResult } from "@/lib/audioAnalysis";
@@ -38,7 +38,7 @@ function trackToDbRow(userId: string, projectId: string, track: MixTrack, positi
   };
 }
 
-function dbRowToTrack(row: any): MixTrack {
+export function dbRowToTrack(row: any): MixTrack {
   return {
     id: row.id,
     name: row.name,
@@ -55,8 +55,8 @@ function dbRowToTrack(row: any): MixTrack {
   };
 }
 
-/* ── Stage → percent mapping (constant, outside component) ── */
-const stagePercent: Record<string, number> = {
+/* ── Stage → percent mapping ── */
+export const STAGE_PERCENT: Record<string, number> = {
   inicio: 10, gravacao: 50, mix: 80, master: 90, upload: 98, lancado: 100, rough: 10,
 };
 
@@ -120,8 +120,8 @@ interface ProjectContextType {
 
 const ProjectContext = createContext<ProjectContextType | null>(null);
 
-/* ── Helper to map DB row to Project interface ── */
-function dbRowToProject(row: any): Project {
+/* ── DB-row mappers (exported for testing) ── */
+export function dbRowToProject(row: any): Project {
   return {
     id: row.id,
     name: row.name,
@@ -151,7 +151,7 @@ function dbRowToProject(row: any): Project {
   };
 }
 
-function dbRowToTransaction(row: any): Transaction {
+export function dbRowToTransaction(row: any): Transaction {
   return {
     id: row.id,
     projectId: row.project_id,
@@ -165,6 +165,28 @@ function dbRowToTransaction(row: any): Transaction {
     notes: row.notes ?? "",
     createdAt: row.created_at,
   };
+}
+
+/* ── Pure computation helpers (exported for testing) ── */
+
+export function computeProjectFinancials(
+  transactions: Transaction[],
+  projectId: string,
+): ProjectFinancials {
+  const projTx = transactions.filter((t) => t.projectId === projectId && t.paid);
+  const totalIncome  = projTx.filter((t) => t.type === "income" ).reduce((s, t) => s + t.amount, 0);
+  const totalExpense = projTx.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0);
+  const profit = totalIncome - totalExpense;
+  const margin = totalIncome > 0 ? (profit / totalIncome) * 100 : null;
+  return { totalIncome, totalExpense, profit, margin };
+}
+
+export function computeMixPercent(
+  project: Pick<Project, "stage" | "completed"> | undefined,
+): number {
+  if (!project) return 0;
+  if (project.completed) return 100;
+  return STAGE_PERCENT[project.stage] ?? 10;
 }
 
 /* ── Provider ── */
@@ -253,12 +275,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   /* ── Progress derived from stage ── */
 
   const getMixPercent = useCallback(
-    (projectId: string) => {
-      const project = projects.find((p) => p.id === projectId);
-      if (!project) return 0;
-      if (project.completed) return 100;
-      return stagePercent[project.stage] ?? 10;
-    },
+    (projectId: string) => computeMixPercent(projects.find((p) => p.id === projectId)),
     [projects],
   );
 
@@ -562,30 +579,30 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const getProjectFinancials = useCallback(
-    (projectId: string): ProjectFinancials => {
-      // Only count paid transactions to avoid inflating balance with pending entries
-      const projTx = transactions.filter((t) => t.projectId === projectId && t.paid);
-      const totalIncome = projTx.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0);
-      const totalExpense = projTx.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0);
-      const profit = totalIncome - totalExpense;
-      const margin = totalIncome > 0 ? (profit / totalIncome) * 100 : null;
-      return { totalIncome, totalExpense, profit, margin };
-    },
+    (projectId: string): ProjectFinancials => computeProjectFinancials(transactions, projectId),
     [transactions],
   );
 
+  const ctxValue = useMemo(() => ({
+    projects, tracks, professionals, masterResults, transactions, loading,
+    addProject, updateProject, deleteProject,
+    getMixPercent, getProjectFinancials,
+    addTrack, updateTrack, removeTrack,
+    addProfessional, removeProfessional, addProfessionalToGlobal,
+    addTransaction, updateTransaction, deleteTransaction,
+    saveMasterResult,
+  }), [
+    projects, tracks, professionals, masterResults, transactions, loading,
+    addProject, updateProject, deleteProject,
+    getMixPercent, getProjectFinancials,
+    addTrack, updateTrack, removeTrack,
+    addProfessional, removeProfessional, addProfessionalToGlobal,
+    addTransaction, updateTransaction, deleteTransaction,
+    saveMasterResult,
+  ]);
+
   return (
-    <ProjectContext.Provider
-      value={{
-        projects, tracks, professionals, masterResults, transactions, loading,
-        addProject, updateProject, deleteProject,
-        getMixPercent, getProjectFinancials,
-        addTrack, updateTrack, removeTrack,
-        addProfessional, removeProfessional, addProfessionalToGlobal,
-        addTransaction, updateTransaction, deleteTransaction,
-        saveMasterResult,
-      }}
-    >
+    <ProjectContext.Provider value={ctxValue}>
       {children}
     </ProjectContext.Provider>
   );

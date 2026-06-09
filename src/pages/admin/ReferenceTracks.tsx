@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Navigate } from "react-router-dom";
 import Papa from "papaparse";
-import { Database, Upload, RefreshCw, FileText, Loader2, AlertCircle, CheckCircle2, PackageCheck } from "lucide-react";
+import { Database, Upload, RefreshCw, FileText, Loader2, AlertCircle, CheckCircle2, PackageCheck, Music2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +12,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ReferenceCoverageReport } from "@/components/admin/ReferenceCoverageReport";
+import { ReferenceTrackIngestor } from "@/components/admin/ReferenceTrackIngestor";
+import { SonaraCsvImporter } from "@/components/admin/SonaraCsvImporter";
 
 interface PreviewStats {
   rows: number;
@@ -238,11 +240,23 @@ export default function ReferenceTracks() {
         automaticamente para preservar privacidade.
       </p>
 
-      <Tabs defaultValue="import" className="w-full">
+      <Tabs defaultValue="ingest" className="w-full">
         <TabsList>
-          <TabsTrigger value="import">Importação & lotes</TabsTrigger>
+          <TabsTrigger value="ingest" className="flex items-center gap-1.5">
+            <Music2 className="h-3.5 w-3.5" /> Inserir por áudio
+          </TabsTrigger>
+          <TabsTrigger value="sonara">Importar Sonara CSV</TabsTrigger>
+          <TabsTrigger value="import">Importação CSV & lotes</TabsTrigger>
           <TabsTrigger value="coverage">Cobertura por gênero</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="ingest" className="mt-4">
+          <ReferenceTrackIngestor onInserted={() => { refreshMeta(); refreshSnapshotMeta(); }} />
+        </TabsContent>
+
+        <TabsContent value="sonara" className="mt-4">
+          <SonaraCsvImporter onInserted={() => { refreshMeta(); refreshSnapshotMeta(); }} />
+        </TabsContent>
 
         <TabsContent value="coverage" className="mt-4">
           <ReferenceCoverageReport />

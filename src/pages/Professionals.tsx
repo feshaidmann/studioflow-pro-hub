@@ -1,11 +1,17 @@
-import { useMemo, useState } from "react";
-import { Users, Plus, Filter, Store } from "lucide-react";
+import { useMemo, useState, useEffect } from "react";
+import { Users, Plus, Filter, Store, Inbox, BriefcaseBusiness } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
 import { MarketplaceSheet } from "@/components/marketplace/MarketplaceSheet";
+import { MyRequestsSheet } from "@/components/marketplace/MyRequestsSheet";
+import { InboundRequestsSheet } from "@/components/marketplace/InboundRequestsSheet";
+import { useProfile } from "@/contexts/ProfileContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { MobileStickyHeader } from "@/components/ui/mobile-sticky-header";
 import { useProfessionalsList } from "@/hooks/useProfessionalsList";
+import { useInboundRequestCount } from "@/hooks/useMarketplace";
 import { ProfessionalsFilters, type StatusFilter } from "@/components/professionals/ProfessionalsFilters";
 import { ProfessionalsTable } from "@/components/professionals/ProfessionalsTable";
 import { ProfessionalsCardList } from "@/components/professionals/ProfessionalsCardList";
@@ -29,6 +35,24 @@ export default function Professionals() {
   const [formOpen, setFormOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Professional | null>(null);
   const [marketplaceOpen, setMarketplaceOpen] = useState(false);
+  const [myRequestsOpen, setMyRequestsOpen] = useState(false);
+  const [inboundOpen, setInboundOpen] = useState(false);
+  const { profile } = useProfile();
+  const inboundCount = useInboundRequestCount();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  useEffect(() => {
+    const openRequests = searchParams.get("openRequests");
+    const openInbound = searchParams.get("openInbound");
+    if (!openRequests && !openInbound) return;
+    if (openRequests === "1") setMyRequestsOpen(true);
+    if (openInbound === "1") setInboundOpen(true);
+    setSearchParams((prev) => {
+      prev.delete("openRequests");
+      prev.delete("openInbound");
+      return prev;
+    }, { replace: true });
+  }, [searchParams, setSearchParams]);
 
   const specialties = useMemo(
     () => Array.from(new Set(professionals.map((p) => p.specialty).filter(Boolean))).sort(),
@@ -67,13 +91,33 @@ export default function Professionals() {
     <div className="p-4 md:p-6 space-y-6 max-w-5xl mx-auto">
       <MobileStickyHeader
         title="Meus Contatos"
-        subtitle={`${professionals.length} contato${professionals.length !== 1 ? "s" : ""}`}
+        subtitle={professionals.length > 0 ? `${professionals.length} contato${professionals.length !== 1 ? "s" : ""}` : undefined}
         cta={
           <Button size="sm" className="h-9 gap-1.5" onClick={openCreate}>
             <Plus className="h-4 w-4" /> Novo
           </Button>
         }
       />
+
+      {/* Mobile-only quick-access row for marketplace actions */}
+      <div className="flex md:hidden gap-2 -mt-2">
+        <Button variant="outline" size="sm" className="flex-1 gap-1.5 text-xs h-8" onClick={() => setMyRequestsOpen(true)}>
+          <Inbox className="h-3.5 w-3.5" /> Meus Pedidos
+        </Button>
+        {profile?.allow_global_listing && (
+          <Button variant="outline" size="sm" className="flex-1 gap-1.5 text-xs h-8 relative" onClick={() => setInboundOpen(true)}>
+            <BriefcaseBusiness className="h-3.5 w-3.5" /> Recebidos
+            {inboundCount > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 h-4 min-w-4 rounded-full bg-destructive text-destructive-foreground text-[10px] font-semibold flex items-center justify-center px-1">
+                {inboundCount}
+              </span>
+            )}
+          </Button>
+        )}
+        <Button variant="outline" size="sm" className="flex-1 gap-1.5 text-xs h-8" onClick={() => setMarketplaceOpen(true)}>
+          <Store className="h-3.5 w-3.5" /> Marketplace
+        </Button>
+      </div>
 
       <header className="hidden md:flex items-center justify-between animate-fade-in">
         <div>
@@ -83,6 +127,19 @@ export default function Professionals() {
           <p className="text-muted-foreground mt-1">Sua agenda de profissionais — músicos, engenheiros e colaboradores.</p>
         </div>
         <div className="flex gap-2">
+          {profile?.allow_global_listing && (
+            <Button variant="outline" onClick={() => setInboundOpen(true)} className="gap-2 relative">
+              <BriefcaseBusiness className="h-4 w-4" /> Pedidos Recebidos
+              {inboundCount > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 h-4 min-w-4 rounded-full bg-destructive text-destructive-foreground text-[10px] font-semibold flex items-center justify-center px-1">
+                  {inboundCount}
+                </span>
+              )}
+            </Button>
+          )}
+          <Button variant="outline" onClick={() => setMyRequestsOpen(true)} className="gap-2">
+            <Inbox className="h-4 w-4" /> Meus Pedidos
+          </Button>
           <Button variant="outline" onClick={() => setMarketplaceOpen(true)} className="gap-2">
             <Store className="h-4 w-4" /> Marketplace
           </Button>
@@ -93,21 +150,34 @@ export default function Professionals() {
       </header>
 
       <Card className="glass-card animate-fade-in" style={{ animationDelay: "0.1s" }}>
-        <CardHeader className="pb-3">
-          <ProfessionalsFilters
-            search={search} onSearchChange={setSearch}
-            status={filterStatus} onStatusChange={setFilterStatus}
-            favorite={filterFavorite} onFavoriteChange={setFilterFavorite}
-            allocated={filterAllocated} onAllocatedChange={setFilterAllocated}
-            specialty={filterSpecialty} onSpecialtyChange={setFilterSpecialty}
-            specialties={specialties}
-            total={professionals.length} filtered={filtered.length}
-            onClear={clearFilters} hasActive={hasActiveFilters}
-          />
-        </CardHeader>
+        {(loading || professionals.length > 0 || hasActiveFilters) && (
+          <CardHeader className="pb-3">
+            <ProfessionalsFilters
+              search={search} onSearchChange={setSearch}
+              status={filterStatus} onStatusChange={setFilterStatus}
+              favorite={filterFavorite} onFavoriteChange={setFilterFavorite}
+              allocated={filterAllocated} onAllocatedChange={setFilterAllocated}
+              specialty={filterSpecialty} onSpecialtyChange={setFilterSpecialty}
+              specialties={specialties}
+              total={professionals.length} filtered={filtered.length}
+              onClear={clearFilters} hasActive={hasActiveFilters}
+            />
+          </CardHeader>
+        )}
         <CardContent>
           {loading ? (
-            <p className="text-muted-foreground text-sm animate-pulse py-4 text-center">Carregando...</p>
+            <div className="space-y-2 py-2">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-3 px-1 py-2">
+                  <Skeleton className="h-8 w-8 rounded-full shrink-0" />
+                  <div className="flex-1 space-y-1.5">
+                    <Skeleton className="h-3.5 w-1/3" />
+                    <Skeleton className="h-3 w-1/2" />
+                  </div>
+                  <Skeleton className="h-5 w-16 rounded-full" />
+                </div>
+              ))}
+            </div>
           ) : professionals.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 gap-4 text-center">
               <div className="rounded-full bg-primary/10 p-4">
@@ -180,6 +250,8 @@ export default function Professionals() {
       />
 
       <MarketplaceSheet open={marketplaceOpen} onOpenChange={setMarketplaceOpen} />
+      <MyRequestsSheet open={myRequestsOpen} onOpenChange={setMyRequestsOpen} />
+      <InboundRequestsSheet open={inboundOpen} onOpenChange={setInboundOpen} />
     </div>
   );
 }

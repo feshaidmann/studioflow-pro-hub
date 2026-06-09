@@ -154,7 +154,10 @@ Deno.serve(async (req: Request) => {
         seen.add(item.id);
         editorial.push(item);
       } else {
-        if (item.followers < 100) continue;
+        // Spotify Search returns SimplifiedPlaylistObject which does NOT include
+        // followers.total — that field only appears in FullPlaylistObject from
+        // GET /playlists/{id}. Skip the follower threshold here; relevance is
+        // determined by Spotify's own search ranking.
         if (ugc.length >= 8) continue;
         seen.add(item.id);
         ugc.push(item);

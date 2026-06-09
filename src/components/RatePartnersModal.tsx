@@ -79,7 +79,7 @@ export default function RatePartnersModal({
       }
     }
 
-    toast.success("Avaliações salvas! Obrigado pelo feedback 🙏");
+    toast.success("Avaliações salvas! Obrigado pelo feedback.");
     setSubmitting(false);
     onClose();
   };
@@ -91,7 +91,7 @@ export default function RatePartnersModal({
       <DialogContent className="glass-card border-border sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-lg">
-            🏆 Avalie os parceiros
+            Avalie os parceiros
           </DialogTitle>
           <DialogDescription className="text-sm text-muted-foreground">
             <span className="font-medium text-foreground">{projectName}</span> foi concluído!
@@ -114,8 +114,8 @@ export default function RatePartnersModal({
                   <div className="space-y-3">
                     {/* Member identity */}
                     <div className="flex items-center gap-3">
-                      <div className="h-9 w-9 rounded-full bg-primary/15 border border-primary/20 flex items-center justify-center text-base shrink-0 select-none">
-                        🎵
+                      <div className="h-9 w-9 rounded-full bg-primary/15 border border-primary/20 flex items-center justify-center text-sm font-semibold text-primary shrink-0 select-none">
+                        {member.name.charAt(0).toUpperCase()}
                       </div>
                       <div className="min-w-0">
                         <p className="font-medium text-sm leading-tight truncate">{member.name}</p>

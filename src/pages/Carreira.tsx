@@ -15,6 +15,7 @@ import {
   useEditalApplications,
   useCreateApplication,
   useUpdateApplication,
+  useDeleteApplication,
   type ApplicationStatus,
   type EditalApplication,
 } from "@/hooks/useEditalApplications";
@@ -35,6 +36,7 @@ import EditalResultModal from "@/components/editais/EditalResultModal";
 import {
   editalToOpportunity,
   palcoToOpportunity,
+  normalize,
   type Opportunity,
 } from "@/components/carreira/types";
 import { MobileStickyHeader } from "@/components/ui/mobile-sticky-header";
@@ -44,10 +46,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/contexts/ProfileContext";
 import { useProjects } from "@/contexts/ProjectContext";
 import { trackAppEvent } from "@/lib/analytics";
-
-function normalize(s: string) {
-  return (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-}
+import type { Edital } from "@/hooks/useEditais";
+import type { PalcoCurado } from "@/hooks/usePalcos";
 
 function daysUntil(iso: string | null | undefined): number | null {
   if (!iso) return null;
@@ -139,6 +139,7 @@ export default function Carreira() {
   const { data: applications = [], isLoading: loadingApps, refetch: refetchApps } = useEditalApplications();
   const createApp = useCreateApplication();
   const updateApp = useUpdateApplication();
+  const deleteApp = useDeleteApplication();
 
   // Projeto ativo: primeiro não concluído (proxy) — usado para busca IA + recomendações
   const activeProject = useMemo(() => projects.find((p) => !p.completed) || null, [projects]);
@@ -295,10 +296,10 @@ export default function Carreira() {
 
     // Palco: palcos_curados.id já está em editalId (curated) ou raw.id
     if (op.tipo === "palco") {
-      const palcoId = op.editalId || (op.raw as any).id || null;
+      const palcoId = op.editalId || op.raw.id || null;
       if (palcoId) return { id: palcoId, tipo: "palco" };
       // Palco vindo da IA sem id ainda — salva primeiro
-      await savePalcos([op.raw as any]);
+      await savePalcos([op.raw as PalcoCurado]);
       const { data } = await supabase
         .from("palcos_curados")
         .select("id")
@@ -312,8 +313,8 @@ export default function Carreira() {
     if (op.editalId) return { id: op.editalId, tipo: "fomento" };
 
     // Edital novo (vindo da IA): salva e busca por session_key
-    const key = (op.raw as any).session_key || sessionKeyFor(op.titulo, op.organizador);
-    await saveEditais([op.raw as any]);
+    const key = (op.raw as Edital).session_key || sessionKeyFor(op.titulo, op.organizador);
+    await saveEditais([op.raw as Edital]);
     const { data } = await supabase
       .from("editais")
       .select("id")
@@ -357,8 +358,8 @@ export default function Carreira() {
           setTab("inscricoes");
         }
       }
-    } catch {
-      // toast tratado pelo hook
+    } catch (e: unknown) {
+      console.error("handleInterest:", e);
     } finally {
       setInterestPending(null);
     }
@@ -366,11 +367,11 @@ export default function Carreira() {
 
   const handleSave = async (op: Opportunity) => {
     try {
-      if (op.tipo === "edital") await saveEditais([op.raw as any]);
-      else await savePalcos([op.raw as any]);
+      if (op.tipo === "edital") await saveEditais([op.raw as Edital]);
+      else await savePalcos([op.raw as PalcoCurado]);
       void trackAppEvent("carreira_opportunity_saved", { opportunity_type: op.tipo });
-    } catch (e: any) {
-      toast.error(e.message || "Erro ao salvar");
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Erro ao salvar");
     }
   };
 
@@ -525,10 +526,12 @@ export default function Carreira() {
             />
           )}
 
-          {/* 5. Contador */}
-          <div className="text-xs text-muted-foreground">
-            {filtered.length} oportunidade(s){totalActive ? " com filtros aplicados" : ""}
-          </div>
+          {/* 5. Contador — only show when there's something meaningful to count */}
+          {(filtered.length > 0 || totalActive) && (
+            <div className="text-xs text-muted-foreground">
+              {filtered.length} oportunidade(s){totalActive ? " com filtros aplicados" : ""}
+            </div>
+          )}
 
           {/* 6. Grade */}
           {loading ? (
@@ -681,15 +684,28 @@ export default function Carreira() {
                               <Award className="h-3 w-3 mr-1" /> Registrar resultado
                             </Button>
                           )}
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-7 text-xs"
-                            onClick={() => handleApplicationClick(a)}
-                          >
-                            <ClipboardList className="h-3 w-3 mr-1" />
-                            {isPalco ? "Detalhes" : "Abrir"}
-                          </Button>
+                          {!a.edital ? (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                              aria-label="Remover candidatura órfã"
+                              disabled={deleteApp.isPending}
+                              onClick={() => deleteApp.mutate(a.id)}
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-7 text-xs"
+                              onClick={() => handleApplicationClick(a)}
+                            >
+                              <ClipboardList className="h-3 w-3 mr-1" />
+                              {isPalco ? "Detalhes" : "Abrir"}
+                            </Button>
+                          )}
                         </div>
                       </div>
                     </CardContent>

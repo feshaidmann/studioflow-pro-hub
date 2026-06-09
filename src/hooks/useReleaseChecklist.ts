@@ -103,7 +103,7 @@ export const RELEASE_SECTIONS: SectionDef[] = [
 export type ItemState = { checked: boolean; value: string };
 export type ChecklistState = Record<string, ItemState>;
 
-function defaultState(): ChecklistState {
+export function defaultState(): ChecklistState {
   const s: ChecklistState = {};
   for (const sec of RELEASE_SECTIONS) {
     for (const item of sec.items) {
@@ -111,6 +111,17 @@ function defaultState(): ChecklistState {
     }
   }
   return s;
+}
+
+export function computeChecklistProgress(state: ChecklistState): {
+  checkedItems: number;
+  totalItems: number;
+  progress: number;
+} {
+  const totalItems = RELEASE_SECTIONS.reduce((a, s) => a + s.items.length, 0);
+  const checkedItems = Object.values(state).filter((i) => i.checked).length;
+  const progress = totalItems > 0 ? Math.round((checkedItems / totalItems) * 100) : 0;
+  return { checkedItems, totalItems, progress };
 }
 
 // ── Standalone helper: marca um item do checklist sem precisar do hook ──
@@ -160,6 +171,7 @@ export function useReleaseChecklist(projectId: string) {
   // Fetch
   useEffect(() => {
     if (!user || !projectId) return;
+    let active = true;
     setLoading(true);
     supabase
       .from("release_checklists")
@@ -167,6 +179,7 @@ export function useReleaseChecklist(projectId: string) {
       .eq("project_id", projectId)
       .maybeSingle()
       .then(({ data }) => {
+        if (!active) return;
         if (data) {
           rowIdRef.current = data.id;
           const merged = { ...defaultState(), ...(data.items as ChecklistState) };
@@ -177,6 +190,7 @@ export function useReleaseChecklist(projectId: string) {
         }
         setLoading(false);
       });
+    return () => { active = false; };
   }, [user, projectId]);
 
   // Persist (debounced)
@@ -236,9 +250,7 @@ export function useReleaseChecklist(projectId: string) {
   );
 
   // Stats
-  const totalItems = RELEASE_SECTIONS.reduce((a, s) => a + s.items.length, 0);
-  const checkedItems = Object.values(items).filter((i) => i.checked).length;
-  const progress = totalItems > 0 ? Math.round((checkedItems / totalItems) * 100) : 0;
+  const { checkedItems, totalItems, progress } = computeChecklistProgress(items);
 
   return { items, loading, saving, toggleCheck, setValue, progress, checkedItems, totalItems, sections: RELEASE_SECTIONS };
 }

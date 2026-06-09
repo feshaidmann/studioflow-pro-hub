@@ -81,7 +81,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const appUrl = Deno.env.get("APP_URL") || "https://mix-matters-suite.lovable.app";
+    const appUrl = Deno.env.get("APP_URL") || "https://musicos-ai.com";
     const viewUrl = `${appUrl}/platform-invite/${inv.token}`;
 
     const emailHtml = `

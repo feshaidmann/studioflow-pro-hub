@@ -4,6 +4,8 @@ export interface MarketplaceProvider {
   provider_ref: string;
   source: ProviderSource;
   name: string;
+  /** Some DB views surface display_name separately; falls back to name. */
+  display_name?: string;
   handle: string | null;
   avatar_url: string;
   bio: string;
@@ -14,6 +16,13 @@ export interface MarketplaceProvider {
   projects_completed: number;
   accept_invites: boolean;
   is_user: boolean;
+  /** JSP-verified badge (curated providers only). */
+  verified_by_jsp?: boolean;
+  avg_rating?: number;
+  review_count?: number;
+  base_rate_brl?: number;
+  rate_unit?: string;
+  portfolio_links?: Array<{ url: string; label?: string }>;
 }
 
 export interface MarketplaceFilters {
@@ -39,7 +48,12 @@ export interface ServiceRequest {
   created_at: string;
   updated_at: string;
   closed_at: string | null;
+  target_provider_ref: string | null;
+  target_provider_name: string | null;
 }
+
+/** Subset returned by the service_requests_inbound view — excludes requester_user_id. */
+export type InboundRequest = Omit<ServiceRequest, "requester_user_id">;
 
 export type ProposalStatus = "sent" | "accepted" | "rejected" | "withdrawn";
 
@@ -56,4 +70,6 @@ export interface ServiceProposal {
   status: ProposalStatus;
   created_at: string;
   updated_at: string;
+  provider_name: string;
+  provider_avatar: string;
 }

@@ -1,7 +1,7 @@
 import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 export interface MatchedEdital {
   id: string;
@@ -22,7 +22,6 @@ export interface MatchedEdital {
 
 export function useMatchEditais() {
   const { user } = useAuth();
-  const { toast } = useToast();
   const [matches, setMatches] = useState<MatchedEdital[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -37,11 +36,11 @@ export function useMatchEditais() {
       setMatches(data?.matches || []);
     } catch (err: any) {
       console.error("Match error:", err);
-      toast({ title: "Erro ao buscar recomendações", description: err.message, variant: "destructive" });
+      toast.error("Erro ao buscar recomendações", { description: err.message });
     } finally {
       setLoading(false);
     }
-  }, [user, toast]);
+  }, [user]);
 
   return { matches, loading, fetchMatches };
 }

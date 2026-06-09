@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, Link } from "react-router-dom";
 import {
   Shield,
   Users,
@@ -22,6 +22,10 @@ import {
   UserX,
   Layers,
   Gauge,
+  Store,
+  Music,
+  Tag,
+  Search,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -278,6 +282,31 @@ export default function Admin() {
           {error}
         </div>
       )}
+
+      {/* ── Ferramentas ── */}
+      <section>
+        <SectionTitle icon={Shield} label="Ferramentas Administrativas" />
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {[
+            { label: "Marketplace", sub: "Curadoria de profissionais", icon: Store, to: "/admin/marketplace", color: "text-primary" },
+            { label: "Reference Tracks", sub: "Gerenciar faixas referência", icon: Music, to: "/admin/reference-tracks", color: "text-blue-400" },
+            { label: "Genre Import", sub: "Importar gêneros musicais", icon: Tag, to: "/admin/genre-import", color: "text-success" },
+            { label: "Search Metrics", sub: "Métricas de busca", icon: Search, to: "/admin/oportunidades-search", color: "text-warning" },
+          ].map(({ label, sub, icon: Icon, to, color }) => (
+            <Link key={to} to={to}>
+              <Card className="border-border bg-card hover:bg-muted/50 transition-colors cursor-pointer">
+                <CardContent className="p-4 flex items-start gap-3">
+                  <Icon className={`h-7 w-7 shrink-0 mt-0.5 ${color}`} />
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">{label}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{sub}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+          ))}
+        </div>
+      </section>
 
       {/* ── Saúde Geral ── */}
       <section>
@@ -811,11 +840,11 @@ export default function Admin() {
 
 /* ── Beta Feedback Section ── */
 const CATEGORY_LABELS: Record<string, string> = {
-  bug: "🐛 Bug",
-  sugestao: "💡 Sugestão",
-  elogio: "🎉 Elogio",
-  duvida: "❓ Dúvida",
-  geral: "💬 Geral",
+  bug: "Bug",
+  sugestao: "Sugestão",
+  elogio: "Elogio",
+  duvida: "Dúvida",
+  geral: "Geral",
 };
 
 interface FeedbackRow {

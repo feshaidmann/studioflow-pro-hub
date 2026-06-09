@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useReleaseChecklist, RELEASE_SECTIONS, type SectionDef } from "@/hooks/useReleaseChecklist";
+import { useReleaseChecklist, RELEASE_SECTIONS, type SectionDef, type ChecklistState } from "@/hooks/useReleaseChecklist";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -24,9 +24,20 @@ const SECTION_ICON: Record<string, React.ElementType> = {
   status_final: CheckCircle2,
 };
 
-// ── Seções que têm relação direta com materiais visuais
-// Usadas para calcular o hint de "pendências de conteúdo"
-const CONTENT_KEYS = ["capa", "thumbnail", "teaser", "reels", "stories"];
+// Keys directly related to visual content materials
+export const CONTENT_KEYS = ["capa", "thumbnail", "teaser", "reels", "stories"] as const;
+
+export function computeHasCriticalPending(items: ChecklistState): boolean {
+  return (
+    !items.pronto_distribuir?.checked ||
+    !items.pronto_publicar?.checked ||
+    !items.pendencias_criticas?.checked
+  );
+}
+
+export function computePendingContentCount(items: ChecklistState): number {
+  return CONTENT_KEYS.filter((k) => !items[k]?.checked).length;
+}
 
 function SectionBlock({ section, items, toggleCheck, setValue }: {
   section: SectionDef;
@@ -141,13 +152,8 @@ export default function ProjectReleaseTab({
     );
   }
 
-  const hasCriticalPending =
-    !items.pronto_distribuir?.checked ||
-    !items.pronto_publicar?.checked ||
-    !items.pendencias_criticas?.checked;
-
-  // Conta quantos itens de conteúdo visual ainda estão pendentes
-  const pendingContentItems = CONTENT_KEYS.filter((k) => !items[k]?.checked).length;
+  const hasCriticalPending = computeHasCriticalPending(items);
+  const pendingContentItems = computePendingContentCount(items);
 
   return (
     <div className="space-y-4">

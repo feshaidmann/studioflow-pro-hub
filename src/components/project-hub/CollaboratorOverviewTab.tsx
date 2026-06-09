@@ -49,7 +49,7 @@ interface TeamMember {
   delivery_status: string;
 }
 
-function buildMemberFromInvitation(invitation: AcceptedInvitationInfo, projectStage: string): MemberInfo {
+export function buildMemberFromInvitation(invitation: AcceptedInvitationInfo, projectStage: string): MemberInfo {
   return {
     role: invitation.professional_role || "",
     delivery_status: "ativo",
@@ -60,6 +60,19 @@ function buildMemberFromInvitation(invitation: AcceptedInvitationInfo, projectSt
     fee: Number(invitation.fee ?? 0),
     notes: invitation.schedule_notes || "",
   };
+}
+
+export function computeIsLate(deliveryDueDate: string | null, deliveryStatus: string): boolean {
+  if (!deliveryDueDate) return false;
+  return (
+    new Date(deliveryDueDate) < new Date() &&
+    !["entregou", "concluido"].includes(deliveryStatus)
+  );
+}
+
+export function computeDaysLeft(deliveryDueDate: string | null): number | null {
+  if (!deliveryDueDate) return null;
+  return Math.ceil((new Date(deliveryDueDate).getTime() - Date.now()) / 86400000);
 }
 
 interface CollaboratorOverviewTabProps {
@@ -160,11 +173,9 @@ export default function CollaboratorOverviewTab({ projectId, project }: Collabor
 
   const statusInfo = STATUS_LABELS[member.delivery_status] ?? STATUS_LABELS.ativo;
   const dueDate = member.delivery_due_date ? new Date(member.delivery_due_date).toLocaleDateString("pt-BR") : null;
-  const isLate = member.delivery_due_date && new Date(member.delivery_due_date) < new Date() && !["entregou", "concluido"].includes(member.delivery_status);
+  const isLate = computeIsLate(member.delivery_due_date, member.delivery_status);
   const stageProgress = STAGE_PERCENT[project.stage] ?? 0;
-  const daysLeft = member.delivery_due_date
-    ? Math.ceil((new Date(member.delivery_due_date).getTime() - Date.now()) / 86400000)
-    : null;
+  const daysLeft = computeDaysLeft(member.delivery_due_date);
 
   return (
     <div className="space-y-4 py-2">
