@@ -52,24 +52,15 @@ export interface PalcoCurado {
   match_reason?: string | null;
 }
 
-export interface PalcoSearchResult {
-  message: string;
-  palcos: PalcoCurado[];
-  citations: string[];
-}
-
 // ── Hook principal ───────────────────────────────────────────────────────────
+// NOTA: a busca AI agora vive em `oportunidades-search` (ver AISearchPanel).
+// Este hook foca em listar palcos curados e calcular match por perfil.
 
 export function usePalcos() {
-  const { user } = useAuth();
+  const { user: _user } = useAuth();
 
   const [palcosCurados, setPalcosCurados] = useState<PalcoCurado[]>([]);
   const [loadingCurados, setLoadingCurados] = useState(true);
-  const [searching, setSearching] = useState(false);
-  const [searchResult, setSearchResult] = useState<PalcoSearchResult | null>(null);
-  const [searchError, setSearchError] = useState<string | null>(null);
-  const [lastQuery, setLastQuery] = useState<string | null>(null);
-  const [lastProjectId, setLastProjectId] = useState<string | null>(null);
 
   // ── Banco curado ─────────────────────────────────────────────────────────
   const fetchCurados = useCallback(async () => {
