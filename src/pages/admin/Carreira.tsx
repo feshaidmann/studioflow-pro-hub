@@ -47,6 +47,9 @@ interface Edital {
   valor: string | null;
   resumo: string | null;
   status: string | null;
+  created_at?: string | null;
+  publico_alvo?: string | null;
+  documentos_resumo?: string | null;
 }
 
 interface Palco {
