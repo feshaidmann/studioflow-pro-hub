@@ -9,7 +9,7 @@ export interface Professional {
   allow_global_listing: boolean;
   created_at: string;
   favorite: boolean;
-  genres: string[];
+  genres?: string[];
 }
 
 export interface ProfMetrics {

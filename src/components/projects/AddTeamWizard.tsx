@@ -21,6 +21,7 @@ import {
 import { DatePickerField } from "@/components/ui/date-picker-field";
 import { cn } from "@/lib/utils";
 import type { Project, Professional } from "@/data/mockData";
+import type { Professional as GlobalProfessional } from "@/components/professionals/types";
 
 type WizardSource = "new" | "existing";
 type WizardProfType =
@@ -48,7 +49,7 @@ export interface AddTeamWizardProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   project: Project;
-  globalProfessionals: Array<Professional & { email?: string; phone?: string }>;
+  globalProfessionals: Array<GlobalProfessional & { email?: string; phone?: string }>;
   globalsLoading: boolean;
   addProfessional: (projectId: string, prof: Omit<Professional, "id">) => Promise<void>;
   addProfessionalToGlobal: (data: { name: string; specialty: string; email: string; phone: string; bio: string; allowGlobalListing?: boolean }) => Promise<unknown>;
@@ -182,7 +183,7 @@ export function AddTeamWizard({
   const hasDeadlineWarning = !!(proposal.deadline && project.estimatedMonths && deadlineExceedsProject(proposal.deadline));
   const selectedEmail = wizardSource === "new"
     ? newContact.email
-    : ((globalProfessionals.find((x) => x.id === selectedExistingProfId) as Professional & { email?: string })?.email ?? "");
+    : (globalProfessionals.find((x) => x.id === selectedExistingProfId)?.email ?? "");
   const canSubmit = !!wizardProfType && (wizardSource === "new" ? !!newContact.name : !!selectedExistingProfId);
 
   const handleSubmit = async () => {
@@ -202,7 +203,7 @@ export function AddTeamWizard({
         else addNotification({ title: "Profissional adicionado", message: `${newContact.name} adicionado à equipe`, link: "/projects", type: "general" });
         toast.success(`${newContact.name} adicionado à equipe`);
       } else {
-        const prof = globalProfessionals.find((p) => p.id === selectedExistingProfId) as Professional & { email?: string; phone?: string };
+        const prof = globalProfessionals.find((p) => p.id === selectedExistingProfId);
         if (!prof) { setSaving(false); return; }
         let invId: string | null = null;
         if (prof.email) invId = await createInvite({ projectId: project.id, name: prof.name, email: prof.email, role: prof.specialty || wizardProfType || "", fee, deadline: proposal.deadline, scheduleNotes: proposal.scheduleNotes });
