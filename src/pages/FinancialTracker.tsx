@@ -155,8 +155,7 @@ export default function FinancialTracker() {
     `\nEvolução últimos 6 meses:\n` + evolutionData.map((d) => `- ${d.mes}: Receita R$${d.receitas.toFixed(0)} | Despesa R$${d.despesas.toFixed(0)} | Saldo R$${d.saldo.toFixed(0)}`).join("\n"),
   ].filter(Boolean).join("\n");
 
-  // `t` é mantido em escopo para futuras chaves i18n (atualmente strings PT hardcoded).
-  void t;
+
 
   return (
     <div className="p-4 md:p-6 space-y-6 pb-12 max-w-6xl mx-auto">
