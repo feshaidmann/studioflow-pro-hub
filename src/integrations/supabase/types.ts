@@ -3088,7 +3088,7 @@ export type Database = {
           p_danceability?: number
           p_dynamic_range_db?: number
           p_energy?: number
-          p_genre?: string
+          p_genre_labels?: string[]
           p_instrumentalness?: number
           p_key_name?: string
           p_limit?: number
