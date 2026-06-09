@@ -2,7 +2,6 @@ import { Filter, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { GENRE_OPTIONS } from "@/constants/genreOptions";
@@ -40,21 +39,24 @@ interface Props {
   filters: CarreiraFilters;
   onChange: (next: CarreiraFilters) => void;
   className?: string;
+  /** Quando definido, oculta filtros não-aplicáveis (ex: gênero só em palcos). */
+  tipoContext?: "edital" | "palco";
 }
 
-export default function OpportunityFilters({ filters, onChange, className }: Props) {
+export default function OpportunityFilters({ filters, onChange, className, tipoContext }: Props) {
   const update = <K extends keyof CarreiraFilters>(key: K, value: CarreiraFilters[K]) =>
     onChange({ ...filters, [key]: value });
 
-  const clear = () => onChange({ ...DEFAULT_FILTERS });
+  const clear = () => onChange({ ...DEFAULT_FILTERS, tipo: filters.tipo });
   const hasActive =
-    filters.tipo !== "todos" ||
     filters.status !== "todos" ||
     filters.estado !== "todos" ||
     filters.genero !== "todos" ||
     filters.deadline !== "todos" ||
     !filters.hideClosed ||
     !!filters.query;
+
+  const showGenero = tipoContext !== "edital";
 
   return (
     <aside className={className}>
@@ -79,28 +81,6 @@ export default function OpportunityFilters({ filters, onChange, className }: Pro
             onChange={(e) => update("query", e.target.value)}
             className="h-9 text-sm"
           />
-        </div>
-
-        <div>
-          <Label className="text-xs mb-2 block">Tipo de oportunidade</Label>
-          <RadioGroup
-            value={filters.tipo}
-            onValueChange={(v) => update("tipo", v as TipoFiltro)}
-            className="space-y-1.5"
-          >
-            {[
-              { v: "todos",  l: "Todas" },
-              { v: "edital", l: "Editais e fomento" },
-              { v: "palco",  l: "Palcos e festivais" },
-            ].map((o) => (
-              <div key={o.v} className="flex items-center gap-2">
-                <RadioGroupItem value={o.v} id={`tipo-${o.v}`} />
-                <Label htmlFor={`tipo-${o.v}`} className="text-sm font-normal cursor-pointer">
-                  {o.l}
-                </Label>
-              </div>
-            ))}
-          </RadioGroup>
         </div>
 
         <div className="flex items-center justify-between gap-3">
@@ -153,18 +133,20 @@ export default function OpportunityFilters({ filters, onChange, className }: Pro
           </Select>
         </div>
 
-        <div>
-          <Label className="text-xs mb-1.5 block">Gênero (palcos)</Label>
-          <Select value={filters.genero} onValueChange={(v) => update("genero", v)}>
-            <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="todos">Todos</SelectItem>
-              {GENRE_OPTIONS.map((g) => (
-                <SelectItem key={g} value={g}>{g}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        {showGenero && (
+          <div>
+            <Label className="text-xs mb-1.5 block">Gênero (palcos)</Label>
+            <Select value={filters.genero} onValueChange={(v) => update("genero", v)}>
+              <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos</SelectItem>
+                {GENRE_OPTIONS.map((g) => (
+                  <SelectItem key={g} value={g}>{g}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
       </div>
     </aside>
   );
