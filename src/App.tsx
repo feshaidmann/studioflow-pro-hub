@@ -157,7 +157,7 @@ const App = () => (
                 <RateLimitDialogProvider>
                   <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><div className="animate-pulse text-muted-foreground">Carregando…</div></div>}>
                     <Routes>
-                      <Route path="/" element={<Welcome />} />
+                      <Route path="/" element={<RootRoute />} />
                       <Route path="/auth" element={<Auth />} />
                       <Route path="/auth/reset-password" element={<ResetPassword />} />
                       <Route path="/onboarding" element={<OnboardingRouter />} />
