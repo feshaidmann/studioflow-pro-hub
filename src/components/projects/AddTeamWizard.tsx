@@ -49,7 +49,7 @@ export interface AddTeamWizardProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   project: Project;
-  globalProfessionals: Array<Professional & { email?: string; phone?: string }>;
+  globalProfessionals: Array<GlobalProfessional & { email?: string; phone?: string }>;
   globalsLoading: boolean;
   addProfessional: (projectId: string, prof: Omit<Professional, "id">) => Promise<void>;
   addProfessionalToGlobal: (data: { name: string; specialty: string; email: string; phone: string; bio: string; allowGlobalListing?: boolean }) => Promise<unknown>;
