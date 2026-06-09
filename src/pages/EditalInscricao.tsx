@@ -125,58 +125,34 @@ export default function EditalInscricao() {
     }
     setFormValues(vals);
     if (filled > 0) toast.success(`${filled} campo${filled > 1 ? "s" : ""} preenchido${filled > 1 ? "s" : ""} com seu perfil`);
-  }, [extractedFields, profile, formValues]);
-
-  const DEFAULT_CAMPOS: EditalField[] = [
-    { nome: "Nome do projeto", tipo: "text", obrigatorio: true, descricao: "", opcoes: null },
-    { nome: "Artista / Grupo responsável", tipo: "text", obrigatorio: true, descricao: "", opcoes: null },
-    { nome: "Área artística", tipo: "text", obrigatorio: true, descricao: "Ex: Música, Teatro, Dança, Circo…", opcoes: null },
-    { nome: "Resumo do projeto", tipo: "textarea", obrigatorio: true, descricao: "Breve descrição do projeto (até 300 palavras)", opcoes: null },
-    { nome: "Memória descritiva", tipo: "textarea", obrigatorio: false, descricao: "Histórico, justificativa e objetivos do projeto", opcoes: null },
-    { nome: "Público-alvo", tipo: "textarea", obrigatorio: false, descricao: "A quem o projeto se destina", opcoes: null },
-    { nome: "Justificativa cultural", tipo: "textarea", obrigatorio: false, descricao: "Relevância cultural e social do projeto", opcoes: null },
-    { nome: "Cronograma de execução", tipo: "textarea", obrigatorio: false, descricao: "Etapas de produção com datas estimadas", opcoes: null },
-    { nome: "Planilha de orçamento", tipo: "textarea", obrigatorio: false, descricao: "Custos previstos e fontes de financiamento", opcoes: null },
-    { nome: "Biografia do proponente", tipo: "textarea", obrigatorio: false, descricao: "Trajetória artística resumida", opcoes: null },
-  ];
-
-  const handleSkip = useCallback(() => {
-    const preFilled: Record<string, string> = {};
-    if (profile) {
-      preFilled["Artista / Grupo responsável"] = profile.display_name || "";
-      preFilled["Área artística"] = profile.specialties?.join(", ") || "";
-      preFilled["Biografia do proponente"] = profile.bio || "";
-    }
-    setExtractedFieldsManual({ campos: DEFAULT_CAMPOS, resumo_edital: "", documentos_exigidos: [] });
-    setFormValues(preFilled);
-    setStep("filling");
-  }, [profile, setExtractedFieldsManual]);
-
-  // Batch fill all textarea fields with AI
+  // Batch fill: top textarea fields with AI, em paralelo (até 4 simultâneas para não estourar quota)
   const handleBatchFill = useCallback(async () => {
     if (!extractedFields?.campos || !edital) return;
 
-    // First fill profile fields
+    // Preenche campos simples de perfil primeiro
     preFillProfile();
 
-    const textareaFields = extractedFields.campos.filter(
+    // Prioriza campos vazios mais importantes (memorial / justificativa / público / resumo / biografia)
+    const PRIORITY_KEYWORDS = ["memori", "justificativ", "público", "publico", "resumo", "biograf", "objetiv", "descri"];
+    const emptyTextareas = extractedFields.campos.filter(
       (c) => c.tipo === "textarea" && !formValues[c.nome]?.trim()
     );
+    const prioritized = [
+      ...emptyTextareas.filter((c) => PRIORITY_KEYWORDS.some((k) => c.nome.toLowerCase().includes(k))),
+      ...emptyTextareas.filter((c) => !PRIORITY_KEYWORDS.some((k) => c.nome.toLowerCase().includes(k))),
+    ].slice(0, 4); // limite duro para o MVP
 
-    if (textareaFields.length === 0) {
+    if (prioritized.length === 0) {
       toast("Todos os campos já estão preenchidos");
       return;
     }
 
     setBatchFilling(true);
-    setBatchProgress({ current: 0, total: textareaFields.length });
+    setBatchProgress({ current: 0, total: prioritized.length });
 
-    for (let i = 0; i < textareaFields.length; i++) {
-      const campo = textareaFields[i];
-      setBatchProgress({ current: i + 1, total: textareaFields.length });
-
-      try {
-        const { data } = await supabase.functions.invoke("edital-ai-assistant", {
+    const results = await Promise.allSettled(
+      prioritized.map((campo) =>
+        supabase.functions.invoke("edital-ai-assistant", {
           body: {
             action: "fill_field",
             payload: {
@@ -188,20 +164,42 @@ export default function EditalInscricao() {
               project_id: selectedProject && selectedProject !== "none" ? selectedProject : undefined,
             },
           },
-        });
+        })
+      )
+    );
 
-        if (data?.response) {
-          setFormValues((prev) => ({ ...prev, [campo.nome]: data.response }));
-          setAiGeneratedFields((prev) => new Set(prev).add(campo.nome));
-        }
-      } catch {
-        // Continue with next field
+    const updates: Record<string, string> = {};
+    const aiKeys: string[] = [];
+    let successCount = 0;
+    results.forEach((res, idx) => {
+      if (res.status === "fulfilled" && res.value?.data?.response) {
+        updates[prioritized[idx].nome] = res.value.data.response;
+        aiKeys.push(prioritized[idx].nome);
+        successCount++;
       }
+    });
+
+    if (successCount > 0) {
+      setFormValues((prev) => ({ ...prev, ...updates }));
+      setAiGeneratedFields((prev) => {
+        const next = new Set(prev);
+        aiKeys.forEach((k) => next.add(k));
+        return next;
+      });
     }
 
     setBatchFilling(false);
-    toast.success(`${textareaFields.length} campos gerados com IA`);
+    setBatchProgress({ current: 0, total: 0 });
+
+    if (successCount === prioritized.length) {
+      toast.success(`${successCount} campos gerados com IA`);
+    } else if (successCount > 0) {
+      toast.success(`${successCount} de ${prioritized.length} campos gerados (alguns falharam)`);
+    } else {
+      toast.error("Nenhum campo foi gerado. Tente novamente em alguns instantes.");
+    }
   }, [extractedFields, edital, formValues, selectedProject, preFillProfile]);
+
 
   // Calculate progress
   const progress = useMemo(() => {
