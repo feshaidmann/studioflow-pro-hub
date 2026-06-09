@@ -617,7 +617,6 @@ function FieldInput({
   const [refining, setRefining] = useState(false);
   const [showRefine, setShowRefine] = useState(false);
   const [refineInstruction, setRefineInstruction] = useState("");
-  const [savingToBank, setSavingToBank] = useState(false);
   const { user } = useAuth();
 
   const wordCount = value.trim() ? value.trim().split(/\s+/).length : 0;
