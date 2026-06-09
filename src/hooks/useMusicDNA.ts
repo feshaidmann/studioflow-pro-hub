@@ -36,6 +36,7 @@ export type Genre =
   | "Lo-Fi Hip Hop"
   // ── Internacional ───────────────────────────────────
   | "Pop Internacional"
+  | "Rock"
   | "Rock Alternativo"
   | "Heavy Metal"
   | "Punk Rock"
@@ -43,6 +44,7 @@ export type Genre =
   | "Grunge"
   | "Hip-Hop"
   | "Jazz"
+  | "Blues"
   | "Synth-Pop"
   | "Eletrônica / House"
   | "Country"
@@ -220,6 +222,8 @@ export const GENRE_PRESETS: Record<Genre, AudioFeatures> = {
   "Bossa Nova":        { energy: 0.28, danceability: 0.52, acousticness: 0.82, valence: 0.58, instrumentalness: 0.20, liveness: 0.12 },
   "Rock Alternativo":  { energy: 0.78, danceability: 0.52, acousticness: 0.15, valence: 0.42, instrumentalness: 0.18, liveness: 0.25 },
   // ── Internacional (alinhados com HARDCODED_GENRE_PROFILES) ──────
+  "Rock":              { energy: 0.74, danceability: 0.50, acousticness: 0.18, valence: 0.50, instrumentalness: 0.10, liveness: 0.24 },
+  "Blues":             { energy: 0.45, danceability: 0.52, acousticness: 0.62, valence: 0.42, instrumentalness: 0.15, liveness: 0.28 },
   "Heavy Metal":       { energy: 0.92, danceability: 0.40, acousticness: 0.04, valence: 0.40, instrumentalness: 0.18, liveness: 0.20 },
   "Punk Rock":         { energy: 0.88, danceability: 0.48, acousticness: 0.06, valence: 0.55, instrumentalness: 0.06, liveness: 0.25 },
   "Folk Rock":         { energy: 0.45, danceability: 0.50, acousticness: 0.65, valence: 0.55, instrumentalness: 0.08, liveness: 0.18 },
