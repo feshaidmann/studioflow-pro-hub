@@ -13,6 +13,7 @@ function KpiCard({
   icon: Icon,
   colorClass,
   trend,
+  inverseTrend = false,
   tooltip,
 }: {
   label: string;
@@ -21,8 +22,19 @@ function KpiCard({
   icon: React.ElementType;
   colorClass: string;
   trend?: number | null;
+  /** Quando true, uma variação positiva é tratada como negativa (ex.: despesas subindo). */
+  inverseTrend?: boolean;
   tooltip?: string;
 }) {
+  const trendIsGood =
+    trend === undefined || trend === null
+      ? false
+      : inverseTrend
+        ? trend <= 0
+        : trend >= 0;
+  const trendColor = trendIsGood ? "text-success" : "text-destructive";
+  const TrendIcon = (trend ?? 0) >= 0 ? ArrowUpRight : ArrowDownRight;
+
   return (
     <Card className="glass-card gradient-border animate-fade-in">
       <CardContent className="flex items-start gap-3 p-4">
@@ -55,8 +67,8 @@ function KpiCard({
           <p className={`text-lg font-bold font-mono-nums ${colorClass} leading-tight`}>{value}</p>
           {sub && <p className="text-[11px] text-muted-foreground mt-0.5">{sub}</p>}
           {trend !== undefined && trend !== null && (
-            <div className={`flex items-center gap-0.5 text-[11px] font-medium mt-0.5 ${trend >= 0 ? "text-success" : "text-destructive"}`}>
-              {trend >= 0 ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
+            <div className={`flex items-center gap-0.5 text-[11px] font-medium mt-0.5 ${trendColor}`}>
+              <TrendIcon className="h-3 w-3" />
               {Math.abs(trend).toFixed(1)}% vs mês anterior
             </div>
           )}
