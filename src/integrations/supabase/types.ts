@@ -3435,6 +3435,7 @@ export type Database = {
         Returns: {
           composite_score: number
           copied_rate: number
+          impressions: number
           sample_size: number
           saved_rate: number
           summary_variant: string

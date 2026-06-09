@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { Textarea } from "@/components/ui/textarea";
 import { FeedbackModal } from "./FeedbackModal";
 import {
   Radar, RadarChart, PolarAngleAxis, PolarGrid, PolarRadiusAxis,
@@ -364,7 +365,10 @@ function ExecutiveSummary({ diagnosis, proximosPassos, addedItems, onAddStep, an
   addedItems: Set<string>;
   onAddStep: (acao: string, key: string) => void;
   analysisId?: string;
-  onSendSignal?: (signal: "thumbs_up" | "thumbs_down" | "copied") => void;
+  onSendSignal?: (
+    signal: "thumbs_up" | "thumbs_down" | "copied" | "impression",
+    metadata?: Record<string, unknown>,
+  ) => void;
   stage?: AudioStage;
 }) {
   const [voted, setVoted] = useState<"thumbs_up" | "thumbs_down" | null>(null);
@@ -420,11 +424,61 @@ function ExecutiveSummary({ diagnosis, proximosPassos, addedItems, onAddStep, an
 
   const stepsCount = proximosPassos.length;
 
+  const extractionConfidence = (diagnosis.realAnalysis as { extraction_confidence?: "preview" | "full" | "external" } | undefined)?.extraction_confidence ?? "preview";
+  const confidenceBadge = {
+    preview: { label: "Análise rápida", tone: "bg-amber-100 text-amber-800 border-amber-300", title: "Métricas físicas confiáveis; perceptuais (energia/valência/dançabilidade) são estimativas heurísticas." },
+    full: { label: "Análise completa", tone: "bg-primary/10 text-primary border-primary/30", title: "Faixa inteira analisada no browser. LUFS, True Peak e DR são medições reais; energia/valência/dançabilidade são estimativas heurísticas espectrais." },
+    external: { label: "Catálogo verificado", tone: "bg-primary/10 text-primary border-primary/30", title: "Features consolidadas com dados externos." },
+  }[extractionConfidence];
+
+  // Snapshot de contexto enviado em todo sinal — permite fatiar A/B por
+  // estágio/gênero/confiança sem precisar voltar para juntar com a análise.
+  const signalContext: Record<string, unknown> = {
+    stage,
+    genre: diagnosis.genero_classificado ?? null,
+    extraction_confidence: extractionConfidence,
+  };
+
+  // — Impression tracking — só conta como impressão depois de 1s no viewport
+  const summaryRef = useRef<HTMLDivElement | null>(null);
+  const impressionSentRef = useRef(false);
+  useEffect(() => {
+    if (!analysisId || impressionSentRef.current) return;
+    const el = summaryRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const observer = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
+          if (timer) continue;
+          timer = setTimeout(() => {
+            if (impressionSentRef.current) return;
+            impressionSentRef.current = true;
+            onSendSignal?.("impression", signalContext);
+            observer.disconnect();
+          }, 1000);
+        } else if (timer) {
+          clearTimeout(timer);
+          timer = null;
+        }
+      }
+    }, { threshold: [0, 0.5, 1] });
+    observer.observe(el);
+    return () => {
+      if (timer) clearTimeout(timer);
+      observer.disconnect();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [analysisId]);
+
+  const [downReason, setDownReason] = useState<string>("");
+  const [showReasonBox, setShowReasonBox] = useState(false);
+
   const handleCopy = () => {
     try {
       navigator.clipboard.writeText(diagnosis.diagnostico_resumo ?? "");
       toast.success("Resumo copiado");
-      onSendSignal?.("copied");
+      onSendSignal?.("copied", signalContext);
     } catch {
       toast.error("Não foi possível copiar");
     }
@@ -433,22 +487,29 @@ function ExecutiveSummary({ diagnosis, proximosPassos, addedItems, onAddStep, an
   const handleVote = (signal: "thumbs_up" | "thumbs_down") => {
     if (voted) return;
     setVoted(signal);
-    onSendSignal?.(signal);
-    toast.success("Obrigado pelo feedback!");
+    if (signal === "thumbs_up") {
+      onSendSignal?.("thumbs_up", signalContext);
+      toast.success("Obrigado pelo feedback!");
+    } else {
+      // thumbs_down: abre caixa pedindo motivo. Sinal vai junto com o motivo
+      // (mesmo se vazio) quando o usuário enviar ou descartar.
+      setShowReasonBox(true);
+    }
   };
 
-  const extractionConfidence = (diagnosis.realAnalysis as { extraction_confidence?: "preview" | "full" | "external" } | undefined)?.extraction_confidence ?? "preview";
-  const confidenceBadge = {
-    preview: { label: "Análise rápida", tone: "bg-amber-100 text-amber-800 border-amber-300", title: "Métricas físicas confiáveis; perceptuais (energia/valência/dançabilidade) são estimativas heurísticas." },
-    full: { label: "Análise completa", tone: "bg-primary/10 text-primary border-primary/30", title: "Faixa inteira analisada no browser. LUFS, True Peak e DR são medições reais; energia/valência/dançabilidade são estimativas heurísticas espectrais." },
-    external: { label: "Catálogo verificado", tone: "bg-primary/10 text-primary border-primary/30", title: "Features consolidadas com dados externos." },
-  }[extractionConfidence];
+  const submitDown = (skip = false) => {
+    const reason = skip ? "" : downReason.trim();
+    onSendSignal?.("thumbs_down", { ...signalContext, reason });
+    setShowReasonBox(false);
+    toast.success(reason ? "Feedback registrado, obrigado!" : "Feedback registrado");
+  };
+
 
   return (
     <section id="dna-resumo" className="scroll-mt-16">
       <Card className="border-l-4 border-l-primary animate-fade-in">
         <CardContent className="p-4 space-y-4">
-          <div>
+          <div ref={summaryRef}>
             <p className="text-[11px] font-mono uppercase tracking-widest text-primary mb-1">Resumo executivo</p>
             <p className="text-sm leading-relaxed">{diagnosis.diagnostico_resumo}</p>
           </div>
@@ -522,6 +583,30 @@ function ExecutiveSummary({ diagnosis, proximosPassos, addedItems, onAddStep, an
               <Button type="button" size="sm" variant="ghost" className="h-7 text-xs gap-1.5" onClick={handleCopy}>
                 <Copy className="h-3.5 w-3.5" /> Copiar resumo
               </Button>
+            </div>
+          )}
+
+          {/* Caixa opcional de motivo para 👎 */}
+          {showReasonBox && (
+            <div className="space-y-2 rounded-md border border-border bg-muted/30 p-2">
+              <p className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground">
+                O que faltou? (opcional)
+              </p>
+              <Textarea
+                value={downReason}
+                onChange={(e) => setDownReason(e.target.value.slice(0, 280))}
+                placeholder="Ex.: muito genérico, não citou o gargalo do mix, linguagem confusa…"
+                rows={2}
+                className="text-xs"
+              />
+              <div className="flex items-center justify-end gap-2">
+                <Button type="button" size="sm" variant="ghost" className="h-7 text-xs" onClick={() => submitDown(true)}>
+                  Pular
+                </Button>
+                <Button type="button" size="sm" className="h-7 text-xs" onClick={() => submitDown(false)}>
+                  Enviar
+                </Button>
+              </div>
             </div>
           )}
 
@@ -1012,9 +1097,12 @@ export function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSav
   const { send: sendSignal } = useAcceptanceSignal();
   const summaryVariant = (diagnosis.summaryVariant === "B" ? "B" : "A") as "A" | "B";
 
-  const ensureSignal = async (signal: "thumbs_up" | "thumbs_down" | "copied" | "task_created") => {
+  const ensureSignal = async (
+    signal: "thumbs_up" | "thumbs_down" | "copied" | "task_created" | "impression",
+    metadata?: Record<string, unknown>,
+  ) => {
     const id = savedAnalysisId ?? (await onEnsureSaved?.());
-    if (id) sendSignal({ analysisId: id, variant: summaryVariant, signal });
+    if (id) sendSignal({ analysisId: id, variant: summaryVariant, signal, metadata });
   };
 
 
@@ -1111,7 +1199,7 @@ export function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSav
         addedItems={addedItems}
         onAddStep={handleAddToTasks}
         analysisId={savedAnalysisId}
-        onSendSignal={(signal) => ensureSignal(signal)}
+        onSendSignal={(signal, metadata) => ensureSignal(signal, metadata)}
         stage={stage}
       />
 
