@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Navigate, Link } from "react-router-dom";
 import {
   Shield, ArrowLeft, RefreshCw, Trash2, ExternalLink, Search,
-  AlertTriangle, CheckCircle2, HelpCircle, Eye, Edit3, Sparkles,
+  AlertTriangle, CheckCircle2, HelpCircle, Eye, Edit3, Sparkles, Plus,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -92,6 +92,7 @@ export default function AdminCarreira() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [editing, setEditing] = useState<Edital | Palco | null>(null);
   const [editKind, setEditKind] = useState<"edital" | "palco">("edital");
+  const [isCreating, setIsCreating] = useState(false);
   const [viewCorpus, setViewCorpus] = useState<CorpusEntry | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<{ ids: string[]; kind: "edital" | "palco" } | null>(null);
 
@@ -176,12 +177,51 @@ export default function AdminCarreira() {
   async function saveEdit() {
     if (!editing) return;
     const table = editKind === "edital" ? "editais" : "palcos_curados";
-    const { id, ...patch } = editing as any;
-    const { error } = await supabase.from(table).update(patch).eq("id", id);
-    if (error) { toast.error(error.message); return; }
-    toast.success("Salvo");
+    if (isCreating) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { toast.error("Sessão expirada"); return; }
+      const { id: _omit, ...rest } = editing as any;
+      const payload: any = { ...rest };
+      if (editKind === "edital") {
+        if (!payload.titulo?.trim()) { toast.error("Título é obrigatório"); return; }
+        payload.user_id = user.id;
+        payload.tipo = payload.tipo || "fomento";
+        payload.status = payload.status || "Indefinido";
+      } else {
+        if (!payload.nome?.trim() || !payload.organizador?.trim() || !payload.tipo_palco?.trim()) {
+          toast.error("Nome, organizador e tipo de palco são obrigatórios"); return;
+        }
+      }
+      const { error } = await supabase.from(table).insert(payload);
+      if (error) { toast.error(error.message); return; }
+      toast.success("Criado");
+    } else {
+      const { id, ...patch } = editing as any;
+      const { error } = await supabase.from(table).update(patch).eq("id", id);
+      if (error) { toast.error(error.message); return; }
+      toast.success("Salvo");
+    }
     setEditing(null);
+    setIsCreating(false);
     await fetchAll();
+  }
+
+  function openCreate(kind: "edital" | "palco") {
+    setEditKind(kind);
+    setIsCreating(true);
+    if (kind === "edital") {
+      setEditing({
+        id: "", titulo: "", orgao: "", estado: "", tipo: "fomento",
+        link: "", link_status: "unknown", link_checked_at: null,
+        prazo: null, valor: "", resumo: "", status: "Indefinido",
+      } as Edital);
+    } else {
+      setEditing({
+        id: "", nome: "", organizador: "", estado: "", tipo_palco: "",
+        link: "", link_status: "unknown", link_checked_at: null,
+        prazo: null, ativo: true, resumo: "",
+      } as Palco);
+    }
   }
 
   async function dismissCorpus(id: string) {
@@ -272,6 +312,9 @@ export default function AdminCarreira() {
                 <Trash2 className="h-4 w-4" /> Apagar {selected.size}
               </Button>
             )}
+            <Button size="sm" onClick={() => openCreate(currentKind)} className="gap-2 ml-auto">
+              <Plus className="h-4 w-4" /> Novo {currentKind === "edital" ? "edital" : "palco"}
+            </Button>
           </div>
         )}
 
@@ -338,22 +381,34 @@ export default function AdminCarreira() {
         </TabsContent>
       </Tabs>
 
-      {/* Sheet de edição */}
-      <Sheet open={!!editing} onOpenChange={(o) => !o && setEditing(null)}>
+      {/* Sheet de edição/criação */}
+      <Sheet open={!!editing} onOpenChange={(o) => { if (!o) { setEditing(null); setIsCreating(false); } }}>
         <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
           <SheetHeader>
-            <SheetTitle>Editar {editKind === "edital" ? "edital" : "palco"}</SheetTitle>
-            <SheetDescription>Atenção: editais são per-usuário; sua edição altera apenas este registro.</SheetDescription>
+            <SheetTitle>{isCreating ? "Novo" : "Editar"} {editKind === "edital" ? "edital" : "palco"}</SheetTitle>
+            <SheetDescription>
+              {isCreating
+                ? (editKind === "edital"
+                    ? "O edital será criado vinculado à sua conta admin. Demais usuários verão via descoberta/sincronização."
+                    : "Palcos são globais — visíveis a todos os usuários após ativação.")
+                : "Atenção: editais são per-usuário; sua edição altera apenas este registro."}
+            </SheetDescription>
           </SheetHeader>
           {editing && (
             <div className="space-y-3 mt-4">
-              <Field label={editKind === "edital" ? "Título" : "Nome"} value={(editing as any)[editKind === "edital" ? "titulo" : "nome"]} onChange={(v) => setEditing({ ...(editing as any), [editKind === "edital" ? "titulo" : "nome"]: v })} />
-              <Field label={editKind === "edital" ? "Órgão" : "Organizador"} value={(editing as any)[editKind === "edital" ? "orgao" : "organizador"] ?? ""} onChange={(v) => setEditing({ ...(editing as any), [editKind === "edital" ? "orgao" : "organizador"]: v })} />
+              <Field label={editKind === "edital" ? "Título *" : "Nome *"} value={(editing as any)[editKind === "edital" ? "titulo" : "nome"]} onChange={(v) => setEditing({ ...(editing as any), [editKind === "edital" ? "titulo" : "nome"]: v })} />
+              <Field label={editKind === "edital" ? "Órgão" : "Organizador *"} value={(editing as any)[editKind === "edital" ? "orgao" : "organizador"] ?? ""} onChange={(v) => setEditing({ ...(editing as any), [editKind === "edital" ? "orgao" : "organizador"]: v })} />
+              {editKind === "palco" && (
+                <Field label="Tipo de palco *" value={(editing as any).tipo_palco ?? ""} onChange={(v) => setEditing({ ...(editing as any), tipo_palco: v })} />
+              )}
               <Field label="Link" value={(editing as any).link ?? ""} onChange={(v) => setEditing({ ...(editing as any), link: v })} />
               <Field label="Estado (UF)" value={(editing as any).estado ?? ""} onChange={(v) => setEditing({ ...(editing as any), estado: v })} />
               <Field label="Prazo (YYYY-MM-DD)" value={(editing as any).prazo ?? ""} onChange={(v) => setEditing({ ...(editing as any), prazo: v || null })} />
               {editKind === "edital" && (
-                <Field label="Valor" value={(editing as any).valor ?? ""} onChange={(v) => setEditing({ ...(editing as any), valor: v })} />
+                <>
+                  <Field label="Tipo" value={(editing as any).tipo ?? ""} onChange={(v) => setEditing({ ...(editing as any), tipo: v })} />
+                  <Field label="Valor" value={(editing as any).valor ?? ""} onChange={(v) => setEditing({ ...(editing as any), valor: v })} />
+                </>
               )}
               <div className="space-y-1">
                 <Label className="text-xs">Resumo</Label>
@@ -362,8 +417,8 @@ export default function AdminCarreira() {
             </div>
           )}
           <SheetFooter className="mt-4 gap-2">
-            <Button variant="outline" onClick={() => setEditing(null)}>Cancelar</Button>
-            <Button onClick={saveEdit}>Salvar</Button>
+            <Button variant="outline" onClick={() => { setEditing(null); setIsCreating(false); }}>Cancelar</Button>
+            <Button onClick={saveEdit}>{isCreating ? "Criar" : "Salvar"}</Button>
           </SheetFooter>
         </SheetContent>
       </Sheet>
