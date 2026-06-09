@@ -493,19 +493,21 @@ export default function Admin() {
 
 
       <section>
-        <SectionTitle icon={DollarSign} label="Receita" />
+        <SectionTitle icon={DollarSign} label="Receita (potencial)" />
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <Card className="border-success/20 bg-success/5">
             <CardHeader className="pb-1 pt-4 px-4">
               <CardTitle className="text-xs text-success/80 font-medium uppercase tracking-wide">
-                Receita Mensal Estimada
+                Receita potencial @ R$ 49,90
               </CardTitle>
             </CardHeader>
             <CardContent className="px-4 pb-4">
               <p className="text-3xl font-bold text-success">
-                {loading ? <Spinner /> : `R$ ${(stats?.estimatedMonthlyRevenue ?? 0).toFixed(2)}`}
+                {loading ? <Spinner /> : `R$ ${(stats?.potentialMonthlyRevenue ?? 0).toFixed(2)}`}
               </p>
-              <p className="text-xs text-muted-foreground mt-1">Baseado em assinaturas Pro ativas</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Beta força Pro para todos — valor não representa pagantes reais
+              </p>
             </CardContent>
           </Card>
 
@@ -537,46 +539,37 @@ export default function Admin() {
         </div>
       </section>
 
-      {/* ── IA & Custos ── */}
+      {/* ── IA & Custos — resumo (detalhes em /admin/ai-invocations) ── */}
       <section>
-        <SectionTitle icon={Bot} label="IA & Custos" />
+        <SectionTitle icon={Bot} label="IA & Custos">
+          <Link to="/admin/ai-invocations" className="text-xs text-primary hover:underline">
+            Ver detalhes →
+          </Link>
+        </SectionTitle>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5">
-          <Card className="border-border bg-card">
-            <CardHeader className="pb-1 pt-4 px-4">
-              <CardTitle className="text-xs text-muted-foreground font-medium uppercase tracking-wide flex items-center gap-1.5">
-                <Bot className="h-3.5 w-3.5" />
-                Últimos 30 dias
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="px-4 pb-4">
+        <Card className="border-border bg-card mb-5">
+          <CardContent className="p-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
               <p className="text-2xl font-bold text-foreground">
-                {loading ? <Spinner /> : ai?.aiCalls30d ?? 0}
-                <span className="text-sm font-normal text-muted-foreground ml-1">chamadas</span>
+                {loading ? <Spinner /> : (ai?.aiCalls30d ?? 0).toLocaleString("pt-BR")}
               </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                {loading ? "…" : fmtUsd(ai?.aiRealCost30d ?? 0)} USD rastreado
+              <p className="text-xs text-muted-foreground mt-0.5">Chamadas (30d)</p>
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-foreground">
+                {loading ? <Spinner /> : fmtUsd(ai?.aiRealCost30d ?? 0)}
               </p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-primary/20 bg-primary/5">
-            <CardHeader className="pb-1 pt-4 px-4">
-              <CardTitle className="text-xs text-primary/80 font-medium uppercase tracking-wide">
-                Total acumulado
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="px-4 pb-4">
+              <p className="text-xs text-muted-foreground mt-0.5">Custo USD (30d)</p>
+            </div>
+            <div>
               <p className="text-2xl font-bold text-primary">
-                {loading ? <Spinner /> : ai?.aiCallsTotal ?? 0}
-                <span className="text-sm font-normal text-muted-foreground ml-1">chamadas</span>
+                {loading ? <Spinner /> : (ai?.aiCallsTotal ?? 0).toLocaleString("pt-BR")}
               </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                {loading ? "…" : fmtUsd(ai?.aiRealCostTotal ?? 0)} USD total
-              </p>
-            </CardContent>
-          </Card>
-        </div>
+              <p className="text-xs text-muted-foreground mt-0.5">Total acumulado</p>
+            </div>
+          </CardContent>
+        </Card>
+
 
         {/* AI cost line chart */}
         <Card className="border-border bg-card">
