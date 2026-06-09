@@ -509,7 +509,7 @@ function ExecutiveSummary({ diagnosis, proximosPassos, addedItems, onAddStep, an
     <section id="dna-resumo" className="scroll-mt-16">
       <Card className="border-l-4 border-l-primary animate-fade-in">
         <CardContent className="p-4 space-y-4">
-          <div>
+          <div ref={summaryRef}>
             <p className="text-[11px] font-mono uppercase tracking-widest text-primary mb-1">Resumo executivo</p>
             <p className="text-sm leading-relaxed">{diagnosis.diagnostico_resumo}</p>
           </div>
