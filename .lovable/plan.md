@@ -1,38 +1,63 @@
+
+# Item 1 — Crest factor no browser para destravar o matching de Dynamic Range
+
 ## Objetivo
 
-Painel admin em `/admin/ai-invocations` para monitorar uso e gargalos de IA — com foco em `music-dna-analyze`, mas servindo todas as funções.
+Hoje `useMusicDNA.ts` envia `dynamic_range_db = null` para a RPC porque a métrica calculada no browser (`dynamic_range_lu`, percentis P95–P10 do LUFS short-term) está em **LU perceptual**, enquanto o catálogo (`music_reference_tracks.dynamic_range_db`) armazena **crest factor em dB** (`peak_dBFS − RMS_dBFS`). Resultado: a dimensão de dinâmica fica fora do cálculo de similaridade.
 
-## O que o painel mostra
+Solução: calcular **também** o crest factor no browser, em paralelo ao DR perceptual, e usar **apenas o crest factor** para alimentar a RPC. O DR perceptual continua intacto onde já é usado (UI, recomendações de mix, prompt da IA).
 
-**Filtros no topo:** período (24h / 7d / 30d) e função (select com `music-dna-analyze` pré-selecionado, opção "Todas").
+Sem migração de banco. Sem alteração no catálogo. Mudança isolada em frontend.
 
-**Cards de resumo (no período):**
-- Total de invocações
-- Usuários únicos
-- Taxa de erro (% status ≠ success)
-- Custo total estimado (US$)
+## Mudanças
 
-**Gráfico de linha — invocações por hora/dia** (Recharts), com séries `success` e `error` empilhadas. Mostra os picos.
+### 1. `src/lib/audioAnalysis.ts`
+- Adicionar função `computeCrestFactorDb(mono, sampleRate)`:
+  - `peak_dbfs = 20 * log10(max(abs(mono)))` (sample peak, não true peak — alinha com a forma como o catálogo foi importado a partir do `loudness_lufs` + `alcance_dinamico_db` do CSV Sonara).
+  - `rms_dbfs` já existe (`computeRmsDbfs`).
+  - `crest_db = peak_dbfs − rms_dbfs`, clamp seguro `[0, 40]`.
+- Adicionar campo `crest_factor_db: number` em `RealAudioAnalysis` (logo após `dynamic_range_lu`).
+- Popular no objeto `real` em `analyzeAudioFull` (linha ~1177) e na variante interna (linha ~1293/1299).
+- Não tocar em `dynamicRange` / `dynamic_range_lu` — continuam servindo a UI e `mixRecommendations`.
 
-**Tabela "Top usuários no período"** (limitada a 20):
-`user_id` curto · display_name (join com `profiles`) · total · sucessos · erros · último uso. Ordenada por total desc.
+### 2. `src/hooks/useMusicDNA.ts` (linhas 758–784)
+- Substituir o comentário sobre `dynamic_range_db omitido` por:
+  ```ts
+  dynamic_range_db: realAnalysis.crest_factor_db,
+  ```
+- Manter os demais campos.
+- Atualizar o trecho do prompt (linha 481) opcionalmente, para mostrar os dois valores (LU perceptual + crest factor dB), deixando claro à IA que o catálogo usa crest.
 
-**Tabela "Top funções no período"** (quando filtro = "Todas"):
-`function_name` · total · usuários únicos · taxa de erro · custo total. Ordenada por total desc.
+### 3. `src/workers/acousticMatch.worker.ts`
+- Em `toQuery` (`AcousticMatchPanel.tsx`), passar `dynamic_range_lu: analysis.crest_factor_db` para o worker — o catálogo embarcado em `acoustic-catalog/v1.json` usa `dynamic_range_db` (crest), então a comparação fica coerente. Renomear o campo no payload da `QueryFeatures` para `dynamic_range_db` seria mais limpo; alternativa mínima: manter o nome e só trocar o valor enviado.
 
-**Tabela "Últimos 50 eventos"**: timestamp, função, user_id, model, status, cost_usd. Útil para inspeção pontual.
+### 4. Tipos derivados
+- `src/types/musicDna.ts` (linha 141): `dynamic_range_db: diagnosis.realAnalysis.crest_factor_db` (em vez de `dynamic_range_lu`), para alinhar `SpotifyFeatures`.
+- `src/components/admin/ReferenceTrackIngestor.tsx` (linha 107): trocar para `crest_factor_db` — a ingestão admin passa a gravar a métrica correta no catálogo a partir de análises browser.
 
-## Como funciona (técnico)
+### 5. Testes
+- Novo teste em `src/lib/__tests__/audioAnalysis.test.ts`:
+  - Sinal sintético `sin(2π·440·t) * 0.5` → RMS ≈ −9 dBFS, peak ≈ −6 dBFS → crest ≈ 3 dB.
+  - Sinal `[1, 0, 0, ..., 0]` → crest alto (>30 dB), confirma clamp.
+- Ajustar `mixRecommendations.test.ts` apenas se algum mock precisar do novo campo.
 
-1. **RPC `get_ai_invocations_metrics(p_hours int, p_function_name text)`** (`SECURITY DEFINER`, gate via `has_role(auth.uid(), 'admin')`), retornando `jsonb` com 4 blocos: `totals`, `series` (buckets por hora se ≤48h, senão por dia), `top_users`, `top_functions`. O join com `profiles` é via `LEFT JOIN profiles ON profiles.id = ai_invocations.user_id` para trazer `display_name`.
-2. **Nova página** `src/pages/admin/AIInvocationsMetrics.tsx` reutilizando padrões de `OportunidadesSearchMetrics.tsx` (cards + Recharts + tabelas shadcn).
-3. **Rota** `/admin/ai-invocations` em `App.tsx`, protegida pelo guard já existente para rotas `/admin/*`.
-4. **Card de atalho** em `src/pages/Admin.tsx` ("IA · Invocações" → `/admin/ai-invocations`).
-5. **Últimos 50 eventos**: query direta na tabela (já tem policy admin de SELECT), sem RPC.
+## Detalhes técnicos
 
-Sem mudança de schema na tabela `ai_invocations` (índices em `created_at` e `function_name` já existem).
+**Por que sample peak e não true peak?**
+O catálogo foi importado de um CSV que usa o crest factor convencional `peak_dBFS − RMS_dBFS` (sample peak). Usar `true_peak_dbtp` introduziria 0–1 dB de viés sistemático contra todas as faixas do catálogo.
 
-## Fora de escopo
-- Drill-down por usuário individual.
-- Reset/manipulação de quotas — só visualização.
-- Export CSV (pode vir depois se pedido).
+**Por que manter `dynamic_range_lu`?**
+Ele é a métrica certa para feedback ao usuário ("hiperlimitado < 7 LU"), pois reflete percepção. O crest é uma métrica de engenharia útil só para o matching com o catálogo legado.
+
+**Escopo da mudança:** 1 função nova, 1 campo no tipo, 3 sites de uso. Sem SQL, sem edge function, sem migração.
+
+## Validação
+
+1. `npx vitest run src/lib/__tests__/audioAnalysis.test.ts` passa com os novos casos.
+2. Análise de uma faixa real: `crest_factor_db` aparece no objeto retornado, valor entre ~6 dB (master moderno) e ~18 dB (clássica/jazz).
+3. Inspecionar `track_features.dynamic_range_db` no payload enviado para `music-dna-analyze` (Network tab) — não é mais `null`.
+4. `AcousticMatchPanel` continua retornando matches coerentes.
+
+## Próximos passos (fora deste item)
+
+- Item 4 da priorização: adicionar coluna `dynamic_range_lu` perceptual ao catálogo, permitindo no futuro usar **as duas** dimensões (perceptual + crest) no matching.
