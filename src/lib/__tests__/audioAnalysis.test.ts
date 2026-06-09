@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   evaluateTruePeak,
+  computeCrestFactorDb,
   TRUE_PEAK_TARGET_DBTP,
   TRUE_PEAK_MAX_DBTP,
 } from "../audioAnalysis";
