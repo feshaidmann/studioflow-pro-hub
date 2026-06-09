@@ -140,7 +140,7 @@ export default function FinancialTracker() {
   const openEdit = (tx: Transaction) => { setEditTx(tx); setFormOpen(true); };
 
   const aiContext = [
-    `Saldo total (pagas): R$${kpis.balanceAll.toFixed(2)}`,
+    `Saldo realizado acumulado: R$${kpis.balanceAll.toFixed(2)}`,
     `Receitas do mês: R$${kpis.incomeMonth.toFixed(2)}`,
     `Despesas do mês: R$${kpis.expenseMonth.toFixed(2)}`,
     `Resultado do mês: R$${kpis.resultMonth.toFixed(2)}`,
