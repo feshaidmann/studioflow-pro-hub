@@ -3172,6 +3172,7 @@ export type Database = {
         Returns: number
       }
       expire_old_invitations: { Args: never; Returns: number }
+      expire_old_service_requests: { Args: never; Returns: undefined }
       find_nearest_reference_tracks: {
         Args: {
           p_acousticness?: number
