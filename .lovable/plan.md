@@ -1,63 +1,84 @@
-
-# Item 1 — Crest factor no browser para destravar o matching de Dynamic Range
-
 ## Objetivo
 
-Hoje `useMusicDNA.ts` envia `dynamic_range_db = null` para a RPC porque a métrica calculada no browser (`dynamic_range_lu`, percentis P95–P10 do LUFS short-term) está em **LU perceptual**, enquanto o catálogo (`music_reference_tracks.dynamic_range_db`) armazena **crest factor em dB** (`peak_dBFS − RMS_dBFS`). Resultado: a dimensão de dinâmica fica fora do cálculo de similaridade.
+Criar uma suíte de testes end-to-end que valide as garantias de RLS e fluxos `SECURITY DEFINER` do StudioFlow contra o banco Supabase real, exercitando os cenários sensíveis (convites, leitura de projetos, acesso admin, privacidade financeira) com usuários de roles diferentes.
 
-Solução: calcular **também** o crest factor no browser, em paralelo ao DR perceptual, e usar **apenas o crest factor** para alimentar a RPC. O DR perceptual continua intacto onde já é usado (UI, recomendações de mix, prompt da IA).
+Complementa o `src/test/security-invariants.test.ts` (estático) com verificações **dinâmicas** — se alguém afrouxar uma policy ou esquecer um `WITH CHECK`, o teste falha de verdade.
 
-Sem migração de banco. Sem alteração no catálogo. Mudança isolada em frontend.
+## Stack
 
-## Mudanças
+- **Vitest** (já configurado) com um novo projeto `rls` isolado do unit run padrão.
+- `@supabase/supabase-js` instanciado por usuário (anon key + sessão própria), sem service role no cliente.
+- Um cliente admin via `SUPABASE_SERVICE_ROLE_KEY` **só** dentro do setup/teardown para criar/destruir usuários — nunca exposto aos testes em si.
+- Roda apenas quando as variáveis de ambiente estão presentes (`SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`). Em CI sem secrets, a suíte é pulada com `describe.skipIf`.
 
-### 1. `src/lib/audioAnalysis.ts`
-- Adicionar função `computeCrestFactorDb(mono, sampleRate)`:
-  - `peak_dbfs = 20 * log10(max(abs(mono)))` (sample peak, não true peak — alinha com a forma como o catálogo foi importado a partir do `loudness_lufs` + `alcance_dinamico_db` do CSV Sonara).
-  - `rms_dbfs` já existe (`computeRmsDbfs`).
-  - `crest_db = peak_dbfs − rms_dbfs`, clamp seguro `[0, 40]`.
-- Adicionar campo `crest_factor_db: number` em `RealAudioAnalysis` (logo após `dynamic_range_lu`).
-- Popular no objeto `real` em `analyzeAudioFull` (linha ~1177) e na variante interna (linha ~1293/1299).
-- Não tocar em `dynamicRange` / `dynamic_range_lu` — continuam servindo a UI e `mixRecommendations`.
+## Estrutura
 
-### 2. `src/hooks/useMusicDNA.ts` (linhas 758–784)
-- Substituir o comentário sobre `dynamic_range_db omitido` por:
-  ```ts
-  dynamic_range_db: realAnalysis.crest_factor_db,
-  ```
-- Manter os demais campos.
-- Atualizar o trecho do prompt (linha 481) opcionalmente, para mostrar os dois valores (LU perceptual + crest factor dB), deixando claro à IA que o catálogo usa crest.
+```text
+src/test/rls/
+  setup.ts              # cria/derruba usuários, helpers de auth
+  fixtures.ts           # cria projects, invitations, transactions seed
+  invitations.e2e.ts    # convidar/aceitar/recusar via RPC
+  projects.e2e.ts       # owner vs membro vs estranho vs anon
+  admin.e2e.ts          # user_roles, admin RPCs, function_logs
+  finance.e2e.ts        # guest não vê transactions/valor
+  cleanup.ts            # remove usuários e dados de teste
+package.json            # novo script "test:rls"
+vitest.rls.config.ts    # config separada (timeout maior, sem jsdom)
+```
 
-### 3. `src/workers/acousticMatch.worker.ts`
-- Em `toQuery` (`AcousticMatchPanel.tsx`), passar `dynamic_range_lu: analysis.crest_factor_db` para o worker — o catálogo embarcado em `acoustic-catalog/v1.json` usa `dynamic_range_db` (crest), então a comparação fica coerente. Renomear o campo no payload da `QueryFeatures` para `dynamic_range_db` seria mais limpo; alternativa mínima: manter o nome e só trocar o valor enviado.
+## Cenários cobertos
 
-### 4. Tipos derivados
-- `src/types/musicDna.ts` (linha 141): `dynamic_range_db: diagnosis.realAnalysis.crest_factor_db` (em vez de `dynamic_range_lu`), para alinhar `SpotifyFeatures`.
-- `src/components/admin/ReferenceTrackIngestor.tsx` (linha 107): trocar para `crest_factor_db` — a ingestão admin passa a gravar a métrica correta no catálogo a partir de análises browser.
+**1. Convites (`project_invitations` / `platform_invitations`)**
+- Anon não consegue `SELECT * FROM project_invitations` direto (mesmo com token).
+- `respond-to-invite` edge function: token válido → aceita; token expirado → 410; token inválido → 404; reuso → 409.
+- Após `accepted`, o convidado vira `project_members` e enxerga o projeto via `get_member_projects` RPC.
 
-### 5. Testes
-- Novo teste em `src/lib/__tests__/audioAnalysis.test.ts`:
-  - Sinal sintético `sin(2π·440·t) * 0.5` → RMS ≈ −9 dBFS, peak ≈ −6 dBFS → crest ≈ 3 dB.
-  - Sinal `[1, 0, 0, ..., 0]` → crest alto (>30 dB), confirma clamp.
-- Ajustar `mixRecommendations.test.ts` apenas se algum mock precisar do novo campo.
+**2. Projetos (`projects`, `project_members`)**
+- Owner: CRUD completo.
+- Membro aceito: SELECT via RPC, **sem** acesso a campos financeiros.
+- Estranho autenticado: 0 linhas.
+- Anon: 0 linhas / permission denied.
+
+**3. Admin (`user_roles`, `function_logs`, `ai_invocations`, `marketplace_curated_providers`)**
+- Usuário comum: SELECT em `function_logs` retorna vazio.
+- Admin (inserido em `user_roles`): SELECT funciona, INSERT em `marketplace_curated_providers` funciona.
+- Tentativa de auto-promoção: usuário comum não consegue `INSERT INTO user_roles ... role='admin'`.
+
+**4. Privacidade financeira**
+- Owner vê `transactions` próprias.
+- Guest aceito no projeto: `SELECT FROM transactions WHERE project_id=...` retorna 0 linhas.
+- RPC `get_project_for_member` chamada pelo guest não devolve `valor_total`, `gross_revenue`, `cache`.
+
+**5. Storage (smoke)**
+- Upload em `avatars/{outroUserId}/foo.png` falha; em `avatars/{self}/foo.png` passa.
+
+## Setup/teardown
+
+- `beforeAll`: cria 4 usuários efêmeros (owner, member, stranger, admin) com `admin.createUser({ email_confirm: true })`, promove `admin` em `user_roles`, cria 1 projeto + 1 convite + 1 transação via service role.
+- `afterAll`: `admin.deleteUser()` em cascata derruba `profiles`, `projects`, `transactions`, `project_invitations` (FK ON DELETE CASCADE já existentes).
+- Emails usam prefixo `rls-test+<uuid>@studioflow.test` para facilitar limpeza manual se algo falhar.
+
+## Execução
+
+- Local: `npm run test:rls` — exige `.env.test` com as 3 variáveis.
+- CI: job separado (não bloqueia o unit run); habilitado quando `SUPABASE_SERVICE_ROLE_KEY` está disponível como secret.
+- Documentado em `docs/05-seguranca.md` (seção nova "Testes E2E de RLS").
 
 ## Detalhes técnicos
 
-**Por que sample peak e não true peak?**
-O catálogo foi importado de um CSV que usa o crest factor convencional `peak_dBFS − RMS_dBFS` (sample peak). Usar `true_peak_dbtp` introduziria 0–1 dB de viés sistemático contra todas as faixas do catálogo.
+- `supabaseUser(email, password)` helper retorna um client com sessão própria — sem compartilhar com o singleton de `src/integrations/supabase/client.ts` para evitar poluir `localStorage` em jsdom.
+- `vitest.rls.config.ts` usa `environment: 'node'`, `testTimeout: 30_000`, `pool: 'forks'`, `sequence: { concurrent: false }` (fixtures compartilhadas).
+- Assertions sobre erros de RLS checam `error.code === '42501'` ou `data.length === 0` (PostgREST converte negação de SELECT em zero linhas, não em erro).
+- Edge functions são chamadas via `supabase.functions.invoke` com o token do usuário relevante, validando o gate de auth dentro da função.
 
-**Por que manter `dynamic_range_lu`?**
-Ele é a métrica certa para feedback ao usuário ("hiperlimitado < 7 LU"), pois reflete percepção. O crest é uma métrica de engenharia útil só para o matching com o catálogo legado.
+## Fora do escopo
 
-**Escopo da mudança:** 1 função nova, 1 campo no tipo, 3 sites de uso. Sem SQL, sem edge function, sem migração.
+- Não testa frontend renderizado (Playwright/Cypress) — fica para uma próxima iteração se houver demanda.
+- Não roda contra o banco de produção. Espera-se um projeto Supabase de staging dedicado (ou o próprio dev) — a suíte recusa rodar se `SUPABASE_URL` apontar para o ref de produção (`icdedfqsiorzzuhzvfgl`) sem `RLS_TEST_ALLOW_PROD=1`.
 
-## Validação
+## Entregáveis
 
-1. `npx vitest run src/lib/__tests__/audioAnalysis.test.ts` passa com os novos casos.
-2. Análise de uma faixa real: `crest_factor_db` aparece no objeto retornado, valor entre ~6 dB (master moderno) e ~18 dB (clássica/jazz).
-3. Inspecionar `track_features.dynamic_range_db` no payload enviado para `music-dna-analyze` (Network tab) — não é mais `null`.
-4. `AcousticMatchPanel` continua retornando matches coerentes.
-
-## Próximos passos (fora deste item)
-
-- Item 4 da priorização: adicionar coluna `dynamic_range_lu` perceptual ao catálogo, permitindo no futuro usar **as duas** dimensões (perceptual + crest) no matching.
+- 6 arquivos novos em `src/test/rls/` + helpers.
+- `vitest.rls.config.ts` e script `test:rls` no `package.json`.
+- Seção em `docs/05-seguranca.md` explicando como rodar e o que cobre.
+- Nenhuma migração de banco (suíte usa apenas o que já existe).

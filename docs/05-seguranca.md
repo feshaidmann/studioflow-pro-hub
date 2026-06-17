@@ -99,3 +99,20 @@ Funções administrativas (ex.: `admin-stats`, `import-reference-tracks`, `expor
 | `edital-monitor` | Periódico | Detecta novos editais |
 
 Crons são chamados sem JWT — autenticidade garantida pela origem (pg_cron) e ausência de side-effects sensíveis.
+
+## Testes E2E de RLS
+
+Suíte dinâmica em `src/test/rls/` (Vitest, config separada `vitest.rls.config.ts`). Executa contra um projeto Supabase real, cria 4 usuários efêmeros (owner / member / stranger / admin) e valida:
+
+- enumeração de `project_invitations` por token (anon e estranho bloqueados; invitee permitido)
+- leitura de `projects` direta vs. via `get_project_for_member` / `get_member_projects` (campos financeiros não vazam)
+- tabelas admin-only (`function_logs`, `ai_invocations`, `user_roles`) — incluindo guard contra auto-promoção
+- privacidade financeira (`transactions` estritamente do dono)
+
+Rodar:
+
+```bash
+SUPABASE_URL=... SUPABASE_ANON_KEY=... SUPABASE_SERVICE_ROLE_KEY=... npm run test:rls
+```
+
+A suíte recusa rodar contra o ref de produção sem `RLS_TEST_ALLOW_PROD=1`. Em CI sem secrets, todos os `describe` são pulados via `describe.skipIf(!isEnabled)`.
