@@ -11,15 +11,17 @@ interface Props {
   filters: CarreiraFilters;
   onChange: (next: CarreiraFilters) => void;
   className?: string;
+  /** Quando "edital", chip de gênero é omitido (filtro não se aplica a editais). */
+  tipoContext?: "edital" | "palco";
 }
 
-export default function ActiveFiltersChips({ filters, onChange, className }: Props) {
+export default function ActiveFiltersChips({ filters, onChange, className, tipoContext }: Props) {
   const chips: { key: keyof CarreiraFilters; label: string }[] = [];
   // tipo é controlado pelas sub-abas — não exibimos como chip.
   void TIPO_LABEL;
   if (filters.status !== "todos") chips.push({ key: "status", label: filters.status });
   if (filters.estado !== "todos") chips.push({ key: "estado", label: filters.estado });
-  if (filters.genero !== "todos") chips.push({ key: "genero", label: `Gênero: ${filters.genero}` });
+  if (tipoContext !== "edital" && filters.genero !== "todos") chips.push({ key: "genero", label: `Gênero: ${filters.genero}` });
   if (filters.deadline !== "todos") chips.push({ key: "deadline", label: DEADLINE_LABEL[filters.deadline] });
   if (!filters.hideClosed) chips.push({ key: "hideClosed", label: "Inclui encerrados" });
   if (filters.query) chips.push({ key: "query", label: `“${filters.query}”` });

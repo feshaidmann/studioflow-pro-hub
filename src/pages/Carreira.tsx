@@ -266,7 +266,7 @@ export default function Carreira() {
   const advancedActiveCount =
     (filters.status !== "todos" ? 1 : 0) +
     (filters.estado !== "todos" ? 1 : 0) +
-    (filters.genero !== "todos" ? 1 : 0) +
+    (subTipo === "palco" && filters.genero !== "todos" ? 1 : 0) +
     (filters.deadline !== "todos" ? 1 : 0) +
     (!filters.hideClosed ? 1 : 0);
 
@@ -336,6 +336,7 @@ export default function Carreira() {
       }
     } catch (e) {
       console.error("handleInterest:", e);
+      toast.error(e instanceof Error ? e.message : "Erro ao registrar candidatura. Tente novamente.");
     } finally {
       setInterestPending(null);
     }
@@ -391,7 +392,14 @@ export default function Carreira() {
         <button
           key={o.v}
           type="button"
-          onClick={() => setFilters({ ...filters, tipo: o.v })}
+          onClick={() =>
+            setFilters({
+              ...filters,
+              tipo: o.v,
+              // genero só se aplica a palcos — limpa ao trocar para edital
+              genero: o.v === "edital" ? DEFAULT_FILTERS.genero : filters.genero,
+            })
+          }
           className={
             "text-sm px-3.5 py-1.5 rounded-[0.55rem] transition-colors inline-flex items-center gap-1.5 " +
             (filters.tipo === o.v
@@ -517,7 +525,7 @@ export default function Carreira() {
               )}
             </div>
 
-            {anyFilterActive && <ActiveFiltersChips filters={filters} onChange={setFilters} />}
+            {anyFilterActive && <ActiveFiltersChips filters={filters} onChange={setFilters} tipoContext={subTipo} />}
 
             {/* 4. Recomendados — só sem filtros nem IA */}
             {!anyFilterActive && !loading && aiResults.length === 0 && (
@@ -539,7 +547,10 @@ export default function Carreira() {
             {/* 5. Contador */}
             {(filtered.length > 0 || anyFilterActive) && (
               <div className="text-xs text-muted-foreground">
-                {filtered.length} {subTipo === "edital" ? "edital(is)" : "palco(s)"}
+                {filtered.length}{" "}
+                {subTipo === "edital"
+                  ? filtered.length === 1 ? "edital" : "editais"
+                  : filtered.length === 1 ? "palco" : "palcos"}
                 {anyFilterActive ? " com filtros aplicados" : ""}
               </div>
             )}
