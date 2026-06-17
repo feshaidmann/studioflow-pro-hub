@@ -76,7 +76,8 @@ describe("security invariants: migrations", () => {
     for (const m of allSql.matchAll(createRe)) created.add(m[1].toLowerCase());
 
     const rlsEnabled = new Set<string>();
-    const rlsRe = /ALTER\s+TABLE\s+(?:public\.)?([a-z_][a-z0-9_]*)\s+ENABLE\s+ROW\s+LEVEL\s+SECURITY/gi;
+    const rlsRe =
+      /ALTER\s+TABLE\s+(?:IF\s+EXISTS\s+)?(?:public\.)?([a-z_][a-z0-9_]*)\s+ENABLE\s+ROW\s+LEVEL\s+SECURITY/gi;
     for (const m of allSql.matchAll(rlsRe)) rlsEnabled.add(m[1].toLowerCase());
 
     const missing = [...created].filter((t) => !rlsEnabled.has(t) && !t.startsWith("_"));
