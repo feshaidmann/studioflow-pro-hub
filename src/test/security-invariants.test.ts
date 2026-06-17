@@ -85,15 +85,24 @@ describe("security invariants: migrations", () => {
   });
 
   // 2. Every SECURITY DEFINER function must SET search_path (prevents search_path hijacking).
+  //    Only the LATEST definition per function name is checked, since later
+  //    CREATE OR REPLACE migrations supersede earlier ones.
   it("every SECURITY DEFINER function sets search_path", () => {
-    const violators: string[] = [];
-    // Split into function bodies between CREATE OR REPLACE FUNCTION and the matching `$function$` or `$$` terminator.
+    const latest = new Map<string, string>(); // fn name -> header text of latest def
     const fnRe =
       /CREATE\s+(?:OR\s+REPLACE\s+)?FUNCTION\s+(?:public\.)?([a-z_][a-z0-9_]*)[\s\S]*?LANGUAGE[\s\S]*?AS\s+\$[a-z_]*\$/gi;
-    for (const m of allSql.matchAll(fnRe)) {
-      const header = m[0];
+    // Walk migrations in chronological order (filename sorted) so map ends on latest.
+    const sortedSql = [...migrations]
+      .sort((a, b) => a.path.localeCompare(b.path))
+      .map((m) => m.body)
+      .join("\n");
+    for (const m of sortedSql.matchAll(fnRe)) {
+      latest.set(m[1].toLowerCase(), m[0]);
+    }
+    const violators: string[] = [];
+    for (const [name, header] of latest) {
       if (/SECURITY\s+DEFINER/i.test(header) && !/SET\s+search_path/i.test(header)) {
-        violators.push(m[1]);
+        violators.push(name);
       }
     }
     expect(violators, `SECURITY DEFINER without SET search_path: ${violators.join(", ")}`).toEqual([]);
