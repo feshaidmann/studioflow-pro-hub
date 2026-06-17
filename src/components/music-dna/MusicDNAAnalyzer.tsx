@@ -147,7 +147,7 @@ export function MusicDNAAnalyzer({ defaultProjectId, initialAnalysisId }: { defa
   };
 
   const activeDiagnosis = viewingDiagnosis || result;
-  const activeBenchmark = findBenchmarkForGenre(benchmarks, activeDiagnosis?.genero_classificado);
+  const activeBenchmark = findBenchmarkForGenre(benchmarks, lastInput?.genre);
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-6">
