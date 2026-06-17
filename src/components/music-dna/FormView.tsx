@@ -360,7 +360,8 @@ export function FormView({ onSubmit, isPending, projects, defaultProjectId }: {
               </FormItem>
             )} />
 
-            {/* 5. Optional context — collapsible */}
+            {/* 5. Optional context — collapsible (hidden in beta) */}
+            {false && (
             <Collapsible>
               <CollapsibleTrigger className="text-[11px] uppercase tracking-widest font-mono text-muted-foreground hover:text-foreground transition-colors">
                 + Contexto adicional (opcional)
@@ -404,6 +405,7 @@ export function FormView({ onSubmit, isPending, projects, defaultProjectId }: {
                 }} />
               </CollapsibleContent>
             </Collapsible>
+            )}
           </CardContent>
         </Card>
 
