@@ -57,20 +57,12 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/contexts/ProfileContext";
 import { useProjects } from "@/contexts/ProjectContext";
 import { trackAppEvent } from "@/lib/analytics";
+import { opportunitySlug } from "@/lib/opportunitySlug";
 import type { Edital } from "@/hooks/useEditais";
 import type { PalcoCurado } from "@/hooks/usePalcos";
 
 type SubTipo = "edital" | "palco";
 type MainTab = "explorar" | "candidaturas";
-
-function sessionKeyFor(nome: string, organizador: string) {
-  return `${nome}_${organizador}`
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9_]/g, "_")
-    .replace(/_+/g, "_");
-}
 
 function readFiltersFromURL(sp: URLSearchParams): CarreiraFilters {
   const tipo = sp.get("tipo");
@@ -288,7 +280,7 @@ export default function Carreira() {
         return data?.id ? { id: data.id as string, tipo: "palco" } : null;
       }
       if (op.editalId) return { id: op.editalId, tipo: "fomento" };
-      const key = (op.raw as Edital).session_key || sessionKeyFor(op.titulo, op.organizador);
+      const key = (op.raw as Edital).session_key || opportunitySlug(op.titulo, op.organizador);
       await saveEditais([op.raw as Edital]);
       const { data } = await supabase
         .from("editais")

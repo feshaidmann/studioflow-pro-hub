@@ -16,6 +16,8 @@ interface Props {
   opportunityKind: "edital" | "palco";
   opportunityId: string;
   opportunityTitle?: string;
+  /** Chamado após envio bem-sucedido com o motivo selecionado. */
+  onSuccess?: (reason: string) => void;
 }
 
 const REASONS = [
@@ -27,7 +29,7 @@ const REASONS = [
   { value: "other", label: "Outro" },
 ];
 
-export default function ReportInfoDialog({ open, onOpenChange, opportunityKind, opportunityId, opportunityTitle }: Props) {
+export default function ReportInfoDialog({ open, onOpenChange, opportunityKind, opportunityId, opportunityTitle, onSuccess }: Props) {
   const [reason, setReason] = useState("link_broken");
   const [comment, setComment] = useState("");
   const [busy, setBusy] = useState(false);
@@ -46,6 +48,7 @@ export default function ReportInfoDialog({ open, onOpenChange, opportunityKind, 
     setBusy(false);
     if (error) return toast.error(error.message);
     toast.success("Obrigado! O time vai revisar.");
+    onSuccess?.(reason);
     setComment(""); setReason("link_broken");
     onOpenChange(false);
   }

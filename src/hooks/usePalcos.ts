@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { opportunitySlug } from "@/lib/opportunitySlug";
 
 // ── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -90,10 +91,6 @@ export function usePalcos() {
     projectId?: string | null
   ) => {
     if (!user || palcos.length === 0) return;
-    const slug = (s: string) =>
-      s.toLowerCase()
-        .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-        .replace(/[^a-z0-9_]/g, "_").replace(/_+/g, "_");
     try {
       const nowIso = new Date().toISOString();
       const rows = palcos.map((p) => ({
@@ -110,7 +107,7 @@ export function usePalcos() {
         link: p.link || "",
         origem_url: p.link || "",
         inferido: false,
-        session_key: slug(`${p.nome}_${p.organizador}`),
+        session_key: opportunitySlug(p.nome, p.organizador),
         valor: p.cachet_medio || "",
         publico_alvo: p.publico_estimado || "",
         resumo: p.resumo || "",
