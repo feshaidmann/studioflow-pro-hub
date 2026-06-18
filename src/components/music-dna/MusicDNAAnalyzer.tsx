@@ -6,6 +6,7 @@ import {
   type TrackInput, type Genre,
   type DiagnosisResult,
 } from "@/hooks/useMusicDNA";
+import { trackAppEvent } from "@/lib/analytics";
 import {
   useSavedAnalyses, cacheLastAnalysis, getCachedAnalysis, clearCachedAnalysis,
   type SavedAnalysis,
@@ -144,10 +145,17 @@ export function MusicDNAAnalyzer({ defaultProjectId, initialAnalysisId }: { defa
     setSavedAnalysisId(saved.id);
     setRestoredFromCache(false);
     cacheLastAnalysis(input, saved.diagnosis);
+    trackAppEvent("analysis_loaded", {
+      genre: (input as { genre?: string }).genre ?? null,
+      stage: input.stage ?? null,
+      has_project: !!input.projectId,
+      source: "history",
+      project_id: input.projectId ?? null,
+    });
   };
 
   const activeDiagnosis = viewingDiagnosis || result;
-  const activeBenchmark = findBenchmarkForGenre(benchmarks, activeDiagnosis?.genero_classificado);
+  const activeBenchmark = findBenchmarkForGenre(benchmarks, lastInput?.genre);
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-6">

@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils";
 import { resolveStage, type AudioStage } from "@/lib/musicDnaStages";
 import { GENRE_PRESETS, type Genre } from "@/hooks/useMusicDNA";
 import { StageSelector } from "@/components/music-dna/StageSelector";
+import { trackAppEvent } from "@/lib/analytics";
 
 export const ACCEPTED_AUDIO = [
   "audio/wav", "audio/x-wav", "audio/mpeg", "audio/mp3",
@@ -267,7 +268,7 @@ export function FormView({ onSubmit, isPending, projects, defaultProjectId }: {
                   <FormControl>
                     <StageSelector
                       value={field.value as AudioStage}
-                      onChange={(s) => { setStageTouched(true); field.onChange(s); }}
+                      onChange={(s) => { setStageTouched(true); field.onChange(s); trackAppEvent("stage_selected", { stage: s }); }}
                       derivedFromProject={derived}
                     />
                   </FormControl>
@@ -360,7 +361,8 @@ export function FormView({ onSubmit, isPending, projects, defaultProjectId }: {
               </FormItem>
             )} />
 
-            {/* 5. Optional context — collapsible */}
+            {/* 5. Optional context — collapsible (hidden in beta) */}
+            {false && (
             <Collapsible>
               <CollapsibleTrigger className="text-[11px] uppercase tracking-widest font-mono text-muted-foreground hover:text-foreground transition-colors">
                 + Contexto adicional (opcional)
@@ -404,6 +406,7 @@ export function FormView({ onSubmit, isPending, projects, defaultProjectId }: {
                 }} />
               </CollapsibleContent>
             </Collapsible>
+            )}
           </CardContent>
         </Card>
 

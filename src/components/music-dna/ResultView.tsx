@@ -1062,11 +1062,12 @@ export function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSav
 
   // Only show catalog neighbors that share the classified genre AND are close enough (≥55% similarity).
   // Cross-genre or low-similarity entries add noise without actionable insight.
-  const classifiedGenreNorm = (diagnosis.genero_classificado ?? "").toLowerCase().trim();
+  const declaredGenreNorm = ((input as { genre?: string }).genre ?? "").toLowerCase().trim();
   const relevantNeighbors = (catalogNeighbors ?? []).filter((n) => {
     if (n.similarity_score < 0.55) return false;
+    if (!declaredGenreNorm) return true;
     const ng = (n.genre ?? "").toLowerCase().trim();
-    return ng === classifiedGenreNorm || ng.includes(classifiedGenreNorm) || classifiedGenreNorm.includes(ng);
+    return ng === declaredGenreNorm || ng.includes(declaredGenreNorm) || declaredGenreNorm.includes(ng);
   });
 
   const fmt = (n: number | null | undefined, digits = 1) =>
@@ -1553,7 +1554,7 @@ export function ResultView({ input, diagnosis, benchmark, onReset, onSave, isSav
       {/* Popularidade no Spotify */}
       <SpotifyPopularityCard
         spotifyTrackId={diagnosis.externalLookup?.spotify_id ?? null}
-        genre={diagnosis.genero_classificado ?? null}
+        genre={(input as { genre?: string }).genre ?? null}
       />
 
       {/* Playlists Compatíveis (Spotify) — desativado temporariamente */}

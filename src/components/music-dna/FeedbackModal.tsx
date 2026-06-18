@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { trackAppEvent } from "@/lib/analytics";
 import {
   type AudioFeatures, type DiagnosisResult, type Genre,
   FEATURE_KEYS, FEATURE_LABELS, GENRE_PRESETS,
@@ -116,6 +117,11 @@ export function FeedbackModal({ open, onOpenChange, diagnosis }: FeedbackModalPr
 
       if (error) throw error;
 
+      trackAppEvent("feedback_submitted", {
+        genre_changed: genreChanged,
+        features_changed: featureDiffs.length > 0,
+        has_text: feedbackText.trim().length > 0,
+      });
       toast.success("Feedback enviado! Suas correções serão usadas para melhorar futuras análises.");
       onOpenChange(false);
     } catch (err: any) {

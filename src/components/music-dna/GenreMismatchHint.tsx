@@ -30,6 +30,8 @@ export function GenreMismatchHint({ hint, declared, analysisId }: Props) {
   const { getThresholds, submitFeedback, submitting } = useGenreMismatchCalibration();
   const [dismissed, setDismissed] = useState(false);
 
+  return null;
+
   if (dismissed) return null;
   if (!hint?.detected || !declared) return null;
 
