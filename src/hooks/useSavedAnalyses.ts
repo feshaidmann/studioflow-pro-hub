@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import type { DiagnosisResult } from "@/hooks/useMusicDNA";
 import { musicDnaColumnsFromDiagnosis } from "@/types/musicDna";
 import { ensureTrackVersion } from "@/hooks/useTrackVersions";
+import { trackAppEvent } from "@/lib/analytics";
 
 export interface SavedAnalysis {
   id: string;
@@ -170,6 +171,13 @@ export function useSavedAnalyses() {
       if (projectId) {
         queryClient.invalidateQueries({ queryKey: ["project-analyses", projectId] });
       }
+      trackAppEvent("analysis_saved", {
+        genre: (variables.input as { genre?: string }).genre ?? null,
+        stage: variables.input.stage ?? null,
+        has_project: !!projectId,
+        version_number: _data.versionNumber,
+        project_id: projectId ?? null,
+      });
       if (!variables.silent) toast.success("Análise salva com sucesso");
     },
     onError: (err: Error, variables) => {

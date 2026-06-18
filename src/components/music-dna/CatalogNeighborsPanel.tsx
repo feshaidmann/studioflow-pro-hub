@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Users2 } from "lucide-react";
+import { trackAppEvent } from "@/lib/analytics";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
@@ -62,7 +63,13 @@ export function CatalogNeighborsPanel({ neighbors, totalCompared, userTrack, lim
               <button
                 key={`${n.band}-${n.filename}-${idx}`}
                 type="button"
-                onClick={() => setSelected(n)}
+                onClick={() => {
+                  setSelected(n);
+                  trackAppEvent("neighbor_clicked", {
+                    similarity: Math.round((Number(n.similarity_score) || 0) * 100),
+                    genre: n.genre ?? null,
+                  });
+                }}
                 className="w-full text-left rounded-lg border border-border bg-muted/20 hover:bg-muted/40 hover:border-primary/40 transition-colors p-2.5 space-y-1.5 group"
               >
                 <div className="flex items-start justify-between gap-2">
