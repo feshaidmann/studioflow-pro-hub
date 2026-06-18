@@ -1,4 +1,4 @@
-import { ExternalLink, MapPin, Calendar, DollarSign, Trophy, Mic2, ClipboardList, Tag, Users, FileText, Loader2, AlertTriangle, Search } from "lucide-react";
+import { ExternalLink, MapPin, Calendar, DollarSign, Trophy, Mic2, ClipboardList, Tag, Users, FileText, Loader2, AlertTriangle, Search, Flag } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -7,6 +7,7 @@ import { TIPO_PALCO_LABELS, type TipoPalco, PORTE_LABELS, type Porte, type Palco
 import type { Edital } from "@/hooks/useEditais";
 import type { Opportunity } from "./types";
 import { buildGoogleFallbackUrl, formatLinkChecked } from "./linkHelpers";
+import ReportInfoDialog from "./ReportInfoDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useState } from "react";
@@ -33,7 +34,7 @@ interface Props {
 }
 
 export default function OpportunityDetailSheet({ opportunity: op, open, onOpenChange, onApply, onSave, alreadyApplied, pending }: Props) {
-  const [reporting, setReporting] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
 
   if (!op) return null;
 
@@ -48,25 +49,18 @@ export default function OpportunityDetailSheet({ opportunity: op, open, onOpenCh
   const linkBroken = op.linkStatus === "broken";
   const linkCheckedLabel = formatLinkChecked(op);
 
-  async function handleReportBroken() {
-    if (!op.editalId) return;
-    setReporting(true);
-    // Palcos curados vivem em palcos_curados; tudo o resto (editais + palcos
-    // salvos via IA pelo pipeline unificado) vive em editais.
+  async function markLinkBroken() {
+    if (!op?.editalId) return;
     const table = op.origem === "curated" ? "palcos_curados" : "editais";
     const { error } = await supabase
       .from(table)
       .update({ link_status: "broken", link_checked_at: new Date().toISOString() })
       .eq("id", op.editalId);
-    setReporting(false);
-    if (error) {
-      toast.error("Não foi possível reportar", { description: error.message });
-      return;
-    }
-    toast.success("Obrigado!", { description: "Marcamos o link como indisponível." });
+    if (error) toast.error("Não foi possível marcar o link", { description: error.message });
   }
 
   return (
+    <>
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-full sm:max-w-lg overflow-y-auto">
         <SheetHeader className="text-left">
@@ -201,17 +195,15 @@ export default function OpportunityDetailSheet({ opportunity: op, open, onOpenCh
               </a>
             </Button>
           ) : null}
-          {!linkBroken && op.link && op.editalId && (
+          {op.editalId && (
             <Button
               variant="ghost"
               size="sm"
               className="text-xs text-muted-foreground"
-              disabled={reporting}
-              onClick={handleReportBroken}
-              title="Reportar link quebrado"
+              onClick={() => setReportOpen(true)}
             >
-              {reporting ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <AlertTriangle className="h-3 w-3 mr-1" />}
-              Reportar link
+              <Flag className="h-3 w-3 mr-1" />
+              Reportar problema
             </Button>
           )}
           {onSave && op.origem === "ai" && (
@@ -232,5 +224,18 @@ export default function OpportunityDetailSheet({ opportunity: op, open, onOpenCh
         </div>
       </SheetContent>
     </Sheet>
+    {op.editalId && (
+      <ReportInfoDialog
+        open={reportOpen}
+        onOpenChange={setReportOpen}
+        opportunityKind={op.tipo}
+        opportunityId={op.editalId}
+        opportunityTitle={op.titulo}
+        onSuccess={(reason) => {
+          if (reason === "link_broken") void markLinkBroken();
+        }}
+      />
+    )}
+    </>
   );
 }

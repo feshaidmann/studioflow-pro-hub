@@ -47,16 +47,15 @@ export default function OpportunityFilters({ filters, onChange, className, tipoC
   const update = <K extends keyof CarreiraFilters>(key: K, value: CarreiraFilters[K]) =>
     onChange({ ...filters, [key]: value });
 
-  const clear = () => onChange({ ...DEFAULT_FILTERS, tipo: filters.tipo });
+  const showGenero = tipoContext !== "edital";
+  const clear = () => onChange({ ...DEFAULT_FILTERS, tipo: filters.tipo, genero: showGenero ? DEFAULT_FILTERS.genero : filters.genero });
   const hasActive =
     filters.status !== "todos" ||
     filters.estado !== "todos" ||
-    filters.genero !== "todos" ||
+    (showGenero && filters.genero !== "todos") ||
     filters.deadline !== "todos" ||
     !filters.hideClosed ||
     !!filters.query;
-
-  const showGenero = tipoContext !== "edital";
 
   return (
     <aside className={className}>

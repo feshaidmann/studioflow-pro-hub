@@ -30,9 +30,10 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import ApplicationStatusMenu from "./ApplicationStatusMenu";
-import type {
-  ApplicationStatus,
-  EditalApplication,
+import {
+  RESULTADO_LABELS,
+  type ApplicationStatus,
+  type EditalApplication,
 } from "@/hooks/useEditalApplications";
 
 function formatBrDate(iso: string | null | undefined): string | null {
@@ -62,13 +63,13 @@ function daysUntil(iso: string | null | undefined): number | null {
 type Group = "preparando" | "inscrito" | "resultado";
 
 const GROUP_TITLE: Record<Group, string> = {
-  preparando: "Em preparação",
+  preparando: "Em andamento",
   inscrito: "Inscritas",
   resultado: "Resultados",
 };
 
 const GROUP_HELP: Record<Group, string> = {
-  preparando: "Você marcou interesse e ainda está organizando a inscrição.",
+  preparando: "Oportunidades com interesse marcado ou inscrição em preparo.",
   inscrito: "Inscrição enviada — agora é aguardar.",
   resultado: "Candidaturas com resultado registrado.",
 };
@@ -248,13 +249,7 @@ function ApplicationRow({
               />
               {a.resultado && (
                 <Badge variant="outline" className="text-[10px]">
-                  {a.resultado === "aprovado"
-                    ? "Aprovado"
-                    : a.resultado === "reprovado"
-                      ? "Reprovado"
-                      : a.resultado === "lista_espera"
-                        ? "Lista de espera"
-                        : "Desistência"}
+                  {RESULTADO_LABELS[a.resultado]}
                   {a.valor_aprovado
                     ? ` · R$ ${a.valor_aprovado.toLocaleString("pt-BR")}`
                     : ""}
