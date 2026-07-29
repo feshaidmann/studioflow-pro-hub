@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { getErrorMessage } from "@/lib/errorMessage";
 
 // NOTA: a busca AI agora é centralizada em `oportunidades-search` (ver AISearchPanel).
 // Este hook foca apenas em CRUD do banco de editais salvos.
@@ -115,9 +116,9 @@ export function useEditais(projectId?: string | null) {
         toast.success("Editais salvos!", { description: `${newCount} edital(is) salvo(s).` });
       }
       await fetchEditais();
-    } catch (err: any) {
+    } catch (err) {
       console.error("Save error:", err);
-      toast.error("Erro ao salvar", { description: err.message });
+      toast.error("Erro ao salvar", { description: getErrorMessage(err) });
     }
   }, [user, fetchEditais]);
 
@@ -127,8 +128,8 @@ export function useEditais(projectId?: string | null) {
       if (error) throw error;
       setEditais((prev) => prev.filter((e) => e.id !== id));
       toast.success("Edital removido");
-    } catch (err: any) {
-      toast.error("Erro ao remover", { description: err.message });
+    } catch (err) {
+      toast.error("Erro ao remover", { description: getErrorMessage(err) });
     }
   }, []);
 
@@ -138,8 +139,8 @@ export function useEditais(projectId?: string | null) {
       if (error) throw error;
       setEditais((prev) => prev.map((e) => (e.id === id ? { ...e, ...fields } : e)));
       toast.success("Edital atualizado");
-    } catch (err: any) {
-      toast.error("Erro ao atualizar", { description: err.message });
+    } catch (err) {
+      toast.error("Erro ao atualizar", { description: getErrorMessage(err) });
     }
   }, []);
 

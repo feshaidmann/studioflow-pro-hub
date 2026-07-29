@@ -21,6 +21,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useProjects } from "@/contexts/ProjectContext";
 
 import { useEditalApplications, useUpdateApplication, APPLICATION_STATUS_LABELS, type ApplicationStatus } from "@/hooks/useEditalApplications";
+import { getErrorMessage } from "@/lib/errorMessage";
 
 type StepKey = "epk" | "pitch" | "contato";
 
@@ -188,8 +189,8 @@ export default function PalcoProposta() {
       setEpkContent(epk);
       await saveExtras({ epk_content: epk });
       toast.success("EPK gerado");
-    } catch (e: any) {
-      toast.error(e.message || "Não foi possível gerar o EPK");
+    } catch (e) {
+      toast.error(getErrorMessage(e, "Não foi possível gerar o EPK"));
     } finally {
       setGeneratingEpk(false);
     }
@@ -214,8 +215,8 @@ export default function PalcoProposta() {
         setPitchSubject(data.subject_suggestions[0]);
       }
       toast.success("Variações geradas");
-    } catch (e: any) {
-      toast.error(e.message || "Não foi possível gerar a proposta");
+    } catch (e) {
+      toast.error(getErrorMessage(e, "Não foi possível gerar a proposta"));
     } finally {
       setGeneratingPitch(false);
     }

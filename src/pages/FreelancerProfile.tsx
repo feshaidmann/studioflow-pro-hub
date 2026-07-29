@@ -19,6 +19,7 @@ import { ptBR } from "date-fns/locale";
 import { SPECIALTY_OPTIONS } from "@/constants/specialtyOptions";
 import { BRAZIL_STATES } from "@/constants/brazilStates";
 import { maskWhatsapp } from "@/lib/masks";
+import { getErrorMessage } from "@/lib/errorMessage";
 
 const YOUTUBE_REGEX = /^https?:\/\/(www\.)?(youtube\.com|youtu\.be)(\/.*)?$/i;
 
@@ -138,8 +139,8 @@ export default function FreelancerProfile() {
       setAvatarPreview(publicUrl);
       setForm((prev) => ({ ...prev, avatar_url: urlData.publicUrl }));
       toast.success("Foto carregada com sucesso!");
-    } catch (err: any) {
-      toast.error("Erro ao enviar foto: " + (err?.message ?? "Tente novamente"));
+    } catch (err) {
+      toast.error("Erro ao enviar foto: " + getErrorMessage(err, "Tente novamente"));
     } finally {
       setAvatarUploading(false);
       // Reset input so the same file can be re-selected
