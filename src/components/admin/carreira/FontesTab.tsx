@@ -83,7 +83,7 @@ export default function FontesTab() {
       if (error) return toast.error(error.message);
     } else {
       payload.user_id = user.id;
-      const { error } = await supabase.from("fontes_editais").insert(payload);
+      const { error } = await supabase.from("fontes_editais").insert([payload]);
       if (error) return toast.error(error.message);
     }
     toast.success("Salvo");
