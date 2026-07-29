@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
+import { useCallback, useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { useAuth } from "@/contexts/AuthContext";
@@ -16,79 +17,71 @@ export interface Notification {
   createdAt: string;
 }
 
+function rowToNotification(r: NotificationRow): Notification {
+  return {
+    id: r.id,
+    userId: r.user_id,
+    title: r.title,
+    message: r.message,
+    link: r.link,
+    read: r.read,
+    type: r.type,
+    createdAt: r.created_at,
+  };
+}
+
+export const notificationsKey = (userId?: string) => ["notifications", userId ?? "anon"] as const;
+
 export function useNotifications() {
   const { user } = useAuth();
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [loading, setLoading] = useState(false);
+  const queryClient = useQueryClient();
+  const key = notificationsKey(user?.id);
 
-  const fetchNotifications = useCallback(async () => {
-    if (!user) { setNotifications([]); return; }
-    setLoading(true);
-    const { data } = await supabase
-      .from("notifications")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false })
-      .limit(50);
-    if (data) {
-      setNotifications(data.map((r: NotificationRow) => ({
-        id: r.id,
-        userId: r.user_id,
-        title: r.title,
-        message: r.message,
-        link: r.link,
-        read: r.read,
-        type: r.type,
-        createdAt: r.created_at,
-      })));
-    }
-    setLoading(false);
-  }, [user]);
-
-  useEffect(() => {
-    let active = true;
-    const run = async () => {
-      if (!user) { setNotifications([]); return; }
-      setLoading(true);
-      const { data } = await supabase
+  const { data: notifications = [], isLoading, refetch } = useQuery({
+    queryKey: key,
+    enabled: !!user,
+    queryFn: async (): Promise<Notification[]> => {
+      const { data, error } = await supabase
         .from("notifications")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("user_id", user!.id)
         .order("created_at", { ascending: false })
         .limit(50);
-      if (!active) return;
-      if (data) {
-        setNotifications(data.map((r: NotificationRow) => ({
-          id: r.id,
-          userId: r.user_id,
-          title: r.title,
-          message: r.message,
-          link: r.link,
-          read: r.read,
-          type: r.type,
-          createdAt: r.created_at,
-        })));
-      }
-      setLoading(false);
-    };
-    run();
-    return () => { active = false; };
-  }, [user]);
+      if (error) throw error;
+      return (data ?? []).map(rowToNotification);
+    },
+  });
+
+  // Realtime: keep the cache fresh instead of manual refetching.
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase
+      .channel(`notifications:${user.id}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` },
+        () => { queryClient.invalidateQueries({ queryKey: key }); },
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, queryClient]);
+
+  const setCache = useCallback((updater: (prev: Notification[]) => Notification[]) => {
+    queryClient.setQueryData<Notification[]>(key, (prev) => updater(prev ?? []));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [queryClient, user?.id]);
 
   const markRead = useCallback(async (id: string) => {
     const { error } = await supabase.from("notifications").update({ read: true }).eq("id", id);
-    if (!error) {
-      setNotifications((prev) => prev.map((n) => n.id === id ? { ...n, read: true } : n));
-    }
-  }, []);
+    if (!error) setCache((prev) => prev.map((n) => n.id === id ? { ...n, read: true } : n));
+  }, [setCache]);
 
   const markAllRead = useCallback(async () => {
     if (!user) return;
     const { error } = await supabase.from("notifications").update({ read: true }).eq("user_id", user.id).eq("read", false);
-    if (!error) {
-      setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-    }
-  }, [user]);
+    if (!error) setCache((prev) => prev.map((n) => ({ ...n, read: true })));
+  }, [user, setCache]);
 
   const addNotification = useCallback(async (data: { title: string; message: string; link?: string; type?: string }) => {
     if (!user) return;
@@ -99,21 +92,18 @@ export function useNotifications() {
       link: data.link ?? "",
       type: data.type ?? "general",
     }).select().single();
-    if (row) {
-      setNotifications((prev) => [{
-        id: row.id,
-        userId: row.user_id,
-        title: row.title,
-        message: row.message,
-        link: row.link,
-        read: row.read,
-        type: row.type,
-        createdAt: row.created_at,
-      }, ...prev]);
-    }
-  }, [user]);
+    if (row) setCache((prev) => [rowToNotification(row), ...prev]);
+  }, [user, setCache]);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
-  return { notifications, loading, unreadCount, markRead, markAllRead, addNotification, refresh: fetchNotifications };
+  return {
+    notifications,
+    loading: isLoading,
+    unreadCount,
+    markRead,
+    markAllRead,
+    addNotification,
+    refresh: refetch,
+  };
 }
