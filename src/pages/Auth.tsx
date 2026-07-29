@@ -10,7 +10,7 @@ import { useProfile } from "@/contexts/ProfileContext";
 import { toast } from "sonner";
 import { ArrowLeft, Mail, Eye, EyeOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import logoMusicosAi from "@/assets/logo-musicos-ai.svg";
+import logoStudioFlow from "@/assets/logo-studioflow-pro.png";
 import { lovable } from "@/integrations/lovable/index";
 
 type Mode = "login" | "signup" | "forgot";
@@ -167,7 +167,7 @@ export default function Auth() {
             {mode === "forgot" ? (
               <Mail className="h-7 w-7 text-primary" />
             ) : (
-              <img src={logoMusicosAi} alt="StudioFlow Pro" className="h-14 w-14" />
+              <img src={logoStudioFlow} alt="StudioFlow Pro" className="h-14 w-14" />
             )}
           </div>
           <CardTitle className="text-2xl font-semibold">StudioFlow Pro</CardTitle>
