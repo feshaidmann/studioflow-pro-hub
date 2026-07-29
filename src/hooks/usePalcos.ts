@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { opportunitySlug } from "@/lib/opportunitySlug";
+import { getErrorMessage } from "@/lib/errorMessage";
 
 // ── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -123,7 +124,7 @@ export function usePalcos() {
 
       const { data: inserted, error } = await supabase
         .from("editais")
-        .upsert(rows as any, { onConflict: "user_id,session_key", ignoreDuplicates: true })
+        .upsert(rows, { onConflict: "user_id,session_key", ignoreDuplicates: true })
         .select("id");
       if (error) throw error;
 
@@ -136,8 +137,8 @@ export function usePalcos() {
       } else {
         toast.success(`${newCount} oportunidade(s) salva(s)!`);
       }
-    } catch (err: any) {
-      toast.error("Erro ao salvar", { description: err.message });
+    } catch (err) {
+      toast.error("Erro ao salvar", { description: getErrorMessage(err) });
     }
   }, [user]);
 
