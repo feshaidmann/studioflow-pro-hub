@@ -14,24 +14,22 @@ export interface ProfessionalOption {
 }
 
 export function useProfessionals() {
-  const [professionals, setProfessionals] = useState<ProfessionalOption[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let active = true;
-    supabase
-      .from("professionals")
-      .select("id, name, specialty, email, phone, bio, allow_global_listing")
-      .eq("active", true)
-      .order("name")
-      .then(({ data, error }) => {
-        if (!active) return;
-        if (error) console.error("useProfessionals fetch error:", error);
-        if (data) setProfessionals(data as ProfessionalOption[]);
-        setLoading(false);
-      });
-    return () => { active = false; };
-  }, []);
+  const { data: professionals = [], isLoading: loading } = useQuery({
+    queryKey: ["professionals-options"],
+    queryFn: async (): Promise<ProfessionalOption[]> => {
+      const { data, error } = await supabase
+        .from("professionals")
+        .select("id, name, specialty, email, phone, bio, allow_global_listing")
+        .eq("active", true)
+        .order("name");
+      if (error) {
+        console.error("useProfessionals fetch error:", error);
+        return [];
+      }
+      return (data as ProfessionalOption[]) ?? [];
+    },
+  });
 
   return { professionals, loading };
+
 }
