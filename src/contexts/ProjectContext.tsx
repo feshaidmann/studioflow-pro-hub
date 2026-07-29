@@ -607,9 +607,21 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     [updateProject],
   );
 
-  /* ── Transactions (Supabase) ── */
+  /* ── Transactions (Supabase, com atualizações otimistas) ── */
   const addTransaction = useCallback(async (tx: Omit<Transaction, "id" | "createdAt">): Promise<boolean> => {
     if (!user) return false;
+    // Otimista: insere uma linha temporária imediatamente na UI.
+    const tempId = `temp-${crypto.randomUUID()}`;
+    const optimistic: Transaction = {
+      ...(tx as Transaction),
+      id: tempId,
+      createdAt: new Date().toISOString(),
+      paid: tx.paid ?? false,
+      customCategory: tx.customCategory ?? "",
+      notes: tx.notes ?? "",
+    };
+    setTransactions((prev) => [optimistic, ...prev]);
+
     const { data: row, error } = await supabase.from("transactions").insert({
       user_id: user.id,
       project_id: tx.projectId || null,
@@ -622,11 +634,17 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       paid: tx.paid ?? false,
       notes: tx.notes ?? "",
     }).select().maybeSingle();
+
     if (error) {
       console.error("addTransaction error:", error);
+      setTransactions((prev) => prev.filter((t) => t.id !== tempId)); // rollback
+      toast.error("Erro ao salvar lançamento", { description: "Tente novamente." });
       return false;
     }
-    if (row) setTransactions((prev) => [dbRowToTransaction(row), ...prev]);
+    // Reconcilia o registro temporário com a linha real do banco.
+    setTransactions((prev) =>
+      prev.map((t) => (t.id === tempId ? (row ? dbRowToTransaction(row) : t) : t)),
+    );
     return true;
   }, [user]);
 
@@ -641,14 +659,51 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     if (data.projectId !== undefined) dbData.project_id = data.projectId || null;
     if (data.paid !== undefined) dbData.paid = data.paid;
     if (data.notes !== undefined) dbData.notes = data.notes;
-    await supabase.from("transactions").update(dbData).eq("id", id);
-    setTransactions((prev) => prev.map((t) => (t.id === id ? { ...t, ...data } : t)));
+
+    // Snapshot para rollback e aplicação otimista antes da ida ao servidor.
+    let previous: Transaction | undefined;
+    setTransactions((prev) => {
+      previous = prev.find((t) => t.id === id);
+      return prev.map((t) => (t.id === id ? { ...t, ...data } : t));
+    });
+
+    const { error } = await supabase.from("transactions").update(dbData).eq("id", id);
+    if (error) {
+      console.error("updateTransaction error:", error);
+      if (previous) {
+        const snapshot = previous;
+        setTransactions((prev) => prev.map((t) => (t.id === id ? snapshot : t)));
+      }
+      toast.error("Erro ao atualizar lançamento", { description: "As alterações foram desfeitas." });
+    }
   }, []);
 
   const deleteTransaction = useCallback(async (id: string) => {
-    await supabase.from("transactions").delete().eq("id", id);
-    setTransactions((prev) => prev.filter((t) => t.id !== id));
+    // Remove otimista, restaurando na posição original em caso de falha.
+    let previous: Transaction | undefined;
+    let previousIndex = -1;
+    setTransactions((prev) => {
+      previousIndex = prev.findIndex((t) => t.id === id);
+      previous = previousIndex >= 0 ? prev[previousIndex] : undefined;
+      return prev.filter((t) => t.id !== id);
+    });
+
+    const { error } = await supabase.from("transactions").delete().eq("id", id);
+    if (error) {
+      console.error("deleteTransaction error:", error);
+      if (previous) {
+        const snapshot = previous;
+        const at = previousIndex;
+        setTransactions((prev) => {
+          const next = [...prev];
+          next.splice(Math.max(at, 0), 0, snapshot);
+          return next;
+        });
+      }
+      toast.error("Erro ao excluir lançamento", { description: "O item foi restaurado." });
+    }
   }, []);
+
 
   const getProjectFinancials = useCallback(
     (projectId: string): ProjectFinancials => computeProjectFinancials(transactions, projectId),
