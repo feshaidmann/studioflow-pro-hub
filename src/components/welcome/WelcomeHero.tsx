@@ -20,7 +20,7 @@ export function WelcomeHero({ onGoogle, onSignupEmail, onLogin }: Props) {
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white text-purple-900 shadow-xl">
             <Music2 className="h-5 w-5" strokeWidth={2.5} aria-hidden />
           </div>
-          <span className="font-display text-2xl tracking-wider text-white">MusicOS.ai</span>
+          <span className="font-display text-2xl tracking-wider text-white">StudioFlow Pro</span>
         </div>
         <h1 className="font-display mb-6 text-[2.75rem] leading-[0.95] text-white sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl">
           Sua música merece mais que{" "}

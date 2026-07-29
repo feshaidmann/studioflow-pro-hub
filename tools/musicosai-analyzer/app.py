@@ -7,7 +7,7 @@ from datetime import datetime
 
 # ─── PAGE CONFIG ────────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="MusicOS.ai · Audio Analyzer",
+    page_title="StudioFlow Pro · Audio Analyzer",
     page_icon="🎵",
     layout="wide",
     initial_sidebar_state="collapsed",
@@ -678,7 +678,7 @@ def build_report_markdown(d: dict, genre: str, adjustments: list, verdict: str,
                            blockers: int, criticals: int) -> str:
     now = datetime.now().strftime("%d/%m/%Y %H:%M")
     lines = [
-        f"# Relatório de Análise — MusicOS.ai",
+        f"# Relatório de Análise — StudioFlow Pro",
         f"**Jam Session Project** · Gerado em {now}",
         f"",
         f"## Faixa analisada",
@@ -706,7 +706,7 @@ def build_report_markdown(d: dict, genre: str, adjustments: list, verdict: str,
         lines.append("")
     lines += [
         "---",
-        "*Este relatório foi gerado pelo MusicOS.ai — Jam Session Project.*",
+        "*Este relatório foi gerado pelo StudioFlow Pro — Jam Session Project.*",
         "*Compartilhe com seu produtor para revisão técnica.*",
     ]
     return "\n".join(lines)
@@ -735,7 +735,7 @@ def reset_state():
 # ─── HEADER ──────────────────────────────────────────────────────────────────────
 st.markdown("""
 <div>
-  <span class="jsp-logo">MusicOS.ai</span>
+  <span class="jsp-logo">StudioFlow Pro</span>
   <span class="jsp-subtitle">Jam Session Project · Audio Analyzer</span>
 </div>
 <div class="jsp-divider"></div>
@@ -1322,7 +1322,7 @@ with dl_col2:
 # ─── FOOTER ──────────────────────────────────────────────────────────────────────
 st.markdown(f"""
 <div class="jsp-footer">
-  <span>MusicOS.ai · Jam Session Project · Audio Analyzer v0.3</span>
+  <span>StudioFlow Pro · Jam Session Project · Audio Analyzer v0.3</span>
   <span>~37.000 faixas de referência · Catálogo JSP · sa-east-1</span>
 </div>
 """, unsafe_allow_html=True)

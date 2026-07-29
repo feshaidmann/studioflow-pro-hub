@@ -430,7 +430,7 @@ const translations: Record<string, string> = {
   
   "editais.linkProject": "Vincular ao projeto",
   "editais.noProject": "Sem vínculo",
-  "editais.save": "Salvar no MusicOS.ai",
+  "editais.save": "Salvar no StudioFlow Pro",
   "editais.saveSelected": "Salvar selecionados",
   "editais.saveAll": "Salvar todos",
   "editais.exportCSV": "Exportar CSV",
