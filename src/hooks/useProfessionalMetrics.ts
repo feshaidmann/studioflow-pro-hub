@@ -3,6 +3,20 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import type { Professional, ProfMetrics } from "@/components/professionals/types";
 
+/** Perfil público resolvido por e-mail (RPC find_public_profile_by_email). */
+interface PublicProfileRow { username: string | null; display_name: string | null }
+
+/** Linha de project_members com projeto embedado pela query. */
+interface MemberRow {
+  project_id: string | null;
+  created_at: string;
+  role: string | null;
+  fee: number | null;
+  delivery_status: string | null;
+  delivery_due_date: string | null;
+  projects: { id: string; name: string; completed: boolean } | null;
+}
+
 export function useProfessionalMetrics(prof: Professional | null) {
   const { user } = useAuth();
   const [metrics, setMetrics] = useState<ProfMetrics | null>(null);
@@ -34,26 +48,25 @@ export function useProfessionalMetrics(prof: Professional | null) {
         prof.email
           ? supabase
               .rpc("find_public_profile_by_email", { p_email: prof.email.toLowerCase() })
-              .then((res: any) => ({
-                data: Array.isArray(res.data) ? res.data[0] ?? null : null,
-                error: res.error,
+              .then((res) => ({
+                data: (Array.isArray(res.data) ? res.data[0] ?? null : null) as PublicProfileRow | null,
               }))
-          : Promise.resolve({ data: null } as any),
+          : Promise.resolve({ data: null as PublicProfileRow | null }),
       ]);
 
       if (cancelled) return;
 
-      const ratingRows = (ratingsRes.data as any[]) ?? [];
+      const ratingRows = ratingsRes.data ?? [];
       const ratingCount = ratingRows.length;
       const avgRating = ratingCount > 0
-        ? ratingRows.reduce((acc: number, r: any) => acc + Number(r.stars), 0) / ratingCount
+        ? ratingRows.reduce((acc, r) => acc + Number(r.stars), 0) / ratingCount
         : null;
 
-      const rows = (membersRes.data as any[]) ?? [];
+      const rows = (membersRes.data ?? []) as MemberRow[];
       const projectNames = rows.map((m) => m.projects?.name).filter(Boolean);
       const lastActivity = rows[0]?.created_at ?? null;
-      const collaborationHistory = rows.map((m: any) => ({
-        projectId: (m.projects?.id as string | undefined) ?? null,
+      const collaborationHistory = rows.map((m) => ({
+        projectId: m.projects?.id ?? null,
         projectName: m.projects?.name || "—",
         completed: m.projects?.completed ?? false,
         role: m.role || "",
@@ -74,9 +87,9 @@ export function useProfessionalMetrics(prof: Professional | null) {
         ? Math.round(deliveryDays.reduce((a, b) => a + b, 0) / deliveryDays.length)
         : null;
 
-      const publicProfileData = (profileRes as any)?.data;
+      const publicProfileData = profileRes?.data;
       const publicProfile = publicProfileData?.username
-        ? { username: publicProfileData.username as string, display_name: publicProfileData.display_name as string }
+        ? { username: publicProfileData.username, display_name: publicProfileData.display_name ?? "" }
         : null;
 
       setMetrics({
