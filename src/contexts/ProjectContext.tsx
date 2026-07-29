@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useCallback, useEffect, useRef, useMemo, type ReactNode } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import type { AnalysisResult } from "@/lib/audioAnalysis";
@@ -250,88 +251,119 @@ export function computeMixPercent(
   return STAGE_PERCENT[project.stage] ?? 10;
 }
 
+/* ── React Query: dados base do contexto de projetos ── */
+export interface ProjectContextData {
+  projects: Project[];
+  tracks: Record<string, MixTrack[]>;
+  professionals: Record<string, Professional[]>;
+  transactions: Transaction[];
+}
+
+const EMPTY_DATA: ProjectContextData = { projects: [], tracks: {}, professionals: {}, transactions: [] };
+
+export const projectContextQueryKey = (userId: string | undefined) =>
+  ["project-context", userId ?? "anon"] as const;
+
+async function fetchProjectContextData(userId: string): Promise<ProjectContextData> {
+  const [projRes, txRes, tracksRes, membersRes] = await Promise.all([
+    supabase.from("projects").select("*").order("created_at", { ascending: false }),
+    supabase.from("transactions").select("*").order("created_at", { ascending: false }),
+    supabase.from("mix_tracks").select("*").order("position", { ascending: true }),
+    supabase.from("project_members").select("*").order("created_at", { ascending: true }),
+  ]);
+
+  const projects = (projRes.data ?? []).map(dbRowToProject);
+
+  // Agrupa tracks por projeto
+  const tracksByProject: Record<string, MixTrack[]> = {};
+  (tracksRes.data ?? []).forEach((row) => {
+    if (!tracksByProject[row.project_id]) tracksByProject[row.project_id] = [];
+    tracksByProject[row.project_id].push(dbRowToTrack(row));
+  });
+
+  // Projetos sem tracks no banco recebem os defaults persistidos
+  const missingProjects = projects.filter((p) => !tracksByProject[p.id]);
+  for (const p of missingProjects) {
+    const defaults = createDefaultTracks();
+    tracksByProject[p.id] = defaults;
+    const rows = defaults.map((t, i) => trackToDbRow(userId, p.id, t, i));
+    await supabase.from("mix_tracks").insert(rows);
+  }
+
+  // Agrupa project_members por projeto
+  const membersByProject: Record<string, Professional[]> = {};
+  (membersRes.data ?? []).forEach((row) => {
+    if (!membersByProject[row.project_id]) membersByProject[row.project_id] = [];
+    membersByProject[row.project_id].push({
+      id: row.id,
+      name: row.name,
+      role: row.role,
+      instrument: row.instrument,
+      email: row.email,
+      phone: row.phone,
+      fee: Number(row.fee),
+      notes: row.notes,
+      invitationId: row.invitation_id ?? undefined,
+    });
+  });
+
+  return {
+    projects,
+    tracks: tracksByProject,
+    professionals: membersByProject,
+    transactions: (txRes.data ?? []).map(dbRowToTransaction),
+  };
+}
+
 /* ── Provider ── */
 export function ProjectProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [tracks, setTracks] = useState<Record<string, MixTrack[]>>({});
-  const [professionals, setProfessionals] = useState<Record<string, Professional[]>>({});
+  const queryClient = useQueryClient();
   const [masterResults, setMasterResults] = useState<Record<string, MasterResult>>({});
 
   // Debounce timers: key = `${projectId}:${trackId}:${field}`
   const debounceTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
-  /* ── Fetch data when user changes ── */
-  useEffect(() => {
-    if (!user) {
-      setProjects([]);
-      setTransactions([]);
-      setTracks({});
-      setProfessionals({});
-      setLoading(false);
-      return;
-    }
-    const fetchData = async () => {
-      setLoading(true);
-      const [projRes, txRes, tracksRes, membersRes] = await Promise.all([
-        supabase.from("projects").select("*").order("created_at", { ascending: false }),
-        supabase.from("transactions").select("*").order("created_at", { ascending: false }),
-        supabase.from("mix_tracks").select("*").order("position", { ascending: true }),
-        supabase.from("project_members").select("*").order("created_at", { ascending: true }),
-      ]);
+  const queryKey = useMemo(() => projectContextQueryKey(user?.id), [user?.id]);
 
-      if (projRes.data) {
-        const mapped = projRes.data.map(dbRowToProject);
-        setProjects(mapped);
+  const { data, isLoading, isFetching } = useQuery({
+    queryKey,
+    enabled: !!user,
+    queryFn: () => fetchProjectContextData(user!.id),
+    staleTime: 2 * 60 * 1000,
+  });
 
-        // Group fetched tracks by project_id
-        const tracksByProject: Record<string, MixTrack[]> = {};
-        if (tracksRes.data) {
-          tracksRes.data.forEach((row) => {
-            if (!tracksByProject[row.project_id]) tracksByProject[row.project_id] = [];
-            tracksByProject[row.project_id].push(dbRowToTrack(row));
-          });
-        }
+  const { projects, tracks, professionals, transactions } = data ?? EMPTY_DATA;
+  const loading = !!user && (isLoading || (isFetching && !data));
 
-        // For projects without any tracks in the DB, create & persist defaults
-        const missingProjects = mapped.filter((p) => !tracksByProject[p.id]);
-        for (const p of missingProjects) {
-          const defaults = createDefaultTracks();
-          tracksByProject[p.id] = defaults;
-          const rows = defaults.map((t, i) => trackToDbRow(user.id, p.id, t, i));
-          await supabase.from("mix_tracks").insert(rows);
-        }
+  /* Escritas no cache compartilhado (mantêm a API interna de "setState") */
+  const patchData = useCallback(
+    (updater: (prev: ProjectContextData) => ProjectContextData) => {
+      queryClient.setQueryData<ProjectContextData>(queryKey, (prev) => updater(prev ?? EMPTY_DATA));
+    },
+    [queryClient, queryKey],
+  );
 
-        setTracks(tracksByProject);
-      }
+  const setProjects = useCallback(
+    (updater: (prev: Project[]) => Project[]) => patchData((d) => ({ ...d, projects: updater(d.projects) })),
+    [patchData],
+  );
+  const setTracks = useCallback(
+    (updater: (prev: Record<string, MixTrack[]>) => Record<string, MixTrack[]>) =>
+      patchData((d) => ({ ...d, tracks: updater(d.tracks) })),
+    [patchData],
+  );
+  const setProfessionals = useCallback(
+    (updater: (prev: Record<string, Professional[]>) => Record<string, Professional[]>) =>
+      patchData((d) => ({ ...d, professionals: updater(d.professionals) })),
+    [patchData],
+  );
+  const setTransactions = useCallback(
+    (updater: (prev: Transaction[]) => Transaction[]) =>
+      patchData((d) => ({ ...d, transactions: updater(d.transactions) })),
+    [patchData],
+  );
 
-      // Group fetched project_members by project_id
-      if (membersRes.data) {
-        const membersByProject: Record<string, Professional[]> = {};
-        membersRes.data.forEach((row) => {
-          if (!membersByProject[row.project_id]) membersByProject[row.project_id] = [];
-          membersByProject[row.project_id].push({
-            id: row.id,
-            name: row.name,
-            role: row.role,
-            instrument: row.instrument,
-            email: row.email,
-            phone: row.phone,
-            fee: Number(row.fee),
-            notes: row.notes,
-            invitationId: row.invitation_id ?? undefined,
-          });
-        });
-        setProfessionals(membersByProject);
-      }
-
-      if (txRes.data) setTransactions(txRes.data.map(dbRowToTransaction));
-      setLoading(false);
-    };
-    fetchData();
-  }, [user]);
 
   /* ── Realtime: mantém o ledger financeiro sincronizado ── */
   useEffect(() => {
