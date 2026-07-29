@@ -82,6 +82,29 @@ interface CorpusEntry {
   input_excerpt: string | null;
 }
 
+/** Linha genérica do formulário: edital ou palco (campos exclusivos são opcionais). */
+type OppRow = Partial<Edital> & Partial<Palco> & { id: string };
+
+/** Campos que a IA pode sugerir a partir do texto/arquivo do edital. */
+interface AnaliseFields {
+  resumo?: string | null;
+  valor?: string | null;
+  publico_alvo?: string | null;
+  prazo?: string | null;
+  documentos_resumo?: string | null;
+}
+
+/** Payload bruto retornado pela edge function analyze-edital. */
+interface AnaliseIA extends AnaliseFields {
+  prazos?: Array<{ data?: string }> | null;
+  documentos?: Array<string | { nome?: string }> | null;
+}
+
+function errMsg(e: unknown, fallback: string) {
+  return e instanceof Error ? e.message : fallback;
+}
+
+
 function statusBadge(s: LinkStatus) {
   if (s === "ok") return <Badge variant="outline" className="border-emerald-500/40 text-emerald-700 bg-emerald-50"><CheckCircle2 className="h-3 w-3 mr-1" />ok</Badge>;
   if (s === "broken") return <Badge variant="outline" className="border-destructive/40 text-destructive bg-destructive/10"><AlertTriangle className="h-3 w-3 mr-1" />broken</Badge>;
