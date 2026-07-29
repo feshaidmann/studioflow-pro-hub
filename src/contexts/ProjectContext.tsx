@@ -364,6 +364,12 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     [patchData],
   );
 
+  /* IDs alterados localmente — evita notificar o eco da própria mutação. */
+  const localTxOpsRef = useRef<Set<string>>(new Set());
+  const markLocalTxOp = useCallback((id: string) => {
+    localTxOpsRef.current.add(id);
+    setTimeout(() => localTxOpsRef.current.delete(id), 8000);
+  }, []);
 
   /* ── Realtime: mantém o ledger financeiro sincronizado ── */
   useEffect(() => {
@@ -378,17 +384,30 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
           const oldRow = payload.old as { id?: string } | null;
 
           if (payload.eventType === "DELETE") {
-            if (oldRow?.id) setTransactions((prev) => prev.filter((t) => t.id !== oldRow.id));
+            if (!oldRow?.id) return;
+            const isLocal = localTxOpsRef.current.has(oldRow.id);
+            setTransactions((prev) => prev.filter((t) => t.id !== oldRow.id));
+            if (!isLocal) toast.info("Um lançamento foi excluído", { description: "O total do ledger foi atualizado." });
             return;
           }
           if (!newRow?.id) return;
           const tx = dbRowToTransaction(newRow);
+          const isLocal = localTxOpsRef.current.has(tx.id);
+          let isNew = false;
           setTransactions((prev) => {
             const idx = prev.findIndex((t) => t.id === tx.id);
-            if (idx === -1) return [tx, ...prev];
+            if (idx === -1) {
+              isNew = true;
+              return [tx, ...prev];
+            }
             const next = [...prev];
             next[idx] = tx;
             return next;
+          });
+          if (isLocal) return;
+          const sign = tx.type === "income" ? "+" : "-";
+          toast.info(isNew ? "Novo lançamento no ledger" : "Lançamento atualizado", {
+            description: `${tx.description || "Sem descrição"} · ${sign}${formatCurrency(tx.amount)}`,
           });
         },
       )
@@ -398,6 +417,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       supabase.removeChannel(channel);
     };
   }, [user]);
+
 
 
   /* ── Progress derived from stage ── */
