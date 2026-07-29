@@ -61,7 +61,7 @@ export function deriveNextAction(
 }
 
 export default function ProjectOverviewTab({ project, progress, isOwner, onSwitchTab }: ProjectOverviewTabProps) {
-  const currentStageIdx = STAGE_STEPS.indexOf(project.stage as any);
+  const currentStageIdx = STAGE_STEPS.indexOf(project.stage as typeof STAGE_STEPS[number]);
   const { getProjectFinancials, professionals, transactions } = useProjects();
   const { activeTasks } = useTasks();
   const { progress: releaseProgress, checkedItems, totalItems } = useReleaseChecklist(project.id);

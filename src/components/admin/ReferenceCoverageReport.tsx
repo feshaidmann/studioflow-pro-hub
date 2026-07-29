@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { getErrorMessage } from "@/lib/errorMessage";
 
 interface CoverageRow {
   genre: string;
@@ -51,11 +52,11 @@ export function ReferenceCoverageReport() {
   const load = async () => {
     setLoading(true);
     try {
-      const { data, error } = await (supabase.rpc as any)("report_reference_coverage");
+      const { data, error } = await supabase.rpc("report_reference_coverage");
       if (error) throw error;
       setRows((data ?? []) as CoverageRow[]);
-    } catch (e: any) {
-      toast.error(e.message ?? "Falha ao carregar cobertura");
+    } catch (e: unknown) {
+      toast.error(getErrorMessage(e, "Falha ao carregar cobertura"));
     } finally {
       setLoading(false);
     }

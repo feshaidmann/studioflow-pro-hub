@@ -39,10 +39,11 @@ interface CuratedProvider {
   avatar_url: string;
   status: "pending_review" | "approved" | "rejected";
   notes: string;
-  verified_by_jsp: boolean;
-  base_rate_brl: number | null;
-  rate_unit: string;
-  portfolio_links: Array<{ label: string; url: string }>;
+  /** Campos opcionais: ainda não existem como colunas na tabela. */
+  verified_by_jsp?: boolean;
+  base_rate_brl?: number | null;
+  rate_unit?: string;
+  portfolio_links?: Array<{ label: string; url: string }>;
   created_at: string;
   updated_at: string;
 }

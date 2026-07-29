@@ -46,7 +46,14 @@ export default function PendingTeamCard({ hidden }: { hidden?: boolean }) {
         if (data) {
           const now = Date.now();
           setInvites(
-            data.map((d: any) => ({
+            data.map((d: {
+              id: string;
+              project_id: string;
+              projects: { name: string } | null;
+              professional_name: string;
+              professional_role: string;
+              created_at: string;
+            }) => ({
               id: d.id,
               projectId: d.project_id,
               projectName: d.projects?.name || "—",
@@ -70,8 +77,22 @@ export default function PendingTeamCard({ hidden }: { hidden?: boolean }) {
           const now = Date.now();
           setDeliveries(
             data
-              .filter((d: any) => d.delivery_due_date)
-              .map((d: any) => {
+              .filter((d: {
+                project_id: string;
+                name: string;
+                role: string;
+                delivery_due_date: string | null;
+                delivery_status: string;
+                projects: { name: string } | null;
+              }) => d.delivery_due_date)
+              .map((d: {
+                project_id: string;
+                name: string;
+                role: string;
+                delivery_due_date: string | null;
+                delivery_status: string;
+                projects: { name: string } | null;
+              }) => {
                 const due = new Date(d.delivery_due_date).getTime();
                 return {
                   projectId: d.project_id,

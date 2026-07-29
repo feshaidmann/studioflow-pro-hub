@@ -65,7 +65,7 @@ export function LinkAnalysisTrackDialog({
     if (mode?.kind !== "pick-analysis") return [];
     const linkedTrackIds = new Set<string>();
     for (const r of releases) for (const t of r.tracks ?? []) if (t.linked_analysis) linkedTrackIds.add(t.linked_analysis.id);
-    const items = savedAnalyses.map((a: any) => ({
+    const items = savedAnalyses.map((a) => ({
       id: a.id,
       label: a.track_name,
       sub: `${a.version_label ?? "v1"} · ${a.genre || "—"} · ${new Date(a.created_at).toLocaleDateString("pt-BR")}`,

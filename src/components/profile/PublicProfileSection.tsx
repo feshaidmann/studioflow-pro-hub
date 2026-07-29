@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import { Globe, Copy, ExternalLink, Check } from "lucide-react";
 
 export default function PublicProfileSection() {
-  const { profile, refreshProfile } = useProfile() as any;
+  const { profile, refreshProfile } = useProfile();
   const [enabled, setEnabled] = useState(false);
   const [showEmail, setShowEmail] = useState(false);
   const [showWhats, setShowWhats] = useState(false);
