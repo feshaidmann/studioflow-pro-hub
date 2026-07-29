@@ -49,28 +49,33 @@ export interface SearchResult {
 
 export function useEditais(projectId?: string | null) {
   const { user } = useAuth();
-  const [editais, setEditais] = useState<Edital[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const queryKey = ["editais", user?.id ?? null, projectId ?? null] as const;
 
-  const fetchEditais = useCallback(async () => {
-    if (!user) { setEditais([]); setLoading(false); return; }
-    setLoading(true);
-    try {
+  const { data: editais = [], isLoading: loading } = useQuery({
+    queryKey,
+    enabled: !!user,
+    queryFn: async (): Promise<Edital[]> => {
       let q = supabase.from("editais").select("*").order("created_at", { ascending: false });
       if (projectId) q = q.eq("project_id", projectId);
       const { data, error } = await q;
       if (error) throw error;
-      setEditais((data as unknown as Edital[]) || []);
-    } catch (err) {
-      console.error("Error fetching editais:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, [user, projectId]);
+      return (data as unknown as Edital[]) || [];
+    },
+  });
 
-  useEffect(() => {
-    void fetchEditais();
-  }, [fetchEditais]);
+  const fetchEditais = useCallback(async () => {
+    await queryClient.invalidateQueries({ queryKey: ["editais"] });
+  }, [queryClient]);
+
+  const setEditais = useCallback(
+    (updater: (prev: Edital[]) => Edital[]) => {
+      queryClient.setQueryData<Edital[]>(queryKey, (prev) => updater(prev || []));
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [queryClient, user?.id, projectId]
+  );
+
 
 
   const saveResults = useCallback(async (items: Edital[], linkedProjectId?: string | null) => {
