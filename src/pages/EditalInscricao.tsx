@@ -96,7 +96,7 @@ export default function EditalInscricao() {
       // tenta carregar análise já salva
       const { data: appData } = await supabase
         .from("edital_applications")
-        .select("analise_ia, project_id")
+        .select("analise_ia, project_id" as string)
         .eq("edital_id", id)
         .eq("user_id", user.id)
         .maybeSingle();
