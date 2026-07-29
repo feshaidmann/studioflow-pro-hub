@@ -30,7 +30,7 @@ export function useGuestProjects() {
       if (error) console.warn("[useGuestProjects]", error);
       if (data) {
         setProjects(
-          data.map((d: any) => ({
+          data.map((d) => ({
             id: d.id,
             name: d.name,
             artist: d.artist,

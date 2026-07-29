@@ -103,7 +103,7 @@ export function useEditalApplications() {
   return useQuery({
     queryKey: ["edital-applications", user?.id],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("list_user_applications" as any);
+      const { data, error } = await supabase.rpc("list_user_applications");
       if (error) throw error;
       return ((data || []) as RPCRow[]).map((r): EditalApplication => ({
         id: r.id,
@@ -165,7 +165,7 @@ export function useCreateApplication() {
           notas: params.notas || "",
           status: "interesse",
           data_inscricao: params.data_inscricao || null,
-        } as any)
+        })
         .select()
         .single();
       if (error) throw error;
@@ -175,7 +175,7 @@ export function useCreateApplication() {
       qc.invalidateQueries({ queryKey: ["edital-applications"] });
       toast.success("Candidatura iniciada");
     },
-    onError: (err: any) => {
+    onError: (err: { message?: string; code?: string }) => {
       if (err?.message?.includes("duplicate") || err?.code === "23505") {
         toast.error("Você já tem uma candidatura para este edital");
       } else {
@@ -193,7 +193,7 @@ export function useUpdateApplication() {
       const { id, ...fields } = params;
       const { error } = await supabase
         .from("edital_applications")
-        .update(fields as any)
+        .update(fields)
         .eq("id", id);
       if (error) throw error;
     },

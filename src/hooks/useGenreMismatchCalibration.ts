@@ -112,7 +112,7 @@ export function useGenreMismatchCalibration() {
         gap: params.gap,
         verdict: params.verdict,
         analysis_id: params.analysisId ?? null,
-      } as any);
+      });
       if (error) throw error;
     },
     onSuccess: () => {

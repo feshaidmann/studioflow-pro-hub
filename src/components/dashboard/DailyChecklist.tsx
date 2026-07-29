@@ -70,7 +70,7 @@ interface DailyChecklistProps {
   onAddTask: (desc: string) => Promise<void>;
   onToggleTask: (id: string) => void;
   onDeleteTask: (id: string) => void;
-  onUpdateTask?: (id: string, patch: any) => void;
+  onUpdateTask?: (id: string, patch: Partial<Task>) => void;
   onRefresh: () => Promise<void>;
   refreshing: boolean;
   lastRefreshed: Date | null;

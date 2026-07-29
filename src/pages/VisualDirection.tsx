@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { ChevronLeft, Palette, Loader2 } from "lucide-react";
 import { useProjects } from "@/contexts/ProjectContext";
 import { toast } from "sonner";
+import { getErrorMessage } from "@/lib/errorMessage";
 import Stepper, { StepKey } from "@/components/visual-direction/Stepper";
 import ArtisticProfileStep from "@/components/visual-direction/ArtisticProfileStep";
 import GenerationStep from "@/components/visual-direction/GenerationStep";
@@ -93,8 +94,8 @@ export default function VisualDirection() {
         designer_notes: data.designer_notes,
         approved_images: approvedImages,
       });
-    } catch (e: any) {
-      toast.error("Não foi possível salvar", { description: e?.message });
+    } catch (e) {
+      toast.error("Não foi possível salvar", { description: getErrorMessage(e) });
     }
   };
 

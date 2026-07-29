@@ -188,7 +188,7 @@ export default function Settings() {
       .from("professionals")
       .select("email")
       .eq("user_id", user.id);
-    const existingEmails = new Set((existing ?? []).map((r: any) => r.email));
+    const existingEmails = new Set((existing ?? []).map((r) => r.email));
 
     // Insert professionals that don't exist yet
     const newProfs = SAMPLE_PROFESSIONALS.filter((p) => !existingEmails.has(p.email));
@@ -205,7 +205,7 @@ export default function Settings() {
       .from("professional_ratings")
       .select("id")
       .eq("user_id", user.id);
-    if (!existingRatings || (existingRatings as any[]).length === 0) {
+    if (!existingRatings || existingRatings.length === 0) {
       // Use a dummy project_id (first project available or a placeholder uuid)
       const firstProject = projects[0];
       const projectId = firstProject?.id ?? "00000000-0000-0000-0000-000000000000";

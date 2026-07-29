@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { getErrorMessage } from "@/lib/errorMessage";
 import { VisualBriefing } from "./types";
 
 interface Props {
@@ -48,8 +49,8 @@ export default function BriefingStep({ briefing, onBack }: Props) {
       setPdfUrl(url);
       window.open(url, "_blank", "noopener,noreferrer");
       toast.success("Briefing PDF gerado");
-    } catch (e: any) {
-      toast.error("Não foi possível gerar o PDF", { description: e?.message });
+    } catch (e: unknown) {
+      toast.error("Não foi possível gerar o PDF", { description: getErrorMessage(e) });
     } finally {
       setExporting(false);
     }
@@ -86,8 +87,8 @@ export default function BriefingStep({ briefing, onBack }: Props) {
       try { await navigator.clipboard.writeText(url); } catch { /* ignore */ }
       toast.success("Link de compartilhamento gerado e copiado");
       setSharePopoverOpen(false);
-    } catch (e: any) {
-      toast.error("Não foi possível gerar o link", { description: e?.message });
+    } catch (e: unknown) {
+      toast.error("Não foi possível gerar o link", { description: getErrorMessage(e) });
     } finally {
       setCreatingShare(false);
     }

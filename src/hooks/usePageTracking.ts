@@ -31,13 +31,13 @@ export function usePageTracking() {
       const durationSec = Math.round((now - enteredAt.current) / 1000);
       if (durationSec > 0 && durationSec < 3600) {
         supabase
-          .from("page_views" as any)
+          .from("page_views")
           .insert({
             user_id: user.id,
             page_path: prevPath.current,
             session_id: sessionId,
             duration_seconds: durationSec,
-          } as any)
+          })
           .then(() => {});
       }
     }
@@ -59,7 +59,7 @@ export function usePageTracking() {
         try {
           if (navigator.sendBeacon) {
             navigator.sendBeacon(
-              `${(import.meta as any).env.VITE_SUPABASE_URL}/rest/v1/page_views`,
+              `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/page_views`,
               new Blob([body], { type: "application/json" })
             );
           }

@@ -12,8 +12,10 @@ import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter,
 } from "@/components/ui/sheet";
 import { supabase } from "@/integrations/supabase/client";
+import type { Json } from "@/integrations/supabase/types";
 import { toast } from "sonner";
 import { Plus, Play, Edit3, Trash2, Loader2, Globe, Clock } from "lucide-react";
+import { getErrorMessage } from "@/lib/errorMessage";
 
 interface Fonte {
   id: string;
@@ -23,7 +25,7 @@ interface Fonte {
   ativo: boolean;
   frequencia_horas: number;
   ultima_busca: string | null;
-  parametros: any;
+  parametros: Json;
 }
 
 export default function FontesTab() {
@@ -59,20 +61,27 @@ export default function FontesTab() {
     }
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { toast.error("Sessão expirada"); return; }
-    const payload: any = {
+    const payload: {
+      nome: string;
+      url_base: string;
+      tipo: string;
+      ativo: boolean;
+      frequencia_horas: number;
+      parametros: Json;
+      user_id?: string;
+    } = {
       nome: editing.nome,
       url_base: editing.url_base,
       tipo: editing.tipo,
       ativo: editing.ativo,
       frequencia_horas: editing.frequencia_horas,
-      parametros: editing.parametros ?? {},
+      parametros: (editing.parametros ?? {}) as Json,
     };
     if (editing.id) {
       const { error } = await supabase.from("fontes_editais").update(payload).eq("id", editing.id);
       if (error) return toast.error(error.message);
     } else {
-      payload.user_id = user.id;
-      const { error } = await supabase.from("fontes_editais").insert(payload);
+      const { error } = await supabase.from("fontes_editais").insert({ ...payload, user_id: user.id });
       if (error) return toast.error(error.message);
     }
     toast.success("Salvo");
@@ -99,8 +108,8 @@ export default function FontesTab() {
       if (data?.error) throw new Error(data.error);
       toast.success(`${f.nome}: ${data?.created ?? 0} novo(s), ${data?.skipped ?? 0} ignorado(s)`, { id: t });
       await fetchAll();
-    } catch (e: any) {
-      toast.error(e?.message ?? "Falha", { id: t });
+    } catch (e: unknown) {
+      toast.error(getErrorMessage(e, "Falha"), { id: t });
     } finally {
       setRunning((s) => { const n = new Set(s); n.delete(f.id); return n; });
     }

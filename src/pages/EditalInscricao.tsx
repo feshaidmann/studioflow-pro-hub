@@ -94,8 +94,14 @@ export default function EditalInscricao() {
       setLoadingEdital(false);
 
       // tenta carregar análise já salva
-      const { data: appData } = await (supabase as any)
-        .from("edital_applications")
+      type EditalApplicationRow = { analise_ia: unknown; project_id: string | null };
+      interface SimpleQuery<T> {
+        select(cols: string): SimpleQuery<T>;
+        eq(col: string, value: unknown): SimpleQuery<T>;
+        maybeSingle(): Promise<{ data: T | null }>;
+      }
+      const appQuery = supabase.from("edital_applications") as unknown as SimpleQuery<EditalApplicationRow>;
+      const { data: appData } = await appQuery
         .select("analise_ia, project_id")
         .eq("edital_id", id)
         .eq("user_id", user.id)

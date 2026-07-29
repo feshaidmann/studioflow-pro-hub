@@ -3,6 +3,18 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { trackSlug } from "@/lib/trackSlug";
 
+export interface TrackVersionDiagnosis {
+  diagnostico_resumo?: string;
+  realAnalysis?: {
+    lufs_integrated?: number | null;
+    true_peak_dbtp?: number | null;
+    dynamic_range_lu?: number | null;
+    bpm?: number | null;
+    spectral_centroid_hz?: number | null;
+  } | null;
+  [key: string]: unknown;
+}
+
 export interface TrackVersionRow {
   id: string;
   track_name: string;
@@ -11,7 +23,7 @@ export interface TrackVersionRow {
   version_number: number | null;
   version_label: string | null;
   summary_variant: string | null;
-  diagnosis: any;
+  diagnosis: TrackVersionDiagnosis | null;
 }
 
 export interface TrackVersionGroup {
@@ -38,8 +50,7 @@ export function useTrackVersions() {
       if (error) throw error;
 
       const groups = new Map<string, TrackVersionGroup>();
-      for (const row of data ?? []) {
-        const r: any = row;
+      for (const r of data ?? []) {
         const key = r.track_version_id ?? `slug:${trackSlug(r.track_name)}`;
         const existing = groups.get(key);
         const v: TrackVersionRow = {
@@ -50,7 +61,7 @@ export function useTrackVersions() {
           version_number: r.version_number ?? null,
           version_label: r.version_label ?? null,
           summary_variant: r.summary_variant ?? null,
-          diagnosis: r.diagnosis,
+          diagnosis: (r.diagnosis ?? null) as TrackVersionDiagnosis | null,
         };
         if (existing) {
           existing.versions.push(v);
@@ -88,7 +99,7 @@ export async function ensureTrackVersion(params: {
     .eq("track_slug", slug)
     .maybeSingle();
 
-  let versionId = (existing as any)?.id as string | undefined;
+  let versionId = existing?.id;
   if (!versionId) {
     const { data: created, error } = await supabase
       .from("music_track_versions")
@@ -101,7 +112,7 @@ export async function ensureTrackVersion(params: {
       .select("id")
       .single();
     if (error) throw error;
-    versionId = (created as any).id as string;
+    versionId = created.id;
   }
 
   const { count } = await supabase

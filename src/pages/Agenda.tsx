@@ -59,13 +59,13 @@ export default function Agenda() {
           const now = Date.now();
           setTeamDeadlines(
             data
-              .map((d: any) => ({
+              .map((d) => ({
                 memberName: d.name,
                 role: d.role,
                 projectName: d.projects?.name || "—",
                 projectId: d.project_id,
-                dueDate: d.delivery_due_date,
-                daysUntilDue: Math.ceil((new Date(d.delivery_due_date).getTime() - now) / 86400000),
+                dueDate: d.delivery_due_date as string,
+                daysUntilDue: Math.ceil((new Date(d.delivery_due_date as string).getTime() - now) / 86400000),
                 status: d.delivery_status,
               }))
               .sort((a: TeamDeadline, b: TeamDeadline) => a.daysUntilDue - b.daysUntilDue)

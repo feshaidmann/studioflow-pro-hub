@@ -169,9 +169,14 @@ export function useSpotifyCatalog() {
         `)
         .order("release_date", { ascending: false, nullsFirst: false });
       if (error) throw error;
-      return (data ?? []).map((r: any) => ({
+type SpotifyTrackDbRow = SpotifyReleaseRow["tracks"] extends (infer T)[] | undefined ? T : never;
+      type RawTrack = Omit<SpotifyTrackDbRow, "linked_analysis"> & {
+        music_dna_analyses: SpotifyTrackDbRow["linked_analysis"] | SpotifyTrackDbRow["linked_analysis"][] | null;
+      };
+      type RawRelease = Omit<SpotifyReleaseRow, "tracks"> & { spotify_tracks?: RawTrack[] };
+      return ((data ?? []) as unknown as RawRelease[]).map((r) => ({
         ...r,
-        tracks: (r.spotify_tracks ?? []).map((t: any) => ({
+        tracks: (r.spotify_tracks ?? []).map((t) => ({
           ...t,
           linked_analysis: Array.isArray(t.music_dna_analyses)
             ? (t.music_dna_analyses[0] ?? null)

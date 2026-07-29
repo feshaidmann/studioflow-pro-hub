@@ -15,8 +15,18 @@ vi.mock("@/integrations/supabase/client", () => {
   // Each table's chain terminates at the exact method the hook uses last,
   // returning an explicit Promise. Intermediate methods return the chain.
 
-  function membersChain() {
-    const c: any = {};
+  type ChainResult = Promise<{ data: unknown; error: null }>;
+  interface QueryChain {
+    select: () => QueryChain;
+    eq: () => QueryChain;
+    ilike: (() => QueryChain) | (() => ChainResult);
+    order?: () => ChainResult;
+    maybySingle?: () => ChainResult;
+    maybeSingle?: () => ChainResult;
+  }
+
+  function membersChain(): QueryChain {
+    const c = {} as QueryChain;
     c.select = () => c;
     c.eq     = () => c;
     c.ilike  = () => c;
@@ -24,16 +34,16 @@ vi.mock("@/integrations/supabase/client", () => {
     return c;
   }
 
-  function ratingsChain() {
-    const c: any = {};
+  function ratingsChain(): QueryChain {
+    const c = {} as QueryChain;
     c.select = () => c;
     c.eq     = () => c;
     c.ilike  = () => Promise.resolve({ data: db.ratings, error: null });
     return c;
   }
 
-  function profilesChain() {
-    const c: any = {};
+  function profilesChain(): QueryChain {
+    const c = {} as QueryChain;
     c.select     = () => c;
     c.eq         = () => c;
     c.maybySingle = () => Promise.resolve({ data: db.profile, error: null }); // typo in name below

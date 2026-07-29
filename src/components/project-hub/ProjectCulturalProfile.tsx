@@ -8,6 +8,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { X, Plus, Save, ChevronDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { getErrorMessage } from "@/lib/errorMessage";
 
 interface PerfilCultural {
   areas: string[];
@@ -47,7 +48,7 @@ export default function ProjectCulturalProfile({ projectId }: { projectId: strin
         .eq("id", projectId)
         .single();
       if (data?.perfil_cultural && typeof data.perfil_cultural === "object") {
-        const p = data.perfil_cultural as any;
+        const p = data.perfil_cultural as Partial<PerfilCultural>;
         setPerfil({
           areas: p.areas || [],
           estados: p.estados || [],
@@ -113,12 +114,12 @@ export default function ProjectCulturalProfile({ projectId }: { projectId: strin
     try {
       const { error } = await supabase
         .from("projects")
-        .update({ perfil_cultural: perfil as any })
+        .update({ perfil_cultural: perfil as unknown as import("@/integrations/supabase/types").Json })
         .eq("id", projectId);
       if (error) throw error;
       toast.success("Perfil cultural salvo!", { description: "Veja recomendações de editais na aba Editais → Meus Editais" });
-    } catch (err: any) {
-      toast.error("Erro ao salvar", { description: err.message });
+    } catch (err: unknown) {
+      toast.error("Erro ao salvar", { description: getErrorMessage(err) });
     } finally {
       setSaving(false);
     }

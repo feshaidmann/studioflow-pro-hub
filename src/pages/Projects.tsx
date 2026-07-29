@@ -219,7 +219,7 @@ export default function Projects() {
         totalContractValue: null, amountPaid: null, estimatedMonths: null,
         uploadDate: uploadDateStr, templateTracks: templateTracks,
         genre: form.genre || null, audienceSizeAtStart: form.audienceSize || null,
-        artistState: (profile as any)?.state ?? null,
+        artistState: profile?.state ?? null,
       });
       if (!newProj) { toast.error(t("projects.createError")); return; }
       if (projects.length === 0) {
@@ -250,7 +250,7 @@ export default function Projects() {
       projectType: project.projectType || "single",
       trackCount: project.trackCount ? String(project.trackCount) : "",
       uploadDate: uploadDateDisplay,
-      genre: (project as any).genre ?? "", audienceSize: (project as any).audienceSizeAtStart ?? "",
+      genre: project.genre ?? "", audienceSize: project.audienceSizeAtStart ?? "",
     });
     setEditDialogOpen(true);
   };

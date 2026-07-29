@@ -423,7 +423,7 @@ export default function AdminCarreira() {
         <HealthBar onFilter={setHealthFilter} active={healthFilter} refreshKey={refreshKey} />
       )}
 
-      <Tabs value={tab} onValueChange={(v) => { setTab(v as any); setSelected(new Set()); setSearch(""); setFilterStatus("all"); setHealthFilter(null); }}>
+      <Tabs value={tab} onValueChange={(v) => { setTab(v as typeof tab); setSelected(new Set()); setSearch(""); setFilterStatus("all"); setHealthFilter(null); }}>
         <TabsList className="flex-wrap h-auto">
           <TabsTrigger value="editais">Editais ({editais.length})</TabsTrigger>
           <TabsTrigger value="palcos">Palcos ({palcos.length})</TabsTrigger>
@@ -438,7 +438,7 @@ export default function AdminCarreira() {
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input className="pl-8" placeholder="Buscar por título..." value={search} onChange={(e) => setSearch(e.target.value)} />
             </div>
-            <Select value={sortBy} onValueChange={(v) => setSortBy(v as any)}>
+            <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
               <SelectTrigger className="w-[170px]"><Flame className="h-3.5 w-3.5 mr-1" /><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="urgency">Precisa de atenção</SelectItem>
@@ -446,7 +446,7 @@ export default function AdminCarreira() {
                 <SelectItem value="deadline">Prazo mais próximo</SelectItem>
               </SelectContent>
             </Select>
-            <Select value={filterStatus} onValueChange={(v) => setFilterStatus(v as any)}>
+            <Select value={filterStatus} onValueChange={(v) => setFilterStatus(v as typeof filterStatus)}>
               <SelectTrigger className="w-[150px]"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos links</SelectItem>
@@ -682,7 +682,7 @@ export default function AdminCarreira() {
       <DedupDialog
         open={dedupOpen}
         onOpenChange={setDedupOpen}
-        rows={currentKind === "edital" ? editais : palcos}
+        rows={(currentKind === "edital" ? editais : palcos) as unknown as Array<{ id: string; [k: string]: string | number | boolean | null | undefined }>}
         kind={currentKind}
         onDone={fetchAll}
       />

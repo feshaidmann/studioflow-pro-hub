@@ -20,14 +20,14 @@ export function useLinkAnalysisToSpotifyTrack() {
       if (spotifyTrackId) {
         const { error: clearErr } = await supabase
           .from("music_dna_analyses")
-          .update({ spotify_track_id: null } as any)
+          .update({ spotify_track_id: null })
           .eq("spotify_track_id", spotifyTrackId)
           .neq("id", analysisId);
         if (clearErr) throw clearErr;
       }
       const { error } = await supabase
         .from("music_dna_analyses")
-        .update({ spotify_track_id: spotifyTrackId } as any)
+        .update({ spotify_track_id: spotifyTrackId })
         .eq("id", analysisId);
       if (error) throw error;
     },

@@ -4,6 +4,7 @@ import type { Database } from "@/integrations/supabase/types";
 import { useAuth } from "@/contexts/AuthContext";
 
 type TaskRow = Database["public"]["Tables"]["tasks"]["Row"];
+type TaskUpdate = Database["public"]["Tables"]["tasks"]["Update"];
 
 export type TaskSeverity = "low" | "medium" | "high" | "critical";
 export type TaskArea = "mix" | "gravacao" | "financeiro" | "equipe" | "lancamento" | "geral";
@@ -164,7 +165,7 @@ export function useTasks() {
   }, [tasks]);
 
   const updateTask = useCallback(async (id: string, patch: Partial<Pick<Task, "assignedTo" | "blocked" | "blockedReason" | "severity" | "taskArea" | "description" | "dueDate" | "projectId">>) => {
-    const dbPatch: Record<string, any> = {};
+    const dbPatch: TaskUpdate = {};
     if (patch.assignedTo !== undefined) dbPatch.assigned_to = patch.assignedTo;
     if (patch.blocked !== undefined) dbPatch.blocked = patch.blocked;
     if (patch.blockedReason !== undefined) dbPatch.blocked_reason = patch.blockedReason;

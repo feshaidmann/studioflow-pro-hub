@@ -51,19 +51,26 @@ export function useRateLimitDialog() {
  * Try to extract a structured rate-limit payload from a Supabase Functions error.
  * Returns null if the error is NOT a rate_limit response.
  */
-export async function extractRateLimitInfo(error: any): Promise<RateLimitInfo | null> {
+interface FunctionsErrorLike {
+  context?: {
+    json?: () => Promise<unknown>;
+    text?: () => Promise<string>;
+  };
+}
+
+export async function extractRateLimitInfo(error: unknown): Promise<RateLimitInfo | null> {
   try {
-    const ctx = error?.context;
+    const ctx = (error as FunctionsErrorLike | undefined)?.context;
     if (!ctx) return null;
-    let body: any = null;
+    let body: Record<string, unknown> | null = null;
     if (typeof ctx.json === "function") {
-      body = await ctx.json();
+      body = (await ctx.json()) as Record<string, unknown>;
     } else if (typeof ctx.text === "function") {
       const txt = await ctx.text();
       try { body = JSON.parse(txt); } catch { return null; }
     }
     if (body?.error === "rate_limit" && body?.limit_type && body?.resets_at) {
-      return body as RateLimitInfo;
+      return body as unknown as RateLimitInfo;
     }
     return null;
   } catch {

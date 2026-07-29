@@ -11,10 +11,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { normalizeName } from "./urgencyScore";
 import { Combine, Loader2 } from "lucide-react";
+import { getErrorMessage } from "@/lib/errorMessage";
 
 interface RowLike {
   id: string;
-  [k: string]: any;
+  [k: string]: string | number | boolean | null | undefined;
 }
 
 interface Props {
@@ -35,7 +36,7 @@ function buildClusters(rows: RowLike[], kind: "edital" | "palco"): Cluster[] {
   for (const r of rows) {
     const a = kind === "edital" ? r.titulo : r.nome;
     const b = kind === "edital" ? r.orgao : r.organizador;
-    const key = `${normalizeName(a)}::${normalizeName(b)}`;
+    const key = `${normalizeName(a != null ? String(a) : null)}::${normalizeName(b != null ? String(b) : null)}`;
     if (!key || key === "::") continue;
     if (!map.has(key)) map.set(key, []);
     map.get(key)!.push(r);
@@ -70,8 +71,8 @@ export default function DedupDialog({ open, onOpenChange, rows, kind, onDone }: 
       toast.success(`${total} duplicado(s) arquivado(s)`);
       onDone();
       onOpenChange(false);
-    } catch (e: any) {
-      toast.error(e?.message ?? "Erro ao mesclar");
+    } catch (e: unknown) {
+      toast.error(getErrorMessage(e, "Erro ao mesclar"));
     } finally {
       setBusy(false);
     }
@@ -109,13 +110,13 @@ export default function DedupDialog({ open, onOpenChange, rows, kind, onDone }: 
                           <RadioGroupItem value={it.id} id={it.id} className="mt-1" />
                           <Label htmlFor={it.id} className="flex-1 cursor-pointer">
                             <div className="flex items-center gap-2 flex-wrap">
-                              <span className="font-medium text-sm">{name}</span>
+                              <span className="font-medium text-sm">{name != null ? String(name) : ""}</span>
                               {it.link_status === "ok" && <Badge variant="outline" className="text-[10px] border-emerald-500/40 text-emerald-700">link ok</Badge>}
                               {it.resumo && <Badge variant="outline" className="text-[10px]">resumo</Badge>}
-                              {it.prazo && <Badge variant="outline" className="text-[10px]">prazo {it.prazo}</Badge>}
+                              {it.prazo && <Badge variant="outline" className="text-[10px]">prazo {String(it.prazo)}</Badge>}
                             </div>
-                            <p className="text-xs text-muted-foreground">{sub} · criado {new Date(it.created_at).toLocaleDateString("pt-BR")}</p>
-                            {it.link && <p className="text-[10px] text-muted-foreground truncate">{it.link}</p>}
+                            <p className="text-xs text-muted-foreground">{sub != null ? String(sub) : ""} · criado {new Date(it.created_at as string).toLocaleDateString("pt-BR")}</p>
+                            {it.link && <p className="text-[10px] text-muted-foreground truncate">{String(it.link)}</p>}
                           </Label>
                         </div>
                       );

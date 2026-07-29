@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Loader2, Palette, Sparkles, ArrowRight, Image as ImageIcon, Type, Quote } from "lucide-react";
 import { toast } from "sonner";
+import { getErrorMessage } from "@/lib/errorMessage";
 import { useVisualBriefing } from "@/components/visual-direction/useVisualBriefing";
 import type { ArtisticProfile } from "@/components/visual-direction/types";
 import type { StepKey } from "@/components/visual-direction/Stepper";
@@ -77,11 +78,12 @@ export default function ProjectVisualDirectionTab({ projectId }: Props) {
       };
       updateProfile(merged);
       toast.success("Sugestão aplicada", { description: "Abra o módulo para revisar e gerar as referências." });
-    } catch (e: any) {
-      const msg: string = e?.message || "";
-      if (msg.toLowerCase().includes("limite") || e?.status === 429) {
+    } catch (e: unknown) {
+      const msg: string = getErrorMessage(e, "");
+      const status = (e && typeof e === "object" && "status" in e) ? (e as { status?: number }).status : undefined;
+      if (msg.toLowerCase().includes("limite") || status === 429) {
         toast.error("Limite de uso da IA atingido", { description: "Tente novamente em alguns minutos." });
-      } else if (msg.toLowerCase().includes("crédito") || e?.status === 402) {
+      } else if (msg.toLowerCase().includes("crédito") || status === 402) {
         toast.error("Créditos de IA esgotados", { description: "Adicione créditos no workspace." });
       } else {
         toast.error("Não foi possível sugerir agora", { description: msg || "Tente novamente." });

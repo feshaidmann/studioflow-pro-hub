@@ -64,7 +64,7 @@ describe("buildMemberFromInvitation", () => {
   });
 
   it("converts fee to Number", () => {
-    const inv = { ...base, fee: "1200" as any };
+    const inv = { ...base, fee: "1200" as unknown as number };
     expect(buildMemberFromInvitation(inv, "mix").fee).toBe(1200);
   });
 

@@ -15,6 +15,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { trackAppEvent } from "@/lib/analytics";
+import { getErrorMessage } from "@/lib/errorMessage";
 import {
   type AudioFeatures, type DiagnosisResult, type Genre,
   FEATURE_KEYS, FEATURE_LABELS, GENRE_PRESETS,
@@ -107,13 +108,13 @@ export function FeedbackModal({ open, onOpenChange, diagnosis }: FeedbackModalPr
         analysis_id: `${Date.now()}`,
         original_genre: diagnosis.genero_classificado,
         corrected_genre: finalGenre,
-        original_features: diagnosis.trackFeatures as any,
+        original_features: diagnosis.trackFeatures as unknown as import("@/integrations/supabase/types").Json,
         corrected_features: {
           ...correctedFeatures,
           _diff_summary: diffSummary,
-        } as any,
+        } as unknown as import("@/integrations/supabase/types").Json,
         feedback_text: feedbackText.trim(),
-      } as any);
+      });
 
       if (error) throw error;
 
@@ -124,8 +125,8 @@ export function FeedbackModal({ open, onOpenChange, diagnosis }: FeedbackModalPr
       });
       toast.success("Feedback enviado! Suas correções serão usadas para melhorar futuras análises.");
       onOpenChange(false);
-    } catch (err: any) {
-      toast.error(`Erro ao enviar feedback: ${err.message}`);
+    } catch (err: unknown) {
+      toast.error(`Erro ao enviar feedback: ${getErrorMessage(err)}`);
     } finally {
       setSaving(false);
     }

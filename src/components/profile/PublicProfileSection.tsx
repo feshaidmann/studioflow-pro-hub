@@ -8,8 +8,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Globe, Copy, ExternalLink, Check } from "lucide-react";
 
+interface PublicProfileFields {
+  public_profile_enabled?: boolean;
+  show_public_email?: boolean;
+  show_public_whatsapp?: boolean;
+}
+
 export default function PublicProfileSection() {
-  const { profile, refreshProfile } = useProfile() as any;
+  const { profile, refreshProfile } = useProfile();
+  const publicProfile = profile as unknown as (typeof profile & PublicProfileFields) | null;
   const [enabled, setEnabled] = useState(false);
   const [showEmail, setShowEmail] = useState(false);
   const [showWhats, setShowWhats] = useState(false);
@@ -18,9 +25,9 @@ export default function PublicProfileSection() {
 
   useEffect(() => {
     if (!profile) return;
-    setEnabled(!!profile.public_profile_enabled);
-    setShowEmail(!!profile.show_public_email);
-    setShowWhats(!!profile.show_public_whatsapp);
+    setEnabled(!!publicProfile?.public_profile_enabled);
+    setShowEmail(!!publicProfile?.show_public_email);
+    setShowWhats(!!publicProfile?.show_public_whatsapp);
   }, [profile?.id]);
 
   const username: string | null = profile?.username ?? null;

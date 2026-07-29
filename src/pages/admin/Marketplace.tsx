@@ -39,10 +39,11 @@ interface CuratedProvider {
   avatar_url: string;
   status: "pending_review" | "approved" | "rejected";
   notes: string;
-  verified_by_jsp: boolean;
-  base_rate_brl: number | null;
-  rate_unit: string;
-  portfolio_links: Array<{ label: string; url: string }>;
+  /** Campos opcionais: ainda não existem como colunas na tabela. */
+  verified_by_jsp?: boolean;
+  base_rate_brl?: number | null;
+  rate_unit?: string;
+  portfolio_links?: Array<{ label: string; url: string }>;
   created_at: string;
   updated_at: string;
 }
@@ -74,7 +75,7 @@ function ProviderForm({
   const [genresRaw, setGenresRaw] = useState(initial.genres.join(", "));
   const [saving, setSaving] = useState(false);
 
-  const set = (k: keyof typeof EMPTY_FORM, v: any) => setForm((f) => ({ ...f, [k]: v }));
+  const set = <K extends keyof typeof EMPTY_FORM>(k: K, v: (typeof EMPTY_FORM)[K]) => setForm((f) => ({ ...f, [k]: v }));
 
   const handleSave = async () => {
     if (!form.name.trim() || !form.specialty.trim()) {
@@ -226,12 +227,12 @@ export default function AdminMarketplace() {
 
   const fetchProviders = async () => {
     setLoading(true);
-    const { data, error } = await (supabase as any)
+    const { data, error } = await supabase
       .from("marketplace_curated_providers")
       .select("*")
       .order("created_at", { ascending: false });
     if (error) toast.error("Erro ao carregar: " + error.message);
-    setProviders((data as CuratedProvider[]) ?? []);
+    setProviders(((data ?? []) as unknown) as CuratedProvider[]);
     setLoading(false);
   };
 
@@ -239,7 +240,7 @@ export default function AdminMarketplace() {
 
   const changeStatus = async (id: string, status: CuratedProvider["status"]) => {
     setActioning(id);
-    const { error } = await (supabase as any)
+    const { error } = await supabase
       .from("marketplace_curated_providers")
       .update({ status })
       .eq("id", id);
@@ -253,14 +254,14 @@ export default function AdminMarketplace() {
 
   const handleSave = async (data: typeof EMPTY_FORM) => {
     if (editTarget) {
-      const { error } = await (supabase as any)
+      const { error } = await supabase
         .from("marketplace_curated_providers")
         .update(data)
         .eq("id", editTarget.id);
       if (error) { toast.error("Erro ao atualizar: " + error.message); return; }
       toast.success("Profissional atualizado.");
     } else {
-      const { error } = await (supabase as any)
+      const { error } = await supabase
         .from("marketplace_curated_providers")
         .insert(data);
       if (error) { toast.error("Erro ao criar: " + error.message); return; }
@@ -273,7 +274,7 @@ export default function AdminMarketplace() {
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
-    const { error } = await (supabase as any)
+    const { error } = await supabase
       .from("marketplace_curated_providers")
       .delete()
       .eq("id", deleteTarget.id);
