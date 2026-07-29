@@ -94,15 +94,15 @@ export default function EditalInscricao() {
       setLoadingEdital(false);
 
       // tenta carregar análise já salva
-      const { data: appData } = await supabase
+      type EditalApplicationRow = { analise_ia: unknown; project_id: string | null };
+      const { data: appData } = await (supabase
         .from("edital_applications")
-        .select("analise_ia, project_id" as string)
+        .select("analise_ia, project_id")
         .eq("edital_id", id)
         .eq("user_id", user.id)
-        .maybeSingle();
-      const appRow = appData as { analise_ia: unknown; project_id: string | null } | null;
-      if (appRow?.analise_ia) loadFromApplication(appRow.analise_ia);
-      if (appRow?.project_id) setSelectedProject(appRow.project_id);
+        .maybeSingle() as unknown as Promise<{ data: EditalApplicationRow | null }>);
+      if (appData?.analise_ia) loadFromApplication(appData.analise_ia);
+      if (appData?.project_id) setSelectedProject(appData.project_id);
     })();
   }, [id, user, loadFromApplication]);
 
