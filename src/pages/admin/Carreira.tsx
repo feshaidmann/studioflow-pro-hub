@@ -32,7 +32,7 @@ import FontesTab from "@/components/admin/carreira/FontesTab";
 import ReportsTab from "@/components/admin/carreira/ReportsTab";
 import { computeUrgency } from "@/components/admin/carreira/urgencyScore";
 
-type LinkStatus = "ok" | "broken" | "unknown" | null;
+type LinkStatus = "ok" | "broken" | "unknown" | "pending" | null;
 
 interface Edital {
   id: string;
@@ -126,12 +126,12 @@ export default function AdminCarreira() {
   const [healthFilter, setHealthFilter] = useState<HealthFilter>(null);
   const [sortBy, setSortBy] = useState<"urgency" | "recent" | "deadline">("urgency");
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [editing, setEditing] = useState<Edital | Palco | null>(null);
+  const [editing, setEditing] = useState<OppRow | null>(null);
   const [editKind, setEditKind] = useState<"edital" | "palco">("edital");
   const [isCreating, setIsCreating] = useState(false);
   const [aiText, setAiText] = useState("");
   const [aiBusy, setAiBusy] = useState(false);
-  const [aiSuggestion, setAiSuggestion] = useState<any | null>(null);
+  const [aiSuggestion, setAiSuggestion] = useState<AnaliseFields | null>(null);
   const [diffOpen, setDiffOpen] = useState(false);
   const [dedupOpen, setDedupOpen] = useState(false);
   const [viewCorpus, setViewCorpus] = useState<CorpusEntry | null>(null);
@@ -245,7 +245,7 @@ export default function AdminCarreira() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { toast.error("Sessão expirada"); return; }
       const { id: _omit, ...rest } = editing;
-      const payload: any = { ...rest };
+      const payload: Omit<OppRow, "id"> & { user_id?: string } = { ...rest };
       if (editKind === "edital") {
         if (!payload.titulo?.trim()) { toast.error("Título é obrigatório"); return; }
         payload.user_id = user.id;
@@ -256,12 +256,12 @@ export default function AdminCarreira() {
           toast.error("Nome, organizador e tipo de palco são obrigatórios"); return;
         }
       }
-      const { error } = await supabase.from(table).insert(payload);
+      const { error } = await supabase.from(table).insert(payload as never);
       if (error) { toast.error(error.message); return; }
       toast.success("Criado");
     } else {
       const { id, ...patch } = editing;
-      const { error } = await supabase.from(table).update(patch).eq("id", id);
+      const { error } = await supabase.from(table).update(patch as never).eq("id", id);
       if (error) { toast.error(error.message); return; }
       toast.success("Salvo");
     }
@@ -289,7 +289,7 @@ export default function AdminCarreira() {
     }
   }
 
-  function applyAnalysisToForm(analise: any) {
+  function applyAnalysisToForm(analise: AnaliseIA | null | undefined) {
     if (!analise || !editing) return;
     const firstPrazo = Array.isArray(analise.prazos) ? analise.prazos[0] : null;
     let prazoIso: string | null = null;
@@ -315,7 +315,12 @@ export default function AdminCarreira() {
     setAiBusy(true);
     const t = toast.loading("Analisando com IA...");
     try {
-      let payload: any = {
+      const payload: {
+        edital_title?: string;
+        dry_run: boolean;
+        file?: { base64: string; mime_type: string; filename: string };
+        text?: string;
+      } = {
         edital_title: editing?.titulo || undefined,
         dry_run: !isCreating, // ao editar, não persiste; abre diff
       };
@@ -337,7 +342,7 @@ export default function AdminCarreira() {
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
-      const analise = data?.analise;
+      const analise = data?.analise as AnaliseIA | undefined;
       // Normaliza prazo
       let prazoIso: string | null = null;
       const firstPrazo = Array.isArray(analise?.prazos) ? analise.prazos[0] : null;
@@ -352,7 +357,7 @@ export default function AdminCarreira() {
         publico_alvo: analise?.publico_alvo ?? null,
         prazo: prazoIso,
         documentos_resumo: Array.isArray(analise?.documentos)
-          ? analise.documentos.map((d: unknown) => typeof d === "string" ? d : d?.nome).filter(Boolean).join(", ")
+          ? analise.documentos.map((d) => (typeof d === "string" ? d : d?.nome)).filter(Boolean).join(", ")
           : null,
       };
 
@@ -507,7 +512,7 @@ export default function AdminCarreira() {
           <ReportsTab onOpenOpportunity={(kind, id) => {
             const list = kind === "edital" ? editais : palcos;
             const found = list.find((r: OppRow) => r.id === id);
-            if (found) { setEditKind(kind); setEditing(found as any); setIsCreating(false); }
+            if (found) { setEditKind(kind); setEditing(found); setIsCreating(false); }
             else toast.error("Item não encontrado (talvez tenha sido arquivado)");
           }} />
         </TabsContent>
@@ -677,7 +682,7 @@ export default function AdminCarreira() {
       <DedupDialog
         open={dedupOpen}
         onOpenChange={setDedupOpen}
-        rows={(currentKind === "edital" ? editais : palcos) as any}
+        rows={currentKind === "edital" ? editais : palcos}
         kind={currentKind}
         onDone={fetchAll}
       />
@@ -719,14 +724,14 @@ function KV({ k, v }: { k: string; v: string | null | undefined }) {
   );
 }
 
-function OpportunitiesTable<T extends Edital | Palco>({
+function OpportunitiesTable({
   rows, kind, selected, onToggle, onToggleAll, onEdit, onRevalidate, onDelete,
 }: {
-  rows: T[]; kind: "edital" | "palco";
+  rows: OppRow[]; kind: "edital" | "palco";
   selected: Set<string>;
   onToggle: (id: string) => void;
   onToggleAll: () => void;
-  onEdit: (r: T) => void;
+  onEdit: (r: OppRow) => void;
   onRevalidate: (id: string) => void;
   onDelete: (id: string) => void;
 }) {
@@ -749,7 +754,7 @@ function OpportunitiesTable<T extends Edital | Palco>({
             </tr>
           </thead>
           <tbody>
-            {rows.map((r: OppRow) => {
+            {rows.map((r) => {
               const name = kind === "edital" ? r.titulo : r.nome;
               return (
                 <tr key={r.id} className="border-b last:border-0 hover:bg-muted/30">
