@@ -6,6 +6,7 @@ import type { DiagnosisResult } from "@/hooks/useMusicDNA";
 import { musicDnaColumnsFromDiagnosis } from "@/types/musicDna";
 import { ensureTrackVersion } from "@/hooks/useTrackVersions";
 import { trackAppEvent } from "@/lib/analytics";
+import type { Json } from "@/integrations/supabase/types";
 
 export interface SavedAnalysis {
   id: string;
@@ -115,8 +116,8 @@ export function useSavedAnalyses() {
             genre: diagnosis.genero_classificado || "",
             project_id: input.projectId || null,
             stage: input.stage ?? null,
-            input_metadata: input as unknown as Record<string, unknown>,
-            diagnosis: diagnosis as unknown as Record<string, unknown>,
+            input_metadata: input as unknown as Json,
+            diagnosis: diagnosis as unknown as Json,
             track_version_id: trackVersionId,
             version_number: nextVersionNumber,
             version_label: `v${nextVersionNumber}`,
