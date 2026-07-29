@@ -1,7 +1,9 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useCallback, useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { useAuth } from "@/contexts/AuthContext";
+
 
 type TaskRow = Database["public"]["Tables"]["tasks"]["Row"];
 type TaskUpdate = Database["public"]["Tables"]["tasks"]["Update"];
@@ -74,34 +76,53 @@ export function groupTasks(tasks: Task[]): Record<TaskSection, Task[]> {
   return groups;
 }
 
-const SESSION_KEY = "tasks_loaded";
+export const tasksKey = (userId?: string) => ["tasks", userId ?? "anon"] as const;
 
 export function useTasks() {
   const { user } = useAuth();
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [loading, setLoading] = useState(false);
-  const fetchedRef = useRef(false);
+  const queryClient = useQueryClient();
+  const key = tasksKey(user?.id);
 
-  const fetchTasks = useCallback(async () => {
-    if (!user) { setTasks([]); return; }
-    setLoading(true);
-    const { data } = await supabase
-      .from("tasks")
-      .select("*")
-      .eq("user_id", user.id)
-      .eq("dismissed", false)
-      .order("due_date", { ascending: true, nullsFirst: false })
-      .limit(200);
-    if (data) setTasks(data.map(dbRowToTask));
-    setLoading(false);
-  }, [user]);
+  const { data: tasks = [], isLoading, refetch } = useQuery({
+    queryKey: key,
+    enabled: !!user,
+    queryFn: async (): Promise<Task[]> => {
+      const { data, error } = await supabase
+        .from("tasks")
+        .select("*")
+        .eq("user_id", user!.id)
+        .eq("dismissed", false)
+        .order("due_date", { ascending: true, nullsFirst: false })
+        .limit(200);
+      if (error) throw error;
+      return (data ?? []).map(dbRowToTask);
+    },
+  });
 
+  const loading = isLoading;
+
+  const setTasks = useCallback((updater: (prev: Task[]) => Task[]) => {
+    queryClient.setQueryData<Task[]>(key, (prev) => updater(prev ?? []));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [queryClient, user?.id]);
+
+  // Realtime: tasks created by automations or other sessions land in the cache.
   useEffect(() => {
-    if (!user) { setTasks([]); fetchedRef.current = false; return; }
-    if (fetchedRef.current) return;
-    fetchedRef.current = true;
-    fetchTasks();
-  }, [user, fetchTasks]);
+    if (!user) return;
+    const channel = supabase
+      .channel(`tasks:${user.id}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "tasks", filter: `user_id=eq.${user.id}` },
+        () => { queryClient.invalidateQueries({ queryKey: key }); },
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, queryClient]);
+
+  const fetchTasks = useCallback(async () => { await refetch(); }, [refetch]);
+
 
   const addTask = useCallback(async (data: {
     description: string;
