@@ -12,9 +12,11 @@ import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter,
 } from "@/components/ui/sheet";
 import { supabase } from "@/integrations/supabase/client";
+import type { Json } from "@/integrations/supabase/types";
 import { toast } from "sonner";
 import { Plus, Play, Edit3, Trash2, Loader2, Globe, Clock } from "lucide-react";
 import { getErrorMessage } from "@/lib/errorMessage";
+import type { Json } from "@/integrations/supabase/types";
 
 interface Fonte {
   id: string;
@@ -24,7 +26,7 @@ interface Fonte {
   ativo: boolean;
   frequencia_horas: number;
   ultima_busca: string | null;
-  parametros: Record<string, unknown>;
+  parametros: Json;
 }
 
 export default function FontesTab() {
@@ -66,7 +68,7 @@ export default function FontesTab() {
       tipo: string;
       ativo: boolean;
       frequencia_horas: number;
-      parametros: Record<string, unknown>;
+      parametros: Json;
       user_id?: string;
     } = {
       nome: editing.nome,
@@ -74,7 +76,7 @@ export default function FontesTab() {
       tipo: editing.tipo,
       ativo: editing.ativo,
       frequencia_horas: editing.frequencia_horas,
-      parametros: editing.parametros ?? {},
+      parametros: (editing.parametros ?? {}) as Json,
     };
     if (editing.id) {
       const { error } = await supabase.from("fontes_editais").update(payload).eq("id", editing.id);

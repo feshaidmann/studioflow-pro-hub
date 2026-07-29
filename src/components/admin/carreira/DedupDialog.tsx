@@ -36,7 +36,7 @@ function buildClusters(rows: RowLike[], kind: "edital" | "palco"): Cluster[] {
   for (const r of rows) {
     const a = kind === "edital" ? r.titulo : r.nome;
     const b = kind === "edital" ? r.orgao : r.organizador;
-    const key = `${normalizeName(a != null ? String(a) : a)}::${normalizeName(b != null ? String(b) : b)}`;
+    const key = `${normalizeName(a != null ? String(a) : null)}::${normalizeName(b != null ? String(b) : null)}`;
     if (!key || key === "::") continue;
     if (!map.has(key)) map.set(key, []);
     map.get(key)!.push(r);

@@ -132,7 +132,7 @@ export function useVisualBriefing(projectId: string | undefined): UseVisualBrief
             const base = prev ?? server;
             const merged: VisualBriefing = { ...base };
             for (const key of Object.keys(patch) as (keyof Patch)[]) {
-              (merged as Record<keyof Patch, unknown>)[key] = (server as unknown as Record<keyof Patch, unknown>)[key];
+              (merged as Record<string, unknown>)[key] = (server as unknown as Record<string, unknown>)[key];
             }
             merged.id = server.id;
             merged.updated_at = server.updated_at ?? merged.updated_at;

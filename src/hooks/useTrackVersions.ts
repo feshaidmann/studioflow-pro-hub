@@ -3,6 +3,18 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { trackSlug } from "@/lib/trackSlug";
 
+export interface TrackVersionDiagnosis {
+  diagnostico_resumo?: string;
+  realAnalysis?: {
+    lufs_integrated?: number | null;
+    true_peak_dbtp?: number | null;
+    dynamic_range_lu?: number | null;
+    bpm?: number | null;
+    spectral_centroid_hz?: number | null;
+  } | null;
+  [key: string]: unknown;
+}
+
 export interface TrackVersionRow {
   id: string;
   track_name: string;
@@ -11,7 +23,7 @@ export interface TrackVersionRow {
   version_number: number | null;
   version_label: string | null;
   summary_variant: string | null;
-  diagnosis: unknown;
+  diagnosis: TrackVersionDiagnosis | null;
 }
 
 export interface TrackVersionGroup {
