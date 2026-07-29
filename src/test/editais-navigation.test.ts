@@ -17,7 +17,7 @@
 
 import { describe, it, expect } from "vitest";
 import { readdirSync, readFileSync, statSync } from "node:fs";
-import { join, relative } from "node:path";
+import { join, relative, sep } from "node:path";
 
 import { validateEditaisPath } from "@/lib/editaisLinkGuard";
 
@@ -28,7 +28,7 @@ const EXCLUDE_FILES = new Set(
     "lib/editaisLinkGuard.ts",
     "components/EditaisLinkGuard.tsx",
     "pages/NotFound.tsx",
-  ].map((p) => p.replace(/\//g, require("node:path").sep)),
+  ].map((p) => p.replace(/\//g, sep)),
 );
 
 function walk(dir: string, out: string[] = []): string[] {

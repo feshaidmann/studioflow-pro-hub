@@ -366,7 +366,7 @@ export function FormView({ onSubmit, isPending, projects, defaultProjectId }: {
             )} />
 
             {/* 5. Optional context — collapsible (hidden in beta) */}
-            {false && (
+            {SHOW_OPTIONAL_CONTEXT && (
             <Collapsible>
               <CollapsibleTrigger className="text-[11px] uppercase tracking-widest font-mono text-muted-foreground hover:text-foreground transition-colors">
                 + Contexto adicional (opcional)
