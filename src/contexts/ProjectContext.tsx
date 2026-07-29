@@ -6,6 +6,7 @@ import type { AnalysisResult } from "@/lib/audioAnalysis";
 import type { Project, MixTrack, Professional, Transaction, ProjectType } from "@/data/mockData";
 import { trackAppEvent } from "@/lib/analytics";
 import { toast } from "sonner";
+import { formatCurrency } from "@/lib/financeUtils";
 
 /* ── Default tracks created for every new project ── */
 const defaultTracks: Omit<MixTrack, "id">[] = [
@@ -364,6 +365,12 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     [patchData],
   );
 
+  /* IDs alterados localmente — evita notificar o eco da própria mutação. */
+  const localTxOpsRef = useRef<Set<string>>(new Set());
+  const markLocalTxOp = useCallback((id: string) => {
+    localTxOpsRef.current.add(id);
+    setTimeout(() => localTxOpsRef.current.delete(id), 8000);
+  }, []);
 
   /* ── Realtime: mantém o ledger financeiro sincronizado ── */
   useEffect(() => {
@@ -378,17 +385,30 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
           const oldRow = payload.old as { id?: string } | null;
 
           if (payload.eventType === "DELETE") {
-            if (oldRow?.id) setTransactions((prev) => prev.filter((t) => t.id !== oldRow.id));
+            if (!oldRow?.id) return;
+            const isLocal = localTxOpsRef.current.has(oldRow.id);
+            setTransactions((prev) => prev.filter((t) => t.id !== oldRow.id));
+            if (!isLocal) toast.info("Um lançamento foi excluído", { description: "O total do ledger foi atualizado." });
             return;
           }
           if (!newRow?.id) return;
           const tx = dbRowToTransaction(newRow);
+          const isLocal = localTxOpsRef.current.has(tx.id);
+          let isNew = false;
           setTransactions((prev) => {
             const idx = prev.findIndex((t) => t.id === tx.id);
-            if (idx === -1) return [tx, ...prev];
+            if (idx === -1) {
+              isNew = true;
+              return [tx, ...prev];
+            }
             const next = [...prev];
             next[idx] = tx;
             return next;
+          });
+          if (isLocal) return;
+          const sign = tx.type === "income" ? "+" : "-";
+          toast.info(isNew ? "Novo lançamento no ledger" : "Lançamento atualizado", {
+            description: `${tx.description || "Sem descrição"} · ${sign}${formatCurrency(tx.amount)}`,
           });
         },
       )
@@ -398,6 +418,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       supabase.removeChannel(channel);
     };
   }, [user]);
+
 
 
   /* ── Progress derived from stage ── */
@@ -706,15 +727,19 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     if (error) {
       console.error("addTransaction error:", error);
       setTransactions((prev) => prev.filter((t) => t.id !== tempId)); // rollback
-      toast.error("Erro ao salvar lançamento", { description: "Tente novamente." });
+      toast.error("Lançamento rejeitado pelo servidor", {
+        description: error.message || "O item não foi salvo. Tente novamente.",
+      });
       return false;
     }
     // Reconcilia o registro temporário com a linha real do banco.
+    if (row?.id) markLocalTxOp(row.id);
     setTransactions((prev) =>
       prev.map((t) => (t.id === tempId ? (row ? dbRowToTransaction(row) : t) : t)),
     );
     return true;
-  }, [user]);
+  }, [user, markLocalTxOp]);
+
 
   const updateTransaction = useCallback(async (id: string, data: Partial<Transaction>) => {
     const dbData: Record<string, unknown> = {};
@@ -735,6 +760,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       return prev.map((t) => (t.id === id ? { ...t, ...data } : t));
     });
 
+    markLocalTxOp(id);
     const { error } = await supabase.from("transactions").update(dbData).eq("id", id);
     if (error) {
       console.error("updateTransaction error:", error);
@@ -742,9 +768,12 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         const snapshot = previous;
         setTransactions((prev) => prev.map((t) => (t.id === id ? snapshot : t)));
       }
-      toast.error("Erro ao atualizar lançamento", { description: "As alterações foram desfeitas." });
+      toast.error("Edição rejeitada pelo servidor", {
+        description: error.message || "As alterações foram desfeitas.",
+      });
     }
-  }, []);
+  }, [markLocalTxOp]);
+
 
   const deleteTransaction = useCallback(async (id: string) => {
     // Remove otimista, restaurando na posição original em caso de falha.
@@ -756,6 +785,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       return prev.filter((t) => t.id !== id);
     });
 
+    markLocalTxOp(id);
     const { error } = await supabase.from("transactions").delete().eq("id", id);
     if (error) {
       console.error("deleteTransaction error:", error);
@@ -768,9 +798,12 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
           return next;
         });
       }
-      toast.error("Erro ao excluir lançamento", { description: "O item foi restaurado." });
+      toast.error("Exclusão rejeitada pelo servidor", {
+        description: error.message || "O item foi restaurado.",
+      });
     }
-  }, []);
+  }, [markLocalTxOp]);
+
 
 
   const getProjectFinancials = useCallback(
