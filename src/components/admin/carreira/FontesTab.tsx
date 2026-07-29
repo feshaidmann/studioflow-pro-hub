@@ -16,7 +16,6 @@ import type { Json } from "@/integrations/supabase/types";
 import { toast } from "sonner";
 import { Plus, Play, Edit3, Trash2, Loader2, Globe, Clock } from "lucide-react";
 import { getErrorMessage } from "@/lib/errorMessage";
-import type { Json } from "@/integrations/supabase/types";
 
 interface Fonte {
   id: string;
@@ -82,8 +81,7 @@ export default function FontesTab() {
       const { error } = await supabase.from("fontes_editais").update(payload).eq("id", editing.id);
       if (error) return toast.error(error.message);
     } else {
-      payload.user_id = user.id;
-      const { error } = await supabase.from("fontes_editais").insert([payload]);
+      const { error } = await supabase.from("fontes_editais").insert({ ...payload, user_id: user.id });
       if (error) return toast.error(error.message);
     }
     toast.success("Salvo");

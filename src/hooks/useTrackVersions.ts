@@ -61,7 +61,7 @@ export function useTrackVersions() {
           version_number: r.version_number ?? null,
           version_label: r.version_label ?? null,
           summary_variant: r.summary_variant ?? null,
-          diagnosis: r.diagnosis,
+          diagnosis: (r.diagnosis ?? null) as TrackVersionDiagnosis | null,
         };
         if (existing) {
           existing.versions.push(v);

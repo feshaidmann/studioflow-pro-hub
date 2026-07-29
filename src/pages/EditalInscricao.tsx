@@ -99,9 +99,10 @@ export default function EditalInscricao() {
         .select("analise_ia, project_id")
         .eq("edital_id", id)
         .eq("user_id", user.id)
-        .maybeSingle() as { data: { analise_ia: unknown; project_id: string | null } | null };
-      if (appData?.analise_ia) loadFromApplication(appData.analise_ia);
-      if (appData?.project_id) setSelectedProject(appData.project_id);
+        .maybeSingle();
+      const appRow = appData as { analise_ia: unknown; project_id: string | null } | null;
+      if (appRow?.analise_ia) loadFromApplication(appRow.analise_ia);
+      if (appRow?.project_id) setSelectedProject(appRow.project_id);
     })();
   }, [id, user, loadFromApplication]);
 
