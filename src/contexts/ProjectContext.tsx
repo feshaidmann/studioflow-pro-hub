@@ -785,6 +785,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       return prev.filter((t) => t.id !== id);
     });
 
+    markLocalTxOp(id);
     const { error } = await supabase.from("transactions").delete().eq("id", id);
     if (error) {
       console.error("deleteTransaction error:", error);
@@ -797,9 +798,12 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
           return next;
         });
       }
-      toast.error("Erro ao excluir lançamento", { description: "O item foi restaurado." });
+      toast.error("Exclusão rejeitada pelo servidor", {
+        description: error.message || "O item foi restaurado.",
+      });
     }
-  }, []);
+  }, [markLocalTxOp]);
+
 
 
   const getProjectFinancials = useCallback(
