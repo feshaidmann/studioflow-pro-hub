@@ -333,6 +333,41 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     fetchData();
   }, [user]);
 
+  /* ── Realtime: mantém o ledger financeiro sincronizado ── */
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase
+      .channel("transactions-realtime")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "transactions" },
+        (payload) => {
+          const newRow = payload.new as TransactionRow | null;
+          const oldRow = payload.old as { id?: string } | null;
+
+          if (payload.eventType === "DELETE") {
+            if (oldRow?.id) setTransactions((prev) => prev.filter((t) => t.id !== oldRow.id));
+            return;
+          }
+          if (!newRow?.id) return;
+          const tx = dbRowToTransaction(newRow);
+          setTransactions((prev) => {
+            const idx = prev.findIndex((t) => t.id === tx.id);
+            if (idx === -1) return [tx, ...prev];
+            const next = [...prev];
+            next[idx] = tx;
+            return next;
+          });
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
+
+
   /* ── Progress derived from stage ── */
 
   const getMixPercent = useCallback(
