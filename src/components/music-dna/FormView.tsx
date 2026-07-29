@@ -23,6 +23,10 @@ import { GENRE_PRESETS, type Genre } from "@/hooks/useMusicDNA";
 import { StageSelector } from "@/components/music-dna/StageSelector";
 import { trackAppEvent } from "@/lib/analytics";
 
+/** Contexto adicional opcional — oculto durante o beta. */
+const SHOW_OPTIONAL_CONTEXT = false as boolean;
+
+
 export const ACCEPTED_AUDIO = [
   "audio/wav", "audio/x-wav", "audio/mpeg", "audio/mp3",
   "audio/ogg", "audio/flac", "audio/aac", "audio/x-m4a", "audio/mp4",
