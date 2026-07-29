@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -11,104 +12,43 @@ interface MemberRow {
   projects: { id: string; name: string; completed: boolean } | null;
 }
 
+interface ProfessionalsPayload {
+  professionals: Professional[];
+  ratingsMap: RatingsMap;
+  allocationsMap: AllocationsMap;
+}
+
+const EMPTY: ProfessionalsPayload = { professionals: [], ratingsMap: {}, allocationsMap: {} };
+
 export function useProfessionalsList() {
   const { user } = useAuth();
-  const [professionals, setProfessionals] = useState<Professional[]>([]);
-  const [ratingsMap, setRatingsMap] = useState<RatingsMap>({});
-  const [allocationsMap, setAllocationsMap] = useState<AllocationsMap>({});
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const queryKey = ["professionals-list", user?.id ?? null] as const;
 
-  const fetchAll = useCallback(async () => {
-    if (!user) return;
-    setLoading(true);
-    const { data: profsData } = await supabase
-      .from("professionals")
-      .select("*")
-      .order("name");
-    const profs = (profsData as Professional[]) ?? [];
-    setProfessionals(profs);
-
-    if (profs.length === 0) {
-      setRatingsMap({});
-      setAllocationsMap({});
-      setLoading(false);
-      return;
-    }
-
-    const names = profs.map((p) => p.name);
-    const [ratingsRes, membersRes] = await Promise.all([
-      supabase
-        .from("professional_ratings")
-        .select("professional_name, stars")
-        .eq("user_id", user.id)
-        .in("professional_name", names),
-      supabase
-        .from("project_members")
-        .select("name, project_id, projects:project_id(id, name, completed)")
-        .eq("user_id", user.id)
-        .in("name", names),
-    ]);
-
-    const rMap: RatingsMap = {};
-    (ratingsRes.data ?? []).forEach((r) => {
-      const k = r.professional_name;
-      if (!rMap[k]) rMap[k] = { avg: 0, count: 0 };
-      rMap[k].count++;
-      rMap[k].avg += Number(r.stars);
-    });
-    Object.keys(rMap).forEach((k) => { rMap[k].avg = rMap[k].avg / rMap[k].count; });
-    setRatingsMap(rMap);
-
-    const aMap: AllocationsMap = {};
-    (membersRes.data ?? []).forEach((m: MemberRow) => {
-      if (m.projects?.completed === false) {
-        if (!aMap[m.name]) aMap[m.name] = [];
-        const pId = m.projects?.id as string | undefined;
-        const pName = m.projects?.name as string | undefined;
-        if (pId && pName && !aMap[m.name].some((x) => x.id === pId)) {
-          aMap[m.name].push({ id: pId, name: pName });
-        }
-      }
-    });
-    setAllocationsMap(aMap);
-
-    setLoading(false);
-  }, [user]);
-
-  useEffect(() => {
-    let active = true;
-    const run = async () => {
-      if (!user) return;
-      setLoading(true);
+  const { data = EMPTY, isLoading } = useQuery({
+    queryKey,
+    enabled: !!user,
+    queryFn: async (): Promise<ProfessionalsPayload> => {
       const { data: profsData } = await supabase
         .from("professionals")
         .select("*")
         .order("name");
-      if (!active) return;
       const profs = (profsData as Professional[]) ?? [];
-      setProfessionals(profs);
-
-      if (profs.length === 0) {
-        setRatingsMap({});
-        setAllocationsMap({});
-        setLoading(false);
-        return;
-      }
+      if (profs.length === 0) return EMPTY;
 
       const names = profs.map((p) => p.name);
       const [ratingsRes, membersRes] = await Promise.all([
         supabase
           .from("professional_ratings")
           .select("professional_name, stars")
-          .eq("user_id", user.id)
+          .eq("user_id", user!.id)
           .in("professional_name", names),
         supabase
           .from("project_members")
           .select("name, project_id, projects:project_id(id, name, completed)")
-          .eq("user_id", user.id)
+          .eq("user_id", user!.id)
           .in("name", names),
       ]);
-      if (!active) return;
 
       const rMap: RatingsMap = {};
       (ratingsRes.data ?? []).forEach((r) => {
@@ -118,37 +58,48 @@ export function useProfessionalsList() {
         rMap[k].avg += Number(r.stars);
       });
       Object.keys(rMap).forEach((k) => { rMap[k].avg = rMap[k].avg / rMap[k].count; });
-      setRatingsMap(rMap);
 
       const aMap: AllocationsMap = {};
-      (membersRes.data ?? []).forEach((m: MemberRow) => {
+      ((membersRes.data ?? []) as MemberRow[]).forEach((m) => {
         if (m.projects?.completed === false) {
           if (!aMap[m.name]) aMap[m.name] = [];
-          const pId = m.projects?.id as string | undefined;
-          const pName = m.projects?.name as string | undefined;
+          const pId = m.projects?.id;
+          const pName = m.projects?.name;
           if (pId && pName && !aMap[m.name].some((x) => x.id === pId)) {
             aMap[m.name].push({ id: pId, name: pName });
           }
         }
       });
-      setAllocationsMap(aMap);
-      setLoading(false);
-    };
-    run();
-    return () => { active = false; };
-  }, [user]);
+
+      return { professionals: profs, ratingsMap: rMap, allocationsMap: aMap };
+    },
+  });
+
+  const fetchAll = useCallback(async () => {
+    await queryClient.invalidateQueries({ queryKey: ["professionals-list"] });
+  }, [queryClient]);
+
+  const patchProfessionals = useCallback(
+    (updater: (prev: Professional[]) => Professional[]) => {
+      queryClient.setQueryData<ProfessionalsPayload>(queryKey, (prev) =>
+        prev ? { ...prev, professionals: updater(prev.professionals) } : prev
+      );
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [queryClient, user?.id]
+  );
 
   const toggleFavorite = useCallback(async (id: string, current: boolean) => {
     const next = !current;
-    setProfessionals((prev) => prev.map((p) => p.id === id ? { ...p, favorite: next } : p));
+    patchProfessionals((prev) => prev.map((p) => p.id === id ? { ...p, favorite: next } : p));
     const { error } = await supabase.from("professionals").update({ favorite: next }).eq("id", id);
     if (error) {
       toast.error("Erro ao atualizar favorito");
-      setProfessionals((prev) => prev.map((p) => p.id === id ? { ...p, favorite: current } : p));
+      patchProfessionals((prev) => prev.map((p) => p.id === id ? { ...p, favorite: current } : p));
       return;
     }
     toast.success(next ? "Adicionado aos favoritos" : "Removido dos favoritos");
-  }, []);
+  }, [patchProfessionals]);
 
   const remove = useCallback(async (id: string) => {
     const { error } = await supabase.from("professionals").delete().eq("id", id);
@@ -161,5 +112,13 @@ export function useProfessionalsList() {
     return true;
   }, [fetchAll]);
 
-  return { professionals, ratingsMap, allocationsMap, loading, refetch: fetchAll, toggleFavorite, remove };
+  return {
+    professionals: data.professionals,
+    ratingsMap: data.ratingsMap,
+    allocationsMap: data.allocationsMap,
+    loading: isLoading,
+    refetch: fetchAll,
+    toggleFavorite,
+    remove,
+  };
 }
