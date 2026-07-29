@@ -62,7 +62,7 @@ export default function Auth() {
     try {
       const stored = sessionStorage.getItem(INVITE_CTX_KEY);
       if (stored) setInviteCtx(JSON.parse(stored));
-    } catch {}
+    } catch { /* ctx de convite ausente ou inválido */ }
   }, [isInviteFlow]);
 
   const redirectTo = redirectParam || "/dashboard";
