@@ -19,5 +19,5 @@ export function readInviteCtx(): InviteCtx | null {
 export function clearInviteCtx(): void {
   try {
     sessionStorage.removeItem(INVITE_CTX_KEY);
-  } catch {}
+  } catch { /* sessionStorage indisponível */ }
 }

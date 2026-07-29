@@ -4,6 +4,13 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import type { Professional, RatingsMap, AllocationsMap } from "@/components/professionals/types";
 
+/** Linha de project_members com o projeto embedado pela query. */
+interface MemberRow {
+  name: string;
+  project_id: string;
+  projects: { id: string; name: string; completed: boolean } | null;
+}
+
 export function useProfessionalsList() {
   const { user } = useAuth();
   const [professionals, setProfessionals] = useState<Professional[]>([]);
@@ -43,7 +50,7 @@ export function useProfessionalsList() {
     ]);
 
     const rMap: RatingsMap = {};
-    (ratingsRes.data as any[] ?? []).forEach((r: any) => {
+    (ratingsRes.data ?? []).forEach((r) => {
       const k = r.professional_name;
       if (!rMap[k]) rMap[k] = { avg: 0, count: 0 };
       rMap[k].count++;
@@ -53,7 +60,7 @@ export function useProfessionalsList() {
     setRatingsMap(rMap);
 
     const aMap: AllocationsMap = {};
-    (membersRes.data as any[] ?? []).forEach((m: any) => {
+    (membersRes.data ?? []).forEach((m: MemberRow) => {
       if (m.projects?.completed === false) {
         if (!aMap[m.name]) aMap[m.name] = [];
         const pId = m.projects?.id as string | undefined;
@@ -104,7 +111,7 @@ export function useProfessionalsList() {
       if (!active) return;
 
       const rMap: RatingsMap = {};
-      (ratingsRes.data as any[] ?? []).forEach((r: any) => {
+      (ratingsRes.data ?? []).forEach((r) => {
         const k = r.professional_name;
         if (!rMap[k]) rMap[k] = { avg: 0, count: 0 };
         rMap[k].count++;
@@ -114,7 +121,7 @@ export function useProfessionalsList() {
       setRatingsMap(rMap);
 
       const aMap: AllocationsMap = {};
-      (membersRes.data as any[] ?? []).forEach((m: any) => {
+      (membersRes.data ?? []).forEach((m: MemberRow) => {
         if (m.projects?.completed === false) {
           if (!aMap[m.name]) aMap[m.name] = [];
           const pId = m.projects?.id as string | undefined;
@@ -134,7 +141,7 @@ export function useProfessionalsList() {
   const toggleFavorite = useCallback(async (id: string, current: boolean) => {
     const next = !current;
     setProfessionals((prev) => prev.map((p) => p.id === id ? { ...p, favorite: next } : p));
-    const { error } = await supabase.from("professionals").update({ favorite: next } as any).eq("id", id);
+    const { error } = await supabase.from("professionals").update({ favorite: next }).eq("id", id);
     if (error) {
       toast.error("Erro ao atualizar favorito");
       setProfessionals((prev) => prev.map((p) => p.id === id ? { ...p, favorite: current } : p));

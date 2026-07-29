@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { getErrorMessage } from "@/lib/errorMessage";
 
 // NOTA: a busca AI agora é centralizada em `oportunidades-search` (ver AISearchPanel).
 // Este hook foca apenas em CRUD do banco de editais salvos.
@@ -93,15 +94,15 @@ export function useEditais(projectId?: string | null) {
         resumo: e.resumo || "",
         documentos_resumo: e.documentos_resumo || "",
         match_reason: e.match_reason || "",
-        link_status: (e as any).link_status || "unknown",
-        link_checked_at: (e as any).link_status ? new Date().toISOString() : null,
+        link_status: e.link_status || "unknown",
+        link_checked_at: e.link_status ? new Date().toISOString() : null,
       }));
 
       // Race-safe upsert: confia no UNIQUE INDEX (user_id, session_key) WHERE session_key <> ''.
       // ignoreDuplicates=true descarta silenciosamente itens já existentes.
       const { data: inserted, error } = await supabase
         .from("editais")
-        .upsert(rows as any, { onConflict: "user_id,session_key", ignoreDuplicates: true })
+        .upsert(rows, { onConflict: "user_id,session_key", ignoreDuplicates: true })
         .select("id");
       if (error) throw error;
 
@@ -115,9 +116,9 @@ export function useEditais(projectId?: string | null) {
         toast.success("Editais salvos!", { description: `${newCount} edital(is) salvo(s).` });
       }
       await fetchEditais();
-    } catch (err: any) {
+    } catch (err) {
       console.error("Save error:", err);
-      toast.error("Erro ao salvar", { description: err.message });
+      toast.error("Erro ao salvar", { description: getErrorMessage(err) });
     }
   }, [user, fetchEditais]);
 
@@ -127,19 +128,19 @@ export function useEditais(projectId?: string | null) {
       if (error) throw error;
       setEditais((prev) => prev.filter((e) => e.id !== id));
       toast.success("Edital removido");
-    } catch (err: any) {
-      toast.error("Erro ao remover", { description: err.message });
+    } catch (err) {
+      toast.error("Erro ao remover", { description: getErrorMessage(err) });
     }
   }, []);
 
   const updateEdital = useCallback(async (id: string, fields: Partial<Edital>) => {
     try {
-      const { error } = await supabase.from("editais").update(fields as any).eq("id", id);
+      const { error } = await supabase.from("editais").update(fields).eq("id", id);
       if (error) throw error;
       setEditais((prev) => prev.map((e) => (e.id === id ? { ...e, ...fields } : e)));
       toast.success("Edital atualizado");
-    } catch (err: any) {
-      toast.error("Erro ao atualizar", { description: err.message });
+    } catch (err) {
+      toast.error("Erro ao atualizar", { description: getErrorMessage(err) });
     }
   }, []);
 

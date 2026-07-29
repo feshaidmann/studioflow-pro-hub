@@ -19,6 +19,7 @@ import { ptBR } from "date-fns/locale";
 import { SPECIALTY_OPTIONS } from "@/constants/specialtyOptions";
 import { BRAZIL_STATES } from "@/constants/brazilStates";
 import { maskWhatsapp } from "@/lib/masks";
+import { getErrorMessage } from "@/lib/errorMessage";
 
 const YOUTUBE_REGEX = /^https?:\/\/(www\.)?(youtube\.com|youtu\.be)(\/.*)?$/i;
 
@@ -63,7 +64,7 @@ export default function FreelancerProfile() {
   // Sync from profile
   useEffect(() => {
     if (!profile) return;
-    const p = profile as any;
+    const p = profile;
     // Detect legacy "City, UF" combined format and split into separate fields
     const cityRaw: string = p.city ?? "";
     const legacyMatch = cityRaw.match(/^(.+),\s*([A-Z]{2})$/);
@@ -95,8 +96,8 @@ export default function FreelancerProfile() {
       .eq("user_id", user.id)
       .then(({ data }) => {
         if (!data) return;
-        const total = (data as any[]).length;
-        const uniqueProjects = new Set((data as any[]).map((r: any) => r.project_id)).size;
+        const total = data.length;
+        const uniqueProjects = new Set(data.map((r) => r.project_id)).size;
         setProjectStats({ total, uniqueArtists: uniqueProjects });
       });
   }, [user]);
@@ -138,8 +139,8 @@ export default function FreelancerProfile() {
       setAvatarPreview(publicUrl);
       setForm((prev) => ({ ...prev, avatar_url: urlData.publicUrl }));
       toast.success("Foto carregada com sucesso!");
-    } catch (err: any) {
-      toast.error("Erro ao enviar foto: " + (err?.message ?? "Tente novamente"));
+    } catch (err) {
+      toast.error("Erro ao enviar foto: " + getErrorMessage(err, "Tente novamente"));
     } finally {
       setAvatarUploading(false);
       // Reset input so the same file can be re-selected
@@ -190,7 +191,7 @@ export default function FreelancerProfile() {
         avatar_url: form.avatar_url,
         youtube_url: form.youtube_url.trim(),
         work_links: form.work_links,
-      } as any);
+      });
       toast.success("Perfil atualizado!");
     } catch {
       toast.error("Erro ao salvar perfil");
@@ -199,7 +200,7 @@ export default function FreelancerProfile() {
     }
   };
 
-  const publicUsername = (profile as any)?.username ?? "";
+  const publicUsername = profile?.username ?? "";
   const publicProfileUrl = publicUsername
     ? `${window.location.origin}/u/${publicUsername}`
     : null;
@@ -213,7 +214,7 @@ export default function FreelancerProfile() {
 
   const handleVisibilityToggle = async (v: boolean) => {
     setForm((prev) => ({ ...prev, allow_global_listing: v }));
-    await updateProfile({ allow_global_listing: v } as any);
+    await updateProfile({ allow_global_listing: v });
     toast.success(v ? "Agora visível no Marketplace" : "Removido do Marketplace");
   };
 

@@ -38,7 +38,25 @@ function trackToDbRow(userId: string, projectId: string, track: MixTrack, positi
   };
 }
 
-export function dbRowToTrack(row: any): MixTrack {
+/** Valor numérico como vem do Postgres (numeric chega como string). */
+type Numericish = number | string | null;
+
+export interface TrackRow {
+  id: string;
+  name: string;
+  high_pass_hz: number;
+  eq_notes: string;
+  comp_gr_db: Numericish;
+  sidechain_trigger: string;
+  gain_dbfs: Numericish;
+  done: boolean;
+  track_source: string;
+  musician_id: string;
+  musician_fee: Numericish;
+  fee_paid: boolean;
+}
+
+export function dbRowToTrack(row: TrackRow): MixTrack {
   return {
     id: row.id,
     name: row.name,
@@ -104,7 +122,7 @@ interface ProjectContextType {
   getProjectFinancials: (projectId: string) => ProjectFinancials;
 
   addTrack: (projectId: string) => void;
-  updateTrack: (projectId: string, trackId: string, field: keyof MixTrack, value: any) => void;
+  updateTrack: (projectId: string, trackId: string, field: keyof MixTrack, value: MixTrack[keyof MixTrack]) => void;
   removeTrack: (projectId: string, trackId: string) => void;
 
   addProfessional: (projectId: string, prof: Omit<Professional, "id">) => Promise<void>;
@@ -121,7 +139,35 @@ interface ProjectContextType {
 const ProjectContext = createContext<ProjectContextType | null>(null);
 
 /* ── DB-row mappers (exported for testing) ── */
-export function dbRowToProject(row: any): Project {
+export interface ProjectRow {
+  id: string;
+  name: string;
+  artist: string;
+  bpm: number;
+  key: string;
+  mix_percent: number;
+  master_done: boolean;
+  upload_date: string;
+  revenue_estimate: number;
+  stage: string;
+  lufs: number;
+  streaming_ready: boolean;
+  project_type: string;
+  track_count: number | null;
+  total_contract_value: number | null;
+  amount_paid: number | null;
+  estimated_months: number | null;
+  completed?: boolean | null;
+  notes?: string | null;
+  genre?: string | null;
+  subgenre?: string | null;
+  artist_state?: string | null;
+  audience_size_at_start?: string | null;
+  production_start_date?: string | null;
+  distributor?: string | null;
+}
+
+export function dbRowToProject(row: ProjectRow): Project {
   return {
     id: row.id,
     name: row.name,
@@ -151,11 +197,25 @@ export function dbRowToProject(row: any): Project {
   };
 }
 
-export function dbRowToTransaction(row: any): Transaction {
+export interface TransactionRow {
+  id: string;
+  project_id: string | null;
+  type: string;
+  description: string;
+  amount: number;
+  date: string;
+  category: string;
+  custom_category?: string | null;
+  paid?: boolean | null;
+  notes?: string | null;
+  created_at: string;
+}
+
+export function dbRowToTransaction(row: TransactionRow): Transaction {
   return {
     id: row.id,
     projectId: row.project_id,
-    type: row.type,
+    type: row.type as Transaction["type"],
     description: row.description,
     amount: row.amount,
     date: row.date,
@@ -360,7 +420,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   );
 
   const updateProject = useCallback(async (id: string, data: Partial<Project>) => {
-    const dbData: Record<string, any> = {};
+    const dbData: Record<string, unknown> = {};
     if (data.name !== undefined) dbData.name = data.name;
     if (data.artist !== undefined) dbData.artist = data.artist;
     if (data.bpm !== undefined) dbData.bpm = data.bpm;
@@ -448,7 +508,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     });
   }, [user]);
 
-  const updateTrack = useCallback((projectId: string, trackId: string, field: keyof MixTrack, value: any) => {
+  const updateTrack = useCallback((projectId: string, trackId: string, field: keyof MixTrack, value: MixTrack[keyof MixTrack]) => {
     // Update local state immediately
     setTracks((prev) => ({
       ...prev,
@@ -571,7 +631,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   }, [user]);
 
   const updateTransaction = useCallback(async (id: string, data: Partial<Transaction>) => {
-    const dbData: Record<string, any> = {};
+    const dbData: Record<string, unknown> = {};
     if (data.description !== undefined) dbData.description = data.description;
     if (data.amount !== undefined) dbData.amount = data.amount;
     if (data.date !== undefined) dbData.date = data.date;

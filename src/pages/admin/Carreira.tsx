@@ -32,7 +32,7 @@ import FontesTab from "@/components/admin/carreira/FontesTab";
 import ReportsTab from "@/components/admin/carreira/ReportsTab";
 import { computeUrgency } from "@/components/admin/carreira/urgencyScore";
 
-type LinkStatus = "ok" | "broken" | "unknown" | null;
+type LinkStatus = "ok" | "broken" | "unknown" | "pending" | null;
 
 interface Edital {
   id: string;
@@ -82,6 +82,29 @@ interface CorpusEntry {
   input_excerpt: string | null;
 }
 
+/** Linha genérica do formulário: edital ou palco (campos exclusivos são opcionais). */
+type OppRow = Partial<Edital> & Partial<Palco> & { id: string };
+
+/** Campos que a IA pode sugerir a partir do texto/arquivo do edital. */
+interface AnaliseFields {
+  resumo?: string | null;
+  valor?: string | null;
+  publico_alvo?: string | null;
+  prazo?: string | null;
+  documentos_resumo?: string | null;
+}
+
+/** Payload bruto retornado pela edge function analyze-edital. */
+interface AnaliseIA extends AnaliseFields {
+  prazos?: Array<{ data?: string }> | null;
+  documentos?: Array<string | { nome?: string }> | null;
+}
+
+function errMsg(e: unknown, fallback: string) {
+  return e instanceof Error ? e.message : fallback;
+}
+
+
 function statusBadge(s: LinkStatus) {
   if (s === "ok") return <Badge variant="outline" className="border-emerald-500/40 text-emerald-700 bg-emerald-50"><CheckCircle2 className="h-3 w-3 mr-1" />ok</Badge>;
   if (s === "broken") return <Badge variant="outline" className="border-destructive/40 text-destructive bg-destructive/10"><AlertTriangle className="h-3 w-3 mr-1" />broken</Badge>;
@@ -103,12 +126,12 @@ export default function AdminCarreira() {
   const [healthFilter, setHealthFilter] = useState<HealthFilter>(null);
   const [sortBy, setSortBy] = useState<"urgency" | "recent" | "deadline">("urgency");
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [editing, setEditing] = useState<Edital | Palco | null>(null);
+  const [editing, setEditing] = useState<OppRow | null>(null);
   const [editKind, setEditKind] = useState<"edital" | "palco">("edital");
   const [isCreating, setIsCreating] = useState(false);
   const [aiText, setAiText] = useState("");
   const [aiBusy, setAiBusy] = useState(false);
-  const [aiSuggestion, setAiSuggestion] = useState<any | null>(null);
+  const [aiSuggestion, setAiSuggestion] = useState<AnaliseFields | null>(null);
   const [diffOpen, setDiffOpen] = useState(false);
   const [dedupOpen, setDedupOpen] = useState(false);
   const [viewCorpus, setViewCorpus] = useState<CorpusEntry | null>(null);
@@ -153,7 +176,7 @@ export default function AdminCarreira() {
 
     // health filter chips
     if (healthFilter && tab === "editais") {
-      list = list.filter((r: any) => {
+      list = list.filter((r: OppRow) => {
         switch (healthFilter) {
           case "links_broken": return r.link_status === "broken";
           case "links_unchecked": return !r.link_status || r.link_status === "unknown" || r.link_status === "pending";
@@ -171,12 +194,12 @@ export default function AdminCarreira() {
 
     // sort
     if (sortBy === "urgency") {
-      const withScore = list.map((r: any) => ({ r, u: computeUrgency(r) }));
+      const withScore = list.map((r: OppRow) => ({ r, u: computeUrgency(r) }));
       withScore.sort((a, b) => b.u.score - a.u.score);
       return withScore.map((x) => x.r);
     }
     if (sortBy === "deadline") {
-      return [...list].sort((a: any, b: any) => {
+      return [...list].sort((a: OppRow, b: OppRow) => {
         if (!a.prazo) return 1;
         if (!b.prazo) return -1;
         return a.prazo.localeCompare(b.prazo);
@@ -200,7 +223,7 @@ export default function AdminCarreira() {
       if (error) throw error;
       toast.success(`Link: ${data?.status ?? "verificado"}`, { id: t });
       await fetchAll();
-    } catch (e: any) {
+    } catch (e) {
       toast.error(e?.message ?? "Falha ao revalidar", { id: t });
     }
   }
@@ -221,8 +244,8 @@ export default function AdminCarreira() {
     if (isCreating) {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { toast.error("Sessão expirada"); return; }
-      const { id: _omit, ...rest } = editing as any;
-      const payload: any = { ...rest };
+      const { id: _omit, ...rest } = editing;
+      const payload: Omit<OppRow, "id"> & { user_id?: string } = { ...rest };
       if (editKind === "edital") {
         if (!payload.titulo?.trim()) { toast.error("Título é obrigatório"); return; }
         payload.user_id = user.id;
@@ -233,12 +256,12 @@ export default function AdminCarreira() {
           toast.error("Nome, organizador e tipo de palco são obrigatórios"); return;
         }
       }
-      const { error } = await supabase.from(table).insert(payload);
+      const { error } = await supabase.from(table).insert(payload as never);
       if (error) { toast.error(error.message); return; }
       toast.success("Criado");
     } else {
-      const { id, ...patch } = editing as any;
-      const { error } = await supabase.from(table).update(patch).eq("id", id);
+      const { id, ...patch } = editing;
+      const { error } = await supabase.from(table).update(patch as never).eq("id", id);
       if (error) { toast.error(error.message); return; }
       toast.success("Salvo");
     }
@@ -266,7 +289,7 @@ export default function AdminCarreira() {
     }
   }
 
-  function applyAnalysisToForm(analise: any) {
+  function applyAnalysisToForm(analise: AnaliseIA | null | undefined) {
     if (!analise || !editing) return;
     const firstPrazo = Array.isArray(analise.prazos) ? analise.prazos[0] : null;
     let prazoIso: string | null = null;
@@ -276,11 +299,11 @@ export default function AdminCarreira() {
       prazoIso = `${y}-${m}-${d}`;
     }
     setEditing({
-      ...(editing as any),
-      resumo: analise.resumo || (editing as any).resumo || "",
-      valor: analise.valor || (editing as any).valor || "",
-      publico_alvo: analise.publico_alvo || (editing as any).publico_alvo || "",
-      prazo: prazoIso ?? (editing as any).prazo,
+      ...editing,
+      resumo: analise.resumo || editing.resumo || "",
+      valor: analise.valor || editing.valor || "",
+      publico_alvo: analise.publico_alvo || editing.publico_alvo || "",
+      prazo: prazoIso ?? editing.prazo,
     });
   }
 
@@ -292,8 +315,13 @@ export default function AdminCarreira() {
     setAiBusy(true);
     const t = toast.loading("Analisando com IA...");
     try {
-      let payload: any = {
-        edital_title: (editing as any)?.titulo || undefined,
+      const payload: {
+        edital_title?: string;
+        dry_run: boolean;
+        file?: { base64: string; mime_type: string; filename: string };
+        text?: string;
+      } = {
+        edital_title: editing?.titulo || undefined,
         dry_run: !isCreating, // ao editar, não persiste; abre diff
       };
       if (file) {
@@ -314,7 +342,7 @@ export default function AdminCarreira() {
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
-      const analise = data?.analise;
+      const analise = data?.analise as AnaliseIA | undefined;
       // Normaliza prazo
       let prazoIso: string | null = null;
       const firstPrazo = Array.isArray(analise?.prazos) ? analise.prazos[0] : null;
@@ -329,7 +357,7 @@ export default function AdminCarreira() {
         publico_alvo: analise?.publico_alvo ?? null,
         prazo: prazoIso,
         documentos_resumo: Array.isArray(analise?.documentos)
-          ? analise.documentos.map((d: any) => typeof d === "string" ? d : d?.nome).filter(Boolean).join(", ")
+          ? analise.documentos.map((d) => (typeof d === "string" ? d : d?.nome)).filter(Boolean).join(", ")
           : null,
       };
 
@@ -341,7 +369,7 @@ export default function AdminCarreira() {
         setDiffOpen(true);
         toast.success("Revise as sugestões", { id: t });
       }
-    } catch (e: any) {
+    } catch (e) {
       toast.error(e?.message ?? "Falha ao analisar", { id: t });
     } finally {
       setAiBusy(false);
@@ -364,13 +392,13 @@ export default function AdminCarreira() {
   const toggleSelect = (id: string) => {
     setSelected((prev) => {
       const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+      if (next.has(id)) next.delete(id); else next.add(id);
       return next;
     });
   };
   const toggleSelectAll = () => {
     if (selected.size === filtered.length) setSelected(new Set());
-    else setSelected(new Set(filtered.map((r: any) => r.id)));
+    else setSelected(new Set(filtered.map((r: OppRow) => r.id)));
   };
 
   const currentKind: "edital" | "palco" = tab === "editais" ? "edital" : "palco";
@@ -483,8 +511,8 @@ export default function AdminCarreira() {
         <TabsContent value="reports" className="mt-4">
           <ReportsTab onOpenOpportunity={(kind, id) => {
             const list = kind === "edital" ? editais : palcos;
-            const found = list.find((r: any) => r.id === id);
-            if (found) { setEditKind(kind); setEditing(found as any); setIsCreating(false); }
+            const found = list.find((r: OppRow) => r.id === id);
+            if (found) { setEditKind(kind); setEditing(found); setIsCreating(false); }
             else toast.error("Item não encontrado (talvez tenha sido arquivado)");
           }} />
         </TabsContent>
@@ -579,23 +607,23 @@ export default function AdminCarreira() {
           )}
           {editing && (
             <div className="space-y-3 mt-4">
-              <Field label={editKind === "edital" ? "Título *" : "Nome *"} value={(editing as any)[editKind === "edital" ? "titulo" : "nome"]} onChange={(v) => setEditing({ ...(editing as any), [editKind === "edital" ? "titulo" : "nome"]: v })} />
-              <Field label={editKind === "edital" ? "Órgão" : "Organizador *"} value={(editing as any)[editKind === "edital" ? "orgao" : "organizador"] ?? ""} onChange={(v) => setEditing({ ...(editing as any), [editKind === "edital" ? "orgao" : "organizador"]: v })} />
+              <Field label={editKind === "edital" ? "Título *" : "Nome *"} value={editing[editKind === "edital" ? "titulo" : "nome"]} onChange={(v) => setEditing({ ...editing, [editKind === "edital" ? "titulo" : "nome"]: v })} />
+              <Field label={editKind === "edital" ? "Órgão" : "Organizador *"} value={editing[editKind === "edital" ? "orgao" : "organizador"] ?? ""} onChange={(v) => setEditing({ ...editing, [editKind === "edital" ? "orgao" : "organizador"]: v })} />
               {editKind === "palco" && (
-                <Field label="Tipo de palco *" value={(editing as any).tipo_palco ?? ""} onChange={(v) => setEditing({ ...(editing as any), tipo_palco: v })} />
+                <Field label="Tipo de palco *" value={editing.tipo_palco ?? ""} onChange={(v) => setEditing({ ...editing, tipo_palco: v })} />
               )}
-              <Field label="Link" value={(editing as any).link ?? ""} onChange={(v) => setEditing({ ...(editing as any), link: v })} />
-              <Field label="Estado (UF)" value={(editing as any).estado ?? ""} onChange={(v) => setEditing({ ...(editing as any), estado: v })} />
-              <Field label="Prazo (YYYY-MM-DD)" value={(editing as any).prazo ?? ""} onChange={(v) => setEditing({ ...(editing as any), prazo: v || null })} />
+              <Field label="Link" value={editing.link ?? ""} onChange={(v) => setEditing({ ...editing, link: v })} />
+              <Field label="Estado (UF)" value={editing.estado ?? ""} onChange={(v) => setEditing({ ...editing, estado: v })} />
+              <Field label="Prazo (YYYY-MM-DD)" value={editing.prazo ?? ""} onChange={(v) => setEditing({ ...editing, prazo: v || null })} />
               {editKind === "edital" && (
                 <>
-                  <Field label="Tipo" value={(editing as any).tipo ?? ""} onChange={(v) => setEditing({ ...(editing as any), tipo: v })} />
-                  <Field label="Valor" value={(editing as any).valor ?? ""} onChange={(v) => setEditing({ ...(editing as any), valor: v })} />
+                  <Field label="Tipo" value={editing.tipo ?? ""} onChange={(v) => setEditing({ ...editing, tipo: v })} />
+                  <Field label="Valor" value={editing.valor ?? ""} onChange={(v) => setEditing({ ...editing, valor: v })} />
                 </>
               )}
               <div className="space-y-1">
                 <Label className="text-xs">Resumo</Label>
-                <Textarea rows={4} value={(editing as any).resumo ?? ""} onChange={(e) => setEditing({ ...(editing as any), resumo: e.target.value })} />
+                <Textarea rows={4} value={editing.resumo ?? ""} onChange={(e) => setEditing({ ...editing, resumo: e.target.value })} />
               </div>
             </div>
           )}
@@ -654,7 +682,7 @@ export default function AdminCarreira() {
       <DedupDialog
         open={dedupOpen}
         onOpenChange={setDedupOpen}
-        rows={(currentKind === "edital" ? editais : palcos) as any}
+        rows={currentKind === "edital" ? editais : palcos}
         kind={currentKind}
         onDone={fetchAll}
       />
@@ -663,11 +691,11 @@ export default function AdminCarreira() {
         <AiDiffDialog
           open={diffOpen}
           onOpenChange={setDiffOpen}
-          current={editing as any || {}}
+          current={editing || {}}
           ai={aiSuggestion}
           busy={aiBusy}
           onApply={(patch) => {
-            setEditing({ ...(editing as any), ...patch });
+            setEditing({ ...editing, ...patch });
             setDiffOpen(false);
             setAiSuggestion(null);
             toast.success("Sugestões aplicadas ao formulário");
@@ -696,14 +724,14 @@ function KV({ k, v }: { k: string; v: string | null | undefined }) {
   );
 }
 
-function OpportunitiesTable<T extends Edital | Palco>({
+function OpportunitiesTable({
   rows, kind, selected, onToggle, onToggleAll, onEdit, onRevalidate, onDelete,
 }: {
-  rows: T[]; kind: "edital" | "palco";
+  rows: OppRow[]; kind: "edital" | "palco";
   selected: Set<string>;
   onToggle: (id: string) => void;
   onToggleAll: () => void;
-  onEdit: (r: T) => void;
+  onEdit: (r: OppRow) => void;
   onRevalidate: (id: string) => void;
   onDelete: (id: string) => void;
 }) {
@@ -726,7 +754,7 @@ function OpportunitiesTable<T extends Edital | Palco>({
             </tr>
           </thead>
           <tbody>
-            {rows.map((r: any) => {
+            {rows.map((r) => {
               const name = kind === "edital" ? r.titulo : r.nome;
               return (
                 <tr key={r.id} className="border-b last:border-0 hover:bg-muted/30">

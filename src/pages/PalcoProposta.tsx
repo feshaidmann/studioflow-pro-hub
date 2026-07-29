@@ -21,6 +21,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useProjects } from "@/contexts/ProjectContext";
 
 import { useEditalApplications, useUpdateApplication, APPLICATION_STATUS_LABELS, type ApplicationStatus } from "@/hooks/useEditalApplications";
+import { getErrorMessage } from "@/lib/errorMessage";
+import type { TablesUpdate } from "@/integrations/supabase/types";
 
 type StepKey = "epk" | "pitch" | "contato";
 
@@ -131,19 +133,19 @@ export default function PalcoProposta() {
         .single();
 
       if (row) {
-        setEpkContent((row as any).epk_content || "");
-        setPitchSubject((row as any).pitch_subject || "");
-        setPitchContent((row as any).pitch_content || "");
-        setContactChannel((row as any).contact_channel || "");
-        setContactRecipient((row as any).contact_recipient || "");
-        setContactedAt((row as any).contacted_at || null);
+        setEpkContent(row.epk_content || "");
+        setPitchSubject(row.pitch_subject || "");
+        setPitchContent(row.pitch_content || "");
+        setContactChannel(row.contact_channel || "");
+        setContactRecipient(row.contact_recipient || "");
+        setContactedAt(row.contacted_at || null);
         setNotes(row.notas || "");
         setProjectId(row.project_id || "");
 
         const { data: p } = await supabase
           .from("editais")
           .select("id, titulo, orgao, estado, resumo, link, area")
-          .eq("id", (row as any).opportunity_id)
+          .eq("id", row.opportunity_id)
           .single();
         if (p) setPalco(p as PalcoOpp);
       }
@@ -159,12 +161,12 @@ export default function PalcoProposta() {
     })();
   }, [applicationId, user]);
 
-  const saveExtras = useCallback(async (patch: Record<string, any>) => {
+  const saveExtras = useCallback(async (patch: TablesUpdate<"edital_applications">) => {
     if (!applicationId) return;
     setSavingExtras(true);
     const { error } = await supabase
       .from("edital_applications")
-      .update(patch as any)
+      .update(patch)
       .eq("id", applicationId);
     setSavingExtras(false);
     if (error) {
@@ -188,8 +190,8 @@ export default function PalcoProposta() {
       setEpkContent(epk);
       await saveExtras({ epk_content: epk });
       toast.success("EPK gerado");
-    } catch (e: any) {
-      toast.error(e.message || "Não foi possível gerar o EPK");
+    } catch (e) {
+      toast.error(getErrorMessage(e, "Não foi possível gerar o EPK"));
     } finally {
       setGeneratingEpk(false);
     }
@@ -214,8 +216,8 @@ export default function PalcoProposta() {
         setPitchSubject(data.subject_suggestions[0]);
       }
       toast.success("Variações geradas");
-    } catch (e: any) {
-      toast.error(e.message || "Não foi possível gerar a proposta");
+    } catch (e) {
+      toast.error(getErrorMessage(e, "Não foi possível gerar a proposta"));
     } finally {
       setGeneratingPitch(false);
     }
@@ -240,7 +242,7 @@ export default function PalcoProposta() {
       channel: contactChannel || "other",
       direction: "sent",
       summary: `Proposta enviada via ${contactChannel || "canal"}${contactRecipient ? " para " + contactRecipient : ""}`,
-    } as any);
+    });
     const { data: logs } = await supabase
       .from("palco_outreach_log")
       .select("id, channel, direction, summary, created_at")
@@ -259,7 +261,7 @@ export default function PalcoProposta() {
       channel: newLogChannel,
       direction: "note",
       summary: newLogSummary.trim(),
-    } as any);
+    });
     if (error) {
       toast.error("Erro ao registrar");
       setLoggingOutreach(false);

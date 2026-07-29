@@ -31,6 +31,9 @@ export interface Profile {
   primary_genre?: string | null;
   state?: string | null;
   career_start_year?: number | null;
+  avatar_url?: string | null;
+  youtube_url?: string | null;
+  work_links?: Array<{ title: string; url: string }> | null;
   created_at?: string;
 }
 

@@ -23,6 +23,10 @@ import { GENRE_PRESETS, type Genre } from "@/hooks/useMusicDNA";
 import { StageSelector } from "@/components/music-dna/StageSelector";
 import { trackAppEvent } from "@/lib/analytics";
 
+/** Contexto adicional opcional — oculto durante o beta. */
+const SHOW_OPTIONAL_CONTEXT = false as boolean;
+
+
 export const ACCEPTED_AUDIO = [
   "audio/wav", "audio/x-wav", "audio/mpeg", "audio/mp3",
   "audio/ogg", "audio/flac", "audio/aac", "audio/x-m4a", "audio/mp4",
@@ -362,7 +366,7 @@ export function FormView({ onSubmit, isPending, projects, defaultProjectId }: {
             )} />
 
             {/* 5. Optional context — collapsible (hidden in beta) */}
-            {false && (
+            {SHOW_OPTIONAL_CONTEXT && (
             <Collapsible>
               <CollapsibleTrigger className="text-[11px] uppercase tracking-widest font-mono text-muted-foreground hover:text-foreground transition-colors">
                 + Contexto adicional (opcional)

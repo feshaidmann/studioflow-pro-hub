@@ -203,10 +203,11 @@ export default function InviteResponse() {
               role: invitation?.professional_role ?? null,
             })
           );
-        } catch {}
+        } catch { /* sessionStorage indisponível */ }
       } else {
         // Limpa ctx de aceite anterior para não vazar entre fluxos distintos
-        try { sessionStorage.removeItem(INVITE_CTX_KEY); } catch {}
+        try { sessionStorage.removeItem(INVITE_CTX_KEY); } catch { /* noop */ }
+
       }
 
       setPageState(decision);
