@@ -62,13 +62,12 @@ export interface PalcoCurado {
 export function usePalcos() {
   const { user } = useAuth();
 
-  const [palcosCurados, setPalcosCurados] = useState<PalcoCurado[]>([]);
-  const [loadingCurados, setLoadingCurados] = useState(true);
+  const queryClient = useQueryClient();
 
   // ── Banco curado ─────────────────────────────────────────────────────────
-  const fetchCurados = useCallback(async () => {
-    setLoadingCurados(true);
-    try {
+  const { data: palcosCurados = [], isLoading: loadingCurados } = useQuery({
+    queryKey: ["palcos-curados"],
+    queryFn: async (): Promise<PalcoCurado[]> => {
       const { data, error } = await supabase
         .from("palcos_curados")
         .select("*")
@@ -76,15 +75,15 @@ export function usePalcos() {
         .order("status", { ascending: true }) // Aberto primeiro
         .order("nome", { ascending: true });
       if (error) throw error;
-      setPalcosCurados((data || []) as PalcoCurado[]);
-    } catch (err) {
-      console.error("Error fetching palcos curados:", err);
-    } finally {
-      setLoadingCurados(false);
-    }
-  }, []);
+      return (data || []) as PalcoCurado[];
+    },
+  });
 
-  useEffect(() => { fetchCurados(); }, [fetchCurados]);
+  const fetchCurados = useCallback(async () => {
+    await queryClient.invalidateQueries({ queryKey: ["palcos-curados"] });
+  }, [queryClient]);
+
+
 
 
   // ── Salvar resultado de busca no pipeline ────────────────────────────────
