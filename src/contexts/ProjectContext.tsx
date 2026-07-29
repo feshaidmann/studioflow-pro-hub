@@ -760,6 +760,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       return prev.map((t) => (t.id === id ? { ...t, ...data } : t));
     });
 
+    markLocalTxOp(id);
     const { error } = await supabase.from("transactions").update(dbData).eq("id", id);
     if (error) {
       console.error("updateTransaction error:", error);
@@ -767,9 +768,12 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         const snapshot = previous;
         setTransactions((prev) => prev.map((t) => (t.id === id ? snapshot : t)));
       }
-      toast.error("Erro ao atualizar lançamento", { description: "As alterações foram desfeitas." });
+      toast.error("Edição rejeitada pelo servidor", {
+        description: error.message || "As alterações foram desfeitas.",
+      });
     }
-  }, []);
+  }, [markLocalTxOp]);
+
 
   const deleteTransaction = useCallback(async (id: string) => {
     // Remove otimista, restaurando na posição original em caso de falha.
