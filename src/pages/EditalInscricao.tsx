@@ -95,12 +95,17 @@ export default function EditalInscricao() {
 
       // tenta carregar análise já salva
       type EditalApplicationRow = { analise_ia: unknown; project_id: string | null };
-      const { data: appData } = await (supabase
-        .from("edital_applications")
+      interface SimpleQuery<T> {
+        select(cols: string): SimpleQuery<T>;
+        eq(col: string, value: unknown): SimpleQuery<T>;
+        maybeSingle(): Promise<{ data: T | null }>;
+      }
+      const appQuery = supabase.from("edital_applications") as unknown as SimpleQuery<EditalApplicationRow>;
+      const { data: appData } = await appQuery
         .select("analise_ia, project_id")
         .eq("edital_id", id)
         .eq("user_id", user.id)
-        .maybeSingle() as unknown as Promise<{ data: EditalApplicationRow | null }>);
+        .maybeSingle();
       if (appData?.analise_ia) loadFromApplication(appData.analise_ia);
       if (appData?.project_id) setSelectedProject(appData.project_id);
     })();
