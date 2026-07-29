@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import type { AnalysisResult } from "@/lib/audioAnalysis";
 import type { Project, MixTrack, Professional, Transaction, ProjectType } from "@/data/mockData";
 import { trackAppEvent } from "@/lib/analytics";
+import type { Tables } from "@/integrations/supabase/types";
 
 /* ── Default tracks created for every new project ── */
 const defaultTracks: Omit<MixTrack, "id">[] = [
@@ -38,7 +39,7 @@ function trackToDbRow(userId: string, projectId: string, track: MixTrack, positi
   };
 }
 
-export function dbRowToTrack(row: any): MixTrack {
+export function dbRowToTrack(row: Tables<"mix_tracks">): MixTrack {
   return {
     id: row.id,
     name: row.name,
@@ -104,7 +105,7 @@ interface ProjectContextType {
   getProjectFinancials: (projectId: string) => ProjectFinancials;
 
   addTrack: (projectId: string) => void;
-  updateTrack: (projectId: string, trackId: string, field: keyof MixTrack, value: any) => void;
+  updateTrack: (projectId: string, trackId: string, field: keyof MixTrack, value: MixTrack[keyof MixTrack]) => void;
   removeTrack: (projectId: string, trackId: string) => void;
 
   addProfessional: (projectId: string, prof: Omit<Professional, "id">) => Promise<void>;
@@ -121,7 +122,7 @@ interface ProjectContextType {
 const ProjectContext = createContext<ProjectContextType | null>(null);
 
 /* ── DB-row mappers (exported for testing) ── */
-export function dbRowToProject(row: any): Project {
+export function dbRowToProject(row: Tables<"projects">): Project {
   return {
     id: row.id,
     name: row.name,
@@ -151,7 +152,7 @@ export function dbRowToProject(row: any): Project {
   };
 }
 
-export function dbRowToTransaction(row: any): Transaction {
+export function dbRowToTransaction(row: Tables<"transactions">): Transaction {
   return {
     id: row.id,
     projectId: row.project_id,
@@ -360,7 +361,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   );
 
   const updateProject = useCallback(async (id: string, data: Partial<Project>) => {
-    const dbData: Record<string, any> = {};
+    const dbData: Record<string, unknown> = {};
     if (data.name !== undefined) dbData.name = data.name;
     if (data.artist !== undefined) dbData.artist = data.artist;
     if (data.bpm !== undefined) dbData.bpm = data.bpm;
@@ -448,7 +449,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     });
   }, [user]);
 
-  const updateTrack = useCallback((projectId: string, trackId: string, field: keyof MixTrack, value: any) => {
+  const updateTrack = useCallback((projectId: string, trackId: string, field: keyof MixTrack, value: MixTrack[keyof MixTrack]) => {
     // Update local state immediately
     setTracks((prev) => ({
       ...prev,
@@ -571,7 +572,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   }, [user]);
 
   const updateTransaction = useCallback(async (id: string, data: Partial<Transaction>) => {
-    const dbData: Record<string, any> = {};
+    const dbData: Record<string, unknown> = {};
     if (data.description !== undefined) dbData.description = data.description;
     if (data.amount !== undefined) dbData.amount = data.amount;
     if (data.date !== undefined) dbData.date = data.date;
