@@ -727,15 +727,19 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     if (error) {
       console.error("addTransaction error:", error);
       setTransactions((prev) => prev.filter((t) => t.id !== tempId)); // rollback
-      toast.error("Erro ao salvar lançamento", { description: "Tente novamente." });
+      toast.error("Lançamento rejeitado pelo servidor", {
+        description: error.message || "O item não foi salvo. Tente novamente.",
+      });
       return false;
     }
     // Reconcilia o registro temporário com a linha real do banco.
+    if (row?.id) markLocalTxOp(row.id);
     setTransactions((prev) =>
       prev.map((t) => (t.id === tempId ? (row ? dbRowToTransaction(row) : t) : t)),
     );
     return true;
-  }, [user]);
+  }, [user, markLocalTxOp]);
+
 
   const updateTransaction = useCallback(async (id: string, data: Partial<Transaction>) => {
     const dbData: Record<string, unknown> = {};
