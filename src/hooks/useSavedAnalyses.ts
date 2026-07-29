@@ -115,8 +115,8 @@ export function useSavedAnalyses() {
             genre: diagnosis.genero_classificado || "",
             project_id: input.projectId || null,
             stage: input.stage ?? null,
-            input_metadata: input as any,
-            diagnosis: diagnosis as any,
+            input_metadata: input as unknown as Record<string, unknown>,
+            diagnosis: diagnosis as unknown as Record<string, unknown>,
             track_version_id: trackVersionId,
             version_number: nextVersionNumber,
             version_label: `v${nextVersionNumber}`,
@@ -124,7 +124,7 @@ export function useSavedAnalyses() {
             summary_variant_assigned_at: new Date().toISOString(),
             legacy: false,
             ...derivedColumns,
-          } as any)
+          })
           .select("id")
           .single();
         if (error) throw error;
@@ -135,7 +135,7 @@ export function useSavedAnalyses() {
             .from("diagnosis_acceptance_signals")
             .insert({
               user_id: user!.id,
-              analysis_id: (data as any).id,
+              analysis_id: (data as { id: string }).id,
               summary_variant: summaryVariant,
               signal_type: "saved",
             });
@@ -152,7 +152,7 @@ export function useSavedAnalyses() {
           }
         }
         return {
-          id: (data as any).id as string,
+          id: (data as { id: string }).id,
           trackVersionId,
           versionNumber: nextVersionNumber,
           summaryVariant,

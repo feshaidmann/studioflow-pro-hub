@@ -14,6 +14,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Plus, Play, Edit3, Trash2, Loader2, Globe, Clock } from "lucide-react";
+import { getErrorMessage } from "@/lib/errorMessage";
 
 interface Fonte {
   id: string;
@@ -23,7 +24,7 @@ interface Fonte {
   ativo: boolean;
   frequencia_horas: number;
   ultima_busca: string | null;
-  parametros: any;
+  parametros: Record<string, unknown>;
 }
 
 export default function FontesTab() {
@@ -59,7 +60,15 @@ export default function FontesTab() {
     }
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { toast.error("Sessão expirada"); return; }
-    const payload: any = {
+    const payload: {
+      nome: string;
+      url_base: string;
+      tipo: string;
+      ativo: boolean;
+      frequencia_horas: number;
+      parametros: Record<string, unknown>;
+      user_id?: string;
+    } = {
       nome: editing.nome,
       url_base: editing.url_base,
       tipo: editing.tipo,
@@ -99,8 +108,8 @@ export default function FontesTab() {
       if (data?.error) throw new Error(data.error);
       toast.success(`${f.nome}: ${data?.created ?? 0} novo(s), ${data?.skipped ?? 0} ignorado(s)`, { id: t });
       await fetchAll();
-    } catch (e: any) {
-      toast.error(e?.message ?? "Falha", { id: t });
+    } catch (e: unknown) {
+      toast.error(getErrorMessage(e, "Falha"), { id: t });
     } finally {
       setRunning((s) => { const n = new Set(s); n.delete(f.id); return n; });
     }

@@ -147,13 +147,13 @@ export async function markChecklistItem(
     const next = { ...defaultState(), ...current, [key]: { checked: true, value: "" } };
     await supabase
       .from("release_checklists")
-      .update({ items: next as any })
+      .update({ items: next })
       .eq("id", existing.id);
   } else {
     const next = { ...defaultState(), [key]: { checked: true, value: "" } };
     await supabase
       .from("release_checklists")
-      .insert({ project_id: projectId, user_id: userId, items: next as any });
+      .insert({ project_id: projectId, user_id: userId, items: next });
   }
   return { alreadyChecked: false, label };
 }
@@ -203,12 +203,12 @@ export function useReleaseChecklist(projectId: string) {
         if (rowIdRef.current) {
           await supabase
             .from("release_checklists")
-            .update({ items: next as any })
+            .update({ items: next })
             .eq("id", rowIdRef.current);
         } else {
           const { data } = await supabase
             .from("release_checklists")
-            .insert({ project_id: projectId, user_id: user.id, items: next as any })
+            .insert({ project_id: projectId, user_id: user.id, items: next })
             .select("id")
             .single();
           if (data) rowIdRef.current = data.id;

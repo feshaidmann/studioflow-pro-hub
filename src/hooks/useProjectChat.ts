@@ -74,7 +74,7 @@ export function useProjectChat(projectId: string) {
         { event: "*", schema: "public", table: "project_messages", filter: `project_id=eq.${projectId}` },
         async (payload) => {
           if (payload.eventType === "UPDATE") {
-            const updated = payload.new as any;
+            const updated = payload.new as { id: string; is_pending: boolean; is_resolved: boolean; linked_task_id: string | null };
             setMessages((prev) =>
               prev.map((m) =>
                 m.id === updated.id
@@ -85,7 +85,18 @@ export function useProjectChat(projectId: string) {
             return;
           }
           if (payload.eventType === "INSERT") {
-            const raw = payload.new as any;
+            const raw = payload.new as {
+              id: string;
+              project_id: string;
+              user_id: string;
+              content: string;
+              created_at: string;
+              is_pending: boolean | null;
+              is_resolved: boolean | null;
+              linked_task_id: string | null;
+              attachment_path: string | null;
+              attachment_name: string | null;
+            };
             const { data: profile } = await supabase
               .from("profiles")
               .select("display_name, avatar_url")
@@ -157,7 +168,7 @@ export function useProjectChat(projectId: string) {
           .from("project_members")
           .select("user_id")
           .eq("project_id", projectId);
-        (members ?? []).forEach((m: any) => {
+        (members ?? []).forEach((m) => {
           if (m.user_id && m.user_id !== user.id) recipientIds.add(m.user_id);
         });
         const senderName = user.email?.split("@")[0] ?? "Alguém";

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { getErrorMessage } from "@/lib/errorMessage";
 import { ArtisticProfile, GeneratedImage, VisualBriefing } from "./types";
 import { StepKey } from "./Stepper";
 
@@ -131,7 +132,7 @@ export function useVisualBriefing(projectId: string | undefined): UseVisualBrief
             const base = prev ?? server;
             const merged: VisualBriefing = { ...base };
             for (const key of Object.keys(patch) as (keyof Patch)[]) {
-              (merged as any)[key] = (server as any)[key];
+              (merged as Record<keyof Patch, unknown>)[key] = (server as unknown as Record<keyof Patch, unknown>)[key];
             }
             merged.id = server.id;
             merged.updated_at = server.updated_at ?? merged.updated_at;
@@ -168,7 +169,7 @@ export function useVisualBriefing(projectId: string | undefined): UseVisualBrief
           setStatus("saved");
         }
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error("[visual-briefing] persist failed", e);
       if (seq === requestSeqRef.current) setStatus("error");
     }
@@ -260,8 +261,8 @@ export function useVisualBriefing(projectId: string | undefined): UseVisualBrief
       // persist current_step jump
       queueSave({ current_step: "generation" }, STEP_DEBOUNCE_MS);
       toast.success(regen ? "Novas referências geradas" : "Referências de estilo geradas");
-    } catch (e: any) {
-      toast.error("Falha ao gerar", { description: e?.message });
+    } catch (e: unknown) {
+      toast.error("Falha ao gerar", { description: getErrorMessage(e) });
       setStatus("error");
     } finally {
       setGenerating(false);

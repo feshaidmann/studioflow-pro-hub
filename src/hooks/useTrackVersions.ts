@@ -11,7 +11,7 @@ export interface TrackVersionRow {
   version_number: number | null;
   version_label: string | null;
   summary_variant: string | null;
-  diagnosis: any;
+  diagnosis: unknown;
 }
 
 export interface TrackVersionGroup {
@@ -38,8 +38,7 @@ export function useTrackVersions() {
       if (error) throw error;
 
       const groups = new Map<string, TrackVersionGroup>();
-      for (const row of data ?? []) {
-        const r: any = row;
+      for (const r of data ?? []) {
         const key = r.track_version_id ?? `slug:${trackSlug(r.track_name)}`;
         const existing = groups.get(key);
         const v: TrackVersionRow = {
@@ -88,7 +87,7 @@ export async function ensureTrackVersion(params: {
     .eq("track_slug", slug)
     .maybeSingle();
 
-  let versionId = (existing as any)?.id as string | undefined;
+  let versionId = existing?.id;
   if (!versionId) {
     const { data: created, error } = await supabase
       .from("music_track_versions")
@@ -101,7 +100,7 @@ export async function ensureTrackVersion(params: {
       .select("id")
       .single();
     if (error) throw error;
-    versionId = (created as any).id as string;
+    versionId = created.id;
   }
 
   const { count } = await supabase

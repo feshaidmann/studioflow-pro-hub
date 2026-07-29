@@ -141,17 +141,21 @@ export default function InviteResponse() {
 
   useEffect(() => {
     if (!token) { setPageState("not_found"); return; }
-    (supabase.rpc as any)("get_invitation_by_token", { p_token: token })
-      .then(({ data, error }: { data: any; error: any }) => {
-        const row = Array.isArray(data) ? data[0] : data;
+    const rpc = supabase.rpc as unknown as (
+      fn: "get_invitation_by_token",
+      args: { p_token: string }
+    ) => Promise<{ data: unknown; error: unknown }>;
+    rpc("get_invitation_by_token", { p_token: token })
+      .then(({ data, error }) => {
+        const row = (Array.isArray(data) ? data[0] : data) as (Partial<InvitationData> & Record<string, unknown>) | null;
         if (error || !row) { setPageState("not_found"); return; }
-        const inv = { ...(row as any), project: (row as any).project ?? null } as unknown as InvitationData;
+        const inv = { ...row, project: (row.project as InvitationData["project"]) ?? null } as InvitationData;
         if (inv.status === "revoked") { setPageState("revoked"); return; }
         if (inv.status === "expired") { setPageState("expired"); return; }
         if (inv.status !== "pending") { setPageState("already_responded"); setInvitation(inv); return; }
         if (new Date(inv.expires_at) < new Date()) { setPageState("expired"); return; }
         setInvitation(inv);
-        setArtistName((inv.project as any)?.artist ?? "Artista");
+        setArtistName(inv.project?.artist ?? "Artista");
         setPageState("ready");
       });
   }, [token]);
@@ -355,7 +359,7 @@ export default function InviteResponse() {
 
   if (!invitation) return null;
 
-  const project = invitation.project as any;
+  const project = invitation.project;
   const daysLeft = Math.ceil(
     (new Date(invitation.expires_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
   );

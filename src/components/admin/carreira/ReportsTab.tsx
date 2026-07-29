@@ -58,8 +58,8 @@ export default function ReportsTab({ onOpenOpportunity }: { onOpenOpportunity?: 
       palcoIds.length ? supabase.from("palcos_curados").select("id,nome,link").in("id", palcoIds) : Promise.resolve({ data: [] }),
     ]);
     const map = new Map<string, { title: string; link: string | null }>();
-    (edRes.data || []).forEach((e: any) => map.set(e.id, { title: e.titulo, link: e.link }));
-    (paRes.data || []).forEach((p: any) => map.set(p.id, { title: p.nome, link: p.link }));
+    (edRes.data || []).forEach((e: { id: string; titulo: string; link: string | null }) => map.set(e.id, { title: e.titulo, link: e.link }));
+    (paRes.data || []).forEach((p: { id: string; nome: string; link: string | null }) => map.set(p.id, { title: p.nome, link: p.link }));
     setReports(list.map(r => ({
       ...r,
       opportunity_title: map.get(r.opportunity_id)?.title || "(removido)",
@@ -91,7 +91,7 @@ export default function ReportsTab({ onOpenOpportunity }: { onOpenOpportunity?: 
   }, {} as Record<string, Report[]>);
 
   return (
-    <Tabs value={filter} onValueChange={(v) => setFilter(v as any)}>
+    <Tabs value={filter} onValueChange={(v) => setFilter(v as "open" | "resolved" | "ignored")}>
       <TabsList>
         <TabsTrigger value="open">Abertos</TabsTrigger>
         <TabsTrigger value="resolved">Resolvidos</TabsTrigger>

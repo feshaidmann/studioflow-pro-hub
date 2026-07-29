@@ -70,14 +70,14 @@ function readFiltersFromURL(sp: URLSearchParams): CarreiraFilters {
   const deadline = sp.get("prazo");
   return {
     tipo: tipo === "palco" ? "palco" : "edital", // sempre edital ou palco (sub-tab)
-    status: (["Aberto", "Encerrado", "Indefinido", "Previsto"] as const).includes(status as any)
+    status: (["Aberto", "Encerrado", "Indefinido", "Previsto"] as readonly string[]).includes(status ?? "")
       ? (status as CarreiraFilters["status"])
       : "todos",
     estado: sp.get("uf") || "todos",
     query: sp.get("q") || "",
     genero: sp.get("genero") || "todos",
     hideClosed: sp.get("hideClosed") !== "0",
-    deadline: (["7d", "30d", "90d"] as const).includes(deadline as any)
+    deadline: (["7d", "30d", "90d"] as readonly string[]).includes(deadline ?? "")
       ? (deadline as DeadlineWindow)
       : "todos",
   };

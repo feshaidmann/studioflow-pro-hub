@@ -65,24 +65,25 @@ export default function PublicProfile() {
       const { data, error } = await supabase.rpc("get_public_profile", {
         p_username: username,
       });
-      if (error || !data || (data as any[]).length === 0) {
+      const rows = data as Array<PublicProfileData & { work_links?: unknown }>;
+      if (error || !rows || rows.length === 0) {
         setProfile(null);
         setLoading(false);
         return;
       }
-      const p = (data as any[])[0] as PublicProfileData & { work_links?: any };
+      const p = rows[0];
       setProfile(p);
 
-      if (Array.isArray((p as any).work_links)) {
-        setWorkLinks((p as any).work_links as Array<{ title: string; url: string }>);
+      if (Array.isArray(p.work_links)) {
+        setWorkLinks(p.work_links as Array<{ title: string; url: string }>);
       }
 
       // Fetch ratings
       const { data: rData } = await supabase.rpc("get_public_profile_ratings", {
         p_profile_id: p.id,
       });
-      if (rData && (rData as any[]).length > 0) {
-        const r = (rData as any[])[0];
+      if (rData && rData.length > 0) {
+        const r = rData[0];
         setRatings({ avg_stars: r.avg_stars, rating_count: Number(r.rating_count) });
       }
 

@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { getErrorMessage } from "@/lib/errorMessage";
 
 export interface MatchedEdital {
   id: string;
@@ -29,14 +30,14 @@ export function useMatchEditais() {
     if (!user || !projectId) { setMatches([]); return; }
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke("match-editais", {
+      const { data, error } = await supabase.functions.invoke<{ matches: MatchedEdital[] }>("match-editais", {
         body: { project_id: projectId },
       });
       if (error) throw error;
       setMatches(data?.matches || []);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Match error:", err);
-      toast.error("Erro ao buscar recomendações", { description: err.message });
+      toast.error("Erro ao buscar recomendações", { description: getErrorMessage(err) });
     } finally {
       setLoading(false);
     }

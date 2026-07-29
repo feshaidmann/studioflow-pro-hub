@@ -9,6 +9,21 @@ export interface TemplateTrack {
   position: number;
 }
 
+interface TrackTemplateRow {
+  id: string;
+  user_id: string;
+  name: string;
+  is_default: boolean;
+  created_at: string;
+}
+
+interface TemplateTrackRow {
+  id: string;
+  template_id: string;
+  name: string;
+  position: number;
+}
+
 export interface TrackTemplate {
   id: string;
   userId: string;
@@ -32,18 +47,18 @@ export function useTrackTemplates() {
       .eq("user_id", user.id)
       .order("created_at", { ascending: true });
     if (tpls && tpls.length > 0) {
-      const ids = tpls.map((t: any) => t.id);
+      const ids = (tpls as TrackTemplateRow[]).map((t) => t.id);
       const { data: trkRows } = await supabase
         .from("template_tracks")
         .select("*")
         .in("template_id", ids)
         .order("position", { ascending: true });
       const tracksByTemplate: Record<string, TemplateTrack[]> = {};
-      (trkRows || []).forEach((r: any) => {
+      (trkRows as TemplateTrackRow[] | null || []).forEach((r) => {
         if (!tracksByTemplate[r.template_id]) tracksByTemplate[r.template_id] = [];
         tracksByTemplate[r.template_id].push({ id: r.id, templateId: r.template_id, name: r.name, position: r.position });
       });
-      setTemplates(tpls.map((t: any) => ({
+      setTemplates((tpls as TrackTemplateRow[]).map((t) => ({
         id: t.id,
         userId: t.user_id,
         name: t.name,
@@ -69,7 +84,7 @@ export function useTrackTemplates() {
         .order("created_at", { ascending: true });
       if (!active) return;
       if (tpls && tpls.length > 0) {
-        const ids = tpls.map((t: any) => t.id);
+        const ids = (tpls as TrackTemplateRow[]).map((t) => t.id);
         const { data: trkRows } = await supabase
           .from("template_tracks")
           .select("*")
@@ -77,11 +92,11 @@ export function useTrackTemplates() {
           .order("position", { ascending: true });
         if (!active) return;
         const tracksByTemplate: Record<string, TemplateTrack[]> = {};
-        (trkRows || []).forEach((r: any) => {
+        (trkRows as TemplateTrackRow[] | null || []).forEach((r) => {
           if (!tracksByTemplate[r.template_id]) tracksByTemplate[r.template_id] = [];
           tracksByTemplate[r.template_id].push({ id: r.id, templateId: r.template_id, name: r.name, position: r.position });
         });
-        setTemplates(tpls.map((t: any) => ({
+        setTemplates((tpls as TrackTemplateRow[]).map((t) => ({
           id: t.id,
           userId: t.user_id,
           name: t.name,

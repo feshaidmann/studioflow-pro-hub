@@ -3,13 +3,28 @@ import { useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Palette, Download, AlertTriangle } from "lucide-react";
+import { getErrorMessage } from "@/lib/errorMessage";
+
+interface ArtisticProfile {
+  genres?: string[];
+  moods?: string[];
+  artist_refs?: string;
+  identity_phrase?: string;
+}
+
+interface BriefingImage {
+  id: string;
+  url?: string;
+  style_tag?: string;
+  selected?: boolean;
+}
 
 interface ShareData {
   briefing: {
     id: string;
-    artistic_profile: any;
-    approved_images?: any[];
-    generated_images?: any[];
+    artistic_profile: ArtisticProfile;
+    approved_images?: BriefingImage[];
+    generated_images?: BriefingImage[];
     generated_palette?: { colors: string[]; rationale?: string };
     approved_copy?: string;
     designer_notes?: string;
@@ -43,8 +58,8 @@ export default function VisualBriefingShare() {
         } else {
           setData(json as ShareData);
         }
-      } catch (e: any) {
-        if (!cancelled) setError(e?.message ?? "Erro de rede");
+      } catch (e) {
+        if (!cancelled) setError(getErrorMessage(e, "Erro de rede"));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -71,7 +86,7 @@ export default function VisualBriefingShare() {
   }
 
   const b = data.briefing;
-  const selected = (b.approved_images?.length ? b.approved_images : (b.generated_images ?? []).filter((i: any) => i.selected)) ?? [];
+  const selected = (b.approved_images?.length ? b.approved_images : (b.generated_images ?? []).filter((i) => i.selected)) ?? [];
   const palette = b.generated_palette;
   const expiresLabel = new Date(data.expires_at).toLocaleString("pt-BR");
 
@@ -136,7 +151,7 @@ export default function VisualBriefingShare() {
             <div className="space-y-2">
               <p className="text-[11px] uppercase text-muted-foreground tracking-wide">Referências de estilo</p>
               <div className="grid grid-cols-3 gap-2">
-                {selected.map((img: any) => (
+                {selected.map((img) => (
                   <div key={img.id} className="aspect-square rounded-md overflow-hidden border border-border">
                     {img.url ? <img src={img.url} alt={`Referência — ${img.style_tag}`} className="w-full h-full object-cover" /> : null}
                   </div>

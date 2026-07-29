@@ -1,6 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import type { Database } from "@/integrations/supabase/types";
+
+type TaskRuleRow = Database["public"]["Tables"]["task_rules"]["Row"];
 
 export interface RuleConfig {
   id?: string;
@@ -52,12 +55,12 @@ export const RULE_LABELS: Record<string, { label: string; description: string; p
   release:        { label: "Próximos Lançamentos",        description: "Prepara para datas de lançamento que se aproximam.", paramKey: "daysAhead", paramLabel: "Dias de antecedência", paramMin: 1, paramMax: 30 },
 };
 
-function dbRowToRule(row: any): RuleConfig {
+function dbRowToRule(row: TaskRuleRow): RuleConfig {
   return {
     id: row.id,
     ruleType: row.rule_type,
     isActive: row.is_active,
-    parameters: row.parameters ?? {},
+    parameters: (row.parameters as Record<string, number | boolean | string>) ?? {},
   };
 }
 

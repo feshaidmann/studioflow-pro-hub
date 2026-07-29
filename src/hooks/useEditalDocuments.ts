@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { getErrorMessage } from "@/lib/errorMessage";
 
 export type EditalDocType =
   | "bio"
@@ -109,8 +110,8 @@ export function useEditalDocuments() {
           await fetchAll();
           return data as EditalDocument;
         }
-      } catch (e: any) {
-        toast.error("Erro ao salvar: " + (e?.message ?? "desconhecido"));
+      } catch (e: unknown) {
+        toast.error("Erro ao salvar: " + getErrorMessage(e, "desconhecido"));
         return null;
       } finally {
         setSaving(false);

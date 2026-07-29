@@ -20,7 +20,22 @@ export interface CalendarEvent {
 
 export type NewEvent = Omit<CalendarEvent, "id" | "userId" | "createdAt">;
 
-function dbToEvent(row: any): CalendarEvent {
+interface EventRow {
+  id: string;
+  user_id: string;
+  title: string;
+  description: string | null;
+  event_type: string;
+  start_datetime: string;
+  end_datetime: string | null;
+  location: string | null;
+  status: string;
+  project_id: string | null;
+  all_day: boolean | null;
+  created_at: string;
+}
+
+function dbToEvent(row: EventRow): CalendarEvent {
   return {
     id: row.id,
     userId: row.user_id,
@@ -80,7 +95,7 @@ export function useEvents() {
   }, [user]);
 
   const updateEvent = useCallback(async (id: string, ev: Partial<NewEvent>): Promise<void> => {
-    const dbData: Record<string, any> = {};
+    const dbData: Partial<EventRow> = {};
     if (ev.title !== undefined) dbData.title = ev.title.trim();
     if (ev.description !== undefined) dbData.description = ev.description;
     if (ev.eventType !== undefined) dbData.event_type = ev.eventType;

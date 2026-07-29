@@ -4,6 +4,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/contexts/ProfileContext";
 import { toast } from "sonner";
 import { trackAppEvent } from "@/lib/analytics";
+import type { Database } from "@/integrations/supabase/types";
+
+type ProjectFileRow = Database["public"]["Tables"]["project_files"]["Row"];
 
 export const FOLDERS = [
   { key: "composicao", label: "Composição", icon: "Music" },
@@ -38,18 +41,18 @@ export interface ProjectFile {
   updatedAt: string;
 }
 
-function dbToFile(row: any): ProjectFile {
+function dbToFile(row: ProjectFileRow): ProjectFile {
   return {
     id: row.id,
     projectId: row.project_id,
     userId: row.user_id,
-    folder: row.folder,
+    folder: row.folder as FolderKey,
     fileName: row.file_name,
     originalName: row.original_name,
     mimeType: row.mime_type,
     size: row.size,
     storagePath: row.storage_path,
-    status: row.status,
+    status: row.status as "em_revisao" | "final",
     uploadedByName: row.uploaded_by_name,
     versionNumber: row.version_number,
     parentFileId: row.parent_file_id,
@@ -154,7 +157,7 @@ export function useProjectFiles(projectId: string) {
 
   // Update comments
   const updateComments = useCallback(async (fileId: string, comments: string) => {
-    await supabase.from("project_files").update({ comments } as any).eq("id", fileId);
+    await supabase.from("project_files").update({ comments }).eq("id", fileId);
     setFiles((prev) => prev.map((f) => f.id === fileId ? { ...f, comments } : f));
   }, []);
 

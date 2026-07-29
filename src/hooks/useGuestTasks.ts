@@ -45,7 +45,7 @@ export function useGuestTasks(guestProjects: GuestProject[]) {
         if (data) {
           const nameMap = Object.fromEntries(guestProjects.map((g) => [g.id, g.name]));
           setTasks(
-            data.map((t: any) => ({
+            data.map((t) => ({
               description: t.description,
               source: t.source,
               dueDate: t.due_date,

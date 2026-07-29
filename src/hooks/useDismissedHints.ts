@@ -21,13 +21,13 @@ export function useDismissedHints(projectId?: string) {
     }
     setLoading(true);
     const { data } = await supabase
-      .from("marketplace_hint_dismissals" as any)
+      .from("marketplace_hint_dismissals")
       .select("specialty, snooze_until")
       .eq("user_id", user.id)
       .eq("project_id", projectId);
     const now = Date.now();
     const active = new Set<string>();
-    (data ?? []).forEach((row: any) => {
+    (data ?? []).forEach((row) => {
       const until = row.snooze_until ? new Date(row.snooze_until).getTime() : null;
       if (until === null || until > now) active.add(row.specialty);
     });
@@ -47,7 +47,7 @@ export function useDismissedHints(projectId?: string) {
           ? new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString()
           : null;
       await supabase
-        .from("marketplace_hint_dismissals" as any)
+        .from("marketplace_hint_dismissals")
         .upsert(
           {
             user_id: user.id,

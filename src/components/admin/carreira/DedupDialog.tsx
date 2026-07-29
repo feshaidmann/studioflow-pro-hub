@@ -11,10 +11,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { normalizeName } from "./urgencyScore";
 import { Combine, Loader2 } from "lucide-react";
+import { getErrorMessage } from "@/lib/errorMessage";
 
 interface RowLike {
   id: string;
-  [k: string]: any;
+  [k: string]: string | number | boolean | null | undefined;
 }
 
 interface Props {
@@ -70,8 +71,8 @@ export default function DedupDialog({ open, onOpenChange, rows, kind, onDone }: 
       toast.success(`${total} duplicado(s) arquivado(s)`);
       onDone();
       onOpenChange(false);
-    } catch (e: any) {
-      toast.error(e?.message ?? "Erro ao mesclar");
+    } catch (e: unknown) {
+      toast.error(getErrorMessage(e, "Erro ao mesclar"));
     } finally {
       setBusy(false);
     }
