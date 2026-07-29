@@ -39,7 +39,7 @@ export default function HealthBar({ onFilter, active, refreshKey }: Props) {
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    supabase.rpc("admin_carreira_health" as unknown as Parameters<typeof supabase.rpc>[0]).then(({ data, error }) => {
+    supabase.rpc("admin_carreira_health").then(({ data, error }) => {
       if (cancelled) return;
       if (error) console.error(error);
       const row = Array.isArray(data) ? data[0] : data;

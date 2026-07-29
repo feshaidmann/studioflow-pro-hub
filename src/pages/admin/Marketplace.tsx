@@ -231,7 +231,7 @@ export default function AdminMarketplace() {
       .select("*")
       .order("created_at", { ascending: false });
     if (error) toast.error("Erro ao carregar: " + error.message);
-    setProviders((data as CuratedProvider[]) ?? []);
+    setProviders(((data ?? []) as unknown) as CuratedProvider[]);
     setLoading(false);
   };
 

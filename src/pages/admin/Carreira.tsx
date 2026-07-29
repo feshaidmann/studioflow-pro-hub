@@ -682,7 +682,7 @@ export default function AdminCarreira() {
       <DedupDialog
         open={dedupOpen}
         onOpenChange={setDedupOpen}
-        rows={currentKind === "edital" ? editais : palcos}
+        rows={(currentKind === "edital" ? editais : palcos) as unknown as Array<{ id: string; [k: string]: string | number | boolean | null | undefined }>}
         kind={currentKind}
         onDone={fetchAll}
       />
