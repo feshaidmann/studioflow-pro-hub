@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
+import { useCallback, useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -52,27 +53,47 @@ function dbToEvent(row: EventRow): CalendarEvent {
   };
 }
 
+const byStart = (a: CalendarEvent, b: CalendarEvent) => a.startDatetime.localeCompare(b.startDatetime);
+
+export const eventsKey = (userId?: string) => ["events", userId ?? "anon"] as const;
+
 export function useEvents() {
   const { user } = useAuth();
-  const [events, setEvents] = useState<CalendarEvent[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const key = eventsKey(user?.id);
 
+  const { data: events = [], isLoading } = useQuery({
+    queryKey: key,
+    enabled: !!user,
+    queryFn: async (): Promise<CalendarEvent[]> => {
+      const { data, error } = await supabase
+        .from("events")
+        .select("*")
+        .order("start_datetime", { ascending: true });
+      if (error) throw error;
+      return (data ?? []).map(dbToEvent);
+    },
+  });
+
+  // Realtime: agenda changes (own device or another session) refresh the cache.
   useEffect(() => {
-    if (!user) { setEvents([]); setLoading(false); return; }
-    let active = true;
-    setLoading(true);
-    supabase
-      .from("events")
-      .select("*")
-      .order("start_datetime", { ascending: true })
-      .then(({ data, error }) => {
-        if (!active) return;
-        if (error) console.error("useEvents fetch error:", error);
-        if (data) setEvents(data.map(dbToEvent));
-        setLoading(false);
-      });
-    return () => { active = false; };
-  }, [user]);
+    if (!user) return;
+    const channel = supabase
+      .channel(`events:${user.id}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "events", filter: `user_id=eq.${user.id}` },
+        () => { queryClient.invalidateQueries({ queryKey: key }); },
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, queryClient]);
+
+  const setCache = useCallback((updater: (prev: CalendarEvent[]) => CalendarEvent[]) => {
+    queryClient.setQueryData<CalendarEvent[]>(key, (prev) => updater(prev ?? []));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [queryClient, user?.id]);
 
   const addEvent = useCallback(async (ev: NewEvent): Promise<CalendarEvent | null> => {
     if (!user) return null;
@@ -90,9 +111,9 @@ export function useEvents() {
     }).select().single();
     if (error || !data) { toast.error("Erro ao criar evento"); return null; }
     const created = dbToEvent(data);
-    setEvents((prev) => [...prev, created].sort((a, b) => a.startDatetime.localeCompare(b.startDatetime)));
+    setCache((prev) => [...prev, created].sort(byStart));
     return created;
-  }, [user]);
+  }, [user, setCache]);
 
   const updateEvent = useCallback(async (id: string, ev: Partial<NewEvent>): Promise<void> => {
     const dbData: Partial<EventRow> = {};
@@ -108,18 +129,14 @@ export function useEvents() {
 
     const { error } = await supabase.from("events").update(dbData).eq("id", id);
     if (error) { toast.error("Erro ao atualizar evento"); return; }
-    setEvents((prev) =>
-      prev
-        .map((e) => e.id === id ? { ...e, ...ev } : e)
-        .sort((a, b) => a.startDatetime.localeCompare(b.startDatetime))
-    );
-  }, []);
+    setCache((prev) => prev.map((e) => e.id === id ? { ...e, ...ev } : e).sort(byStart));
+  }, [setCache]);
 
   const deleteEvent = useCallback(async (id: string): Promise<void> => {
     const { error } = await supabase.from("events").delete().eq("id", id);
     if (error) { toast.error("Erro ao excluir evento"); return; }
-    setEvents((prev) => prev.filter((e) => e.id !== id));
-  }, []);
+    setCache((prev) => prev.filter((e) => e.id !== id));
+  }, [setCache]);
 
-  return { events, loading, addEvent, updateEvent, deleteEvent };
+  return { events, loading: isLoading, addEvent, updateEvent, deleteEvent };
 }
