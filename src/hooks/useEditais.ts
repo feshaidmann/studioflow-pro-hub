@@ -94,15 +94,15 @@ export function useEditais(projectId?: string | null) {
         resumo: e.resumo || "",
         documentos_resumo: e.documentos_resumo || "",
         match_reason: e.match_reason || "",
-        link_status: (e as any).link_status || "unknown",
-        link_checked_at: (e as any).link_status ? new Date().toISOString() : null,
+        link_status: e.link_status || "unknown",
+        link_checked_at: e.link_status ? new Date().toISOString() : null,
       }));
 
       // Race-safe upsert: confia no UNIQUE INDEX (user_id, session_key) WHERE session_key <> ''.
       // ignoreDuplicates=true descarta silenciosamente itens já existentes.
       const { data: inserted, error } = await supabase
         .from("editais")
-        .upsert(rows as any, { onConflict: "user_id,session_key", ignoreDuplicates: true })
+        .upsert(rows, { onConflict: "user_id,session_key", ignoreDuplicates: true })
         .select("id");
       if (error) throw error;
 
@@ -135,7 +135,7 @@ export function useEditais(projectId?: string | null) {
 
   const updateEdital = useCallback(async (id: string, fields: Partial<Edital>) => {
     try {
-      const { error } = await supabase.from("editais").update(fields as any).eq("id", id);
+      const { error } = await supabase.from("editais").update(fields).eq("id", id);
       if (error) throw error;
       setEditais((prev) => prev.map((e) => (e.id === id ? { ...e, ...fields } : e)));
       toast.success("Edital atualizado");
