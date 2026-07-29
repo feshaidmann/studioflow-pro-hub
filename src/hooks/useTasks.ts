@@ -1,7 +1,9 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useCallback, useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { useAuth } from "@/contexts/AuthContext";
+
 
 type TaskRow = Database["public"]["Tables"]["tasks"]["Row"];
 type TaskUpdate = Database["public"]["Tables"]["tasks"]["Update"];
