@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Transaction } from "@/data/mockData";
 import { monthKey, pctChange, formatCategoryLabel } from "@/lib/financeUtils";
@@ -11,44 +12,40 @@ export interface PendingFee {
 }
 
 export function usePendingFees(userId: string | undefined, transactions: Transaction[]): PendingFee[] {
-  const [pendingFees, setPendingFees] = useState<PendingFee[]>([]);
+  const { data: memberFees = [] } = useQuery({
+    queryKey: ["project-member-fees", userId ?? "anon"],
+    enabled: !!userId,
+    queryFn: async (): Promise<PendingFee[]> => {
+      const { data, error } = await supabase
+        .from("project_members")
+        .select("name, role, fee, project_id, projects(name)")
+        .eq("user_id", userId!)
+        .gt("fee", 0);
+      if (error) throw error;
+      return (data ?? []).map((d) => ({
+        name: d.name as string,
+        role: d.role as string,
+        projectName: (d.projects as { name: string } | null)?.name ?? "—",
+        fee: d.fee as number,
+      }));
+    },
+  });
 
-  useEffect(() => {
-    if (!userId) return;
-    let active = true;
-    supabase
-      .from("project_members")
-      .select("name, role, fee, project_id, projects(name)")
-      .eq("user_id", userId)
-      .gt("fee", 0)
-      .then(({ data }) => {
-        if (!active || !data) return;
-        const paidDescs = new Set(
-          transactions
-            .filter((t) => t.type === "expense" && t.paid)
-            .map((t) => t.description.toLowerCase()),
-        );
-        setPendingFees(
-          data
-            .map((d) => ({
-              name: d.name as string,
-              role: d.role as string,
-              projectName: (d.projects as { name: string } | null)?.name ?? "—",
-              fee: d.fee as number,
-            }))
-            .filter(
-              (f) =>
-                !paidDescs.has(`cachê ${f.name}`.toLowerCase()) &&
-                !paidDescs.has(`cache ${f.name}`.toLowerCase()) &&
-                !paidDescs.has(f.name.toLowerCase()),
-            ),
-        );
-      });
-    return () => { active = false; };
-  }, [userId, transactions]);
-
-  return pendingFees;
+  return useMemo(() => {
+    const paidDescs = new Set(
+      transactions
+        .filter((t) => t.type === "expense" && t.paid)
+        .map((t) => t.description.toLowerCase()),
+    );
+    return memberFees.filter(
+      (f) =>
+        !paidDescs.has(`cachê ${f.name}`.toLowerCase()) &&
+        !paidDescs.has(`cache ${f.name}`.toLowerCase()) &&
+        !paidDescs.has(f.name.toLowerCase()),
+    );
+  }, [memberFees, transactions]);
 }
+
 
 export function useFinancialKpis(transactions: Transaction[]) {
   const now = new Date();
