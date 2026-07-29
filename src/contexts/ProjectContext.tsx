@@ -4,7 +4,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import type { AnalysisResult } from "@/lib/audioAnalysis";
 import type { Project, MixTrack, Professional, Transaction, ProjectType } from "@/data/mockData";
 import { trackAppEvent } from "@/lib/analytics";
-import type { Tables } from "@/integrations/supabase/types";
 
 /* ── Default tracks created for every new project ── */
 const defaultTracks: Omit<MixTrack, "id">[] = [
@@ -39,7 +38,25 @@ function trackToDbRow(userId: string, projectId: string, track: MixTrack, positi
   };
 }
 
-export function dbRowToTrack(row: Tables<"mix_tracks">): MixTrack {
+/** Valor numérico como vem do Postgres (numeric chega como string). */
+type Numericish = number | string | null;
+
+export interface TrackRow {
+  id: string;
+  name: string;
+  high_pass_hz: number;
+  eq_notes: string;
+  comp_gr_db: Numericish;
+  sidechain_trigger: string;
+  gain_dbfs: Numericish;
+  done: boolean;
+  track_source: string;
+  musician_id: string;
+  musician_fee: Numericish;
+  fee_paid: boolean;
+}
+
+export function dbRowToTrack(row: TrackRow): MixTrack {
   return {
     id: row.id,
     name: row.name,
@@ -122,7 +139,35 @@ interface ProjectContextType {
 const ProjectContext = createContext<ProjectContextType | null>(null);
 
 /* ── DB-row mappers (exported for testing) ── */
-export function dbRowToProject(row: Tables<"projects">): Project {
+export interface ProjectRow {
+  id: string;
+  name: string;
+  artist: string;
+  bpm: number;
+  key: string;
+  mix_percent: number;
+  master_done: boolean;
+  upload_date: string;
+  revenue_estimate: number;
+  stage: string;
+  lufs: number;
+  streaming_ready: boolean;
+  project_type: string;
+  track_count: number | null;
+  total_contract_value: number | null;
+  amount_paid: number | null;
+  estimated_months: number | null;
+  completed?: boolean | null;
+  notes?: string | null;
+  genre?: string | null;
+  subgenre?: string | null;
+  artist_state?: string | null;
+  audience_size_at_start?: string | null;
+  production_start_date?: string | null;
+  distributor?: string | null;
+}
+
+export function dbRowToProject(row: ProjectRow): Project {
   return {
     id: row.id,
     name: row.name,
@@ -152,11 +197,25 @@ export function dbRowToProject(row: Tables<"projects">): Project {
   };
 }
 
-export function dbRowToTransaction(row: Tables<"transactions">): Transaction {
+export interface TransactionRow {
+  id: string;
+  project_id: string | null;
+  type: string;
+  description: string;
+  amount: number;
+  date: string;
+  category: string;
+  custom_category?: string | null;
+  paid?: boolean | null;
+  notes?: string | null;
+  created_at: string;
+}
+
+export function dbRowToTransaction(row: TransactionRow): Transaction {
   return {
     id: row.id,
     projectId: row.project_id,
-    type: row.type,
+    type: row.type as Transaction["type"],
     description: row.description,
     amount: row.amount,
     date: row.date,
