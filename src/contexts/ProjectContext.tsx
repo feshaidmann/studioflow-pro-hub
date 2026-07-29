@@ -6,6 +6,7 @@ import type { AnalysisResult } from "@/lib/audioAnalysis";
 import type { Project, MixTrack, Professional, Transaction, ProjectType } from "@/data/mockData";
 import { trackAppEvent } from "@/lib/analytics";
 import { toast } from "sonner";
+import { formatCurrency } from "@/lib/financeUtils";
 
 /* ── Default tracks created for every new project ── */
 const defaultTracks: Omit<MixTrack, "id">[] = [
