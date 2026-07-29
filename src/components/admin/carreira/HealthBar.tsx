@@ -39,7 +39,7 @@ export default function HealthBar({ onFilter, active, refreshKey }: Props) {
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    supabase.rpc("admin_carreira_health" as any).then(({ data, error }) => {
+    supabase.rpc("admin_carreira_health" as unknown as Parameters<typeof supabase.rpc>[0]).then(({ data, error }) => {
       if (cancelled) return;
       if (error) console.error(error);
       const row = Array.isArray(data) ? data[0] : data;
@@ -61,7 +61,7 @@ export default function HealthBar({ onFilter, active, refreshKey }: Props) {
 
   const pctOk = m.total_editais > 0 ? Math.round((m.links_ok / m.total_editais) * 100) : 0;
 
-  const items: Array<{ key: HealthFilter; label: string; value: string | number; icon: any; cls: string; sub?: string }> = [
+  const items: Array<{ key: HealthFilter; label: string; value: string | number; icon: React.ComponentType<{ className?: string }>; cls: string; sub?: string }> = [
     { key: null, label: "Editais ativos", value: m.total_editais, icon: Inbox, cls: "text-foreground" },
     { key: null, label: "Links OK", value: `${pctOk}%`, icon: CheckCircle2, cls: "text-emerald-600", sub: `${m.links_ok}/${m.total_editais}` },
     { key: "links_broken", label: "Links quebrados", value: m.links_broken, icon: AlertTriangle, cls: "text-destructive" },

@@ -59,7 +59,7 @@ export default function AiDiffDialog({ open, onOpenChange, current, ai, busy, on
   function handleApply() {
     const patch: AnaliseFields = {};
     for (const f of FIELDS) {
-      if (selected[f.key]) (patch as any)[f.key] = values[f.key] || null;
+      if (selected[f.key]) (patch as Record<keyof AnaliseFields, string | null>)[f.key] = values[f.key] || null;
     }
     onApply(patch);
   }
