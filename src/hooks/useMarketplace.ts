@@ -183,11 +183,8 @@ export function useInboundRequestCount() {
 
   useEffect(() => {
     if (!user) { setCount(0); return; }
-    (supabase.from("service_requests_inbound" as never) as unknown as {
-      select: (...args: unknown[]) => {
-        eq: (col: string, val: string) => { eq: (col2: string, val2: string) => Promise<{ count: number | null }> };
-      };
-    })
+    supabase
+      .from("service_requests_inbound" as never)
       .select("id", { count: "exact", head: true })
       .eq("target_provider_ref", user.id)
       .eq("status", "open")
@@ -247,8 +244,8 @@ export function useInboundRequests() {
     if (!user) { setRequests([]); setMyProposals([]); setLoading(false); return; }
     setLoading(true);
     const [reqRes, propRes] = await Promise.all([
-      (supabase as any)
-        .from("service_requests_inbound")
+      supabase
+        .from("service_requests_inbound" as never)
         .select("*")
         .eq("target_provider_ref", user.id)
         .order("created_at", { ascending: false }),

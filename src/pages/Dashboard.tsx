@@ -168,7 +168,7 @@ export default function Dashboard() {
   const showMarketplaceNudge =
     !marketplaceNudgeDismissed &&
     !!profile?.onboarding_completed &&
-    !(profile as any)?.allow_global_listing;
+    !profile?.allow_global_listing;
 
   const journeyPlan = useMemo(() => getJourneyPlan(profile?.main_pain ?? "organization", profile?.current_moment ?? "", profile?.track_view_mode ?? "basic"), [profile]);
 

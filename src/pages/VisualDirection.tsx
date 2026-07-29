@@ -93,8 +93,8 @@ export default function VisualDirection() {
         designer_notes: data.designer_notes,
         approved_images: approvedImages,
       });
-    } catch (e: any) {
-      toast.error("Não foi possível salvar", { description: e?.message });
+    } catch (e) {
+      toast.error("Não foi possível salvar", { description: getErrorMessage(e) });
     }
   };
 
