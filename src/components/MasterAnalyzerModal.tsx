@@ -10,9 +10,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Upload, FileAudio, Lightbulb, CheckCircle2, AlertCircle, AlertTriangle, Info, Trophy, X } from "lucide-react";
+import { Upload, FileAudio, Lightbulb, CheckCircle2, AlertCircle, AlertTriangle, Info, Trophy, X, Lock } from "lucide-react";
 import { analyzeAudio, generateSuggestions, evaluateTruePeak, TRUE_PEAK_MAX_DBTP, type AnalysisResult } from "@/lib/audioAnalysis";
 import type { Project } from "@/data/mockData";
+
+const MAX_FILE_SIZE_BYTES = 200 * 1024 * 1024;
 
 function RadialGauge({ label, value, target, unit, min, max, reverse, advisory }: {
   label: string; value: number; target: number; unit: string; min: number; max: number; reverse?: boolean; advisory?: boolean;
@@ -92,15 +94,26 @@ export default function MasterAnalyzerModal({
     onOpenChange(v);
   };
 
+  const acceptFile = (f: File) => {
+    if (f.size > MAX_FILE_SIZE_BYTES) {
+      setError(`Arquivo muito grande (${(f.size / (1024 * 1024)).toFixed(0)} MB). O limite é 200 MB.`);
+      return;
+    }
+    setFile(f);
+    setResult(null);
+    setSuggestions([]);
+    setError(null);
+  };
+
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     const f = e.dataTransfer.files[0];
-    if (f) { setFile(f); setResult(null); setSuggestions([]); setError(null); }
+    if (f) acceptFile(f);
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
-    if (f) { setFile(f); setResult(null); setSuggestions([]); setError(null); }
+    if (f) acceptFile(f);
   };
 
   const analyze = async () => {
@@ -172,33 +185,53 @@ export default function MasterAnalyzerModal({
         </DialogHeader>
 
         <div className="space-y-4 py-2">
-          {/* Upload Zone */}
-          <div
-            className={`border-dashed border-2 rounded-lg transition-all cursor-pointer ${
-              file
-                ? "border-primary/60 bg-primary/5 shadow-[0_0_16px_hsl(263_70%_50%/0.15)]"
-                : "border-primary/30 hover:border-primary/50"
-            }`}
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={handleDrop}
-          >
-            <input type="file" accept=".mp3,.wav,.flac,.m4a,.ogg,.aiff,.aif" className="hidden" id="modal-audio-upload" onChange={handleFileSelect} />
-            <label htmlFor="modal-audio-upload" className="flex flex-col items-center justify-center py-8 cursor-pointer">
-              {file ? (
-                <>
-                  <FileAudio className="h-10 w-10 text-primary mb-2" />
-                  <p className="text-sm font-medium">{file.name}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">Clique ou arraste para substituir</p>
-                </>
-              ) : (
-                <>
-                  <Upload className="h-10 w-10 text-muted-foreground mb-2" />
-                  <p className="text-sm font-medium">Arraste áudio aqui</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">MP3, WAV, FLAC, M4A, OGG, AIFF — até 200 MB</p>
-                </>
-              )}
-            </label>
-          </div>
+          {/* Intro + Upload Zone */}
+          {!result && (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="flex flex-col justify-center gap-3">
+                <div>
+                  <p className="text-sm font-semibold">Confira sua faixa antes de avançar.</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Enviamos o áudio e cruzamos loudness, pico e dinâmica com os padrões de streaming — sem enrolação, direto ao ponto.
+                  </p>
+                </div>
+                <div className="flex items-start gap-2 rounded-lg border border-border/60 bg-secondary/20 p-2.5">
+                  <Lock className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-0.5" />
+                  <p className="text-[11px] text-muted-foreground">
+                    Seu arquivo é tratado com privacidade — nunca é compartilhado.
+                  </p>
+                </div>
+              </div>
+
+              <div
+                className={`border-dashed border-2 rounded-lg transition-all cursor-pointer ${
+                  file
+                    ? "border-primary/60 bg-primary/5 shadow-[0_0_16px_hsl(263_70%_50%/0.15)]"
+                    : "border-primary/30 hover:border-primary/50"
+                }`}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={handleDrop}
+              >
+                <input type="file" accept=".mp3,.wav,.flac,.m4a,.ogg,.aiff,.aif" className="hidden" id="modal-audio-upload" onChange={handleFileSelect} />
+                <label htmlFor="modal-audio-upload" className="flex h-full flex-col items-center justify-center py-8 px-3 text-center cursor-pointer">
+                  {file ? (
+                    <>
+                      <FileAudio className="h-10 w-10 text-primary mb-2" />
+                      <p className="text-sm font-medium break-all">{file.name}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">Clique ou arraste para substituir</p>
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="h-10 w-10 text-muted-foreground mb-2" />
+                      <p className="text-sm font-medium">Arraste o áudio aqui</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">ou clique para escolher</p>
+                      <p className="text-[11px] text-muted-foreground mt-2">MP3 · WAV · FLAC · M4A · OGG · AIFF — até 200 MB</p>
+                    </>
+                  )}
+                </label>
+              </div>
+            </div>
+          )}
 
           {/* Progress */}
           {analyzing && (
